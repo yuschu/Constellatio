@@ -1,23 +1,23 @@
-"""
-URL configuration for plugin_host project.
+"""URL 配置：容器路由 + 插件路由动态聚合。
 
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
+插件路由由注册表按 OA_PLUGINS 配置动态 include：
+启停插件 = 改配置即可，路由自动收敛。
 """
 
+from django.conf import settings
 from django.contrib import admin
-from django.urls import path
+from django.urls import include, path
+
+from . import views
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    path('admin/', admin.site.urls),
+    path('', views.index, name='index'),
 ]
+
+# 动态挂载已启用插件的路由（/plugins/<name>/ 前缀）
+for _item in settings.OA_PLUGINS:
+    if _item.get('enabled'):
+        _app = _item['app']
+        _name = _app.rsplit('.', 1)[-1]
+        urlpatterns.append(path(f'plugins/{_name}/', include(f'{_app}.urls')))
