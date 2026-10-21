@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}操作留痕 · Constellatio{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">操作留痕链</h2>
+  <span class="r-badge">共 {{ total }} 条</span>
+</div>
+<div class="r-card mb-4 position-relative">
+  <span class="r-register-mark"></span>
+  {% if verify_ok %}
+    <p class="r-badge">链完整性：通过（未被篡改）</p>
+  {% else %}
+    <p class="r-badge r-badge--orange">链完整性：异常（第 {{ broken_id }} 条被篡改）</p>
+  {% endif %}
+</div>
+<div class="r-card">
+  <table class="r-table">
+    <thead>
+      <tr><th>ID</th><th>插件</th><th>动作</th><th>目标</th><th>内容哈希</th><th>记录哈希</th><th>时间</th></tr>
+    </thead>
+    <tbody>
+      {% for r in records %}
+      <tr>
+        <td>{{ r.id }}</td>
+        <td>{{ r.plugin }}</td>
+        <td>{{ r.action }}</td>
+        <td>{% if r.target_type %}{{ r.target_type }}#{{ r.target_id }}{% else %}—{% endif %}</td>
+        <td style="max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ r.payload_hash }}">{{ r.payload_hash|slice:":12" }}…</td>
+        <td style="max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ r.record_hash }}">{{ r.record_hash|slice:":12" }}…</td>
+        <td>{{ r.created_at|date:"m-d H:i:s" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" class="text-muted">暂无留痕记录（业务操作会自动上链）</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

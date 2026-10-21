@@ -111,7 +111,7 @@ OA_PLUGINS = [
     {'app': 'plugins.approval', 'enabled': True},
     {'app': 'plugins.notice', 'enabled': True},
     {'app': 'plugins.attendance', 'enabled': True},
-    {'app': 'plugins.blockchain', 'enabled': False},
+    {'app': 'plugins.blockchain', 'enabled': True},
 ]
 
 # 默认主题插件（新建 themes/<name>/ + 修改此项即换主题）
