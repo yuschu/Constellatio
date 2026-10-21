@@ -2,7 +2,7 @@
 
 > 项目：Constellatio —— 基于 Django 的企业办公自动化系统（全栈插件化）
 > 适用对象：项目开发人员
-> 文档版本：v1.4 · 2026-10-21
+> 文档版本：v1.5 · 2026-10-21
 > 前置阅读：tech-stack-and-architecture.md、constraints-and-acceptance.md
 
 ---
@@ -434,18 +434,25 @@ class User(AbstractUser):
 
 ### 4.3 notice 插件（公告 + 已读）
 
+> ✅ **已实现（v0.4.0）**：公告列表/详情/发布 + 未读徽标 + 已读幂等统计 + `notice_published` 信号。
+
 ```python
-# plugins/notice/models.py
+# plugins/notice/models.py（已实现）
 class Announcement(models.Model):
     title = models.CharField(max_length=200)
     content = models.TextField()
     publisher = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
     is_top = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-is_top', '-created_at']   # 置顶优先
+        permissions = [('notice_view', '查看公告'), ('notice_manage', '发布公告')]
 
 
 class AnnouncementRead(models.Model):
-    announcement = models.ForeignKey(Announcement, on_delete=models.CASCADE)
+    announcement = models.ForeignKey(Announcement, on_delete=models.CASCADE, related_name='read_records')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     read_at = models.DateTimeField(auto_now=True)
 
@@ -453,8 +460,9 @@ class AnnouncementRead(models.Model):
         unique_together = ('announcement', 'user')   # 一人一篇只记一次
 ```
 
-- 已读统计：`AnnouncementRead.objects.filter(announcement=a).count()`
-- 未读数 = 用户可看公告数 - 已读数
+- 已读统计：`a.read_records.count()`（列表用 `annotate(read_count=Count('read_records'))`）
+- 未读标记：预取 `AnnouncementRead.objects.filter(user=u).values_list('announcement_id', flat=True)`，免 N+1
+- 详情记已读用 `get_or_create`，重复访问幂等
 
 ### 4.4 attendance 插件（考勤 + 统计）
 

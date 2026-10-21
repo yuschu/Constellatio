@@ -92,4 +92,4 @@ Constellatio/
 
 ## 📌 状态
 
-**v0.3 已跑通**（审批中心：请假/报销/用章，状态机 + 全程留痕）→ 开发中：notice（v0.4）→ attendance（v0.5）→ blockchain（v0.6）→ 整合联调（v1.0）
+**v0.4 已跑通**（公告中心：置顶 + 未读/已读统计）→ 开发中：attendance（v0.5）→ blockchain（v0.6）→ 整合联调（v1.0）
