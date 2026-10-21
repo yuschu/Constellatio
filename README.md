@@ -17,7 +17,7 @@
 
 ## 🛠 技术栈
 
-Python 3.11+ · Django 5.2 LTS · MySQL 8.0 · Bootstrap 5 · ECharts 5 · Gunicorn · Nginx · Docker Compose
+Python 3.11+ · Django 5.2 LTS · MySQL 8.0（可切 sqlite）· Risograph 印刷风主题 · ECharts 5 · Gunicorn · Nginx · Docker Compose
 
 ## 🚀 快速开始
 
@@ -52,10 +52,12 @@ Constellatio/
 ├── requirements.txt
 ├── manage.py
 ├── plugin_host/          # 插件容器（唯一固定核心）
-│   ├── registry.py       # 插件注册表
-│   ├── discover.py       # 自动发现
-│   ├── signals.py        # 信号总线
-│   └── templates/        # 统一外壳（base.html / login.html）
+│   ├── registry.py       # 插件注册表（PluginMeta / 菜单聚合）
+│   ├── discover.py       # 自动发现与注册校验
+│   ├── signals.py        # 信号总线（跨插件通信）
+│   ├── context_processors.py  # 模板注入聚合菜单
+│   ├── views.py          # 工作台首页
+│   └── apps.py           # 容器 AppConfig
 ├── plugins/              # 业务插件（全部可插拔）
 │   ├── auth/             # 认证插件
 │   ├── user/             # 用户 / 部门 / 角色 / RBAC
@@ -90,4 +92,4 @@ Constellatio/
 
 ## 📌 状态
 
-规划中 —— 待开发：插件容器 → auth/user → approval → notice → attendance → 整合联调 → 正式发布
+**v0.1 已跑通**（插件容器 + 登录 + 外壳渲染）→ 开发中：auth/user RBAC（v0.2）→ approval（v0.3）→ notice（v0.4）→ attendance（v0.5）→ blockchain（v0.6）→ 整合联调（v1.0）

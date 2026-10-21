@@ -2,7 +2,7 @@
 
 > 项目：Constellatio —— 基于 Django 的企业办公自动化系统（全栈插件化）
 > 适用对象：项目开发人员
-> 文档版本：v1.1 · 2026-10-21
+> 文档版本：v1.2 · 2026-10-21
 > 前置阅读：tech-stack-and-architecture.md、constraints-and-acceptance.md
 
 ---
@@ -89,30 +89,34 @@ gunicorn
 
 ## 二、插件容器 plugin_host 实现
 
+> ✅ **v0.1.0 已落地**（2026-10-21，git `6365d96`）：注册表 / 发现 / 信号 / 登录 / 外壳渲染全部可运行。
+
 容器是唯一固定核心，只做 5 件事：**注册 / 发现 / 外壳 / 信号 / 配置**。
 
 ### 2.1 插件注册表 registry.py
 
 ```python
-# plugin_host/registry.py
+# plugin_host/registry.py（已实现）
 """插件注册表：OA_PLUGINS 配置驱动，运行时聚合插件元信息。"""
+
+from django.conf import settings
 
 PLUGIN_REGISTRY = {}  # name -> PluginMeta
 
 
 class PluginMeta:
-    """插件契约：每个插件必须提供这些字段。"""
+    """插件契约：每个插件必须提供的字段。"""
 
-    def __init__(self, name, version, menus, permissions,
-                 urls, signals, templates, app):
+    def __init__(self, name, version, menus=None, permissions=None,
+                 urls=None, signals=None, templates=None, app=None):
         self.name = name
         self.version = version
-        self.menus = menus          # [{'label','icon','url'}, ...]
-        self.permissions = []       # ['user_manage', 'approval_approve', ...]
-        self.urls = urls            # 路由模块路径
-        self.signals = signals      # 订阅/发出的信号
-        self.templates = templates  # 模板目录
-        self.app = app              # Django AppConfig 实例
+        self.menus = menus or []            # [{'label','icon','url'}, ...]
+        self.permissions = permissions or []  # ['user_manage', ...]
+        self.urls = urls                    # 路由模块路径（可空）
+        self.signals = signals or []        # 订阅/发出的信号
+        self.templates = templates          # 模板目录名
+        self.app = app                      # Django AppConfig 实例
 
 
 def register(meta: PluginMeta):
@@ -121,64 +125,77 @@ def register(meta: PluginMeta):
     PLUGIN_REGISTRY[meta.name] = meta
 
 
-def get_plugins():
-    """返回所有已启用插件（按 OA_PLUGINS 顺序）。"""
-    return PLUGIN_REGISTRY
+def get_enabled_plugins():
+    """按 OA_PLUGINS 顺序返回 (name, meta) 列表（仅已启用且已注册）。"""
+    result = []
+    for item in getattr(settings, 'OA_PLUGINS', []):
+        if not item.get('enabled'):
+            continue
+        name = item['app'].rsplit('.', 1)[-1]
+        meta = PLUGIN_REGISTRY.get(name)
+        if meta:
+            result.append((name, meta))
+    return result
 
 
 def get_menus(user):
-    """按用户权限过滤菜单，容器外壳渲染用。"""
-    from django.contrib.auth.models import Permission
+    """按用户权限过滤菜单；v0.1 登录即可见，v0.2 接入 RBAC 精细过滤。"""
     menus = []
-    for meta in PLUGIN_REGISTRY.values():
+    for name, meta in get_enabled_plugins():
         for menu in meta.menus:
-            if _user_has_perm(user, meta, menu):
-                menus.append({**menu, 'plugin': meta.name})
+            menus.append({**menu, 'plugin': name})
     return menus
 ```
 
 ### 2.2 自动发现 discover.py
 
 ```python
-# plugin_host/discover.py
-"""利用 Django AppConfig.ready() 自动扫描并注册插件。"""
-from django.apps import AppConfig
+# plugin_host/discover.py（已实现）
+"""插件自动发现与注册校验。"""
+
+from .registry import PLUGIN_REGISTRY
 
 
-class PluginHostConfig(AppConfig):
-    name = 'plugin_host'
-
-    def ready(self):
-        # Django 会为每个 INSTALLED_APPS 调 AppConfig.ready()，
-        # 各插件的 AppConfig 在自己的 ready() 中调用 registry.register(...)。
-        # 此处只做已注册插件的校验与冲突检查。
-        from .registry import PLUGIN_REGISTRY
-        _check_permission_conflict(PLUGIN_REGISTRY)
-
-
-def _check_permission_conflict(registry):
+def check_registry():
+    """注册表完整性校验：权限码冲突即启动失败。"""
     seen = set()
-    for meta in registry.values():
+    for meta in PLUGIN_REGISTRY.values():
         for perm in meta.permissions:
             if perm in seen:
                 raise ValueError(f'权限码冲突: {perm}')
             seen.add(perm)
 ```
 
-### 2.3 统一外壳（登录 / 导航 / 布局）
+```python
+# plugin_host/apps.py（已实现）—— Django 全部 app 就绪后校验
+class PluginHostConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'plugin_host'
+    label = 'plugin_host'
+
+    def ready(self):
+        from .discover import check_registry
+        check_registry()
+```
+
+### 2.3 统一外壳（主题插件提供）
+
+> 外壳由**主题插件**提供（默认 `themes/risograph/templates/`），容器不持有任何外壳模板：
 
 ```
-plugin_host/templates/base.html   # 全局基座：侧边栏(动态菜单) + 顶栏 + 内容区
-plugin_host/templates/login.html  # 统一登录页
+themes/risograph/templates/
+├── base.html   # 全局基座：Riso 顶栏 + 侧栏菜单(r-offset-hover) + 内容区 + 套印角标
+├── login.html  # 统一登录页（form action=/plugins/auth/login/，error 变量）
+└── home.html   # 工作台首页（容器 views.index 渲染）
 ```
 
-基座要点：
+菜单渲染：容器通过 context processor `plugin_host.context_processors.menus` 注入 `menus` 变量：
 
 ```html
-<!-- base.html 关键部分：动态导航由 get_menus(request.user) 渲染 -->
+<!-- base.html 关键部分：动态导航由 get_menus(request.user) 注入 -->
 <aside>
   {% for menu in menus %}
-    <a href="{{ menu.url }}" class="nav-item">
+    <a href="{{ menu.url }}" class="r-offset-hover">
       <span>{{ menu.icon }}</span> {{ menu.label }}
     </a>
   {% endfor %}
@@ -189,11 +206,10 @@ plugin_host/templates/login.html  # 统一登录页
 ### 2.4 信号总线 signals.py
 
 ```python
-# plugin_host/signals.py
+# plugin_host/signals.py（已实现）
 """插件间通信总线：跨插件交互一律走信号，禁止直接 import 对方模型。"""
 from django.dispatch import Signal
 
-# 定义全局业务信号
 approval_finished = Signal()      # 审批结束（发起/通过/驳回），携带 approval_id, result
 notice_published = Signal()       # 公告发布，携带 announcement_id
 attendance_checked = Signal()     # 打卡成功，携带 user_id, date

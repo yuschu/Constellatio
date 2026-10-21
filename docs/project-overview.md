@@ -3,7 +3,7 @@
 > 项目代号：**Constellatio**
 > 系统名称：基于 Django 的企业办公自动化系统（OA）
 > 设计思想：**万物皆可插件**（全栈插件化）
-> 文档版本：v1.1 · 2026-10-21
+> 文档版本：v1.2 · 2026-10-21
 
 ---
 
@@ -75,34 +75,40 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
-## 六、目录结构（规划）
+## 六、目录结构（v0.1 已落地）
 
 ```
 Constellatio/
-├── docker-compose.yml          # 一键部署
-├── Dockerfile
-├── nginx/                      # Nginx 配置
+├── docker-compose.yml          # 一键部署（规划）
+├── Dockerfile                  # （规划）
+├── nginx/                      # Nginx 配置（规划）
 ├── requirements.txt
 ├── manage.py
-├── plugin_host/                # 插件容器（唯一固定核心）
-│   ├── registry.py             # 插件注册表
-│   ├── discover.py             # 自动发现（AppConfig.ready）
-│   ├── shell/                  # 统一外壳（登录/导航/布局）
-│   └── signals.py              # 信号总线
+├── plugin_host/                # 插件容器（唯一固定核心，已实现）
+│   ├── registry.py             # 插件注册表（PluginMeta / 菜单聚合）
+│   ├── discover.py             # 自动发现与注册校验
+│   ├── signals.py              # 信号总线
+│   ├── context_processors.py   # 模板注入聚合菜单
+│   ├── views.py                # 工作台首页
+│   ├── apps.py                 # 容器 AppConfig
+│   ├── settings.py             # 全局配置（OA_PLUGINS / OA_THEME / AUTH_USER_MODEL）
+│   └── urls.py                 # 插件路由动态聚合
 ├── plugins/                    # 业务插件（全部可插拔）
-│   ├── auth/                   # 认证插件
-│   ├── user/                   # 用户/部门/角色/RBAC 插件
-│   ├── approval/               # 审批中心插件
-│   ├── notice/                 # 公告通知插件
-│   ├── attendance/             # 考勤打卡插件
-│   └── blockchain/             # 操作留痕上链插件
+│   ├── auth/                   # 认证插件（登录/登出，已实现）
+│   ├── user/                   # 用户/部门/角色/RBAC 插件（模型已建，页面 v0.2）
+│   ├── approval/               # 审批中心插件（待开发）
+│   ├── notice/                 # 公告通知插件（待开发）
+│   ├── attendance/             # 考勤打卡插件（待开发）
+│   └── blockchain/             # 操作留痕上链插件（待开发）
 ├── themes/                     # 主题插件层（可插拔）
-│   └── risograph/              # Risograph 印刷风（默认主题插件）
+│   └── risograph/              # Risograph 印刷风（默认主题插件，外壳模板已实现）
 └── docs/                       # 文档
     ├── tech-stack-and-architecture.md
     ├── constraints-and-acceptance.md
     ├── project-overview.md
-    └── development-guide.md
+    ├── development-guide.md
+    ├── ai-assisted-development-guide.md
+    └── database-design.md
 ```
 
 ## 七、如何开发一个插件（即插即用示例）
@@ -148,6 +154,7 @@ OA_PLUGINS = [
 
 ## 九、待办（后续文档）
 
+- [x] 插件容器 v0.1（登录页可访问 / 外壳渲染 / 菜单聚合）—— 2026-10-21 完成
 - [ ] 需求规格说明书
 - [x] 数据库设计文档（ER 图）—— 已完成：`docs/database-design.md`
 - [ ] 测试报告
