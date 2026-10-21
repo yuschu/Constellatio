@@ -110,7 +110,7 @@ OA_PLUGINS = [
     {'app': 'plugins.user', 'enabled': True},
     {'app': 'plugins.approval', 'enabled': True},
     {'app': 'plugins.notice', 'enabled': True},
-    {'app': 'plugins.attendance', 'enabled': False},
+    {'app': 'plugins.attendance', 'enabled': True},
     {'app': 'plugins.blockchain', 'enabled': False},
 ]
 
