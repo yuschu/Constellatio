@@ -2,7 +2,7 @@
 
 > 项目：Constellatio —— 基于 Django 的企业办公自动化系统（全栈插件化）
 > 适用对象：项目开发人员
-> 文档版本：v1.3 · 2026-10-21
+> 文档版本：v1.4 · 2026-10-21
 > 前置阅读：tech-stack-and-architecture.md、constraints-and-acceptance.md
 
 ---
@@ -219,51 +219,45 @@ attendance_checked = Signal()     # 打卡成功，携带 user_id, date
 
 ## 三、插件开发规范（以 approval 为例）
 
+> ✅ **approval 已实现（v0.3.0，2026-10-21）**：本节 3.1–3.4 与实际代码同步；其余插件沿用同一套契约。
+
 ### 3.1 插件目录结构
 
 ```
 plugins/approval/
 ├── apps.py            # AppConfig + 插件契约声明（核心）
-├── models.py          # approval / approval_record
+├── models.py          # approval / approvalrecord（含权限码 Meta）
+├── services.py        # 状态机流转逻辑（可单测）
 ├── views.py           # 业务视图
 ├── urls.py            # 路由，挂载 /plugins/approval/
-├── admin.py           # 后台管理
+├── tests.py           # 状态机单元测试（必写）
 ├── migrations/
-├── templates/approval/  # 模板片段（继承 base.html）
-└── signals.py         # 本插件信号处理
+└── templates/approval/  # 模板片段（继承 base.html）
 ```
 
 ### 3.2 插件契约声明 apps.py
 
 ```python
-# plugins/approval/apps.py
+# plugins/approval/apps.py（已实现）
 from django.apps import AppConfig
-from plugin_host.registry import register, PluginMeta
 
 
-class ApprovalPluginConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'plugins.approval'
-    label = 'approval'
+class ApprovalConfig(AppConfig):
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "plugins.approval"
 
     def ready(self):
-        from plugin_host import signals as bus
-        from . import signals  # noqa: 确保信号处理函数注册
+        from plugin_host.registry import register, PluginMeta
         register(PluginMeta(
             name='approval',
-            version='1.0.0',
+            version='0.3.0',
             menus=[
-                {'label': '审批中心', 'icon': '📋', 'url': '/plugins/approval/'},
-                {'label': '我的待办', 'icon': '✅', 'url': '/plugins/approval/todo/'},
-                {'label': '我的申请', 'icon': '📤', 'url': '/plugins/approval/mine/'},
+                {'label': '审批中心', 'icon': '▣', 'url': '/plugins/approval/', 'perm': 'approval_view'},
+                {'label': '待我审批', 'icon': '☐', 'url': '/plugins/approval/pending/', 'perm': 'approval_view'},
             ],
-            permissions=[
-                'approval_submit',    # 发起审批
-                'approval_approve',   # 审批他人
-                'approval_manage',    # 管理全部
-            ],
+            permissions=['approval_view', 'approval_approve'],
             urls='plugins.approval.urls',
-            signals=[bus.approval_finished],
+            signals=['approval_finished'],
             templates='approval',
             app=self,
         ))
@@ -272,74 +266,101 @@ class ApprovalPluginConfig(AppConfig):
 ### 3.3 审批状态机 models.py
 
 ```python
-# plugins/approval/models.py
-from django.db import models
+# plugins/approval/models.py（已实现）
 from django.conf import settings
-
-APPROVAL_TYPES = (('leave', '请假'), ('reimburse', '报销'), ('stamp', '用章'))
-
-# 状态机：draft -> pending -> approved / rejected
-STATUS_CHOICES = (
-    ('draft', '草稿'), ('pending', '审批中'),
-    ('approved', '已通过'), ('rejected', '已驳回'),
-)
+from django.db import models
 
 
 class Approval(models.Model):
-    type = models.CharField(max_length=20, choices=APPROVAL_TYPES)
-    title = models.CharField(max_length=200)
-    content = models.TextField()                  # 申请内容
-    applicant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
-                                  related_name='approvals')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
-    current_approver = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
-                                         on_delete=models.SET_NULL, related_name='pending_approvals')
+    """审批单表 approval_approval。"""
+
+    class Type(models.TextChoices):
+        LEAVE = 'leave', '请假'
+        EXPENSE = 'expense', '报销'
+        SEAL = 'seal', '用章'
+
+    class Status(models.TextChoices):
+        DRAFT = 'draft', '草稿'
+        PENDING = 'pending', '待审批'
+        APPROVED = 'approved', '已通过'
+        REJECTED = 'rejected', '已驳回'
+
+    approval_type = models.CharField('审批类型', max_length=20, choices=Type.choices)
+    title = models.CharField('标题', max_length=200)
+    content = models.TextField('内容', blank=True)
+    amount = models.DecimalField('金额', max_digits=12, decimal_places=2, null=True, blank=True)
+    applicant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='approvals')
+    approver = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='approval_tasks')
+    status = models.CharField('状态', max_length=20, choices=Status.choices, default=Status.DRAFT)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        verbose_name = '审批单'
+        ordering = ['-created_at']
+        # 插件权限码：迁移自动创建为 Permission（与 registry permissions 一致）
+        permissions = [
+            ('approval_view', '查看审批'),
+            ('approval_approve', '审批操作'),
+        ]
+
 
 class ApprovalRecord(models.Model):
-    """审批留痕：谁、什么动作、什么意见、什么时候。"""
+    """流转记录表 approval_approvalrecord（全程留痕）。"""
     approval = models.ForeignKey(Approval, on_delete=models.CASCADE, related_name='records')
-    approver = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
-    action = models.CharField(max_length=20, choices=(('submit', '提交'), ('approve', '通过'), ('reject', '驳回')))
-    comment = models.TextField(blank=True)
+    operator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, verbose_name='操作人')
+    action = models.CharField('动作', max_length=20)  # submit / approve / reject
+    comment = models.TextField('意见', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 ```
+
+> ⚠️ 权限码**必须同时**写在模型 `Meta.permissions`（迁移自动建 Permission）和 PluginMeta `permissions`；漏写前者会导致 has_perm 永远查不到。
 
 ### 3.4 状态机流转逻辑（放 services 层，保证可单测）
 
 ```python
-# plugins/approval/services.py
-from .models import Approval, ApprovalRecord
+# plugins/approval/services.py（已实现）
 from plugin_host.signals import approval_finished
+from .models import Approval, ApprovalRecord
 
 
-def submit(approval: Approval, user):
-    approval.status = 'pending'
-    approval.current_approver = _next_approver(approval)  # 部门主管/角色
-    approval.save()
-    ApprovalRecord.objects.create(approval=approval, approver=user, action='submit')
+def _record(approval, operator, action, comment):
+    return ApprovalRecord.objects.create(
+        approval=approval, operator=operator, action=action, comment=comment)
 
 
-def approve(approval: Approval, user, comment=''):
-    approval.status = 'approved'
-    approval.current_approver = None
-    approval.save()
-    ApprovalRecord.objects.create(approval=approval, approver=user, action='approve', comment=comment)
+def submit(approval, operator, comment=''):
+    """草稿/待审批 → 待审批。"""
+    if approval.status not in (Approval.Status.DRAFT, Approval.Status.PENDING):
+        raise ValueError('只有草稿/待审批状态可提交')
+    approval.status = Approval.Status.PENDING
+    approval.save(update_fields=['status', 'updated_at'])
+    _record(approval, operator, 'submit', comment)
+
+
+def approve(approval, operator, comment=''):
+    """待审批 → 已通过。"""
+    if approval.status != Approval.Status.PENDING:
+        raise ValueError('只有待审批状态可通过')
+    approval.status = Approval.Status.APPROVED
+    approval.save(update_fields=['status', 'updated_at'])
+    _record(approval, operator, 'approve', comment)
     approval_finished.send(sender=approval.__class__, approval_id=approval.id, result='approved')
 
 
-def reject(approval: Approval, user, comment):
-    approval.status = 'rejected'
-    approval.current_approver = None
-    approval.save()
-    ApprovalRecord.objects.create(approval=approval, approver=user, action='reject', comment=comment)
+def reject(approval, operator, comment=''):
+    """待审批 → 已驳回。"""
+    if approval.status != Approval.Status.PENDING:
+        raise ValueError('只有待审批状态可驳回')
+    approval.status = Approval.Status.REJECTED
+    approval.save(update_fields=['status', 'updated_at'])
+    _record(approval, operator, 'reject', comment)
     approval_finished.send(sender=approval.__class__, approval_id=approval.id, result='rejected')
 ```
 
 > 状态机规则：只有 `pending` 才能 approve/reject；只有 `draft/pending` 能 submit。
 > 所有流转必须落 ApprovalRecord，保证"全程留痕"可追溯。
+> 已实现 `plugins/approval/tests.py`：5 项单测（submit/approve/reject/非法流转/信号），`manage.py test plugins.approval` 全绿。
 
 ## 四、各业务插件开发要点
 
