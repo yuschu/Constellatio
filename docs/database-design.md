@@ -1,7 +1,7 @@
 # 数据库设计文档（插件化）
 
 > 项目：Constellatio —— 基于 Django 的企业办公自动化系统（全栈插件化）
-> 文档版本：v1.8 · 2026-10-21（10 张业务表全部落地；v1.0 部署在 MySQL8 容器内迁移验证通过）
+> 文档版本：v1.9 · 2026-10-21（v1.1 新增 workspace_pluginswitch——11 张业务表；v1.0 部署在 MySQL8 容器内迁移验证通过）
 > 关联文档：tech-stack-and-architecture.md、constraints-and-acceptance.md、development-guide.md
 
 ---
@@ -30,9 +30,10 @@
 | notice | `notice_announcementread` | 业务 | 公告已读 |
 | attendance | `attendance_attendance` | 业务 | 考勤记录 |
 | blockchain | `blockchain_record` | 业务 | 操作留痕链（哈希链，防篡改） |
+| workspace | `workspace_pluginswitch` | 业务 | 插件运行时开关（v1.1 落地，DB 覆盖静态配置） |
 | — | `auth_permission` 等 | 框架内置 | Django 自带（auth_group / django_session / django_migrations 等） |
 
-业务插件共 **10 张表**；框架内置表不属于任何插件，由 Django 自动管理。
+业务插件共 **11 张表**；框架内置表不属于任何插件，由 Django 自动管理。
 
 ## 三、ER 关系总览
 
@@ -204,7 +205,19 @@ UNIQUE(user_id, date) —— 一天一卡防重复
 
 链式规则：每条记录按 `prev_hash → record_hash` 单向串链；校验时从创世逐条重算，任一条被篡改则后续全部断链报警。
 
-### 4.6 框架内置表（不属于任何插件）
+### 4.6 workspace 插件（plugins/workspace）
+
+**workspace_pluginswitch（插件运行时开关）** —— v1.1 落地
+
+| 字段 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| id | BIGINT | PK | 主键 |
+| app_key | VARCHAR(100) | UNIQUE, NOT NULL | 插件标识（注册名） |
+| enabled | BOOL | NOT NULL, DEFAULT True | 开关状态 |
+| updated_by_id | FK user_user | NULL, SET_NULL | 最后操作人 |
+| updated_at | DATETIME | auto_now | 更新时间 |
+
+### 4.7 框架内置表（不属于任何插件）
 
 `django_migrations`、`auth_permission`、`auth_group`、`auth_group_permissions`、`django_content_type`、`django_session`、`django_admin_log` —— 由 Django 自动创建，不在插件职责内。
 

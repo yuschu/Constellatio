@@ -106,4 +106,4 @@
 | 8 | blockchain 插件 + 链校验 | 篡改检测报警 |
 | 9 | 整合联调 + 测试 + Docker + 发布 | 三项验收全过 |
 
-**当前进度**：✅ v0.1 容器；✅ v0.2 RBAC；✅ v0.3 approval 审批；✅ v0.4 notice 公告；✅ v0.5 attendance 考勤；✅ v0.6 blockchain 留痕；✅ v1.0 整合部署（Docker Compose，MySQL8 + Gunicorn + WhiteNoise，容器冒烟通过）—— 均 2026-10-21。
+**当前进度**：✅ v0.1~v0.6（容器/RBAC/审批/公告/考勤/留痕）；✅ v1.0 整合部署；✅ v1.1 workspace 运行时插件启停（停用即隐藏+404+上链）—— 均 2026-10-21；开发中：v1.2 user 增强 + approval 会签。

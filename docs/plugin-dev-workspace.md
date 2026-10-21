@@ -1,8 +1,8 @@
 # 插件开发文档：workspace（工作台可启用/禁用功能）
 
 > 关联插件：plugin_host 容器（registry 运行时开关）
-> 版本规划：v1.1 · 文档版本：draft-01 · 2026-10-21
-> 状态：**待确认后开发**
+> 版本规划：v1.1 · 文档版本：v1.1 · 2026-10-21
+> 状态：**✅ 已实现并跑通**（4 项单测全绿 + HTTP 冒烟：停用即 404、菜单隐藏、启用恢复、plugin_toggled 上链、链校验通过）
 
 ## 一、需求
 
@@ -14,7 +14,7 @@
 |---|---|
 | 形态 | 新插件 `plugins/workspace`（"万物皆可插件"：管理能力本身也是插件） |
 | 运行时开关 | 新建表 `workspace_pluginswitch`（app_key, enabled）持久化，**DB 优先覆盖** settings.OA_PLUGINS 静态配置 |
-| 生效机制 | `registry.get_enabled_plugins()` 改造：先读 DB 开关，无记录回退静态配置；路由动态 include / 菜单聚合 / 权限收敛均基于它 → 一次请求即生效 |
+| 生效机制 | `registry.get_enabled_plugins()` 改造：先读 DB 开关，无记录回退静态配置；菜单/权限收敛基于它 → 一次请求即生效；**路由即时生效**：新增 `plugin_host.middleware.PluginRouteGuardMiddleware`（URLConf 静态 include 无法按请求刷新，中间件对停用插件请求直接 404） |
 | 防锁死 | `auth`、`workspace` 自身禁止停用（保证登录与开关入口永在） |
 | 权限 | 新权限码 `workspace_manage`（普通管理员即可操作，即时生效） |
 | 上链 | 开关操作发 `plugin_toggled` 信号 → blockchain 订阅上链 |
@@ -87,13 +87,14 @@ def get_enabled_plugins():
 - 单元测试：get_enabled_plugins DB 优先/回退逻辑、toggle 禁停清单、开关状态持久化
 - 冒烟：admin 登录 → 停用 notice → 菜单/路由收敛 → 重启服务状态保持 → 留痕链通过
 
-## 九、改动文件清单
+## 九、改动文件清单（✅ 已实现）
 
 | 文件 | 动作 |
 |---|---|
-| `plugins/workspace/`（apps/models/views/urls/templates/migrations） | 新增 |
-| `plugin_host/registry.py` | 改 get_enabled_plugins |
+| `plugins/workspace/`（apps/models/views/urls/templates/tests/migrations） | 新增（4 项单测） |
+| `plugin_host/registry.py` | 改 get_enabled_plugins（DB 优先） |
 | `plugin_host/signals.py` | 增 plugin_toggled |
-| `plugins/blockchain/apps.py` | 增订阅 |
+| `plugin_host/middleware.py` | 新增 PluginRouteGuardMiddleware（停用即 404） |
+| `plugins/blockchain/apps.py` | 增订阅 plugin_toggled |
 | `themes/risograph/templates/home.html` | 增入口卡片 |
-| `plugin_host/settings.py` | OA_PLUGINS 增 workspace 条目 |
+| `plugin_host/settings.py` | MIDDLEWARE + OA_PLUGINS 增 workspace 条目 |

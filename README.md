@@ -12,6 +12,7 @@
 - 📢 公告通知：发布 / 置顶 / 已读统计
 - 🕐 考勤打卡：上下班打卡 + 月度统计看板（ECharts）
 - ⛓ 区块链留痕：关键操作上链（SHA-256 哈希链），篡改即断链报警
+- ⚙ 插件开关：工作台运行时启用/禁用插件，即时生效（停用即隐藏菜单+404），操作上链
 - 🔐 RBAC 权限：部门 / 角色 / 权限，按角色动态收敛菜单
 - 🐳 Docker 一键部署：`docker compose up -d`（MySQL8 + Gunicorn + WhiteNoise，跨平台）
 
@@ -99,4 +100,4 @@ Constellatio/
 
 ## 📌 状态
 
-**v1.0 已跑通**（Docker Compose 整合部署：MySQL8 + Gunicorn + WhiteNoise，6 插件全页 + 静态 + 留痕链冒烟通过）
+**v1.1 已跑通**（工作台运行时插件启停：DB 开关即时生效，停用即隐藏+404，操作上链）→ 开发中：v1.2 user 增强 + approval 会签
