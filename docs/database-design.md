@@ -1,7 +1,7 @@
 # 数据库设计文档（插件化）
 
 > 项目：Constellatio —— 基于 Django 的企业办公自动化系统（全栈插件化）
-> 文档版本：v1.9 · 2026-10-21（v1.1 新增 workspace_pluginswitch——11 张业务表；v1.0 部署在 MySQL8 容器内迁移验证通过）
+> 文档版本：v2.0 · 2026-10-21（v1.2 新增 approval_approvalsigner 会签表 + user_department.is_active 软删标志 + user_user.permission_frozen 冻结标志——12 张业务表；v1.1 新增 workspace_pluginswitch）
 > 关联文档：tech-stack-and-architecture.md、constraints-and-acceptance.md、development-guide.md
 
 ---
@@ -26,6 +26,7 @@
 | user | `user_user_roles` | 中间表 | 用户-角色 M2M |
 | approval | `approval_approval` | 业务 | 审批单 |
 | approval | `approval_approvalrecord` | 业务 | 审批留痕 |
+| approval | `approval_approvalsigner` | 业务 | 会签人（v1.2 落地，全部通过才生效） |
 | notice | `notice_announcement` | 业务 | 公告 |
 | notice | `notice_announcementread` | 业务 | 公告已读 |
 | attendance | `attendance_attendance` | 业务 | 考勤记录 |
@@ -33,7 +34,7 @@
 | workspace | `workspace_pluginswitch` | 业务 | 插件运行时开关（v1.1 落地，DB 覆盖静态配置） |
 | — | `auth_permission` 等 | 框架内置 | Django 自带（auth_group / django_session / django_migrations 等） |
 
-业务插件共 **11 张表**；框架内置表不属于任何插件，由 Django 自动管理。
+业务插件共 **12 张表**；框架内置表不属于任何插件，由 Django 自动管理。
 
 ## 三、ER 关系总览
 

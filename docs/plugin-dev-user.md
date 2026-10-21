@@ -1,8 +1,8 @@
 # 插件开发文档：user 增强（部门软/硬删除 + 用户状态机 + 密码二次确认 + 权限层级）
 
 > 关联插件：user（主体）、approval（会签审批扩展）、blockchain（上链）
-> 版本规划：v1.2 · 文档版本：draft-01 · 2026-10-21
-> 状态：**待确认后开发**
+> 版本规划：v1.2 · 文档版本：v1.2 · 2026-10-21
+> 状态：**✅ 已实现并跑通**（18 项单测全绿 + 全链路冒烟：部门创建/修改/软删/硬删会签→物理删除、admin 直接禁用、普通管理员会签禁用（双人全签生效）、超管不可操作、冻结即时短路、6 类操作上链 + 链校验通过）
 
 ## 一、需求清单
 
@@ -16,7 +16,23 @@
    - 启用：管理员直接操作
 4. **权限层级**：admin（超管）权限最高；其他任何用户（含普通管理员）都比 admin 低一级——普通管理员**不能**编辑/冻结/禁用/审批处理超管，超管不受普通管理员审批约束
 
-## 二、权限层级规则（全插件生效）
+## 二、实现对照（✅ 落地差异登记，2026-10-21）
+
+开发中与草案的**实际偏差**（均已在代码中实现，冒烟验证通过）：
+
+| 草案 | 实际实现 | 说明 |
+|---|---|---|
+| 字段 `target_type` / `target_id` | `Approval.biz_id`（单一对象ID） | 会签单通过 `approval_type`（dept_delete/user_disable）区分对象类型，`biz_id` 存部门ID/用户ID |
+| ApprovalSigner 字段 `status`/`acted_at` | `signed`（BOOL）/`signed_at` | 布尔态更简单，`unique_together(approval, signer)` 防重复 |
+| `create_consensus(...)` | `services.start_counter_signature(approval, signers, operator)` | 单已创建后建立会签集合；signers 为空直接 rejected（防御） |
+| 信号 `department_delete_requested` 等 6 个 | `dept_delete_requested / user_disable_requested / counter_signature_approved / dept_deleted / dept_disabled / dept_updated / user_status_changed / user_disabled / password_changed`（9 个） | 拆分更细：`user_status_changed` 统一 启用/冻结/解冻；新增 `dept_updated`/`password_changed`；会签通过回调独立信号 `counter_signature_approved(biz_type, biz_id)` |
+| 会签人=非超管管理员 | 具备权限码的**启用用户（含超管）** | 超管天然具备权限码参与会签，更严格；无会签人则单 rejected |
+| 部门列表"已停用默认隐藏+开关" | 全部显示（含停用徽标） | 更直观，便于硬删发起与恢复 |
+| 路由 `/departments/<id>/soft-delete/` 等 | 部门操作走 `department_list` 单 POST（action 分发） | 减少路由膨胀 |
+
+其余设计（软删语义、冻结短路、层级守卫、密码二次确认、信号总线零 import、blockchain 订阅）与草案一致。
+
+## 三、权限层级规则（全插件生效）
 
 | 层级 | 对象 | 判定 | 普通管理员对其可操作 |
 |---|---|---|---|
@@ -28,7 +44,7 @@
 - 超管操作免审批（直接禁用等）
 - approval 会签审批人中**排除超管参与普通单会签**（审批人为有权限的非超管管理员）
 
-## 三、数据模型变更
+## 四、数据模型变更
 
 ### 3.1 user 插件
 
@@ -98,7 +114,7 @@ user_disabled(user_id, operator_id)                        # user 禁用后 → 
 
 `approval_finished` 信号 kwargs **扩展**：`approval_type, target_type, target_id`（兼容既有订阅方 blockchain，向后兼容）
 
-## 四、跨插件协作时序（零 import，只走信号）
+## 五、跨插件协作时序（零 import，只走信号）
 
 ### 4.1 部门硬删除
 
@@ -131,7 +147,7 @@ user 订阅 approval_finished：dept_delete & approved → 物理删除 Departme
 
 `department_soft_deleted / department_hard_deleted / user_frozen / user_enabled / user_disabled`
 
-## 五、路由（user 插件增补）
+## 六、路由（user 插件增补）
 
 | 路由 | 视图 | 权限 |
 |---|---|---|
@@ -142,19 +158,19 @@ user 订阅 approval_finished：dept_delete & approved → 物理删除 Departme
 | `/plugins/user/users/<int:user_id>/enable/` | user_enable（POST） | user_manage + 层级守卫 |
 | `/plugins/user/users/<int:user_id>/disable/` | user_disable（POST：超管直禁 / 普通管理员走审批） | user_manage + 层级守卫 |
 
-## 六、密码二次确认（forms.py）
+## 七、密码二次确认（forms.py）
 
 - `UserForm` 增 `password_confirm` 字段（PasswordInput）
 - 校验：password 非空时 `password == password_confirm`，否则表单错误
 - 新建与编辑均生效；新建留空仍用默认密码（`constellatio123`），二次确认字段留空跳过
 
-## 七、页面
+## 八、页面
 
 - 部门列表：状态徽标（正常/已停用）+ 操作列（编辑 / 停用 / 删除审批单）；"已停用"部门默认隐藏，页头开关显示
 - 用户列表：状态徽标（正常/已冻结/已禁用）+ 操作列（冻结 / 启用 / 禁用）；超管行操作列禁用提示"最高权限"
 - 审批中心：会签单详情显示各会签人状态；待我审批含会签单
 
-## 八、验收标准
+## 九、验收标准
 
 1. 软删部门：列表立即消失（可切"显示已停用"），上链 `user:department_soft_deleted`，链校验通过
 2. 硬删部门：发起审批单 → 全部有权限管理员通过 → 物理删除 → 上链 `user:department_hard_deleted`；未全通过（任一驳回）不删
@@ -164,14 +180,14 @@ user 订阅 approval_finished：dept_delete & approved → 物理删除 Departme
 6. 层级：普通管理员对 admin 的编辑/冻结/禁用/审批单操作全部被拒
 7. 链完整性校验全程通过
 
-## 九、测试计划
+## 十、测试计划
 
 - user 单测：软删标志、has_perm 冻结短路、层级守卫、密码二次确认
 - approval 单测：会签全通过→approved、任一驳回→rejected、signer 去重、非法重复表态
 - 跨插件联调冒烟：硬删部门全链路（发单→逐人审批→删除→上链→校验）
 - 回归：既有 approval 单审批人流程不受影响
 
-## 十、改动文件清单
+## 十一、改动文件清单（✅ 已实现）
 
 | 文件 | 动作 |
 |---|---|
