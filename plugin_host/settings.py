@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'plugins.attendance',
     'plugins.blockchain',
     'plugins.workspace',
+    'plugins.structure',
 ]
 
 MIDDLEWARE = [
@@ -116,6 +117,7 @@ OA_PLUGINS = [
     {'app': 'plugins.attendance', 'enabled': True},
     {'app': 'plugins.blockchain', 'enabled': True},
     {'app': 'plugins.workspace', 'enabled': True},
+    {'app': 'plugins.structure', 'enabled': True},
 ]
 
 # 默认主题插件（新建 themes/<name>/ + 修改此项即换主题）

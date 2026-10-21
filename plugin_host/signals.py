@@ -24,3 +24,6 @@ dept_updated = Signal()           # 部门修改，携带 dept_id, operator_id
 user_status_changed = Signal()    # 用户启用/冻结/解冻，携带 user_id, status, operator_id
 user_disabled = Signal()          # 用户禁用（直接/会签后），携带 user_id, operator_id
 password_changed = Signal()       # 密码变更，携带 user_id, operator_id
+
+# v1.3 structure 插件信号
+structure_applied = Signal()      # 结构模板应用完成，携带 applied_by_id, dept_created, role_created, user_created

@@ -74,6 +74,12 @@ class BlockchainConfig(AppConfig):
                 plugin='user', action='password_changed',
                 payload=f"user:{kw['user_id']}", operator_id=kw.get('operator_id'))
 
+        def _on_structure_applied(sender, **kw):
+            BlockchainRecord.append(
+                plugin='structure', action='structure_applied',
+                payload=f"+{kw['dept_created']}dept/+{kw['role_created']}role/+{kw['user_created']}user",
+                operator_id=kw.get('applied_by_id'))
+
         from .models import BlockchainRecord
         bus.approval_finished.connect(_on_approval_finished, weak=False)
         bus.notice_published.connect(_on_notice_published, weak=False)
@@ -87,10 +93,11 @@ class BlockchainConfig(AppConfig):
         bus.user_status_changed.connect(_on_user_status_changed, weak=False)
         bus.user_disabled.connect(_on_user_disabled, weak=False)
         bus.password_changed.connect(_on_password_changed, weak=False)
+        bus.structure_applied.connect(_on_structure_applied, weak=False)
 
         register(PluginMeta(
             name='blockchain',
-            version='1.2.0',
+            version='1.3.0',
             menus=[
                 {'label': '留痕链', 'icon': '▣', 'url': '/plugins/blockchain/', 'perm': 'blockchain_view'},
             ],
@@ -99,7 +106,8 @@ class BlockchainConfig(AppConfig):
             signals=['approval_finished', 'notice_published', 'attendance_checked',
                      'user_created', 'user_updated', 'plugin_toggled',
                      'dept_deleted', 'dept_disabled', 'dept_updated',
-                     'user_status_changed', 'user_disabled', 'password_changed'],
+                     'user_status_changed', 'user_disabled', 'password_changed',
+                     'structure_applied'],
             templates='blockchain',
             app=self,
         ))
