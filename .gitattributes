@@ -1,0 +1,5 @@
+# 行尾策略：脚本/配置文件强制 LF（容器内执行必需）
+entrypoint.sh text eol=lf
+docker-compose.yml text eol=lf
+Dockerfile text eol=lf
+*.sh text eol=lf

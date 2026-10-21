@@ -1,0 +1,10 @@
+# 不入镜像
+.git
+venv
+Prompt
+db.sqlite3
+staticfiles
+*.log
+__pycache__
+*.pyc
+.env

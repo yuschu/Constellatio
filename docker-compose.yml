@@ -1,0 +1,47 @@
+# Constellatio 一键部署（MySQL8 + Web，跨平台：Linux/macOS/Windows Docker）
+#
+# 用法：docker compose up -d --build
+# 环境变量可写 .env 覆盖（参考 .env.example）
+
+services:
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-constellatio2026}
+      MYSQL_DATABASE: ${DB_NAME:-constellatio}
+      MYSQL_USER: ${DB_USER:-constellatio}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-constellatio2026}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u${DB_USER:-constellatio}", "-p${DB_PASSWORD:-constellatio2026}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  web:
+    build: .
+    environment:
+      DB_ENGINE: mysql
+      DB_NAME: ${DB_NAME:-constellatio}
+      DB_USER: ${DB_USER:-constellatio}
+      DB_PASSWORD: ${DB_PASSWORD:-constellatio2026}
+      DB_HOST: db
+      DB_PORT: 3306
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-0}
+      SECRET_KEY: ${SECRET_KEY:-django-insecure-compose-default-change-me}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-*}
+      DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME:-admin}
+      DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:-Constellatio@2026}
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-3}
+    command: ["sh", "./entrypoint.sh"]
+    ports:
+      - "${WEB_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  db_data:
