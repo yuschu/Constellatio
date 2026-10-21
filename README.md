@@ -97,8 +97,9 @@ Constellatio/
 | [docs/ai-assisted-development-guide.md](docs/ai-assisted-development-guide.md) | 规范 | AI 辅助开发行为规范、迭代规范 |
 | [docs/project-overview.md](docs/project-overview.md) | 说明 | 项目说明、使用指南、插件开发示例 |
 | [docs/plugin-dev-workspace.md](docs/plugin-dev-workspace.md) | 插件开发 | workspace：工作台可启用/禁用功能（v1.1，待确认） |
-| [docs/plugin-dev-user.md](docs/plugin-dev-user.md) | 插件开发 | user 增强：部门软/硬删除、用户状态机、密码二次确认、权限层级（v1.2，待确认） |
-| [docs/plugin-dev-language.md](docs/plugin-dev-language.md) | 插件开发 | language：中英文切换（v1.3，待确认） |
+| [docs/plugin-dev-user.md](docs/plugin-dev-user.md) | 插件开发 | user 增强：部门软/硬删除、用户状态机、密码二次确认、权限层级（v1.2 已实现） |
+| [docs/plugin-dev-structure.md](docs/plugin-dev-structure.md) | 插件开发 | structure：职能制组织架构模板（角色+用户模板一键应用）（v1.3，待确认） |
+| [docs/plugin-dev-language.md](docs/plugin-dev-language.md) | 插件开发 | language：中英文切换（v1.4，待确认） |
 
 ## 📌 状态
 
