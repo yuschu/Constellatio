@@ -108,7 +108,7 @@ LOGOUT_REDIRECT_URL = '/plugins/auth/login/'
 OA_PLUGINS = [
     {'app': 'plugins.auth', 'enabled': True},
     {'app': 'plugins.user', 'enabled': True},
-    {'app': 'plugins.approval', 'enabled': False},
+    {'app': 'plugins.approval', 'enabled': True},
     {'app': 'plugins.notice', 'enabled': False},
     {'app': 'plugins.attendance', 'enabled': False},
     {'app': 'plugins.blockchain', 'enabled': False},

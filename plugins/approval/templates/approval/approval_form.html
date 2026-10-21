@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}发起审批 · Constellatio{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'approval:approval_list' %}" class="r-offset-hover">← 返回</a>
+  <h2 class="mb-0">发起审批</h2>
+</div>
+<div class="r-card position-relative" style="max-width:560px;">
+  <span class="r-register-mark"></span>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    <div class="mb-3">
+      <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">类型</label>
+      <select name="approval_type" class="r-input">
+        <option value="leave">请假</option>
+        <option value="expense">报销</option>
+        <option value="seal">用章</option>
+      </select>
+    </div>
+    <div class="mb-3">
+      <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">标题</label>
+      <input class="r-input" type="text" name="title" required placeholder="如：年假 3 天">
+    </div>
+    <div class="mb-3">
+      <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">内容</label>
+      <textarea class="r-input" name="content" rows="4" placeholder="说明事由"></textarea>
+    </div>
+    <div class="mb-3">
+      <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">金额（报销填）</label>
+      <input class="r-input" type="number" step="0.01" name="amount" placeholder="0.00">
+    </div>
+    <div class="mb-3">
+      <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">审批人</label>
+      <select name="approver" class="r-input" required>
+        {% for u in users %}
+        <option value="{{ u.id }}">{{ u.last_name|default:u.username }}（{{ u.username }}）</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="r-btn" type="submit">提交审批</button>
+  </form>
+</div>
+{% endblock %}
