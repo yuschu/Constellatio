@@ -2,7 +2,7 @@
 
 > 项目：Constellatio —— 基于 Django 的企业办公自动化系统（全栈插件化）
 > 适用对象：项目开发人员
-> 文档版本：v1.6 · 2026-10-21
+> 文档版本：v1.7 · 2026-10-21
 > 前置阅读：tech-stack-and-architecture.md、constraints-and-acceptance.md
 
 ---
@@ -507,6 +507,8 @@ def monthly_stats(request):
 
 ### 4.5 blockchain 插件（操作留痕上链）
 
+> ✅ **已实现（v0.6.0）**：哈希链自动上链 + 篡改检测 + 4 项单测。
+
 ```python
 # plugins/blockchain/models.py —— 哈希链：每条基于上一条 hash 计算本条 hash，防篡改
 import hashlib
@@ -514,7 +516,8 @@ from django.db import models
 from django.conf import settings
 
 
-class Record(models.Model):
+class BlockchainRecord(models.Model):
+    """操作留痕链表 blockchain_record（显式 db_table 对齐数据库设计）。"""
     plugin = models.CharField(max_length=50)            # 来源插件
     action = models.CharField(max_length=50)            # 操作类型
     target_type = models.CharField(max_length=50, blank=True)
@@ -524,6 +527,10 @@ class Record(models.Model):
     prev_hash = models.CharField(max_length=64, default='0' * 64)  # 创世块前哈希
     record_hash = models.CharField(max_length=64, unique=True)     # 本条哈希
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'blockchain_record'
+        permissions = [('blockchain_view', '查看留痕'), ('blockchain_verify', '链完整性校验')]
 
     @classmethod
     def append(cls, plugin, action, payload, operator=None, **kw):
@@ -546,9 +553,9 @@ class Record(models.Model):
         return True, None
 ```
 
-- 订阅信号：`apps.py ready()` 中 `bus.approval_finished.connect(...)`、`bus.attendance_checked.connect(...)` 等，回调里 `Record.append(plugin='approval', action='finished', payload=f'{approval_id}:{result}')` —— **只订阅，不反向依赖任何业务插件**
+- 订阅信号：`apps.py ready()` 中 connect `approval_finished` / `notice_published` / `attendance_checked` / `user_created` / `user_updated` 五个信号，回调 `BlockchainRecord.append(...)` —— **只订阅，不反向依赖任何业务插件**
 - 权限：`blockchain_view`（查看留痕）、`blockchain_verify`（链完整性校验）
-- 校验入口：`Record.verify_chain()` → 页面显示"链完整"或"第 N 条被篡改"
+- 校验入口：`BlockchainRecord.verify_chain()` → 页面显示"链完整"或"第 N 条被篡改"
 
 ## 五、前端开发规范
 
