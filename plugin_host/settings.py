@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'plugins.notice',
     'plugins.attendance',
     'plugins.blockchain',
+    'plugins.workspace',
 ]
 
 MIDDLEWARE = [
@@ -48,6 +49,7 @@ MIDDLEWARE = [
     'whitenoise.middleware.WhiteNoiseMiddleware',   # 容器内静态托管（无需 nginx）
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'plugin_host.middleware.PluginRouteGuardMiddleware',  # 插件运行时启停：停用即 404
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -113,6 +115,7 @@ OA_PLUGINS = [
     {'app': 'plugins.notice', 'enabled': True},
     {'app': 'plugins.attendance', 'enabled': True},
     {'app': 'plugins.blockchain', 'enabled': True},
+    {'app': 'plugins.workspace', 'enabled': True},
 ]
 
 # 默认主题插件（新建 themes/<name>/ + 修改此项即换主题）

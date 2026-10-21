@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}插件开关 · Constellatio{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">插件开关</h2>
+  <span class="r-badge">workspace_manage · 即时生效</span>
+</div>
+<div class="r-card">
+  <table class="r-table">
+    <thead>
+      <tr><th>插件</th><th>版本</th><th>菜单数</th><th>状态</th><th>操作</th></tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td>{{ row.meta.name }}</td>
+        <td>{{ row.meta.version }}</td>
+        <td>{{ row.meta.menus|length }}</td>
+        <td>
+          {% if row.enabled %}<span class="r-badge">启用</span>{% else %}<span class="r-badge">停用</span>{% endif %}
+        </td>
+        <td>
+          {% if row.protected %}
+            <span class="text-muted" style="font-size:.8rem;">系统必需</span>
+          {% elif row.enabled %}
+            <form method="post" action="{% url 'workspace:switch_toggle' row.key %}" class="d-inline">
+              {% csrf_token %}
+              <input type="hidden" name="enabled" value="0">
+              <button class="r-btn" type="submit">停用</button>
+            </form>
+          {% else %}
+            <form method="post" action="{% url 'workspace:switch_toggle' row.key %}" class="d-inline">
+              {% csrf_token %}
+              <input type="hidden" name="enabled" value="1">
+              <button class="r-btn" type="submit">启用</button>
+            </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="text-muted">暂无插件</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

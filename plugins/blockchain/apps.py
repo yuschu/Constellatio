@@ -35,23 +35,30 @@ class BlockchainConfig(AppConfig):
                 plugin='user', action='user_updated',
                 payload=f"user:{kw['user_id']}")
 
+        def _on_plugin_toggled(sender, **kw):
+            BlockchainRecord.append(
+                plugin='workspace', action='plugin_toggled',
+                payload=f"{kw['app_key']}:{kw['enabled']}",
+                operator_id=kw.get('operator_id'))
+
         from .models import BlockchainRecord
         bus.approval_finished.connect(_on_approval_finished, weak=False)
         bus.notice_published.connect(_on_notice_published, weak=False)
         bus.attendance_checked.connect(_on_attendance_checked, weak=False)
         bus.user_created.connect(_on_user_created, weak=False)
         bus.user_updated.connect(_on_user_updated, weak=False)
+        bus.plugin_toggled.connect(_on_plugin_toggled, weak=False)
 
         register(PluginMeta(
             name='blockchain',
-            version='0.6.0',
+            version='1.1.0',
             menus=[
                 {'label': '留痕链', 'icon': '▣', 'url': '/plugins/blockchain/', 'perm': 'blockchain_view'},
             ],
             permissions=['blockchain_view', 'blockchain_verify'],
             urls='plugins.blockchain.urls',
             signals=['approval_finished', 'notice_published',
-                     'attendance_checked', 'user_created', 'user_updated'],
+                     'attendance_checked', 'user_created', 'user_updated', 'plugin_toggled'],
             templates='blockchain',
             app=self,
         ))

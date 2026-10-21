@@ -33,15 +33,26 @@ def register(meta: PluginMeta):
 
 
 def get_enabled_plugins():
-    """按 OA_PLUGINS 顺序返回 (name, meta) 列表（仅已启用且已注册）。"""
+    """按 OA_PLUGINS 顺序返回 (name, meta) 列表。
+
+    workspace 插件提供 DB 运行时开关：有记录以 DB 为准（即时生效），
+    无记录回退静态配置；表未迁移/插件停用时回退静态配置。
+    """
+    switches = {}
+    try:
+        from plugins.workspace.models import PluginSwitch
+        switches = {s.app_key: s.enabled for s in PluginSwitch.objects.all()}
+    except Exception:          # 表未迁移 / workspace 插件停用
+        pass
     result = []
     for item in getattr(settings, 'OA_PLUGINS', []):
-        if not item.get('enabled'):
+        key = item['app'].rsplit('.', 1)[-1]
+        enabled = switches.get(key, item.get('enabled', True))   # DB 优先
+        if not enabled:
             continue
-        name = item['app'].rsplit('.', 1)[-1]
-        meta = PLUGIN_REGISTRY.get(name)
+        meta = PLUGIN_REGISTRY.get(key)
         if meta:
-            result.append((name, meta))
+            result.append((key, meta))
     return result
 
 
