@@ -165,4 +165,7 @@ OA_PLUGINS = [
 - [ ] 需求规格说明书
 - [x] 数据库设计文档（ER 图）—— 已完成：`docs/database-design.md`
 - [x] 整合部署 v1.0（Docker Compose：MySQL8 + Gunicorn + WhiteNoise）—— 2026-10-21 完成并冒烟通过
+- [ ] v1.1 workspace 插件（工作台可启用/禁用功能，运行时开关）—— 开发文档：`docs/plugin-dev-workspace.md`
+- [ ] v1.2 user 增强（部门软/硬删除+修改、用户状态机、密码二次确认、权限层级）+ approval 会签扩展 —— 开发文档：`docs/plugin-dev-user.md`
+- [ ] v1.3 language 插件（默认中英文切换）—— 开发文档：`docs/plugin-dev-language.md`
 - [ ] 测试报告
