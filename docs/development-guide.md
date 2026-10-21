@@ -474,8 +474,21 @@ class Record(models.Model):
 ## 五、前端开发规范
 
 - 页面一律继承 `plugin_host/templates/base.html`，插件只写 `{% block content %}`
-- UI 组件用 Bootstrap 5（栅格/卡片/表格/表单），禁止自造样式体系
+- 布局栅格/表单结构用 Bootstrap 5；**视觉组件统一用 Risograph 主题类**（`r-` 前缀，见下方 5.1），禁止自造体系外样式
 - ECharts 通过 CDN 引入，图表统一封装：
+
+### 5.1 主题：Risograph 印刷风（默认视觉基座）
+
+- 基座文件：`plugin_host/static/plugin_host/css/risograph.css`（页面统一引入）
+- 核心规则：
+  - 有限色板（2-3 主色）：纸白 `#fffbf0` / 墨黑 `#1a1a1a` / 荧光粉 `#ff6b9d` / 蓝 `#2563eb` / 荧光橙 `#ff8a00` / 绿 `#22c55e`
+  - 硬边双向阴影（零模糊 offset shadow），hover 双版套印错位：`6px 6px 0 蓝, -4px -4px 0 橙`
+  - 圆角仅 `2px`（rounded-sm）；粗体等宽字体（monospace）
+  - 扁平色块无渐变；颗粒/半调网点纹理（`.r-grain` / `.r-halftone`）
+  - 动效全部 `duration-100ms linear`（机械印刷感），禁 `ease-in-out` / opacity 过渡
+- 绝对禁止：`rounded-lg/xl/2xl/full`、`bg-gradient-*`、`shadow-md/lg/xl`、`backdrop-blur`、单方向阴影
+- 组件类：`.r-btn`（按钮）/ `.r-card` / `.r-input` / `.r-table` / `.r-nav` / `.r-badge` / `.r-register-mark`（套印规线角标）
+- 绿色角标（registration mark）：rest 偏移 `translate(8px,-8px)`，hover 归位 `(0,0)`
 
 ```html
 <!-- attendance/templates/attendance/stats.html 片段 -->

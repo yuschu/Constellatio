@@ -1,0 +1,240 @@
+/* ============================================================
+   Constellatio · Risograph 主题（主题 UI 插件 · 默认视觉基座）
+   风格来源：Prompt/risograph-hard-prompt.md（本地文件，不入仓库）
+   设计原则：有限色板(2-3 主色) / 套印错位(offset shadow) /
+             粗体等宽字体 / 扁平色块无渐变 / 颗粒纹理 /
+             瞬时印刷动效(duration-100 ease-linear)
+   绝对禁止：渐变 / 圆滑圆角 / 模糊阴影 / 单方向阴影 /
+             glassmorphism / opacity 过渡 hover / ease-in-out
+   ============================================================ */
+
+/* ---------- 1. Design Tokens ---------- */
+:root {
+  /* 色板（有限色，最多 3-4 色同屏） */
+  --r-paper:      #fffbf0;   /* 纸白 · 主背景 */
+  --r-paper-2:    #f5f0e6;   /* 辅纸 · 页脚/辅背景 */
+  --r-ink:        #1a1a1a;   /* 墨黑 · 正文/边框 */
+  --r-pink:       #ff6b9d;   /* 荧光粉 · 主色 1 */
+  --r-blue:       #2563eb;   /* 蓝 · 主色 2 */
+  --r-orange:     #ff8a00;   /* 荧光橙 · 主色 3 */
+  --r-green:      #22c55e;   /* 绿 · 角标/成功 */
+
+  /* 字体：粗体等宽 */
+  --r-font: ui-monospace, SFMono-Regular, "Courier New", Consolas, monospace;
+
+  /* 硬边阴影（零模糊） */
+  --r-shadow-sm: 2px 2px 0 var(--r-pink);
+  --r-shadow-md: 3px 3px 0 var(--r-pink);
+  --r-shadow-lg: 4px 4px 0 var(--r-pink);
+  --r-shadow-blue: 3px 3px 0 var(--r-blue);
+  --r-shadow-orange: 3px 3px 0 var(--r-orange);
+
+  /* 圆角：仅极小圆角（rounded-sm ≈ 2px） */
+  --r-radius: 2px;
+
+  /* 动效：机械印刷机，瞬时切换 */
+  --r-ease: linear;
+  --r-dur: 100ms;
+}
+
+/* ---------- 2. 基础 ---------- */
+body {
+  background: var(--r-paper);
+  color: var(--r-ink);
+  font-family: var(--r-font);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--r-font);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+a { color: var(--r-blue); text-decoration: none; }
+
+/* ---------- 3. 组件 ---------- */
+
+/* 按钮：flat + 硬边 offset 阴影；hover 双向套印错位；active 套印错觉 */
+.r-btn {
+  display: inline-block;
+  padding: 0.55rem 1.2rem;
+  font-family: var(--r-font);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.875rem;
+  border: 2px solid var(--r-ink);
+  border-radius: var(--r-radius);
+  background: var(--r-pink);
+  color: #fff;
+  box-shadow: var(--r-shadow-blue);
+  transition: all var(--r-dur) var(--r-ease);
+  cursor: pointer;
+}
+.r-btn:hover {
+  box-shadow: 6px 6px 0 var(--r-blue), -4px -4px 0 var(--r-orange);
+  transform: translate(2px, 2px);
+}
+.r-btn:active {
+  background: var(--r-blue);           /* 两层油墨在接触点完全重叠 */
+  transform: translate(3px, 3px);
+  box-shadow: none;
+}
+.r-btn:focus-visible {
+  outline: 2px solid var(--r-ink);
+  outline-offset: 2px;
+}
+.r-btn--blue { background: var(--r-blue); box-shadow: 3px 3px 0 var(--r-pink); }
+.r-btn--plain { background: var(--r-paper); color: var(--r-ink); box-shadow: 3px 3px 0 var(--r-orange); }
+
+/* 卡片：粗边框 + 硬边彩色阴影 */
+.r-card {
+  background: var(--r-paper);
+  border: 2px solid var(--r-ink);
+  border-radius: var(--r-radius);
+  box-shadow: var(--r-shadow-lg);
+  padding: 1.25rem;
+}
+.r-card + .r-card { margin-top: 1rem; }
+
+/* 输入框 */
+.r-input, .r-select, .r-textarea {
+  font-family: var(--r-font);
+  font-size: 0.875rem;
+  background: var(--r-paper);
+  color: var(--r-ink);
+  border: 2px solid var(--r-ink);
+  border-radius: var(--r-radius);
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+}
+.r-input:focus, .r-select:focus, .r-textarea:focus {
+  outline: none;
+  box-shadow: var(--r-shadow-sm);
+}
+.r-input::placeholder { color: rgba(26, 26, 26, 0.5); }
+
+/* 表格：印刷表格线 */
+.r-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.r-table th, .r-table td {
+  border: 2px solid var(--r-ink);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+.r-table th {
+  background: var(--r-pink);
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.75rem;
+}
+.r-table tr:nth-child(even) td { background: var(--r-paper-2); }
+
+/* 导航条 */
+.r-nav {
+  background: var(--r-paper);
+  border: 2px solid var(--r-ink);
+  border-left: none;
+  border-right: none;
+}
+.r-nav a {
+  color: var(--r-ink);
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  padding: 0.25rem 0;
+  border-bottom: 2px solid transparent;
+  transition: all var(--r-dur) var(--r-ease);
+}
+.r-nav a:hover {
+  border-bottom-color: var(--r-pink);
+  box-shadow: 3px 3px 0 var(--r-pink);
+}
+
+/* 徽标/标签 */
+.r-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.1rem 0.5rem;
+  border: 2px solid var(--r-ink);
+  border-radius: var(--r-radius);
+  background: var(--r-paper);
+}
+.r-badge--blue  { background: var(--r-blue);  color: #fff; }
+.r-badge--pink  { background: var(--r-pink);  color: #fff; }
+.r-badge--green { background: var(--r-green); color: #fff; }
+.r-badge--orange{ background: var(--r-orange);color: #fff; }
+
+/* 绿色套印规线角标：rest 偏移，hover 归位（印刷机完成一次循环） */
+.r-register-mark {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--r-green);
+  transform: translate(8px, -8px);
+  transition: transform var(--r-dur) var(--r-ease);
+}
+.group:hover .r-register-mark { transform: translate(0, 0); }
+
+/* ---------- 4. 工具类 ---------- */
+.r-shadow-sm  { box-shadow: var(--r-shadow-sm); }
+.r-shadow-md  { box-shadow: var(--r-shadow-md); }
+.r-shadow-lg  { box-shadow: var(--r-shadow-lg); }
+.r-shadow-blue { box-shadow: var(--r-shadow-blue); }
+
+/* hover 双向套印错位（两块油墨版：右下蓝版 + 左上橙版） */
+.r-offset-hover { transition: all var(--r-dur) var(--r-ease); }
+.r-offset-hover:hover {
+  box-shadow: 6px 6px 0 var(--r-blue), -4px -4px 0 var(--r-orange);
+  transform: translate(2px, 2px);
+}
+
+/* 背景色 */
+.r-bg-paper   { background: var(--r-paper); }
+.r-bg-paper-2 { background: var(--r-paper-2); }
+.r-bg-pink    { background: var(--r-pink); }
+.r-bg-blue    { background: var(--r-blue); }
+.r-bg-orange  { background: var(--r-orange); }
+.r-bg-green   { background: var(--r-green); }
+.r-text-ink   { color: var(--r-ink); }
+.r-text-white { color: #fff; }
+.r-text-muted { color: rgba(26, 26, 26, 0.6); }
+
+/* ---------- 5. 颗粒/网点纹理（纸面印刷感） ---------- */
+.r-grain {
+  position: relative;
+}
+.r-grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.06;
+  background-image: radial-gradient(rgba(0,0,0,0.7) 1px, transparent 1px);
+  background-size: 3px 3px;
+}
+
+/* 半调网点（大面积色块用） */
+.r-halftone {
+  background-image: radial-gradient(rgba(0,0,0,0.12) 1px, transparent 1px);
+  background-size: 4px 4px;
+}
+
+/* ---------- 6. 动效与可访问性 ---------- */
+/* 所有过渡：瞬时印刷（机械感），禁止 ease-in-out / opacity 渐变 */
+* { transition-timing-function: var(--r-ease); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+  .r-offset-hover:hover { transform: none; }
+}
