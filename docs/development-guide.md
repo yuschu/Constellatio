@@ -2,7 +2,7 @@
 
 > 项目：Constellatio —— 基于 Django 的企业办公自动化系统（全栈插件化）
 > 适用对象：项目开发人员
-> 文档版本：v1.0 · 2026-10-21
+> 文档版本：v1.1 · 2026-10-21
 > 前置阅读：tech-stack-and-architecture.md、constraints-and-acceptance.md
 
 ---
@@ -19,8 +19,9 @@
 | 3 approval | 审批状态机 + 审批留痕 | 发起→审批→归档闭环跑通 |
 | 4 notice | 公告发布 / 置顶 / 已读 | 已读统计正确 |
 | 5 attendance | 打卡防重 + 月度统计看板（ECharts） | 看板数据与打卡记录一致 |
-| 6 整合 | Docker Compose 部署 + 可插拔三项验证 | 演示全部通过 |
-| 7 测试发布 | 单元测试 + 测试报告 + 发布上线 | 验收标准全过 |
+| 6 blockchain | 操作留痕上链（SHA-256 哈希链）+ 链完整性校验 | 篡改一条链记录 → 校验报警 |
+| 7 整合 | Docker Compose 部署 + 可插拔三项验证 | 演示全部通过 |
+| 8 测试发布 | 单元测试 + 测试报告 + 发布上线 | 验收标准全过 |
 
 ### 每阶段开发循环（一次 commit）
 
@@ -30,12 +31,13 @@
 
 ### Git 提交流程
 
-- 每阶段一个 commit：`feat(plugin_host)` / `feat(user)` / `feat(approval)` / `feat(notice)` / `feat(attendance)` / `feat(deploy)`
-- 完成一阶段打 tag：`v0.1`（容器）→ `v0.2`（auth+user）→ `v0.3`（approval）→ `v0.4`（notice）→ `v0.5`（attendance）→ `v1.0`（整合完成）
+- 每阶段一个 commit：`feat(plugin_host)` / `feat(user)` / `feat(approval)` / `feat(notice)` / `feat(attendance)` / `feat(blockchain)` / `feat(deploy)`
+- 完成一阶段打 tag：`v0.1`（容器）→ `v0.2`（auth+user）→ `v0.3`（approval）→ `v0.4`（notice）→ `v0.5`（attendance）→ `v0.6`（blockchain）→ `v1.0`（整合完成）
 
 ### 关键依赖规则
 
-- user 插件是地基：必须最先完成（approval/notice/attendance 都要引用用户模型）
+- user 插件是地基：必须最先完成（approval/notice/attendance/blockchain 都要引用用户模型）
+- blockchain 插件订阅全局信号，负责把关键操作上链；被订阅方不感知它存在，停用 blockchain 不影响任何业务
 - 插件间交互只走 signals，禁止直接 import 对方模型
 - 每阶段结束做"可插拔自检"：停掉刚完成的插件，确认系统照常跑、导航消失
 
@@ -74,6 +76,7 @@ python manage.py startapp user plugins\user
 python manage.py startapp approval plugins\approval
 python manage.py startapp notice plugins\notice
 python manage.py startapp attendance plugins\attendance
+python manage.py startapp blockchain plugins\blockchain
 ```
 
 ### 1.3 依赖清单 requirements.txt
@@ -194,6 +197,8 @@ from django.dispatch import Signal
 approval_finished = Signal()      # 审批结束（发起/通过/驳回），携带 approval_id, result
 notice_published = Signal()       # 公告发布，携带 announcement_id
 attendance_checked = Signal()     # 打卡成功，携带 user_id, date
+# 各业务插件在"关键操作"处 send() 上述信号；
+# blockchain 插件统一订阅这些信号，把操作写入哈希链留痕（不反向依赖任何业务插件）
 ```
 
 ## 三、插件开发规范（以 approval 为例）
@@ -420,6 +425,51 @@ def monthly_stats(request):
     }
     return JsonResponse(data)   # 前端 ECharts 直接消费
 ```
+
+### 4.5 blockchain 插件（操作留痕上链）
+
+```python
+# plugins/blockchain/models.py —— 哈希链：每条基于上一条 hash 计算本条 hash，防篡改
+import hashlib
+from django.db import models
+from django.conf import settings
+
+
+class Record(models.Model):
+    plugin = models.CharField(max_length=50)            # 来源插件
+    action = models.CharField(max_length=50)            # 操作类型
+    target_type = models.CharField(max_length=50, blank=True)
+    target_id = models.BigIntegerField(null=True, blank=True)
+    operator = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
+    payload_hash = models.CharField(max_length=64)      # 内容 SHA-256
+    prev_hash = models.CharField(max_length=64, default='0' * 64)  # 创世块前哈希
+    record_hash = models.CharField(max_length=64, unique=True)     # 本条哈希
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    @classmethod
+    def append(cls, plugin, action, payload, operator=None, **kw):
+        """追加一条：record_hash = SHA256(prev_hash + payload_hash)"""
+        last = cls.objects.order_by('-id').first()
+        prev = last.record_hash if last else '0' * 64
+        payload_hash = hashlib.sha256(payload.encode('utf-8')).hexdigest()
+        record_hash = hashlib.sha256((prev + payload_hash).encode('utf-8')).hexdigest()
+        return cls.objects.create(plugin=plugin, action=action, payload_hash=payload_hash,
+                                  prev_hash=prev, record_hash=record_hash, operator=operator, **kw)
+
+    @classmethod
+    def verify_chain(cls):
+        """从创世逐条重算：任一条不符即被篡改，返回 (ok, 断裂处 id)"""
+        prev = '0' * 64
+        for r in cls.objects.order_by('id'):
+            if r.prev_hash != prev or r.record_hash != hashlib.sha256((prev + r.payload_hash).encode('utf-8')).hexdigest():
+                return False, r.id
+            prev = r.record_hash
+        return True, None
+```
+
+- 订阅信号：`apps.py ready()` 中 `bus.approval_finished.connect(...)`、`bus.attendance_checked.connect(...)` 等，回调里 `Record.append(plugin='approval', action='finished', payload=f'{approval_id}:{result}')` —— **只订阅，不反向依赖任何业务插件**
+- 权限：`blockchain_view`（查看留痕）、`blockchain_verify`（链完整性校验）
+- 校验入口：`Record.verify_chain()` → 页面显示"链完整"或"第 N 条被篡改"
 
 ## 五、前端开发规范
 

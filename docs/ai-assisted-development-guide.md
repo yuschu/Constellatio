@@ -1,7 +1,7 @@
 # AI 辅助开发规范
 
 > 项目：Constellatio —— 基于 Django 的企业办公自动化系统（全栈插件化）
-> 文档版本：v1.0 · 2026-10-21
+> 文档版本：v1.1 · 2026-10-21
 > 适用范围：本项目开发过程中所有 AI 辅助工具（豆包 / Copilot / Cursor 等）的使用行为
 > 关联文档：constraints-and-acceptance.md（硬约束）、development-guide.md（开发规范）
 
@@ -74,6 +74,7 @@
 | v0.3.0 | approval 审批中心 | 发起→审批→归档闭环 |
 | v0.4.0 | notice 公告 | 已读统计正确 |
 | v0.5.0 | attendance 考勤 | 看板数据正确 |
+| v0.6.0 | blockchain 留痕 | 篡改检测报警 |
 | v1.0.0 | 整合 + 部署 + 发布 | 验收标准全过 |
 
 ### 7.2 标准迭代循环（每版本）

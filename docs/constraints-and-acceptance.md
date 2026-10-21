@@ -2,7 +2,7 @@
 
 > 项目：《基于 Django 的企业办公自动化系统的设计与实现》
 > 设计思想：万物皆可插件（全栈插件化）
-> 文档版本：v1.0 · 2026-10-21
+> 文档版本：v1.1 · 2026-10-21
 > 适用范围：本项目全部设计、开发、测试、文档活动
 
 ---
@@ -20,7 +20,7 @@
 ## 二、架构约束（万物皆可插件）
 
 1. **容器唯一固定**：plugin_host（插件注册表/自动发现/统一外壳/信号总线/配置中心）是系统唯一不可替换核心
-2. **业务全插件化**：auth、user、approval、notice、attendance 全部为插件，无"不可拔业务模块"
+2. **业务全插件化**：auth、user、approval、notice、attendance、blockchain 全部为插件，无"不可拔业务模块"
 3. **基础设施可插拔**：数据库后端、模板引擎、主题 UI、图表引擎、认证后端均通过 Django 官方机制可切换
 4. **插件契约强制**：每个插件必须实现 PluginMeta（name/version/menus/permissions/urls/signals/templates/models），缺一不可
 5. **插件间解耦**：跨插件通信只走 signals，**禁止插件间直接 import 对方 models/views**
@@ -28,7 +28,7 @@
 
 ## 三、功能边界
 
-### 必做（4 个业务插件 + 容器）
+### 必做（5 个业务插件 + 容器）
 
 | 插件 | 功能范围 |
 |---|---|
@@ -37,6 +37,7 @@
 | approval | 请假/报销/用章三类审批、状态机流转、审批记录留痕、我的申请/我的待办 |
 | notice | 公告发布、置顶、已读标记、公告列表/详情 |
 | attendance | 上下班打卡、打卡记录、月度统计（ECharts 看板） |
+| blockchain | 操作留痕上链（订阅全局信号写入哈希链）、链完整性校验、留痕查询 |
 
 ### 必不做（超出当前版本范围，列入 Roadmap）
 
@@ -55,11 +56,12 @@
 ## 五、验收标准
 
 ### 功能验收
-- [ ] 5 个插件（auth/user/approval/notice/attendance）全部可用，CRUD 完整
+- [ ] 6 个插件（auth/user/approval/notice/attendance/blockchain）全部可用，CRUD 完整
 - [ ] 审批流：发起→审批→通过/驳回→归档→留痕可查，状态机正确
 - [ ] 公告：发布/置顶/已读统计正确
 - [ ] 考勤：打卡去重、月度统计与 ECharts 看板数据一致
 - [ ] RBAC：不同角色登录看到不同菜单/操作，越权访问被拦截
+- [ ] 区块链留痕：审批/公告/考勤关键操作自动上链；手动篡改一条链记录 → 完整性校验报警
 
 ### 架构验收（演示项）
 - [ ] 从 `OA_PLUGINS` 停用 approval → 导航消失、系统照常运行
@@ -78,7 +80,7 @@
 - **Python**：PEP 8，代码注释中文，函数/类有 docstring
 - **Django**：MVT 分层，业务逻辑放 views/services，禁止在模板里写复杂逻辑
 - **数据库**：模型迁移用 `makemigrations`/`migrate` 管理，禁止手改表
-- **命名**：插件目录小写（auth/user/approval/notice/attendance），类名驼峰，URL 前缀 `/plugins/<name>/`
+- **命名**：插件目录小写（auth/user/approval/notice/attendance/blockchain），类名驼峰，URL 前缀 `/plugins/<name>/`
 - **Git**：提交信息格式 `类型(范围): 描述`（feat/fix/docs/refactor），每功能一个提交
 - **测试**：核心逻辑（审批状态机、RBAC）至少写单元测试
 
@@ -101,4 +103,5 @@
 | 5 | approval 插件 | 审批闭环跑通 |
 | 6 | notice 插件 | 公告已读闭环跑通 |
 | 7 | attendance 插件 + 看板 | 统计正确 |
-| 8 | 整合联调 + 测试 + Docker + 发布 | 三项验收全过 |
+| 8 | blockchain 插件 + 链校验 | 篡改检测报警 |
+| 9 | 整合联调 + 测试 + Docker + 发布 | 三项验收全过 |

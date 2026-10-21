@@ -1,7 +1,7 @@
 # 数据库设计文档（插件化）
 
 > 项目：Constellatio —— 基于 Django 的企业办公自动化系统（全栈插件化）
-> 文档版本：v1.0 · 2026-10-21
+> 文档版本：v1.1 · 2026-10-21
 > 关联文档：tech-stack-and-architecture.md、constraints-and-acceptance.md、development-guide.md
 
 ---
@@ -29,9 +29,10 @@
 | notice | `notice_announcement` | 业务 | 公告 |
 | notice | `notice_announcementread` | 业务 | 公告已读 |
 | attendance | `attendance_attendance` | 业务 | 考勤记录 |
+| blockchain | `blockchain_record` | 业务 | 操作留痕链（哈希链，防篡改） |
 | — | `auth_permission` 等 | 框架内置 | Django 自带（auth_group / django_session / django_migrations 等） |
 
-业务插件共 **9 张表**；框架内置表不属于任何插件，由 Django 自动管理。
+业务插件共 **10 张表**；框架内置表不属于任何插件，由 Django 自动管理。
 
 ## 三、ER 关系总览
 
@@ -54,6 +55,7 @@
      └─────────────────┘
     user 1:N notice_announcement 1:N notice_announcementread
     user 1:N attendance_attendance
+    user 1:N blockchain_record（操作人 operator）
 ```
 
 - 部门 1—N 用户；用户 M—N 角色；角色 M—N 权限（框架内置表）
@@ -181,7 +183,28 @@ UNIQUE(announcement_id, user_id) —— 一人一篇只记一次
 
 UNIQUE(user_id, date) —— 一天一卡防重复
 
-### 4.5 框架内置表（不属于任何插件）
+### 4.5 blockchain 插件（plugins/blockchain）
+
+**blockchain_record（操作留痕链）** —— 哈希链防篡改审计
+
+| 字段 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| id | BIGINT | PK | 主键 |
+| plugin | VARCHAR(50) | NOT NULL | 来源插件（approval / notice / attendance / user） |
+| action | VARCHAR(50) | NOT NULL | 操作类型（approval_finished / attendance_checked / …） |
+| target_type | VARCHAR(50) | NULL | 目标对象类型 |
+| target_id | BIGINT | NULL | 目标对象 ID |
+| operator_id | FK user_user | NULL, ON DELETE SET NULL | 操作人 |
+| payload_hash | CHAR(64) | NOT NULL | 内容哈希（SHA-256） |
+| prev_hash | CHAR(64) | NOT NULL | 前一条记录哈希（创世 = 64 个 0） |
+| record_hash | CHAR(64) | NOT NULL, UNIQUE | 本条哈希 = SHA256(prev_hash + payload_hash + created_at) |
+| created_at | DATETIME | NOT NULL | 上链时间 |
+
+索引：(prev_hash) UNIQUE、(record_hash) UNIQUE、(plugin, action)
+
+链式规则：每条记录按 `prev_hash → record_hash` 单向串链；校验时从创世逐条重算，任一条被篡改则后续全部断链报警。
+
+### 4.6 框架内置表（不属于任何插件）
 
 `django_migrations`、`auth_permission`、`auth_group`、`auth_group_permissions`、`django_content_type`、`django_session`、`django_admin_log` —— 由 Django 自动创建，不在插件职责内。
 
@@ -202,6 +225,7 @@ python manage.py makemigrations user
 python manage.py makemigrations approval
 python manage.py makemigrations notice
 python manage.py makemigrations attendance
+python manage.py makemigrations blockchain
 
 # 应用全部迁移
 python manage.py migrate
@@ -215,3 +239,4 @@ python manage.py migrate
 - 密码：Django 自动 PBKDF2 哈希存储，禁止明文
 - 审批意见/公告内容：正常存储，管理员可审计
 - 删除审计：审批记录只增不改（追加式留痕），满足追溯要求
+- 链式留痕：关键操作由 blockchain 插件写入哈希链（SHA-256 逐条串链），任何一条被篡改，其后全部校验失败——满足"不可篡改审计"要求

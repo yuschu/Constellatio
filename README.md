@@ -11,6 +11,7 @@
 - 📋 审批中心：请假 / 报销 / 用章，状态机流转 + 全程留痕
 - 📢 公告通知：发布 / 置顶 / 已读统计
 - 🕐 考勤打卡：上下班打卡 + 月度统计看板（ECharts）
+- ⛓ 区块链留痕：关键操作上链（SHA-256 哈希链），篡改即断链报警
 - 🔐 RBAC 权限：部门 / 角色 / 权限，按角色动态收敛菜单
 - 🐳 Docker 一键部署：`docker compose up -d`
 
@@ -60,7 +61,8 @@ Constellatio/
 │   ├── user/             # 用户 / 部门 / 角色 / RBAC
 │   ├── approval/         # 审批中心
 │   ├── notice/           # 公告通知
-│   └── attendance/       # 考勤打卡
+│   ├── attendance/       # 考勤打卡
+│   └── blockchain/       # 操作留痕上链
 └── docs/                 # 项目文档
     ├── tech-stack-and-architecture.md    # 技术栈与架构方案
     ├── constraints-and-acceptance.md     # 约束与验收规范

@@ -3,7 +3,7 @@
 > 项目代号：**Constellatio**
 > 系统名称：基于 Django 的企业办公自动化系统（OA）
 > 设计思想：**万物皆可插件**（全栈插件化）
-> 文档版本：v1.0 · 2026-10-21
+> 文档版本：v1.1 · 2026-10-21
 
 ---
 
@@ -17,7 +17,7 @@
 
 ```
 万物皆可插件：
-┌─ 业务插件层 ─ auth / user / approval / notice / attendance ─┐
+┌─ 业务插件层 ─ auth / user / approval / notice / attendance / blockchain ─┐
 │ 基础设施插件层 ─ DB后端 / 模板引擎 / 主题UI / 图表引擎 / 认证 │
 │ 插件容器 plugin_host（唯一固定：注册表/外壳/信号/配置）        │
 └─ 部署：Nginx + Gunicorn + Django + MySQL（Docker Compose）  ─┘
@@ -37,6 +37,7 @@
 | approval | 审批中心 | 请假/报销/用章，状态机 + 审批留痕 |
 | notice | 公告通知 | 发布/置顶/已读统计 |
 | attendance | 考勤打卡 | 上下班打卡 + 月度统计看板（ECharts） |
+| blockchain | 操作留痕上链 | 订阅全局信号写入哈希链，篡改即断链报警 |
 
 ## 四、技术栈
 
@@ -93,7 +94,8 @@ Constellatio/
 │   ├── user/                   # 用户/部门/角色/RBAC 插件
 │   ├── approval/               # 审批中心插件
 │   ├── notice/                 # 公告通知插件
-│   └── attendance/             # 考勤打卡插件
+│   ├── attendance/             # 考勤打卡插件
+│   └── blockchain/             # 操作留痕上链插件
 └── docs/                       # 文档
     ├── tech-stack-and-architecture.md
     ├── constraints-and-acceptance.md
@@ -145,5 +147,5 @@ OA_PLUGINS = [
 ## 九、待办（后续文档）
 
 - [ ] 需求规格说明书
-- [ ] 数据库设计文档（ER 图）
+- [x] 数据库设计文档（ER 图）—— 已完成：`docs/database-design.md`
 - [ ] 测试报告

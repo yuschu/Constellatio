@@ -2,7 +2,7 @@
 
 > 项目：《基于 Django 的企业办公自动化系统的设计与实现》
 > 设计思想：**万物皆可插件**——容器内核唯一固定，从基础设施到业务模块全部可插拔、可替换
-> 文档版本：v1.0 · 2026-10-21
+> 文档版本：v1.1 · 2026-10-21
 
 ---
 
@@ -27,7 +27,7 @@
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ 业务插件层（全部可插拔）                                    │
-│  auth 认证 │ user 用户/RBAC │ approval 审批 │ notice 公告 │ attendance 考勤 │ + 未来任意插件 │
+│  auth 认证 │ user 用户/RBAC │ approval 审批 │ notice 公告 │ attendance 考勤 │ blockchain 留痕 │ + 未来任意插件 │
 ├─────────────────────────────────────────────────────────┤
 │ 基础设施插件层（官方原生可插拔机制）                         │
 │  DB 后端(mysql/sqlite/pg) │ 模板引擎(Django/Jinja2)       │
@@ -56,7 +56,7 @@
    - 图表引擎：统一 `ChartRenderer` 接口，ECharts 为默认实现
    - 认证后端：`AUTHENTICATION_BACKENDS` 列表加一行 = 新增一种登录方式
 3. **业务插件层**（全部可插拔）
-   - auth（登录/认证）、user（用户/部门/角色/RBAC）、approval（审批中心）、notice（公告通知）、attendance（考勤打卡）
+   - auth（登录/认证）、user（用户/部门/角色/RBAC）、approval（审批中心）、notice（公告通知）、attendance（考勤打卡）、blockchain（操作留痕上链）
    - 删一个插件 = 从 `OA_PLUGINS` 删一行，导航/权限/路由自动消失，系统照常运行
 
 ## 三、插件契约（每个插件必须声明）
@@ -84,6 +84,7 @@ PluginMeta:
 | approval | 审批中心（请假/报销/用章，状态机+审批留痕） | approval、approval_record |
 | notice | 公告通知（发布/置顶/已读） | announcement、announcement_read |
 | attendance | 考勤打卡（打卡+月度统计） | attendance |
+| blockchain | 操作留痕上链（SHA-256 哈希链，防篡改审计） | blockchain_record |
 
 ## 五、关键设计决策
 
@@ -92,7 +93,8 @@ PluginMeta:
 3. **不引前端框架**：Django 模板 + Bootstrap 足够，减少技术栈复杂度，突出后端架构设计
 4. **RBAC 由 user 插件统一提供**：所有业务插件共用一套权限
 5. **审批状态机**：approval.status + approval_record 双表，实现审批流转与全程留痕（发起→审批中→通过/驳回→归档）
-6. **容器化部署**：docker compose up -d 一键拉起，环境一致、可复现
+6. **操作留痕上链**：blockchain 插件订阅全局信号，用 SHA-256 哈希链记录关键操作（链式哈希防篡改，完整性可随时校验），实现"业务留痕 + 篡改可检测"的审计能力
+7. **容器化部署**：docker compose up -d 一键拉起，环境一致、可复现
 
 ## 六、竞品调研结论
 
@@ -127,9 +129,10 @@ docker-compose.yml
   1. 停掉 approval 插件 → 导航消失、系统照常跑
   2. 数据库 MySQL → SQLite 一行切换重启即跑
   3. 新增会议室插件（写 models+views+meta）→ 注册一行 → 系统自动出现该模块
+  4. 篡改一条上链记录 → 链完整性校验立即报警（区块链留痕防篡改）
 - **呼应竞品**：飞书客户端 33 模块 / 泛微"可拆可合" / 若依按需启用——本项目实现最彻底
 
-## 九、开发排期（8 周）
+## 九、开发排期（9 周）
 
 | 周次 | 任务 |
 |---|---|
@@ -138,4 +141,5 @@ docker-compose.yml
 | 5 | approval 审批中心插件 |
 | 6 | notice 公告插件 |
 | 7 | attendance 考勤插件 + ECharts 统计看板 |
-| 8 | 模块整合联调 + 测试 + Docker 部署 + 正式发布 |
+| 8 | blockchain 留痕插件 + 链完整性校验 |
+| 9 | 模块整合联调 + 测试 + Docker 部署 + 正式发布 |
