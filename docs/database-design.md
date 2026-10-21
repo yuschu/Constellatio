@@ -1,7 +1,7 @@
 # 数据库设计文档（插件化）
 
 > 项目：Constellatio —— 基于 Django 的企业办公自动化系统（全栈插件化）
-> 文档版本：v2.0 · 2026-10-21（v1.2 新增 approval_approvalsigner 会签表 + user_department.is_active 软删标志 + user_user.permission_frozen 冻结标志——12 张业务表；v1.1 新增 workspace_pluginswitch）
+> 文档版本：v2.1 · 2026-10-21（v1.3 新增 structure_structurerecord 应用记录表——13 张业务表；v1.2 新增 approval_approvalsigner 会签表 + 软删/冻结标志）
 > 关联文档：tech-stack-and-architecture.md、constraints-and-acceptance.md、development-guide.md
 
 ---
@@ -32,9 +32,10 @@
 | attendance | `attendance_attendance` | 业务 | 考勤记录 |
 | blockchain | `blockchain_record` | 业务 | 操作留痕链（哈希链，防篡改） |
 | workspace | `workspace_pluginswitch` | 业务 | 插件运行时开关（v1.1 落地，DB 覆盖静态配置） |
+| structure | `structure_structurerecord` | 业务 | 结构模板应用记录（v1.3 落地，幂等应用留痕） |
 | — | `auth_permission` 等 | 框架内置 | Django 自带（auth_group / django_session / django_migrations 等） |
 
-业务插件共 **12 张表**；框架内置表不属于任何插件，由 Django 自动管理。
+业务插件共 **13 张表**；框架内置表不属于任何插件，由 Django 自动管理。
 
 ## 三、ER 关系总览
 
@@ -218,7 +219,23 @@ UNIQUE(user_id, date) —— 一天一卡防重复
 | updated_by_id | FK user_user | NULL, SET_NULL | 最后操作人 |
 | updated_at | DATETIME | auto_now | 更新时间 |
 
-### 4.7 框架内置表（不属于任何插件）
+### 4.7 structure 插件（plugins/structure）
+
+**structure_structurerecord（结构模板应用记录）** —— v1.3 落地
+
+| 字段 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| id | BIGINT | PK | 主键 |
+| applied_by_id | FK user_user | PROTECT | 操作人 |
+| dept_created | INT | NOT NULL, DEFAULT 0 | 新增部门数 |
+| role_created | INT | NOT NULL, DEFAULT 0 | 新增角色数 |
+| user_created | INT | NOT NULL, DEFAULT 0 | 新增用户数 |
+| grant_manager_perms | BOOL | NOT NULL, DEFAULT False | 本次是否授予经理 user_manage |
+| applied_at | DATETIME | auto_now_add | 应用时间 |
+
+权限码：`structure_manage`（应用模板）、`structure_view`（查看架构）。模板本身为代码常量（`plugins/structure/template.py`：20 部门/31 角色/31 用户），不落表，可扩展。
+
+### 4.8 框架内置表（不属于任何插件）
 
 `django_migrations`、`auth_permission`、`auth_group`、`auth_group_permissions`、`django_content_type`、`django_session`、`django_admin_log` —— 由 Django 自动创建，不在插件职责内。
 

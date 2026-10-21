@@ -15,6 +15,7 @@
 - ⚙ 插件开关：工作台运行时启用/禁用插件，即时生效（停用即隐藏菜单+404），操作上链
 - 🏢 组织增强：部门软删（即时+上链）/ 修改 / 硬删（会签审批全通过后物理删除+上链）
 - 👤 用户状态机：启用 / 禁用（admin 直接禁用，普通管理员走会签）/ 冻结权限（即时短路），密码二次确认，超管权限层级最高
+- ◫ 组织架构模板：职能制部门树 + 31 角色 + 31 用户模板一键幂等应用，应用动作上链
 - 🔐 RBAC 权限：部门 / 角色 / 权限，按角色动态收敛菜单
 - 🐳 Docker 一键部署：`docker compose up -d`（MySQL8 + Gunicorn + WhiteNoise，跨平台）
 
@@ -96,11 +97,11 @@ Constellatio/
 | [docs/development-guide.md](docs/development-guide.md) | 开发 | 开发流程、环境、容器实现、插件开发、编程规约、插件规范 |
 | [docs/ai-assisted-development-guide.md](docs/ai-assisted-development-guide.md) | 规范 | AI 辅助开发行为规范、迭代规范 |
 | [docs/project-overview.md](docs/project-overview.md) | 说明 | 项目说明、使用指南、插件开发示例 |
-| [docs/plugin-dev-workspace.md](docs/plugin-dev-workspace.md) | 插件开发 | workspace：工作台可启用/禁用功能（v1.1，待确认） |
+| [docs/plugin-dev-workspace.md](docs/plugin-dev-workspace.md) | 插件开发 | workspace：工作台可启用/禁用功能（v1.1 已实现） |
 | [docs/plugin-dev-user.md](docs/plugin-dev-user.md) | 插件开发 | user 增强：部门软/硬删除、用户状态机、密码二次确认、权限层级（v1.2 已实现） |
-| [docs/plugin-dev-structure.md](docs/plugin-dev-structure.md) | 插件开发 | structure：职能制组织架构模板（角色+用户模板一键应用）（v1.3，待确认） |
+| [docs/plugin-dev-structure.md](docs/plugin-dev-structure.md) | 插件开发 | structure：职能制组织架构模板（角色+用户模板一键应用）（v1.3 已实现） |
 | [docs/plugin-dev-language.md](docs/plugin-dev-language.md) | 插件开发 | language：中英文切换（v1.4，待确认） |
 
 ## 📌 状态
 
-**v1.2 已跑通**（部门软/硬删+修改、用户状态机+会签禁用、密码二次确认、权限层级、6 类操作上链）→ 开发中：v1.3 language 中英切换
+**v1.3 已跑通**（structure 职能制架构模板：20 部门/31 角色/31 用户模板幂等应用+上链）→ 开发中：v1.4 language 中英切换
