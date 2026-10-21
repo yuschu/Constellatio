@@ -18,8 +18,47 @@
         <td>{{ u.last_name|default:'—' }}</td>
         <td>{{ u.department.name|default:'—' }}</td>
         <td>{% for r in u.roles.all %}<span class="r-badge">{{ r.name }}</span> {% empty %}—{% endfor %}</td>
-        <td>{% if u.is_active %}<span class="r-badge r-badge--blue">启用</span>{% else %}<span class="r-badge r-badge--orange">停用</span>{% endif %}</td>
-        <td><a href="{% url 'user:user_edit' u.id %}" class="r-offset-hover">编辑</a></td>
+        <td>
+          {% if u.is_active and u.permission_frozen %}<span class="r-badge r-badge--blue">权限冻结</span>
+          {% elif u.is_active %}<span class="r-badge">启用</span>
+          {% else %}<span class="r-badge r-badge--orange">禁用</span>{% endif %}
+        </td>
+        <td>
+          {% if u.is_superuser %}
+            <span class="text-muted" style="font-size:.8rem;">超管（不可操作）</span>
+          {% else %}
+            <a href="{% url 'user:user_edit' u.id %}" class="r-offset-hover">编辑</a>
+            {% if not u.is_active %}
+              <form method="post" action="{% url 'user:user_status' u.id %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="status" value="enable">
+                <button class="r-btn" type="submit">启用</button>
+              </form>
+            {% elif u.permission_frozen %}
+              <form method="post" action="{% url 'user:user_status' u.id %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="status" value="unfreeze">
+                <button class="r-btn" type="submit">解冻</button>
+              </form>
+              <form method="post" action="{% url 'user:user_status' u.id %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="status" value="disable">
+                <button class="r-btn" type="submit" onclick="return confirm('禁用用户「{{ u.last_name|default:u.username }}」？超管直接禁用，普通管理员需发起会签审批。')">禁用</button>
+              </form>
+            {% else %}
+              <form method="post" action="{% url 'user:user_status' u.id %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="status" value="freeze">
+                <button class="r-btn" type="submit" onclick="return confirm('冻结「{{ u.last_name|default:u.username }}」的权限？即时生效。')">冻结权限</button>
+              </form>
+              <form method="post" action="{% url 'user:user_status' u.id %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="status" value="disable">
+                <button class="r-btn" type="submit" onclick="return confirm('禁用用户「{{ u.last_name|default:u.username }}」？超管直接禁用，普通管理员需发起会签审批。')">禁用</button>
+              </form>
+            {% endif %}
+          {% endif %}
+        </td>
       </tr>
       {% empty %}
       <tr><td colspan="7" class="text-muted">暂无用户</td></tr>

@@ -1,4 +1,4 @@
-"""user 插件路由：挂载 /plugins/user/（RBAC 管理页面）。"""
+"""user 插件路由：挂载 /plugins/user/。"""
 
 from django.urls import path
 
@@ -11,6 +11,7 @@ urlpatterns = [
     path('users/', views.user_list, name='user_list'),
     path('users/new/', views.user_create, name='user_create'),
     path('users/<int:user_id>/edit/', views.user_edit, name='user_edit'),
+    path('users/<int:user_id>/status/', views.user_status, name='user_status'),
     path('roles/', views.role_list, name='role_list'),
     path('roles/new/', views.role_create, name='role_create'),
     path('roles/<int:role_id>/edit/', views.role_edit, name='role_edit'),

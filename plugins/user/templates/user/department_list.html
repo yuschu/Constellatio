@@ -5,12 +5,13 @@
   <h2 class="mb-0">部门管理</h2>
   <span class="r-badge">user_manage</span>
 </div>
+{% if error %}<div class="r-card mb-4" style="box-shadow: var(--r-shadow-orange);">{{ error }}</div>{% endif %}
 <div class="row g-4">
-  <div class="col-md-7">
+  <div class="col-md-8">
     <div class="r-card">
       <table class="r-table">
         <thead>
-          <tr><th>ID</th><th>名称</th><th>上级部门</th><th>成员数</th></tr>
+          <tr><th>ID</th><th>名称</th><th>上级部门</th><th>成员数</th><th>状态</th><th>操作</th></tr>
         </thead>
         <tbody>
           {% for d in departments %}
@@ -19,31 +20,82 @@
             <td>{{ d.name }}</td>
             <td>{{ d.parent.name|default:'—' }}</td>
             <td>{{ d.members.count }}</td>
+            <td>{% if d.is_active %}<span class="r-badge">启用</span>{% else %}<span class="r-badge r-badge--orange">停用</span>{% endif %}</td>
+            <td>
+              {% if d.is_active %}
+              <form method="post" action="{% url 'user:department_list' %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="edit">
+                <input type="hidden" name="dept_id" value="{{ d.id }}">
+                <button class="r-btn" type="submit">修改</button>
+              </form>
+              <form method="post" action="{% url 'user:department_list' %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="soft_delete">
+                <input type="hidden" name="dept_id" value="{{ d.id }}">
+                <button class="r-btn" type="submit" onclick="return confirm('软删除（停用）部门「{{ d.name }}」？即时生效并留痕。')">停用</button>
+              </form>
+              <form method="post" action="{% url 'user:department_list' %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="hard_delete">
+                <input type="hidden" name="dept_id" value="{{ d.id }}">
+                <button class="r-btn" type="submit" onclick="return confirm('物理删除部门「{{ d.name }}」？将发起部门删除审批单，全部审批人通过后执行。')">物理删除</button>
+              </form>
+              {% else %}
+              <form method="post" action="{% url 'user:department_list' %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="edit">
+                <input type="hidden" name="dept_id" value="{{ d.id }}">
+                <button class="r-btn" type="submit">修改</button>
+              </form>
+              {% endif %}
+            </td>
           </tr>
           {% empty %}
-          <tr><td colspan="4" class="text-muted">暂无部门</td></tr>
+          <tr><td colspan="6" class="text-muted">暂无部门</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </div>
-  <div class="col-md-5">
+  <div class="col-md-4">
     <div class="r-card position-relative">
       <span class="r-register-mark"></span>
-      <h3 class="fs-5 mb-3">新建部门</h3>
-      <form method="post" novalidate>
-        {% csrf_token %}
-        <div class="mb-3">
-          <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">名称</label>
-          {{ form.name }}
-          {% for e in form.name.errors %}<div class="text-danger" style="font-size:.8rem;">{{ e }}</div>{% endfor %}
-        </div>
-        <div class="mb-3">
-          <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">上级部门</label>
-          {{ form.parent }}
-        </div>
-        <button class="r-btn" type="submit">创建</button>
-      </form>
+      {% if edit_dept %}
+        <h3 class="fs-5 mb-3">修改部门：{{ edit_dept.name }}</h3>
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <input type="hidden" name="action" value="edit">
+          <input type="hidden" name="dept_id" value="{{ edit_dept.id }}">
+          <div class="mb-3">
+            <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">名称</label>
+            {{ form.name }}
+            {% for e in form.name.errors %}<div class="text-danger" style="font-size:.8rem;">{{ e }}</div>{% endfor %}
+          </div>
+          <div class="mb-3">
+            <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">上级部门</label>
+            {{ form.parent }}
+          </div>
+          <button class="r-btn" type="submit">保存修改</button>
+          <a href="{% url 'user:department_list' %}" class="r-offset-hover ms-2">取消</a>
+        </form>
+      {% else %}
+        <h3 class="fs-5 mb-3">新建部门</h3>
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <input type="hidden" name="action" value="create">
+          <div class="mb-3">
+            <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">名称</label>
+            {{ form.name }}
+            {% for e in form.name.errors %}<div class="text-danger" style="font-size:.8rem;">{{ e }}</div>{% endfor %}
+          </div>
+          <div class="mb-3">
+            <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">上级部门</label>
+            {{ form.parent }}
+          </div>
+          <button class="r-btn" type="submit">创建</button>
+        </form>
+      {% endif %}
     </div>
   </div>
 </div>

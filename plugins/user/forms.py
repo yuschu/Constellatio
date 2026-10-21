@@ -1,4 +1,7 @@
-"""user 插件表单：部门 / 用户 / 角色。"""
+"""user 插件表单：部门 / 用户 / 角色。
+
+v1.2：密码二次确认（password_confirm）；部门表单复用编辑。
+"""
 
 from django import forms
 
@@ -15,11 +18,14 @@ class DepartmentForm(forms.ModelForm):
 
 
 class UserForm(forms.ModelForm):
-    """用户创建/编辑：初始密码仅新建时生效（留空用默认密码）。"""
+    """用户创建/编辑：初始密码仅新建时生效（留空用默认密码）；二次确认必填一致。"""
 
     password = forms.CharField(
         required=False, widget=forms.PasswordInput(attrs={'class': 'r-input', 'autocomplete': 'new-password'}),
         label='初始密码（留空使用默认）')
+    password_confirm = forms.CharField(
+        required=False, widget=forms.PasswordInput(attrs={'class': 'r-input', 'autocomplete': 'new-password'}),
+        label='确认密码')
 
     class Meta:
         model = User
@@ -30,6 +36,14 @@ class UserForm(forms.ModelForm):
             'email': forms.EmailInput(attrs={'class': 'r-input'}),
             'is_active': forms.CheckboxInput(),
         }
+
+    def clean(self):
+        cleaned = super().clean()
+        pwd = cleaned.get('password')
+        confirm = cleaned.get('password_confirm')
+        if pwd != confirm:
+            raise forms.ValidationError('两次输入的密码不一致')
+        return cleaned
 
     def save(self, commit=True):
         user = super().save(commit=False)

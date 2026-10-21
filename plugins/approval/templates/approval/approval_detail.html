@@ -35,9 +35,25 @@
       <div class="text-muted" style="font-size:.8rem;">暂无流转记录</div>
       {% endfor %}
     </div>
+    {% if is_counter %}
+    <div class="r-card mb-4">
+      <h3 class="fs-5 mb-3">会签人（{{ signers|length }} 人，全部通过才生效）</h3>
+      {% for s in signers %}
+      <div class="d-flex gap-2 mb-2" style="font-size:.85rem;">
+        <span class="r-badge {% if s.signed %}r-badge--blue{% else %}r-badge--orange{% endif %}">
+          {{ s.signed|yesno:'已签,待签' }}
+        </span>
+        <span>{{ s.signer.last_name|default:s.signer.username }}</span>
+        {% if s.comment %}<span class="text-muted">：{{ s.comment }}</span>{% endif %}
+      </div>
+      {% empty %}
+      <div class="text-muted" style="font-size:.8rem;">暂无会签人</div>
+      {% endfor %}
+    </div>
+    {% endif %}
     {% if can_act %}
     <div class="r-card">
-      <h3 class="fs-5 mb-3">审批操作</h3>
+      <h3 class="fs-5 mb-3">{% if is_counter %}会签操作{% else %}审批操作{% endif %}</h3>
       <form method="post" novalidate>
         {% csrf_token %}
         <div class="mb-3">
@@ -45,8 +61,13 @@
           <input class="r-input" type="text" name="comment" placeholder="审批意见（可选）">
         </div>
         <div class="d-flex gap-3">
+          {% if is_counter %}
+          <button class="r-btn" type="submit" name="action" value="sign_approve">会签通过</button>
+          <button class="r-btn" type="submit" name="action" value="sign_reject" style="box-shadow: var(--r-shadow-orange);">会签驳回</button>
+          {% else %}
           <button class="r-btn" type="submit" name="action" value="approve">通过</button>
           <button class="r-btn" type="submit" name="action" value="reject" style="box-shadow: var(--r-shadow-orange);">驳回</button>
+          {% endif %}
         </div>
       </form>
     </div>
