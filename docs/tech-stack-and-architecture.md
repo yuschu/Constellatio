@@ -15,7 +15,7 @@
 | **数据库引擎** | **MySQL 8.0** | 默认 | Django 原生支持 mysql / sqlite / postgres / oracle **后端切换**；每插件可挂独立数据源（database router） |
 | ORM | Django ORM | 随框架 | 每插件自带 models + migrations，各自建表 |
 | **模板引擎** | Django 模板 | 默认 | `TEMPLATES` 配置可切 Jinja2 / 多引擎共存 |
-| **UI 框架** | **Bootstrap 5** | 默认主题插件 | 主题即插件：换 Tailwind/自定义只需替换模板基座 + 静态资源 |
+| **主题 UI** | **Risograph 印刷风**（Bootstrap 栅格） | 默认主题插件 `themes/risograph` | 主题即插件：新建 `themes/<name>/` + 改 `OA_THEME` 即换主题 |
 | **图表引擎** | **ECharts** | 默认图表插件 | 统一 chart 接口，可换 Chart.js / D3 / 原生 SVG |
 | **认证后端** | Django auth（session） | 默认 | `AUTHENTICATION_BACKENDS` 可插拔：加 LDAP / OAuth 插件 |
 | 事件总线 | Django signals | 随框架 | 插件间通信，互不 import |
@@ -52,7 +52,7 @@
 2. **基础设施插件层**（Django 官方原生可插拔机制）
    - 数据库后端：`DATABASES` 一行切换 mysql ↔ sqlite ↔ postgres
    - 模板引擎：`TEMPLATES` 配置可切 Django 模板 ↔ Jinja2
-   - 主题 UI：模板基座 + 静态资源整体替换
+   - 主题 UI：主题即插件（默认 `themes/risograph`），换主题 = 新建 `themes/<name>/`（模板基座 + 静态资源）+ 改 `OA_THEME`
    - 图表引擎：统一 `ChartRenderer` 接口，ECharts 为默认实现
    - 认证后端：`AUTHENTICATION_BACKENDS` 列表加一行 = 新增一种登录方式
 3. **业务插件层**（全部可插拔）

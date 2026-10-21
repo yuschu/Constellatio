@@ -96,6 +96,8 @@ Constellatio/
 │   ├── notice/                 # 公告通知插件
 │   ├── attendance/             # 考勤打卡插件
 │   └── blockchain/             # 操作留痕上链插件
+├── themes/                     # 主题插件层（可插拔）
+│   └── risograph/              # Risograph 印刷风（默认主题插件）
 └── docs/                       # 文档
     ├── tech-stack-and-architecture.md
     ├── constraints-and-acceptance.md

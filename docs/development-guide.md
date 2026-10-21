@@ -477,9 +477,10 @@ class Record(models.Model):
 - 布局栅格/表单结构用 Bootstrap 5；**视觉组件统一用 Risograph 主题类**（`r-` 前缀，见下方 5.1），禁止自造体系外样式
 - ECharts 通过 CDN 引入，图表统一封装：
 
-### 5.1 主题：Risograph 印刷风（默认视觉基座）
+### 5.1 主题：Risograph 印刷风（默认主题插件）
 
-- 基座文件：`plugin_host/static/plugin_host/css/risograph.css`（页面统一引入）
+- 主题插件：`themes/risograph`（默认主题，`OA_THEME` 可切换；换主题 = 新建 `themes/<name>/` + 注册）
+- 基座文件：`themes/risograph/static/themes/risograph/css/risograph.css`（页面统一引入）
 - 核心规则：
   - 有限色板（2-3 主色）：纸白 `#fffbf0` / 墨黑 `#1a1a1a` / 荧光粉 `#ff6b9d` / 蓝 `#2563eb` / 荧光橙 `#ff8a00` / 绿 `#22c55e`
   - 硬边双向阴影（零模糊 offset shadow），hover 双版套印错位：`6px 6px 0 蓝, -4px -4px 0 橙`
