@@ -24,3 +24,6 @@ staticfiles/
 # ---- 系统 ----
 Thumbs.db
 .DS_Store
+
+# ---- 本地提示词（不上传仓库） ----
+Prompt/
