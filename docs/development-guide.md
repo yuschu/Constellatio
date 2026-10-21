@@ -2,7 +2,7 @@
 
 > 项目：Constellatio —— 基于 Django 的企业办公自动化系统（全栈插件化）
 > 适用对象：项目开发人员
-> 文档版本：v1.2 · 2026-10-21
+> 文档版本：v1.3 · 2026-10-21
 > 前置阅读：tech-stack-and-architecture.md、constraints-and-acceptance.md
 
 ---
@@ -345,27 +345,40 @@ def reject(approval: Approval, user, comment):
 
 ### 4.1 auth 插件（认证）
 
+> ✅ **已实现（v0.1.0）**：登录 / 登出 / 插件注册（meta：工作台菜单）。
+
 ```python
-# plugins/auth/views.py —— 登录视图
-from django.contrib.auth import authenticate, login
+# plugins/auth/views.py —— 登录/登出视图（已实现）
+from django.contrib.auth import authenticate, login, logout
 
 def login_view(request):
+    if request.user.is_authenticated:
+        return redirect('index')
+    error = None
     if request.method == 'POST':
         user = authenticate(request,
-                            username=request.POST['username'],
-                            password=request.POST['password'])
+                            username=request.POST.get('username', '').strip(),
+                            password=request.POST.get('password', ''))
         if user:
             login(request, user)
             return redirect('index')
-    return render(request, 'auth/login.html')
+        error = '用户名或密码错误'
+    return render(request, 'login.html', {'error': error})
+
+def logout_view(request):
+    logout(request)
+    return redirect('index')
 ```
 
 - 认证后端可插拔：`AUTHENTICATION_BACKENDS` 加一行即可扩展 LDAP/OAuth
+- 路由：`plugins/auth/urls.py`，挂载 `/plugins/auth/login/`、`/plugins/auth/logout/`
 
 ### 4.2 user 插件（RBAC 地基）
 
+> ✅ **已实现（v0.2.0）**：部门/用户/角色管理 + 权限码 `user_manage` + 菜单/视图权限过滤 + 信号。
+
 ```python
-# plugins/user/models.py
+# plugins/user/models.py（已实现）
 from django.contrib.auth.models import AbstractUser
 
 
@@ -380,13 +393,23 @@ class Role(models.Model):
 
 
 class User(AbstractUser):
-    """扩展用户：部门 + 角色。"""
+    """扩展用户：部门 + 角色 + RBAC 判定。"""
     department = models.ForeignKey(Department, null=True, on_delete=models.SET_NULL)
     roles = models.ManyToManyField(Role)
+
+    class Meta:
+        permissions = [('user_manage', '用户与组织管理')]  # 迁移自动建 Permission
+
+    def has_perm(self, perm, obj=None):
+        """判定链：超管 → 个人权限 → 角色权限码。"""
+        if self.is_superuser or self.user_permissions.filter(codename=perm).exists():
+            return True
+        return self.roles.filter(permissions__codename=perm).exists()
 ```
 
 - **必须**在 settings.py 设置 `AUTH_USER_MODEL = 'user.User'`，且在首次 migrate 前配置
-- 视图装饰器：`@login_required` + `@permission_required('approval_approve')`
+- 权限过滤两层：菜单（`registry.get_menus` 按菜单项 `perm`）+ 视图（`require_perm('user_manage')` 装饰器）
+- 多选 M2M 空值：提交空 `roles=`/`permissions=` 会触发校验错误，视图层用 `_clean_multi` 清洗
 
 ### 4.3 notice 插件（公告 + 已读）
 

@@ -92,4 +92,4 @@ Constellatio/
 
 ## 📌 状态
 
-**v0.1 已跑通**（插件容器 + 登录 + 外壳渲染）→ 开发中：auth/user RBAC（v0.2）→ approval（v0.3）→ notice（v0.4）→ attendance（v0.5）→ blockchain（v0.6）→ 整合联调（v1.0）
+**v0.2 已跑通**（RBAC：部门/用户/角色管理 + 权限过滤）→ 开发中：approval（v0.3）→ notice（v0.4）→ attendance（v0.5）→ blockchain（v0.6）→ 整合联调（v1.0）
