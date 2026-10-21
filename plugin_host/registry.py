@@ -45,10 +45,21 @@ def get_enabled_plugins():
     return result
 
 
+def _user_has_perm(user, codename):
+    """RBAC 权限判定：超管放行；否则查用户角色的权限码（Permission.codename）。"""
+    if user.is_superuser:
+        return True
+    return user.roles.filter(permissions__codename=codename).exists()
+
+
 def get_menus(user):
-    """按用户权限过滤菜单；v0.1 登录即可见，v0.2 接入 RBAC 精细过滤。"""
+    """按用户权限过滤菜单：菜单项可声明 perm（如 {'label','icon','url','perm'}），
+    无 perm 的菜单登录即可见；有 perm 的按 RBAC 过滤。"""
     menus = []
     for name, meta in get_enabled_plugins():
         for menu in meta.menus:
+            perm = menu.get('perm')
+            if perm and not _user_has_perm(user, perm):
+                continue
             menus.append({**menu, 'plugin': name})
     return menus

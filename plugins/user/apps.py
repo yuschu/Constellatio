@@ -10,10 +10,14 @@ class UserConfig(AppConfig):
         register(PluginMeta(
             name='user',
             version='0.2.0',
-            menus=[],  # v0.2 提供部门/用户/角色菜单
+            menus=[
+                {'label': '部门', 'icon': '▣', 'url': '/plugins/user/departments/', 'perm': 'user_manage'},
+                {'label': '用户', 'icon': '☰', 'url': '/plugins/user/users/', 'perm': 'user_manage'},
+                {'label': '角色', 'icon': '◆', 'url': '/plugins/user/roles/', 'perm': 'user_manage'},
+            ],
             permissions=['user_manage'],
             urls='plugins.user.urls',
-            signals=[],
+            signals=['user_created', 'user_updated'],
             templates='user',
             app=self,
         ))

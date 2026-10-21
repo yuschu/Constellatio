@@ -50,6 +50,19 @@ class User(AbstractUser):
 
     class Meta:
         verbose_name = '用户'
+        # 插件权限码：迁移时 Django 自动创建为 Permission（codename 即权限码）
+        permissions = [
+            ('user_manage', '用户与组织管理'),
+        ]
+
+    def has_perm(self, perm, obj=None):
+        """RBAC 判定链：超管/个人权限放行；否则按角色 → 权限码查询。
+        perm 支持 'user_manage' 裸码（插件权限码契约）。"""
+        if self.is_superuser:
+            return True
+        if self.user_permissions.filter(codename=perm).exists():
+            return True
+        return self.roles.filter(permissions__codename=perm).exists()
 
     def __str__(self):
         return f'{self.last_name or self.username}'

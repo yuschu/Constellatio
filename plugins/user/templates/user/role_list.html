@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}角色管理 · Constellatio{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">角色管理</h2>
+  <a href="{% url 'user:role_create' %}" class="r-btn">＋ 新建角色</a>
+</div>
+<div class="r-card">
+  <table class="r-table">
+    <thead>
+      <tr><th>ID</th><th>角色名</th><th>权限码</th><th>成员数</th><th>操作</th></tr>
+    </thead>
+    <tbody>
+      {% for r in roles %}
+      <tr>
+        <td>{{ r.id }}</td>
+        <td>{{ r.name }}</td>
+        <td>
+          {% for p in r.permissions.all %}<span class="r-badge r-badge--blue">{{ p.codename }}</span> {% empty %}—{% endfor %}
+        </td>
+        <td>{{ r.users.count }}</td>
+        <td><a href="{% url 'user:role_edit' r.id %}" class="r-offset-hover">编辑</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="text-muted">暂无角色</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

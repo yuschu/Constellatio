@@ -10,3 +10,5 @@ from django.dispatch import Signal
 approval_finished = Signal()      # 审批结束（发起/通过/驳回），携带 approval_id, result
 notice_published = Signal()       # 公告发布，携带 announcement_id
 attendance_checked = Signal()     # 打卡成功，携带 user_id, date
+user_created = Signal()           # 用户创建，携带 user_id
+user_updated = Signal()           # 用户更新，携带 user_id
