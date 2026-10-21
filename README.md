@@ -6,18 +6,18 @@
 
 ## ✨ 特性
 
-- 🧩 **万物皆可插件**：插件容器 + 全插件化业务（auth / user / approval / notice / attendance）
+- 🧩 **万物皆可插件**：插件容器 + 全插件化业务（auth / user / approval / notice / attendance / blockchain）
 - 🔌 基础设施可插拔：数据库（MySQL↔sqlite）、模板引擎、主题 UI、图表引擎、认证后端
 - 📋 审批中心：请假 / 报销 / 用章，状态机流转 + 全程留痕
 - 📢 公告通知：发布 / 置顶 / 已读统计
 - 🕐 考勤打卡：上下班打卡 + 月度统计看板（ECharts）
 - ⛓ 区块链留痕：关键操作上链（SHA-256 哈希链），篡改即断链报警
 - 🔐 RBAC 权限：部门 / 角色 / 权限，按角色动态收敛菜单
-- 🐳 Docker 一键部署：`docker compose up -d`
+- 🐳 Docker 一键部署：`docker compose up -d`（MySQL8 + Gunicorn + WhiteNoise，跨平台）
 
 ## 🛠 技术栈
 
-Python 3.11+ · Django 5.2 LTS · MySQL 8.0（可切 sqlite）· Risograph 印刷风主题 · ECharts 5 · Gunicorn · Nginx · Docker Compose
+Python 3.13 · Django 5.2 LTS · MySQL 8.0（可切 sqlite）· Risograph 印刷风主题 · ECharts 5 · Gunicorn · WhiteNoise · Docker Compose
 
 ## 🚀 快速开始
 
@@ -26,8 +26,9 @@ Python 3.11+ · Django 5.2 LTS · MySQL 8.0（可切 sqlite）· Risograph 印�
 跨平台：**Windows / macOS / Linux** 通用，仅需安装 Docker（Desktop 或 Engine），一条命令拉起。
 
 ```bash
-docker compose up -d
-# 访问 http://localhost:80
+docker compose up -d --build
+# 访问 http://localhost:8000
+# 默认超管：admin / Constellatio@2026（可用 .env 覆盖，见 .env.example）
 ```
 
 ### 本地开发
@@ -46,9 +47,12 @@ python manage.py runserver
 
 ```
 Constellatio/
-├── docker-compose.yml
-├── Dockerfile
-├── nginx/
+├── docker-compose.yml   # 一键部署（MySQL8 + web）
+├── Dockerfile           # 应用镜像（gunicorn + whitenoise）
+├── entrypoint.sh        # 容器启动脚本（migrate/collectstatic/超管/gunicorn）
+├── .env.example         # 部署环境变量示例
+├── .dockerignore
+├── .gitattributes       # 行尾 LF 固定（容器执行必需）
 ├── requirements.txt
 ├── manage.py
 ├── plugin_host/          # 插件容器（唯一固定核心）
@@ -92,4 +96,4 @@ Constellatio/
 
 ## 📌 状态
 
-**v0.6 已跑通**（留痕链：5 类业务操作自动上链 + 篡改检测）→ 开发中：整合联调（v1.0，Docker Compose）
+**v1.0 已跑通**（Docker Compose 整合部署：MySQL8 + Gunicorn + WhiteNoise，6 插件全页 + 静态 + 留痕链冒烟通过）

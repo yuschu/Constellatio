@@ -2,7 +2,7 @@
 
 > 项目：《基于 Django 的企业办公自动化系统的设计与实现》
 > 设计思想：**万物皆可插件**——容器内核唯一固定，从基础设施到业务模块全部可插拔、可替换
-> 文档版本：v1.7 · 2026-10-21
+> 文档版本：v1.8 · 2026-10-21（部署章节同步 v1.0：WhiteNoise 直托静态，去 Nginx）
 
 ---
 
@@ -20,7 +20,7 @@
 | **认证后端** | Django auth（session） | 默认 | `AUTHENTICATION_BACKENDS` 可插拔：加 LDAP / OAuth 插件 |
 | 事件总线 | Django signals | 随框架 | 插件间通信，互不 import |
 | WSGI | Gunicorn | 默认 | 可换 uvicorn（ASGI） |
-| 代理/部署 | Nginx + Docker Compose | 默认 | `docker compose up -d` 一键部署 |
+| 代理/部署 | WhiteNoise + Docker Compose | 默认 | `docker compose up -d` 一键部署（MySQL8 + Gunicorn） |
 
 ## 二、全栈插件化架构
 
@@ -38,8 +38,8 @@
 │  Plugin Registry │ 自动发现(AppConfig.ready) │ 统一外壳    │
 │  信号总线 signals │ 配置中心 │ 权限聚合 │ 模板基座          │
 ├─────────────────────────────────────────────────────────┤
-│ 部署：Nginx → Gunicorn → Django 容器 + MySQL 8.0 容器     │
-│        docker compose up -d                               │
+│ 部署：WhiteNoise → Gunicorn → Django 容器 + MySQL 8.0 容器  │
+│        docker compose up -d --build                         │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -113,14 +113,14 @@ PluginMeta:
 
 ```
 docker-compose.yml
-├── nginx     （反向代理 + 静态文件）
-├── web       （Gunicorn + Django 容器）
-└── db        （MySQL 8.0）
+├── web       （Gunicorn + WhiteNoise + Django 容器，静态直托免 Nginx）
+└── db        （MySQL 8.0，healthcheck 就绪后 web 才启动）
 ```
 
-启动：`docker compose up -d`
+启动：`docker compose up -d --build`（默认访问 http://localhost:8000，超管 admin / Constellatio@2026，可用 .env 覆盖）
 
 > **跨平台**：Windows / macOS / Linux 通用，仅需安装 Docker（Desktop / Engine），无需其他环境即可一键部署。
+> **国内网络适配**：Dockerfile 内 pip/apt 均走华为云镜像；Docker daemon 需配置 registry 加速器拉取基础镜像。
 
 ## 八、项目亮点
 

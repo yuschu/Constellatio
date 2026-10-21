@@ -3,7 +3,7 @@
 > 项目代号：**Constellatio**
 > 系统名称：基于 Django 的企业办公自动化系统（OA）
 > 设计思想：**万物皆可插件**（全栈插件化）
-> 文档版本：v1.7 · 2026-10-21
+> 文档版本：v1.8 · 2026-10-21（v1.0 整合部署完成）
 
 ---
 
@@ -20,7 +20,7 @@
 ┌─ 业务插件层 ─ auth / user / approval / notice / attendance / blockchain ─┐
 │ 基础设施插件层 ─ DB后端 / 模板引擎 / 主题UI / 图表引擎 / 认证 │
 │ 插件容器 plugin_host（唯一固定：注册表/外壳/信号/配置）        │
-└─ 部署：Nginx + Gunicorn + Django + MySQL（Docker Compose）  ─┘
+└─ 部署：WhiteNoise + Gunicorn + Django + MySQL（Docker Compose）  ─┘
 ```
 
 核心原则：
@@ -41,9 +41,9 @@
 
 ## 四、技术栈
 
-- Python 3.11+ / Django 5.2 LTS / MySQL 8.0
-- Django 模板 + Bootstrap 5 + ECharts 5
-- Gunicorn + Nginx + Docker Compose
+- Python 3.13 / Django 5.2 LTS / MySQL 8.0
+- Django 模板 + Risograph 印刷风主题 + ECharts 5
+- Gunicorn + WhiteNoise + Docker Compose（跨平台一键部署）
 
 ## 五、快速开始
 
@@ -52,8 +52,8 @@
 跨平台：**Windows / macOS / Linux** 通用，仅需安装 Docker，一条命令拉起。
 
 ```bash
-docker compose up -d
-# 访问 http://localhost:80
+docker compose up -d --build
+# 访问 http://localhost:8000 （默认超管 admin / Constellatio@2026）
 ```
 
 ### 方式二：本地开发
@@ -75,13 +75,15 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
-## 六、目录结构（v0.1 已落地）
+## 六、目录结构（v1.0 已落地）
 
 ```
 Constellatio/
-├── docker-compose.yml          # 一键部署（规划）
-├── Dockerfile                  # （规划）
-├── nginx/                      # Nginx 配置（规划）
+├── docker-compose.yml          # 一键部署（MySQL8 + web，已实现）
+├── Dockerfile                  # 应用镜像（gunicorn + whitenoise，已实现）
+├── entrypoint.sh               # 容器启动脚本（migrate/collectstatic/超管/gunicorn，已实现）
+├── .env.example                # 部署环境变量示例
+├── .dockerignore / .gitattributes
 ├── requirements.txt
 ├── manage.py
 ├── plugin_host/                # 插件容器（唯一固定核心，已实现）
@@ -162,4 +164,5 @@ OA_PLUGINS = [
 - [x] 留痕链 v0.6（SHA256 哈希链 + 5 信号自动上链 + 篡改检测 + 4 项单测）—— 2026-10-21 完成
 - [ ] 需求规格说明书
 - [x] 数据库设计文档（ER 图）—— 已完成：`docs/database-design.md`
+- [x] 整合部署 v1.0（Docker Compose：MySQL8 + Gunicorn + WhiteNoise）—— 2026-10-21 完成并冒烟通过
 - [ ] 测试报告

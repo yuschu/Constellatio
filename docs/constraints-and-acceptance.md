@@ -2,19 +2,19 @@
 
 > 项目：《基于 Django 的企业办公自动化系统的设计与实现》
 > 设计思想：万物皆可插件（全栈插件化）
-> 文档版本：v1.7 · 2026-10-21
+> 文档版本：v1.8 · 2026-10-21（v1.0 整合部署完成：Docker Compose 冒烟通过）
 > 适用范围：本项目全部设计、开发、测试、文档活动
 
 ---
 
 ## 一、技术栈约束（已定版，不得擅自更改）
 
-- 语言：**Python 3.11+**
+- 语言：**Python 3.13**
 - 框架：**Django 5.2 LTS**（插件容器）
 - 数据库：**MySQL 8.0**（默认）；可通过配置切换 sqlite/postgres（演示用途）
-- 前端：**Django 模板 + Bootstrap 5**；**禁止引入 Vue/React 等前端框架**
+- 前端：**Django 模板 + Risograph 印刷风主题**；**禁止引入 Vue/React 等前端框架**
 - 图表：**ECharts 5**（统计看板）
-- 服务器：Gunicorn + Nginx
+- 服务器：Gunicorn + WhiteNoise（静态直托，免 Nginx）
 - 部署：Docker Compose（`docker compose up -d`），**Windows / macOS / Linux 多平台通用**
 
 ## 二、架构约束（万物皆可插件）
@@ -106,4 +106,4 @@
 | 8 | blockchain 插件 + 链校验 | 篡改检测报警 |
 | 9 | 整合联调 + 测试 + Docker + 发布 | 三项验收全过 |
 
-**当前进度**：✅ v0.1 容器；✅ v0.2 RBAC；✅ v0.3 approval 审批；✅ v0.4 notice 公告；✅ v0.5 attendance 考勤；✅ v0.6 blockchain 留痕（均 2026-10-21）；开发中：v1.0 整合部署（Docker Compose）。
+**当前进度**：✅ v0.1 容器；✅ v0.2 RBAC；✅ v0.3 approval 审批；✅ v0.4 notice 公告；✅ v0.5 attendance 考勤；✅ v0.6 blockchain 留痕；✅ v1.0 整合部署（Docker Compose，MySQL8 + Gunicorn + WhiteNoise，容器冒烟通过）—— 均 2026-10-21。

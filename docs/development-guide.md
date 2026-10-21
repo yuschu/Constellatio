@@ -2,7 +2,7 @@
 
 > 项目：Constellatio —— 基于 Django 的企业办公自动化系统（全栈插件化）
 > 适用对象：项目开发人员
-> 文档版本：v1.7 · 2026-10-21
+> 文档版本：v1.8 · 2026-10-21
 > 前置阅读：tech-stack-and-architecture.md、constraints-and-acceptance.md
 
 ---
@@ -662,17 +662,41 @@ python manage.py test plugins
 
 ## 八、部署开发
 
+> ✅ **v1.0 已实现并跑通**（2026-10-21）：Docker Compose 一键拉起 MySQL8 + Web，容器冒烟通过（登录/静态/6 插件页/留痕链校验）。
+
 ### 8.1 Dockerfile
 
 ```dockerfile
-FROM python:3.11-slim
+# Constellatio 应用镜像（Django 5.2 + gunicorn + whitenoise）
+FROM python:3.13-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_INDEX_URL=https://mirrors.huaweicloud.com/repository/pypi/simple/
+
 WORKDIR /app
+
+# mysqlclient 编译依赖（构建期使用，构建后清理减小镜像）
+# apt 源切华为云镜像（deb.debian.org 国内直连不稳定）
+RUN sed -i 's|deb.debian.org|mirrors.huaweicloud.com|g; s|security.debian.org|mirrors.huaweicloud.com|g' /etc/apt/sources.list.d/debian.sources \
+    && apt-get update && apt-get install -y --no-install-recommends \
+        gcc \
+        default-libmysqlclient-dev \
+        pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
-RUN pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+RUN pip install --no-cache-dir -r requirements.txt
+
 COPY . .
+
 EXPOSE 8000
-CMD ["gunicorn", "plugin_host.wsgi:application", "-b", "0.0.0.0:8000"]
+
+CMD ["sh", "./entrypoint.sh"]
 ```
+
+- 镜像源适配：pip 走华为云镜像；apt 走华为云 Debian 镜像（本机 deb.debian.org 直连 502）
+- 静态托管：WhiteNoise（`whitenoise.middleware.WhiteNoiseMiddleware` + `STATIC_ROOT`），**无需 Nginx**
 
 ### 8.2 docker-compose.yml
 
@@ -681,24 +705,80 @@ services:
   db:
     image: mysql:8.0
     environment:
-      MYSQL_DATABASE: oa_db
-      MYSQL_ROOT_PASSWORD: oa_pass
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-constellatio2026}
+      MYSQL_DATABASE: ${DB_NAME:-constellatio}
+      MYSQL_USER: ${DB_USER:-constellatio}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-constellatio2026}
     volumes:
       - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u${DB_USER:-constellatio}", "-p${DB_PASSWORD:-constellatio2026}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
   web:
     build: .
-    command: sh -c "python manage.py migrate && gunicorn plugin_host.wsgi:application -b 0.0.0.0:8000"
-    depends_on: [db]
-    ports: ["8000:8000"]
-  nginx:
-    image: nginx:latest
-    ports: ["80:80"]
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
-    depends_on: [web]
+    environment:
+      DB_ENGINE: mysql
+      DB_NAME: ${DB_NAME:-constellatio}
+      DB_USER: ${DB_USER:-constellatio}
+      DB_PASSWORD: ${DB_PASSWORD:-constellatio2026}
+      DB_HOST: db
+      DB_PORT: 3306
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-0}
+      SECRET_KEY: ${SECRET_KEY:-django-insecure-compose-default-change-me}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-*}
+      DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME:-admin}
+      DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:-Constellatio@2026}
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-3}
+    command: ["sh", "./entrypoint.sh"]
+    ports:
+      - "${WEB_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   db_data:
 ```
+
+### 8.3 entrypoint.sh（容器启动）
+
+```bash
+#!/bin/sh
+set -e
+python manage.py migrate --noinput
+python manage.py collectstatic --noinput
+# 存在 DJANGO_SUPERUSER_* 时幂等创建超管
+python manage.py shell -c "..."
+exec gunicorn plugin_host.wsgi:application --bind 0.0.0.0:8000 --workers "${GUNICORN_WORKERS:-3}"
+```
+
+### 8.4 一键部署
+
+```bash
+# 可选：cp .env.example .env 并按需修改
+docker compose up -d --build
+# 访问 http://localhost:8000 （默认超管 admin / Constellatio@2026）
+```
+
+跨平台：Windows（Docker Desktop）/ macOS / Linux 通用；国内网络需在 Docker daemon 配置镜像加速器（Dockerfile 内 apt/pip 已走国内源）。
+
+### 8.5 v1.0 冒烟记录（2026-10-21 实测）
+
+| 项 | 结果 |
+|---|---|
+| MySQL 8.0 healthcheck | ✅ healthy |
+| migrate（10 业务表） | ✅ 全 OK |
+| collectstatic | ✅ 128 文件 |
+| 超管创建（entrypoint 幂等） | ✅ superuser created |
+| Gunicorn 26.2.0 | ✅ 3 workers listening |
+| 登录页 / 静态 CSS | ✅ 200 / 200 |
+| 6 插件页面（user 三页/approval/notice/attendance/blockchain） | ✅ 全 200 |
+| 留痕链完整性 | ✅ 通过（未被篡改） |
 
 ## 九、Git 工作流
 
