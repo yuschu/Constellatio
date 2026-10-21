@@ -2,7 +2,7 @@
 
 > 项目：Constellatio —— 基于 Django 的企业办公自动化系统（全栈插件化）
 > 适用对象：项目开发人员
-> 文档版本：v1.5 · 2026-10-21
+> 文档版本：v1.6 · 2026-10-21
 > 前置阅读：tech-stack-and-architecture.md、constraints-and-acceptance.md
 
 ---
@@ -466,17 +466,28 @@ class AnnouncementRead(models.Model):
 
 ### 4.4 attendance 插件（考勤 + 统计）
 
+> ✅ **已实现（v0.5.0）**：签到/签退一天一卡 + 本月出勤/迟到统计 + `attendance_checked` 信号。
+
 ```python
-# plugins/attendance/models.py
+# plugins/attendance/models.py（已实现）
 class Attendance(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    date = models.DateField(auto_now_add=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                             related_name='attendance_records')
+    date = models.DateField()
     check_in = models.DateTimeField(null=True, blank=True)
     check_out = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = ('user', 'date')   # 一天一卡，防重复打卡
+        ordering = ['-date']
+        permissions = [('attendance_view', '查看考勤'), ('attendance_check', '考勤打卡')]
 ```
+
+- 打卡：`Attendance.objects.get_or_create(user=u, date=today)` 复用当天记录，`action=in/out` 只填空字段
+- 本月出勤 = 当月记录数；迟到 = `check_in__time__gt=time(9, 0)`（09:00 正常线）
+- ⚠️ 时区：字段存 aware 时间，测试构造须 `timezone.make_aware`、断言用 `timezone.localtime()`
 
 - 打卡接口：`check_in` 为空则记上班，已存在则记下班（`unique_together` 防重）
 - 月度统计：按 `date__year/month` 聚合，数据源喂给 ECharts：
