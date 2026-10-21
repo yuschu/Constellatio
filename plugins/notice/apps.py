@@ -4,3 +4,18 @@ from django.apps import AppConfig
 class NoticeConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "plugins.notice"
+
+    def ready(self):
+        from plugin_host.registry import register, PluginMeta
+        register(PluginMeta(
+            name='notice',
+            version='0.4.0',
+            menus=[
+                {'label': '公告中心', 'icon': '▣', 'url': '/plugins/notice/', 'perm': 'notice_view'},
+            ],
+            permissions=['notice_view', 'notice_manage'],
+            urls='plugins.notice.urls',
+            signals=['notice_published'],
+            templates='notice',
+            app=self,
+        ))
