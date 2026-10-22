@@ -657,3 +657,42 @@ msgstr "Password changed"
 
 msgid "structure_applied"
 msgstr "Structure applied"
+
+msgid "审批结束"
+msgstr "Approval finished"
+
+msgid "公告发布"
+msgstr "Notice published"
+
+msgid "考勤打卡记录"
+msgstr "Attendance checked"
+
+msgid "用户创建"
+msgstr "User created"
+
+msgid "用户更新"
+msgstr "User updated"
+
+msgid "插件开关切换"
+msgstr "Plugin toggled"
+
+msgid "部门删除"
+msgstr "Department deleted"
+
+msgid "部门停用"
+msgstr "Department disabled"
+
+msgid "部门修改"
+msgstr "Department updated"
+
+msgid "用户状态变更"
+msgstr "User status changed"
+
+msgid "用户禁用"
+msgstr "User disabled"
+
+msgid "密码变更"
+msgstr "Password changed"
+
+msgid "组织架构应用"
+msgstr "Structure applied"

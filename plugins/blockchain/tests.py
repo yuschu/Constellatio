@@ -62,3 +62,15 @@ class BlockchainTest(TestCase):
         self.assertContains(response, record.record_hash)
         self.assertContains(response, record.prev_hash)
         self.assertContains(response, '操作记录')
+
+    def test_plugin_and_action_labels_follow_language(self):
+        self.client.force_login(self.user)
+        record = BlockchainRecord.append(
+            'notice', 'notice_published', 'a:1', operator=self.user)
+        response = self.client.get(f'/plugins/blockchain/{record.id}/')
+        self.assertContains(response, '公告通知')
+        self.assertContains(response, '公告发布')
+        self.client.cookies['django_language'] = 'en'
+        response = self.client.get(f'/plugins/blockchain/{record.id}/')
+        self.assertContains(response, 'Notices')
+        self.assertContains(response, 'Notice published')

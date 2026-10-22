@@ -23,8 +23,8 @@
       {% for r in records %}
       <tr>
         <td>{{ r.id }}</td>
-        <td>{% trans r.plugin %}</td>
-        <td>{% trans r.action %}</td>
+        <td>{{ r.plugin_title }}</td>
+        <td>{{ r.action_label }}</td>
         <td>{% if r.target_type %}{{ r.target_type }}#{{ r.target_id }}{% else %}—{% endif %}</td>
         <td style="max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ r.payload_hash }}">{{ r.payload_hash|slice:":12" }}…</td>
         <td style="max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ r.record_hash }}">{{ r.record_hash|slice:":12" }}…</td>

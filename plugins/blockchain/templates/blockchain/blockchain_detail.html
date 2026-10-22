@@ -18,8 +18,8 @@
 <div class="r-card">
   <table class="r-table">
     <tr><th>ID</th><td>{{ record.id }}</td></tr>
-    <tr><th>{% trans "插件" %}</th><td>{% trans record.plugin %}</td></tr>
-    <tr><th>{% trans "动作" %}</th><td>{% trans record.action %}</td></tr>
+    <tr><th>{% trans "插件" %}</th><td>{{ record.plugin_title }}</td></tr>
+    <tr><th>{% trans "动作" %}</th><td>{{ record.action_label }}</td></tr>
     <tr><th>{% trans "目标" %}</th><td>{% if record.target_type %}{{ record.target_type }}#{{ record.target_id }}{% else %}—{% endif %}</td></tr>
     <tr><th>{% trans "操作人" %}</th><td>{% if record.operator %}{{ record.operator.last_name|default:record.operator.username }}{% else %}—{% endif %}</td></tr>
     <tr><th>{% trans "内容哈希" %}</th><td style="word-break:break-all; font-family:monospace;">{{ record.payload_hash }}</td></tr>

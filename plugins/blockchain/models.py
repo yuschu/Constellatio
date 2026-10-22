@@ -8,6 +8,24 @@ import hashlib
 
 from django.conf import settings
 from django.db import models
+from django.utils.translation import gettext_lazy as _
+
+
+ACTION_LABELS = {
+    'approval_finished': _('审批结束'),
+    'notice_published': _('公告发布'),
+    'attendance_checked': _('考勤打卡记录'),
+    'user_created': _('用户创建'),
+    'user_updated': _('用户更新'),
+    'plugin_toggled': _('插件开关切换'),
+    'dept_deleted': _('部门删除'),
+    'dept_disabled': _('部门停用'),
+    'dept_updated': _('部门修改'),
+    'user_status_changed': _('用户状态变更'),
+    'user_disabled': _('用户禁用'),
+    'password_changed': _('密码变更'),
+    'structure_applied': _('组织架构应用'),
+}
 
 
 class BlockchainRecord(models.Model):
@@ -37,6 +55,18 @@ class BlockchainRecord(models.Model):
 
     def __str__(self):
         return f'{self.plugin}:{self.action}#{self.id}'
+
+    @property
+    def plugin_title(self):
+        """插件展示名：优先取注册表里的 gettext_lazy title，未知 key 回退原始值。"""
+        from plugin_host.registry import PLUGIN_REGISTRY
+        meta = PLUGIN_REGISTRY.get(self.plugin)
+        return meta.title if meta else self.plugin
+
+    @property
+    def action_label(self):
+        """动作展示名：信号动作映射为可翻译标签，未知动作回退原始值。"""
+        return ACTION_LABELS.get(self.action, self.action)
 
     @classmethod
     def append(cls, plugin, action, payload, operator=None, **kw):
