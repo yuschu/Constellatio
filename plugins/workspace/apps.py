@@ -11,6 +11,7 @@ class WorkspaceConfig(AppConfig):
         register(PluginMeta(
             name='workspace',
             version='1.1.0',
+            title=_('插件开关'),
             menus=[
                 {'label': _('插件开关'), 'icon': '⚙', 'url': '/plugins/workspace/', 'perm': 'workspace_manage'},
             ],

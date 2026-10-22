@@ -5,13 +5,13 @@
 <div class="d-flex align-items-center gap-3 mb-4">
   <a href="{% url 'notice:notice_list' %}" class="r-offset-hover">← {% trans "返回" %}</a>
   <h2 class="mb-0">{{ announcement.title }}</h2>
-  {% if announcement.is_top %}<span class="r-badge">置顶</span>{% endif %}
+  {% if announcement.is_top %}<span class="r-badge">{% trans "置顶" %}</span>{% endif %}
 </div>
 <div class="r-card position-relative" style="max-width:720px;">
   <span class="r-register-mark"></span>
   <div class="text-muted mb-3" style="font-size:.8rem;">
-    发布人：{{ announcement.publisher.last_name|default:announcement.publisher.username }} ·
-    {{ announcement.created_at|date:"Y-m-d H:i" }} · {{ read_count }} 人已读
+    {% blocktranslate with publisher=announcement.publisher.last_name|default:announcement.publisher.username %}发布人：{{ publisher }}{% endblocktranslate %} ·
+    {{ announcement.created_at|date:"Y-m-d H:i" }} · {% blocktranslate with count=read_count %}{{ count }} 人已读{% endblocktranslate %}
   </div>
   <div style="white-space:pre-wrap; line-height:1.7;">{{ announcement.content }}</div>
 </div>

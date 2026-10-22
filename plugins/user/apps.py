@@ -15,6 +15,7 @@ class UserConfig(AppConfig):
         register(PluginMeta(
             name='user',
             version='1.2.0',
+            title=_('用户与组织'),
             menus=[
                 {'label': _('部门'), 'icon': '▣', 'url': '/plugins/user/departments/', 'perm': 'user_manage'},
                 {'label': _('用户'), 'icon': '☰', 'url': '/plugins/user/users/', 'perm': 'user_manage'},

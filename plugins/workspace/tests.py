@@ -53,3 +53,18 @@ class PluginSwitchTests(TestCase):
         self.client.force_login(noperm)
         resp = self.client.get(reverse('workspace:switch_list'))
         self.assertEqual(resp.status_code, 302)
+
+    def test_switch_list_localized_plugin_titles(self):
+        """插件名称随语言切换：中文显示中文名，英文显示英文名。"""
+        self.client.force_login(self.admin)
+        self.client.cookies['django_language'] = 'zh-hans'
+        resp = self.client.get(reverse('workspace:switch_list'))
+        self.assertContains(resp, '认证')
+        self.assertContains(resp, '用户与组织')
+        self.assertContains(resp, '插件')
+        self.client.cookies['django_language'] = 'en'
+        resp = self.client.get(reverse('workspace:switch_list'))
+        self.assertContains(resp, 'Authentication')
+        self.assertContains(resp, 'Users &amp; organization')
+        self.assertContains(resp, 'Plugins')
+        self.assertNotContains(resp, '用户与组织')

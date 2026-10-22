@@ -13,6 +13,7 @@ class AuthConfig(AppConfig):
         register(PluginMeta(
             name='auth',
             version='0.1.0',
+            title=_('认证'),
             menus=[{'label': _('工作台'), 'icon': '⌂', 'url': '/'}],
             permissions=['auth_login'],
             urls='plugins.auth.urls',

@@ -1,7 +1,7 @@
 """blockchain 插件视图：留痕列表 + 链完整性校验。"""
 
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 
 from .models import BlockchainRecord
 
@@ -16,4 +16,17 @@ def blockchain_list(request):
         'verify_ok': ok,
         'broken_id': broken_id,
         'total': BlockchainRecord.objects.count(),
+    })
+
+
+@login_required
+def blockchain_detail(request, record_id):
+    """单条留痕详情：字段 + 链校验状态。"""
+    record = get_object_or_404(
+        BlockchainRecord.objects.select_related('operator'), pk=record_id)
+    ok, broken_id = BlockchainRecord.verify_chain()
+    return render(request, 'blockchain/blockchain_detail.html', {
+        'record': record,
+        'verify_ok': ok,
+        'broken_id': broken_id,
     })

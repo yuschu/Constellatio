@@ -45,3 +45,20 @@ class BlockchainTest(TestCase):
         ok, broken = BlockchainRecord.verify_chain()
         self.assertFalse(ok)
         self.assertEqual(broken, r2.id)
+
+    def test_list_links_to_record_detail(self):
+        self.client.force_login(self.user)
+        record = BlockchainRecord.append(
+            'approval', 'approval_finished', '1:approved', operator=self.user)
+        response = self.client.get('/plugins/blockchain/')
+        self.assertContains(response, f'/plugins/blockchain/{record.id}/')
+
+    def test_record_detail(self):
+        self.client.force_login(self.user)
+        record = BlockchainRecord.append(
+            'approval', 'approval_finished', '1:approved', operator=self.user)
+        response = self.client.get(f'/plugins/blockchain/{record.id}/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, record.record_hash)
+        self.assertContains(response, record.prev_hash)
+        self.assertContains(response, '操作记录')

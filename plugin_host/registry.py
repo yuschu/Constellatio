@@ -14,10 +14,11 @@ PLUGIN_REGISTRY = {}  # name -> PluginMeta
 class PluginMeta:
     """插件契约：每个插件必须提供的字段。"""
 
-    def __init__(self, name, version, menus=None, permissions=None,
+    def __init__(self, name, version, title=None, menus=None, permissions=None,
                  urls=None, signals=None, templates=None, app=None):
         self.name = name
         self.version = version
+        self.title = title or name          # 展示名（可 gettext_lazy）
         self.menus = menus or []            # [{'label','icon','url'}, ...]
         self.permissions = permissions or []  # ['user_manage', ...]
         self.urls = urls                    # 路由模块路径（可空）

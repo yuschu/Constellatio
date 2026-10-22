@@ -11,27 +11,27 @@
   <form method="post" novalidate>
     {% csrf_token %}
     <div class="mb-3">
-      <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">类型</label>
+      <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">{% trans "类型" %}</label>
       <select name="approval_type" class="r-input">
-        <option value="leave">请假</option>
-        <option value="expense">报销</option>
-        <option value="seal">用章</option>
+        <option value="leave">{% trans "请假" %}</option>
+        <option value="expense">{% trans "报销" %}</option>
+        <option value="seal">{% trans "用章" %}</option>
       </select>
     </div>
     <div class="mb-3">
-      <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">标题</label>
-      <input class="r-input" type="text" name="title" required placeholder="如：年假 3 天">
+      <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">{% trans "标题" %}</label>
+      <input class="r-input" type="text" name="title" required placeholder="{% trans '如：年假 3 天' %}">
     </div>
     <div class="mb-3">
-      <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">内容</label>
-      <textarea class="r-input" name="content" rows="4" placeholder="说明事由"></textarea>
+      <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">{% trans "内容" %}</label>
+      <textarea class="r-input" name="content" rows="4" placeholder="{% trans '说明事由' %}"></textarea>
     </div>
     <div class="mb-3">
-      <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">金额（报销填）</label>
+      <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">{% trans "金额（报销填）" %}</label>
       <input class="r-input" type="number" step="0.01" name="amount" placeholder="0.00">
     </div>
     <div class="mb-3">
-      <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">审批人</label>
+      <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">{% trans "审批人" %}</label>
       <select name="approver" class="r-input" required>
         {% for u in users %}
         <option value="{{ u.id }}">{{ u.last_name|default:u.username }}（{{ u.username }}）</option>

@@ -249,3 +249,411 @@ msgstr "Back to login"
 
 msgid "蓝灰配色 · 圆角卡片 · 轻阴影 · 200ms 以内交互。"
 msgstr "Blue-gray palette · rounded cards · soft shadows · interactions under 200ms."
+
+msgid "认证"
+msgstr "Authentication"
+
+msgid "用户与组织"
+msgstr "Users & organization"
+
+msgid "公告通知"
+msgstr "Notices"
+
+msgid "组织架构模板"
+msgstr "Organization template"
+
+msgid "中英文切换"
+msgstr "Chinese / English"
+
+msgid "插件"
+msgstr "Plugins"
+
+msgid "版本"
+msgstr "Version"
+
+msgid "菜单数"
+msgstr "Menus"
+
+msgid "状态"
+msgstr "Status"
+
+msgid "操作"
+msgstr "Actions"
+
+msgid "即时生效"
+msgstr "Takes effect immediately"
+
+msgid "暂无插件"
+msgstr "No plugins"
+
+msgid "操作记录"
+msgstr "Operation record"
+
+msgid "操作人"
+msgstr "Operator"
+
+msgid "内容哈希"
+msgstr "Payload hash"
+
+msgid "前链哈希"
+msgstr "Previous hash"
+
+msgid "记录哈希"
+msgstr "Record hash"
+
+msgid "动作"
+msgstr "Action"
+
+msgid "目标"
+msgstr "Target"
+
+msgid "时间"
+msgstr "Time"
+
+msgid "查看"
+msgstr "View"
+
+msgid "暂无留痕记录（业务操作会自动上链）"
+msgstr "No audit records yet (business actions are chained automatically)"
+
+msgid "链完整性：通过（未被篡改）"
+msgstr "Chain integrity: OK (not tampered)"
+
+msgid "链完整性：异常（第 %(id)s 条被篡改）"
+msgstr "Chain integrity: broken (record %(id)s tampered)"
+
+msgid "共 %(count)s 条"
+msgstr "Total %(count)s"
+
+msgid "类型"
+msgstr "Type"
+
+msgid "内容"
+msgstr "Content"
+
+msgid "标题"
+msgstr "Title"
+
+msgid "金额"
+msgstr "Amount"
+
+msgid "审批人"
+msgstr "Approver"
+
+msgid "详情"
+msgstr "Details"
+
+msgid "待审批"
+msgstr "Pending"
+
+msgid "已通过"
+msgstr "Approved"
+
+msgid "已驳回"
+msgstr "Rejected"
+
+msgid "草稿"
+msgstr "Draft"
+
+msgid "暂无审批记录"
+msgstr "No approvals yet"
+
+msgid "请假"
+msgstr "Leave"
+
+msgid "报销"
+msgstr "Expense"
+
+msgid "用章"
+msgstr "Seal"
+
+msgid "如：年假 3 天"
+msgstr "e.g. 3 days annual leave"
+
+msgid "说明事由"
+msgstr "Describe the reason"
+
+msgid "金额（报销填）"
+msgstr "Amount (for expense)"
+
+msgid "申请人"
+msgstr "Applicant"
+
+msgid "发起时间"
+msgstr "Submitted at"
+
+msgid "流转记录"
+msgstr "Flow records"
+
+msgid "暂无流转记录"
+msgstr "No flow records"
+
+msgid "会签人（%(count)s 人，全部通过才生效）"
+msgstr "Signers (%(count)s; all must sign to take effect)"
+
+msgid "已签"
+msgstr "Signed"
+
+msgid "待签"
+msgstr "Pending signature"
+
+msgid "暂无会签人"
+msgstr "No signers"
+
+msgid "会签操作"
+msgstr "Counter-sign actions"
+
+msgid "审批操作"
+msgstr "Approval actions"
+
+msgid "意见"
+msgstr "Comment"
+
+msgid "审批意见（可选）"
+msgstr "Comment (optional)"
+
+msgid "%(count)s 条待办"
+msgstr "%(count)s pending"
+
+msgid "暂无待审批事项"
+msgstr "No pending approvals"
+
+msgid "部门删除（会签）"
+msgstr "Department deletion (counter-sign)"
+
+msgid "用户禁用（会签）"
+msgstr "User disable (counter-sign)"
+
+msgid "发布人"
+msgstr "Publisher"
+
+msgid "已读"
+msgstr "Read"
+
+msgid "未读"
+msgstr "Unread"
+
+msgid "置顶"
+msgstr "Pinned"
+
+msgid "%(count)s 人"
+msgstr "%(count)s people"
+
+msgid "暂无公告"
+msgstr "No notices"
+
+msgid "公告标题"
+msgstr "Notice title"
+
+msgid "公告正文"
+msgstr "Notice content"
+
+msgid "发布人：%(publisher)s"
+msgstr "Publisher: %(publisher)s"
+
+msgid "%(count)s 人已读"
+msgstr "%(count)s read"
+
+msgid "今日状态"
+msgstr "Today's status"
+
+msgid "已签退"
+msgstr "Checked out"
+
+msgid "已签到"
+msgstr "Checked in"
+
+msgid "未打卡"
+msgstr "Not checked in"
+
+msgid "签到 %(check_in)s · 签退 %(check_out)s"
+msgstr "Check in %(check_in)s · check out %(check_out)s"
+
+msgid "签到 %(check_in)s · 当前 %(now)s"
+msgstr "Check in %(check_in)s · now %(now)s"
+
+msgid "本月统计（%(month)s）"
+msgstr "This month (%(month)s)"
+
+msgid "出勤天数"
+msgstr "Attendance days"
+
+msgid "%(count)s 天"
+msgstr "%(count)s days"
+
+msgid "迟到次数"
+msgstr "Late count"
+
+msgid "%(count)s 次（09:00 前为正常）"
+msgstr "%(count)s times (before 09:00 is on time)"
+
+msgid "经理角色授予 user_manage"
+msgstr "Grant user_manage to manager roles"
+
+msgid "应用职能制架构模板？仅创建缺失项，不覆盖既有数据。"
+msgstr "Apply the functional organization template? Only creates missing items; existing data is not overwritten."
+
+msgid "最近应用"
+msgstr "Last applied"
+
+msgid "+%(dept)s部门/+%(role)s角色/+%(user)s用户"
+msgstr "+%(dept)s depts / +%(role)s roles / +%(user)s users"
+
+msgid "部门树（%(count)s 个一级部门）"
+msgstr "Department tree (%(count)s top-level departments)"
+
+msgid "角色（%(count)s 个，身份角色默认空权限）"
+msgstr "Roles (%(count)s; identity roles have no permissions by default)"
+
+msgid "用户模板（%(count)s 个，密码统一 constellatio123）"
+msgstr "User templates (%(count)s; password constellatio123)"
+
+msgid "姓名"
+msgstr "Name"
+
+msgid "所属部门"
+msgstr "Department"
+
+msgid "成员数"
+msgstr "Members"
+
+msgid "名称"
+msgstr "Name"
+
+msgid "上级部门"
+msgstr "Parent department"
+
+msgid "权限冻结"
+msgstr "Permissions frozen"
+
+msgid "超管（不可操作）"
+msgstr "Superuser (read-only)"
+
+msgid "暂无用户"
+msgstr "No users"
+
+msgid "暂无部门"
+msgstr "No departments"
+
+msgid "暂无角色"
+msgstr "No roles"
+
+msgid "角色名"
+msgstr "Role name"
+
+msgid "权限码"
+msgstr "Permission code"
+
+msgid "权限（权限码）"
+msgstr "Permissions (codes)"
+
+msgid "按住 Ctrl 多选；权限码格式：插件名_权限"
+msgstr "Hold Ctrl to multi-select; code format: plugin_permission"
+
+msgid "软删除（停用）部门「%(name)s」？即时生效并留痕。"
+msgstr "Soft-delete (disable) department \"%(name)s\"? Takes effect immediately and is audited."
+
+msgid "物理删除部门「%(name)s」？将发起部门删除审批单，全部审批人通过后执行。"
+msgstr "Permanently delete department \"%(name)s\"? Starts a deletion approval; executes only after all approvers approve."
+
+msgid "禁用用户「%(name)s」？超管直接禁用，普通管理员需发起会签审批。"
+msgstr "Disable user \"%(name)s\"? Superuser disables directly; regular admins start a counter-sign approval."
+
+msgid "冻结「%(name)s」的权限？即时生效。"
+msgstr "Freeze permissions for \"%(name)s\"? Takes effect immediately."
+
+msgid "初始密码（留空使用默认）"
+msgstr "Initial password (leave blank to use default)"
+
+msgid "确认密码"
+msgstr "Confirm password"
+
+msgid "两次输入的密码不一致"
+msgstr "Passwords do not match"
+
+msgid "部门名称"
+msgstr "Department name"
+
+msgid "电子邮件地址"
+msgstr "Email address"
+
+msgid "有效"
+msgstr "Active"
+
+msgid "权限"
+msgstr "Permissions"
+
+msgid "submit"
+msgstr "Submitted"
+
+msgid "approve"
+msgstr "Approved"
+
+msgid "reject"
+msgstr "Rejected"
+
+msgid "sign_approve"
+msgstr "Signed (approve)"
+
+msgid "sign_reject"
+msgstr "Signed (reject)"
+
+msgid "approval"
+msgstr "Approvals"
+
+msgid "notice"
+msgstr "Notices"
+
+msgid "attendance"
+msgstr "Attendance"
+
+msgid "user"
+msgstr "Users & organization"
+
+msgid "workspace"
+msgstr "Plugin switches"
+
+msgid "structure"
+msgstr "Organization template"
+
+msgid "department"
+msgstr "Department"
+
+msgid "approval_finished"
+msgstr "Approval finished"
+
+msgid "notice_published"
+msgstr "Notice published"
+
+msgid "attendance_checked"
+msgstr "Attendance checked"
+
+msgid "user_created"
+msgstr "User created"
+
+msgid "user_updated"
+msgstr "User updated"
+
+msgid "plugin_toggled"
+msgstr "Plugin toggled"
+
+msgid "dept_deleted"
+msgstr "Department deleted"
+
+msgid "dept_disabled"
+msgstr "Department disabled"
+
+msgid "dept_updated"
+msgstr "Department updated"
+
+msgid "user_status_changed"
+msgstr "User status changed"
+
+msgid "user_disabled"
+msgstr "User disabled"
+
+msgid "password_changed"
+msgstr "Password changed"
+
+msgid "structure_applied"
+msgstr "Structure applied"

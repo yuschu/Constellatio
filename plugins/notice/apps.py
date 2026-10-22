@@ -11,6 +11,7 @@ class NoticeConfig(AppConfig):
         register(PluginMeta(
             name='notice',
             version='0.4.0',
+            title=_('公告通知'),
             menus=[
                 {'label': _('公告中心'), 'icon': '▣', 'url': '/plugins/notice/', 'perm': 'notice_view'},
             ],

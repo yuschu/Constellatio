@@ -5,61 +5,61 @@
 <div class="d-flex align-items-center gap-3 mb-4">
   <a href="{% url 'approval:approval_list' %}" class="r-offset-hover">← {% trans "返回" %}</a>
   <h2 class="mb-0">{% trans "审批详情" %} #{{ approval.id }}</h2>
-  <span class="r-badge">{{ approval.get_status_display }}</span>
+  <span class="r-badge">{% trans approval.get_status_display %}</span>
 </div>
 <div class="row g-4">
   <div class="col-md-6">
     <div class="r-card position-relative">
       <span class="r-register-mark"></span>
       <table class="r-table">
-        <tr><th>类型</th><td>{{ approval.get_approval_type_display }}</td></tr>
-        <tr><th>标题</th><td>{{ approval.title }}</td></tr>
-        <tr><th>内容</th><td>{{ approval.content|default:'—' }}</td></tr>
-        <tr><th>金额</th><td>{% if approval.amount %}￥{{ approval.amount }}{% else %}—{% endif %}</td></tr>
-        <tr><th>申请人</th><td>{{ approval.applicant.last_name|default:approval.applicant.username }}</td></tr>
-        <tr><th>审批人</th><td>{{ approval.approver.last_name|default:approval.approver.username }}</td></tr>
-        <tr><th>发起时间</th><td>{{ approval.created_at|date:"Y-m-d H:i" }}</td></tr>
+        <tr><th>{% trans "类型" %}</th><td>{% trans approval.get_approval_type_display %}</td></tr>
+        <tr><th>{% trans "标题" %}</th><td>{{ approval.title }}</td></tr>
+        <tr><th>{% trans "内容" %}</th><td>{{ approval.content|default:'—' }}</td></tr>
+        <tr><th>{% trans "金额" %}</th><td>{% if approval.amount %}￥{{ approval.amount }}{% else %}—{% endif %}</td></tr>
+        <tr><th>{% trans "申请人" %}</th><td>{{ approval.applicant.last_name|default:approval.applicant.username }}</td></tr>
+        <tr><th>{% trans "审批人" %}</th><td>{{ approval.approver.last_name|default:approval.approver.username }}</td></tr>
+        <tr><th>{% trans "发起时间" %}</th><td>{{ approval.created_at|date:"Y-m-d H:i" }}</td></tr>
       </table>
     </div>
   </div>
   <div class="col-md-6">
     <div class="r-card mb-4">
-      <h3 class="fs-5 mb-3">流转记录</h3>
+      <h3 class="fs-5 mb-3">{% trans "流转记录" %}</h3>
       {% for r in records %}
       <div class="d-flex gap-2 mb-2" style="font-size:.85rem;">
-        <span class="r-badge r-badge--blue">{{ r.action }}</span>
+        <span class="r-badge r-badge--blue">{% trans r.action %}</span>
         <span>{{ r.operator.last_name|default:r.operator.username }}</span>
         <span class="text-muted">{{ r.created_at|date:"m-d H:i" }}</span>
         {% if r.comment %}<span class="text-muted">：{{ r.comment }}</span>{% endif %}
       </div>
       {% empty %}
-      <div class="text-muted" style="font-size:.8rem;">暂无流转记录</div>
+      <div class="text-muted" style="font-size:.8rem;">{% trans "暂无流转记录" %}</div>
       {% endfor %}
     </div>
     {% if is_counter %}
     <div class="r-card mb-4">
-      <h3 class="fs-5 mb-3">会签人（{{ signers|length }} 人，全部通过才生效）</h3>
+      <h3 class="fs-5 mb-3">{% blocktranslate with count=signers|length %}会签人（{{ count }} 人，全部通过才生效）{% endblocktranslate %}</h3>
       {% for s in signers %}
       <div class="d-flex gap-2 mb-2" style="font-size:.85rem;">
         <span class="r-badge {% if s.signed %}r-badge--blue{% else %}r-badge--orange{% endif %}">
-          {{ s.signed|yesno:'已签,待签' }}
+          {% if s.signed %}{% trans "已签" %}{% else %}{% trans "待签" %}{% endif %}
         </span>
         <span>{{ s.signer.last_name|default:s.signer.username }}</span>
         {% if s.comment %}<span class="text-muted">：{{ s.comment }}</span>{% endif %}
       </div>
       {% empty %}
-      <div class="text-muted" style="font-size:.8rem;">暂无会签人</div>
+      <div class="text-muted" style="font-size:.8rem;">{% trans "暂无会签人" %}</div>
       {% endfor %}
     </div>
     {% endif %}
     {% if can_act %}
     <div class="r-card">
-      <h3 class="fs-5 mb-3">{% if is_counter %}会签操作{% else %}审批操作{% endif %}</h3>
+      <h3 class="fs-5 mb-3">{% if is_counter %}{% trans "会签操作" %}{% else %}{% trans "审批操作" %}{% endif %}</h3>
       <form method="post" novalidate>
         {% csrf_token %}
         <div class="mb-3">
-          <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">意见</label>
-          <input class="r-input" type="text" name="comment" placeholder="审批意见（可选）">
+          <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">{% trans "意见" %}</label>
+          <input class="r-input" type="text" name="comment" placeholder="{% trans '审批意见（可选）' %}">
         </div>
         <div class="d-flex gap-3">
           {% if is_counter %}

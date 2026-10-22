@@ -4,34 +4,35 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
   <h2 class="mb-0">{% trans "操作留痕链" %}</h2>
-  <span class="r-badge">共 {{ total }} 条</span>
+  <span class="r-badge">{% blocktranslate with count=total %}共 {{ count }} 条{% endblocktranslate %}</span>
 </div>
 <div class="r-card mb-4 position-relative">
   <span class="r-register-mark"></span>
   {% if verify_ok %}
-    <p class="r-badge">链完整性：通过（未被篡改）</p>
+    <p class="r-badge">{% trans "链完整性：通过（未被篡改）" %}</p>
   {% else %}
-    <p class="r-badge r-badge--orange">链完整性：异常（第 {{ broken_id }} 条被篡改）</p>
+    <p class="r-badge r-badge--orange">{% blocktranslate with id=broken_id %}链完整性：异常（第 {{ id }} 条被篡改）{% endblocktranslate %}</p>
   {% endif %}
 </div>
 <div class="r-card">
   <table class="r-table">
     <thead>
-      <tr><th>ID</th><th>插件</th><th>动作</th><th>目标</th><th>内容哈希</th><th>记录哈希</th><th>时间</th></tr>
+      <tr><th>ID</th><th>{% trans "插件" %}</th><th>{% trans "动作" %}</th><th>{% trans "目标" %}</th><th>{% trans "内容哈希" %}</th><th>{% trans "记录哈希" %}</th><th>{% trans "时间" %}</th><th>{% trans "操作" %}</th></tr>
     </thead>
     <tbody>
       {% for r in records %}
       <tr>
         <td>{{ r.id }}</td>
-        <td>{{ r.plugin }}</td>
-        <td>{{ r.action }}</td>
+        <td>{% trans r.plugin %}</td>
+        <td>{% trans r.action %}</td>
         <td>{% if r.target_type %}{{ r.target_type }}#{{ r.target_id }}{% else %}—{% endif %}</td>
         <td style="max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ r.payload_hash }}">{{ r.payload_hash|slice:":12" }}…</td>
         <td style="max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ r.record_hash }}">{{ r.record_hash|slice:":12" }}…</td>
         <td>{{ r.created_at|date:"m-d H:i:s" }}</td>
+        <td><a href="{% url 'blockchain:record_detail' r.id %}" class="r-offset-hover">{% trans "查看" %}</a></td>
       </tr>
       {% empty %}
-      <tr><td colspan="7" class="text-muted">暂无留痕记录（业务操作会自动上链）</td></tr>
+      <tr><td colspan="8" class="text-muted">{% trans "暂无留痕记录（业务操作会自动上链）" %}</td></tr>
       {% endfor %}
     </tbody>
   </table>

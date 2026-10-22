@@ -11,6 +11,7 @@ class StructureConfig(AppConfig):
         register(PluginMeta(
             name='structure',
             version='1.3.0',
+            title=_('组织架构模板'),
             menus=[
                 {'label': _('组织架构'), 'icon': '◫', 'url': '/plugins/structure/', 'perm': 'structure_view'},
                 {'label': _('应用结构'), 'icon': '⤓', 'url': '/plugins/structure/apply/', 'perm': 'structure_manage'},

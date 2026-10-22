@@ -1,4 +1,5 @@
 from django.apps import AppConfig
+from django.utils.translation import gettext_lazy as _
 
 
 class LanguageConfig(AppConfig):
@@ -10,6 +11,7 @@ class LanguageConfig(AppConfig):
         register(PluginMeta(
             name='language',
             version='1.4.0',
+            title=_('中英文切换'),
             menus=[],
             permissions=[],
             urls='plugins.language.urls',

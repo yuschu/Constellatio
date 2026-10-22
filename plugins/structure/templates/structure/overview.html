@@ -8,18 +8,19 @@
     {% csrf_token %}
     <div class="d-flex align-items-center gap-3">
       <label class="form-label mb-0" style="font-size:.75rem;">
-        <input type="checkbox" name="grant_manager_perms" value="1"> 经理角色授予 user_manage
+        <input type="checkbox" name="grant_manager_perms" value="1"> {% trans "经理角色授予 user_manage" %}
       </label>
-      <button class="r-btn" type="submit" onclick="return confirm('应用职能制架构模板？仅创建缺失项，不覆盖既有数据。')">{% trans "⤓ 应用模板" %}</button>
+      {% blocktranslate asvar confirm_apply %}应用职能制架构模板？仅创建缺失项，不覆盖既有数据。{% endblocktranslate %}
+      <button class="r-btn" type="submit" onclick="return confirm('{{ confirm_apply|escapejs }}')">{% trans "⤓ 应用模板" %}</button>
     </div>
   </form>
 </div>
 {% if last_records %}
 <div class="r-card mb-4" style="font-size:.8rem;">
-  <span class="r-badge r-badge--blue">最近应用</span>
+  <span class="r-badge r-badge--blue">{% trans "最近应用" %}</span>
   {% for rec in last_records %}
   <span class="me-3">#{{ rec.pk }} {{ rec.applied_by.last_name|default:rec.applied_by.username }}
-    +{{ rec.dept_created }}部门/+{{ rec.role_created }}角色/+{{ rec.user_created }}用户
+    {% blocktranslate with dept=rec.dept_created role=rec.role_created user=rec.user_created %}+{{ dept }}部门/+{{ role }}角色/+{{ user }}用户{% endblocktranslate %}
     {{ rec.applied_at|date:"m-d H:i" }}</span>
   {% endfor %}
 </div>
@@ -27,7 +28,7 @@
 <div class="row g-4">
   <div class="col-md-5">
     <div class="r-card h-100">
-      <h3 class="fs-5 mb-3">部门树（{{ dept_tree|length }} 个一级部门）</h3>
+      <h3 class="fs-5 mb-3">{% blocktranslate with count=dept_tree|length %}部门树（{{ count }} 个一级部门）{% endblocktranslate %}</h3>
       <ul class="list-unstyled mb-0" style="font-size:.9rem;">
         {% for dept, children in dept_tree %}
         <li class="mb-1">
@@ -44,13 +45,13 @@
   </div>
   <div class="col-md-7">
     <div class="r-card mb-4">
-      <h3 class="fs-5 mb-3">角色（{{ roles|length }} 个，身份角色默认空权限）</h3>
+      <h3 class="fs-5 mb-3">{% blocktranslate with count=roles|length %}角色（{{ count }} 个，身份角色默认空权限）{% endblocktranslate %}</h3>
       <div>
         {% for r in roles %}<span class="r-badge me-2 mb-2">{{ r }}</span>{% endfor %}
       </div>
     </div>
     <div class="r-card">
-      <h3 class="fs-5 mb-3">用户模板（{{ user_count }} 个，密码统一 constellatio123）</h3>
+      <h3 class="fs-5 mb-3">{% blocktranslate with count=user_count %}用户模板（{{ count }} 个，密码统一 constellatio123）{% endblocktranslate %}</h3>
       <div class="row g-3">
         {% for dept, users in users_by_dept.items %}
         <div class="col-md-6">

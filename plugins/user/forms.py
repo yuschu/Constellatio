@@ -4,6 +4,8 @@ v1.2：密码二次确认（password_confirm）；部门表单复用编辑。
 """
 
 from django import forms
+from django.contrib.auth.models import Permission
+from django.utils.translation import get_language, gettext_lazy as _
 
 from .models import Department, Role, User
 
@@ -14,7 +16,7 @@ class DepartmentForm(forms.ModelForm):
     class Meta:
         model = Department
         fields = ['name', 'parent']
-        widgets = {'name': forms.TextInput(attrs={'class': 'r-input', 'placeholder': '部门名称'})}
+        widgets = {'name': forms.TextInput(attrs={'class': 'r-input', 'placeholder': _('部门名称')})}
 
 
 class UserForm(forms.ModelForm):
@@ -22,10 +24,10 @@ class UserForm(forms.ModelForm):
 
     password = forms.CharField(
         required=False, widget=forms.PasswordInput(attrs={'class': 'r-input', 'autocomplete': 'new-password'}),
-        label='初始密码（留空使用默认）')
+        label=_('初始密码（留空使用默认）'))
     password_confirm = forms.CharField(
         required=False, widget=forms.PasswordInput(attrs={'class': 'r-input', 'autocomplete': 'new-password'}),
-        label='确认密码')
+        label=_('确认密码'))
 
     class Meta:
         model = User
@@ -42,7 +44,7 @@ class UserForm(forms.ModelForm):
         pwd = cleaned.get('password')
         confirm = cleaned.get('password_confirm')
         if pwd != confirm:
-            raise forms.ValidationError('两次输入的密码不一致')
+            raise forms.ValidationError(_('两次输入的密码不一致'))
         return cleaned
 
     def save(self, commit=True):
@@ -58,11 +60,23 @@ class UserForm(forms.ModelForm):
         return user
 
 
+class PermissionMultipleChoice(forms.ModelMultipleChoiceField):
+    """权限多选：中文显示 Permission.name，英文显示 app | codename，避免权限元数据中文残留。"""
+
+    def label_from_instance(self, obj):
+        if (get_language() or '').startswith('en'):
+            return f'{obj.content_type.app_label} | {obj.codename}'
+        return obj.name
+
+
 class RoleForm(forms.ModelForm):
+    permissions = PermissionMultipleChoice(
+        queryset=Permission.objects.all(),
+        required=False,
+        widget=forms.SelectMultiple(attrs={'size': '12', 'class': 'r-input'}),
+    )
+
     class Meta:
         model = Role
         fields = ['name', 'permissions']
-        widgets = {
-            'name': forms.TextInput(attrs={'class': 'r-input'}),
-            'permissions': forms.SelectMultiple(attrs={'size': '12', 'class': 'r-input'}),
-        }
+        widgets = {'name': forms.TextInput(attrs={'class': 'r-input'})}

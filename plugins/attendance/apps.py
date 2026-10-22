@@ -11,6 +11,7 @@ class AttendanceConfig(AppConfig):
         register(PluginMeta(
             name='attendance',
             version='0.5.0',
+            title=_('考勤打卡'),
             menus=[
                 {'label': _('考勤打卡'), 'icon': '▣', 'url': '/plugins/attendance/', 'perm': 'attendance_view'},
             ],

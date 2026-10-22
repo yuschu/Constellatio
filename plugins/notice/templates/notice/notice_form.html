@@ -11,16 +11,16 @@
   <form method="post" novalidate>
     {% csrf_token %}
     <div class="mb-3">
-      <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">标题</label>
-      <input class="r-input" type="text" name="title" required placeholder="公告标题">
+      <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">{% trans "标题" %}</label>
+      <input class="r-input" type="text" name="title" required placeholder="{% trans '公告标题' %}">
     </div>
     <div class="mb-3">
-      <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">内容</label>
-      <textarea class="r-input" name="content" rows="8" required placeholder="公告正文"></textarea>
+      <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">{% trans "内容" %}</label>
+      <textarea class="r-input" name="content" rows="8" required placeholder="{% trans '公告正文' %}"></textarea>
     </div>
     <div class="form-check mb-4">
       <input class="form-check-input" type="checkbox" name="is_top" id="is_top">
-      <label class="form-check-label" for="is_top">置顶</label>
+      <label class="form-check-label" for="is_top">{% trans "置顶" %}</label>
     </div>
     <button class="r-btn" type="submit">{% trans "发布" %}</button>
   </form>

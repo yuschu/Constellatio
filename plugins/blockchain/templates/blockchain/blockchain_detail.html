@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "操作记录" %} · Constellatio{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'blockchain:blockchain_list' %}" class="r-offset-hover">← {% trans "返回" %}</a>
+  <h2 class="mb-0">{% trans "操作记录" %} #{{ record.id }}</h2>
+</div>
+
+<div class="r-card mb-4">
+  {% if verify_ok %}
+    <span class="r-badge">{% trans "链完整性：通过（未被篡改）" %}</span>
+  {% else %}
+    <span class="r-badge r-badge--orange">{% blocktranslate with id=broken_id %}链完整性：异常（第 {{ id }} 条被篡改）{% endblocktranslate %}</span>
+  {% endif %}
+</div>
+
+<div class="r-card">
+  <table class="r-table">
+    <tr><th>ID</th><td>{{ record.id }}</td></tr>
+    <tr><th>{% trans "插件" %}</th><td>{% trans record.plugin %}</td></tr>
+    <tr><th>{% trans "动作" %}</th><td>{% trans record.action %}</td></tr>
+    <tr><th>{% trans "目标" %}</th><td>{% if record.target_type %}{{ record.target_type }}#{{ record.target_id }}{% else %}—{% endif %}</td></tr>
+    <tr><th>{% trans "操作人" %}</th><td>{% if record.operator %}{{ record.operator.last_name|default:record.operator.username }}{% else %}—{% endif %}</td></tr>
+    <tr><th>{% trans "内容哈希" %}</th><td style="word-break:break-all; font-family:monospace;">{{ record.payload_hash }}</td></tr>
+    <tr><th>{% trans "前链哈希" %}</th><td style="word-break:break-all; font-family:monospace;">{{ record.prev_hash }}</td></tr>
+    <tr><th>{% trans "记录哈希" %}</th><td style="word-break:break-all; font-family:monospace;">{{ record.record_hash }}</td></tr>
+    <tr><th>{% trans "时间" %}</th><td>{{ record.created_at|date:"Y-m-d H:i:s" }}</td></tr>
+  </table>
+</div>
+{% endblock %}

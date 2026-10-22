@@ -11,13 +11,13 @@
   <form method="post" novalidate>
     {% csrf_token %}
     <div class="mb-3">
-      <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">角色名</label>
+      <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">{% trans "角色名" %}</label>
       {{ form.name }}
     </div>
     <div class="mb-3">
-      <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">权限（权限码）</label>
+      <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">{% trans "权限（权限码）" %}</label>
       {{ form.permissions }}
-      <div class="text-muted mt-1" style="font-size:.75rem;">按住 Ctrl 多选；权限码格式：插件名_权限</div>
+      <div class="text-muted mt-1" style="font-size:.75rem;">{% trans "按住 Ctrl 多选；权限码格式：插件名_权限" %}</div>
     </div>
     <button class="r-btn" type="submit">{% trans "保存" %}</button>
   </form>

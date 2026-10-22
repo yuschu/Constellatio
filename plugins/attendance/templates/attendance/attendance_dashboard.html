@@ -10,15 +10,15 @@
   <div class="col-md-5">
     <div class="r-card position-relative">
       <span class="r-register-mark"></span>
-      <h3 class="fs-5 mb-3">今日状态</h3>
+      <h3 class="fs-5 mb-3">{% trans "今日状态" %}</h3>
       {% if record and record.check_in and record.check_out %}
-        <p class="r-badge">已签退</p>
-        <p class="mt-3 text-muted" style="font-size:.85rem;">签到 {{ record.check_in|date:"H:i" }} · 签退 {{ record.check_out|date:"H:i" }}</p>
+        <p class="r-badge">{% trans "已签退" %}</p>
+        <p class="mt-3 text-muted" style="font-size:.85rem;">{% blocktranslate with check_in=record.check_in|date:"H:i" check_out=record.check_out|date:"H:i" %}签到 {{ check_in }} · 签退 {{ check_out }}{% endblocktranslate %}</p>
       {% elif record and record.check_in %}
-        <p class="r-badge r-badge--blue">已签到</p>
-        <p class="mt-3 text-muted" style="font-size:.85rem;">签到 {{ record.check_in|date:"H:i" }} · 当前 {{ now|date:"H:i" }}</p>
+        <p class="r-badge r-badge--blue">{% trans "已签到" %}</p>
+        <p class="mt-3 text-muted" style="font-size:.85rem;">{% blocktranslate with check_in=record.check_in|date:"H:i" now=now|date:"H:i" %}签到 {{ check_in }} · 当前 {{ now }}{% endblocktranslate %}</p>
       {% else %}
-        <p class="r-badge r-badge--orange">未打卡</p>
+        <p class="r-badge r-badge--orange">{% trans "未打卡" %}</p>
       {% endif %}
       <div class="d-flex gap-3 mt-4">
         <form method="post" action="{% url 'attendance:attendance_check' %}">
@@ -34,10 +34,10 @@
   </div>
   <div class="col-md-7">
     <div class="r-card">
-      <h3 class="fs-5 mb-3">本月统计（{{ today|date:"Y-m" }}）</h3>
+      <h3 class="fs-5 mb-3">{% blocktranslate with month=today|date:"Y-m" %}本月统计（{{ month }}）{% endblocktranslate %}</h3>
       <table class="r-table">
-        <tr><th>出勤天数</th><td>{{ month_days }} 天</td></tr>
-        <tr><th>迟到次数</th><td>{{ month_late }} 次（09:00 前为正常）</td></tr>
+        <tr><th>{% trans "出勤天数" %}</th><td>{% blocktranslate with count=month_days %}{{ count }} 天{% endblocktranslate %}</td></tr>
+        <tr><th>{% trans "迟到次数" %}</th><td>{% blocktranslate with count=month_late %}{{ count }} 次（09:00 前为正常）{% endblocktranslate %}</td></tr>
       </table>
     </div>
   </div>
