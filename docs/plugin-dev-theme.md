@@ -430,5 +430,7 @@ entrypoint.sh 已有 collectstatic，会按当前主题收集；切换主题 = �
 - 登录占位：SSO 按钮 `disabled` + “即将上线”；忘记密码 → `/plugins/auth/password-reset/`，仅提示联系管理员。
 - 首屏 loader：两套 base/login 都有 `.r-loader`；load 后隐藏、beforeunload 显示、2.5s 兜底、noscript 隐藏、reduced-motion 停旋转。
 - 测试：63 项全绿；`collectstatic` 128 个文件；`OA_THEME=risograph` 登录页/占位页/工作台冒烟通过。
+- Docker：`docker compose up -d --build` 成功；entrypoint compile/migrate/collectstatic/gunicorn 3 workers 正常；默认 Corporate Clean 登录页/CSS/占位页 200；`OA_THEME=risograph` 重建后 CSS 200，再切回 Corporate Clean。
+- 访问：http://localhost:8000 （默认超管 admin / Constellatio@2026，若已改密码以实际为准）。
 - 已知例外：hero 按负责人要求使用 gray-900 on blue-600，对比度不足，记录在第十二节。
 - 无迁移、无新依赖；`.mo` 仍不入库。
