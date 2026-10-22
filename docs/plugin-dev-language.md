@@ -1,8 +1,8 @@
 # 插件开发文档：language（语言切换插件，默认中英文）
 
 > 关联插件：plugin_host 容器（中间件 / 注册表）、themes.risograph（外壳）、各业务插件（菜单 / 页标题）
-> 版本规划：v1.4 / v1.5.1 补全 · 文档版本：draft-05（已实现）· 2026-10-22
-> 状态：**✅ v1.4 实现 + v1.5.1 全站 UI 文案补全**（66 项测试全绿；中英双语页面冒烟）
+> 版本规划：v1.4 / v1.5.1–v1.5.2 补全 · 文档版本：draft-06（已实现）· 2026-10-22
+> 状态：**✅ v1.4 实现 + v1.5.1 全站 UI 文案补全 + v1.5.2 留痕插件/动作名本地化**（67 项测试全绿；中英双语页面冒烟）
 
 ## 〇、draft-02 复核结论（先看这节）
 
@@ -265,6 +265,7 @@ tools/compile_mo.py                  # 纯 Python .po → .mo（无 gettext 依�
 - 翻译：`locale/en/LC_MESSAGES/django.po`（200+ 条在用）+ `tools/compile_mo.py`
 - 模板：`base.html` / `login.html` / `home.html` + 8 个 `apps.py` 菜单与展示名 + 全部业务模板（表头 / 字段 / 状态 / 空态 / confirm）
 - 禁停：`workspace.PROTECTED` 增加 `language`
-- 测试：`plugins/language/tests.py` 13 项；全量 **66 项全绿**（v1.5.1）
+- 测试：`plugins/language/tests.py` 13 项；全量 **67 项全绿**（v1.5.2）
+- v1.5.2：留痕链的插件列改用 `PluginMeta.title`，动作列改用 `action_label` 映射，不再显示 `notice` / `notice_published` 这类机器键
 - 冒烟：中文 / 英文各 13 个页面 200；登录页可切换；语言 Cookie 为会话级；`.mo` 不入库
 - v1.5.1：插件开关展示名、表头、状态、留痕详情、权限选项全部随语言切换；英文页扫描仅剩语言名“中文”与业务数据。

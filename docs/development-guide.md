@@ -557,6 +557,7 @@ class BlockchainRecord(models.Model):
 - 权限：`blockchain_view`（查看留痕）、`blockchain_verify`（链完整性校验）
 - 校验入口：`BlockchainRecord.verify_chain()` → 页面显示"链完整"或"第 N 条被篡改"
 - 详情：列表行尾"查看" → `/plugins/blockchain/<id>/`，展示插件/动作/目标/操作人/三种哈希/时间
+- 展示名：插件列用 `PluginMeta.title`，动作列用 `BlockchainRecord.action_label`，随当前语言切换（v1.5.2）
 
 ## 五、前端开发规范
 

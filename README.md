@@ -141,4 +141,4 @@ Constellatio/
 
 ## 📌 状态
 
-**v1.5.1 已跑通**（Corporate Clean 默认 + Risograph 备选 / 全站 UI 中英切换补全 / 留痕详情 / 66 项测试全绿）→ 下一步：v1.6 图表插件化 + ECharts
+**v1.5.2 已跑通**（Corporate Clean 默认 + Risograph 备选 / 全站 UI 中英切换补全 / 留痕插件与动作名本地化 / 67 项测试全绿）→ 下一步：v1.6 图表插件化 + ECharts

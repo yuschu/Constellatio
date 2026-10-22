@@ -175,5 +175,6 @@ OA_PLUGINS = [
 - [x] v1.3 structure 插件（职能制组织架构模板：20 部门/31 角色/31 用户模板幂等应用，应用上链）—— 2026-10-21 完成：`docs/plugin-dev-structure.md`
 - [x] v1.4 language 插件（默认中英文切换，13 项单测 + 双语冒烟）—— 2026-10-22 完成：`docs/plugin-dev-language.md`
 - [x] v1.5 theme 插件（Corporate Clean 默认 / Risograph 备选 + 登录占位入口 + 首屏 loader）—— 2026-10-22 完成：`docs/plugin-dev-theme.md`
-- [x] v1.5.1 全站 UI 文案中英补全（插件名 / 表头 / 状态 / 空态 / confirm）+ 留痕记录点击查看详情（66 项测试全绿）—— 2026-10-22
+- [x] v1.5.1 全站 UI 文案中英补全（插件名 / 表头 / 状态 / 空态 / confirm）+ 留痕记录点击查看详情—— 2026-10-22
+- [x] v1.5.2 留痕链插件/动作展示名本地化（67 项测试全绿）—— 2026-10-22
 - [ ] 测试报告
