@@ -1,7 +1,7 @@
 # 插件开发文档：user 增强（部门软/硬删除 + 用户状态机 + 密码二次确认 + 权限层级）
 
 > 关联插件：user（主体）、approval（会签审批扩展）、blockchain（上链）
-> 版本规划：v1.2 · 文档版本：v1.2 · 2026-10-21
+> 版本规划：v1.2 / v1.5.3 增补 · 文档版本：v1.3 · 2026-10-22
 > 状态：**✅ 已实现并跑通**（18 项单测全绿 + 全链路冒烟：部门创建/修改/软删/硬删会签→物理删除、admin 直接禁用、普通管理员会签禁用（双人全签生效）、超管不可操作、冻结即时短路、6 类操作上链 + 链校验通过）
 
 > ⚠️ 草案差异：§四 / §五 仍保留 v1.2 设计草案；**实际字段与信号以第二节「实现对照」和代码为准**（`biz_id` 取代 target_type/target_id；`signed/signed_at` 取代 status/acted_at；`start_counter_signature` 取代 create_consensus）。v1.10 完整重写。
@@ -203,3 +203,34 @@ user 订阅 approval_finished：dept_delete & approved → 物理删除 Departme
 | `plugins/approval/apps.py` | 订阅 department_delete_requested / user_disable_requested（建会签单） |
 | `plugin_host/signals.py` | 新增 6 信号 + approval_finished kwargs 扩展 |
 | `plugins/blockchain/apps.py` | 新增 5 订阅 |
+
+
+## 十二、v1.5.3 增补：个人中心与用户权限管理
+
+### 12.1 个人中心
+
+| 路由 | 视图 | 说明 |
+|---|---|---|
+| /plugins/user/profile/ | profile | 账号信息 + 编辑资料 / 查看权限 / 修改密码入口 |
+| /plugins/user/profile/edit/ | profile_edit | 只改姓名 / 邮箱，不改角色、权限、状态 |
+| /plugins/user/profile/permissions/ | profile_permissions | 角色、直接权限、有效权限 |
+| /plugins/user/profile/password/ | profile_password | 旧密码校验 + 新密码二次确认；更新会话 |
+
+- 顶栏用户名 badge 改为链接，点击进入个人中心。
+- 修改密码成功后 update_session_auth_hash，登录态不丢；发 password_changed 上链。
+- 个人资料修改发 user_updated 上链。
+- 权限展示：超管显示“拥有全部权限”；普通用户按角色权限 + 直接权限去重；英文下权限显示 app | codename，避免权限元数据残留中文。
+
+### 12.2 用户编辑的权限范围
+
+- UserForm 增加 user_permissions（直接权限）字段；保存时与角色一起写入。
+- grantable_permissions(operator)：超管全部；普通操作者只得到自己直接权限 + 角色权限的并集；目标用户已有权限保留，避免编辑时被静默清空。
+- grantable_roles(operator)：只展示权限集合不超过操作者自身的角色；目标用户已有角色保留。
+- 权限选项中文显示 Permission.name，英文显示 app | codename；空值清洗复用 _clean_multi。
+
+### 12.3 其他
+
+- 登录失败保留用户名（value="{{ username }}"），密码出于安全不回填。
+- 公告菜单去掉 notice_view 门槛：所有登录用户可见公告列表/详情；发布仍要求 notice_manage。
+- user 加入 workspace 禁停清单（个人中心依赖它）。
+- 测试：v1.5.3 全量 76 项通过（新增登录回填、公告可见、个人中心、权限范围）。

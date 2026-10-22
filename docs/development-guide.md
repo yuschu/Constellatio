@@ -430,6 +430,8 @@ class User(AbstractUser):
 
 - **必须**在 settings.py 设置 `AUTH_USER_MODEL = 'user.User'`，且在首次 migrate 前配置
 - 权限过滤两层：菜单（`registry.get_menus` 按菜单项 `perm`）+ 视图（`require_perm('user_manage')` 装饰器）
+- v1.5.3 个人中心：`/plugins/user/profile/`（资料摘要）、`/profile/edit/`、`/profile/permissions/`、`/profile/password/`；顶栏用户名链接进入
+- v1.5.3 用户编辑：`UserForm` 增加 `user_permissions`；`grantable_permissions` / `grantable_roles` 只展示操作者可授予范围
 - 多选 M2M 空值：提交空 `roles=`/`permissions=` 会触发校验错误，视图层用 `_clean_multi` 清洗
 
 ### 4.3 notice 插件（公告 + 已读）
@@ -461,6 +463,7 @@ class AnnouncementRead(models.Model):
 ```
 
 - 已读统计：`a.read_records.count()`（列表用 `annotate(read_count=Count('read_records'))`）
+- 可见性：v1.5.3 起公告菜单对**所有登录用户**可见（不再要求 `notice_view`）；发布仍要求 `notice_manage`
 - 未读标记：预取 `AnnouncementRead.objects.filter(user=u).values_list('announcement_id', flat=True)`，免 N+1
 - 详情记已读用 `get_or_create`，重复访问幂等
 

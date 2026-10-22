@@ -15,7 +15,7 @@
 | 形态 | 新插件 `plugins/workspace`（"万物皆可插件"：管理能力本身也是插件） |
 | 运行时开关 | 新建表 `workspace_pluginswitch`（app_key, enabled）持久化，**DB 优先覆盖** settings.OA_PLUGINS 静态配置 |
 | 生效机制 | `registry.get_enabled_plugins()` 改造：先读 DB 开关，无记录回退静态配置；菜单/权限收敛基于它 → 一次请求即生效；**路由即时生效**：新增 `plugin_host.middleware.PluginRouteGuardMiddleware`（URLConf 静态 include 无法按请求刷新，中间件对停用插件请求直接 404） |
-| 防锁死 | `auth`、`workspace` 自身禁止停用（保证登录与开关入口永在）；v1.4 起 `language` 也加入禁停（外壳级切换入口） |
+| 防锁死 | `auth`、`workspace` 自身禁止停用；v1.4 起 `language`、v1.5.3 起 `user` 也加入禁停（外壳 / 个人中心依赖） |
 | 权限 | 新权限码 `workspace_manage`（普通管理员即可操作，即时生效） |
 | 上链 | 开关操作发 `plugin_toggled` 信号 → blockchain 订阅上链 |
 | 页面 | home 工作台新增"插件开关"入口卡片 → `/plugins/workspace/` 开关页（插件列表 + 开关按钮） |

@@ -2,7 +2,7 @@
 
 > 依据：`tech-stack-and-architecture.md` / `constraints-and-acceptance.md` / `development-guide.md` 的**全栈插件化**目标
 > 负责人校正（2026-10-22）：**不降级**、**补充实现**、**列入修复项**；工作约定只需「文档先行、每改必推 GitHub、每版打 tag」
-> 状态：draft-05（2026-10-22）—— **v1.4–v1.5.2 已完成**（67 项测试全绿）；当前推进 v1.6
+> 状态：draft-06（2026-10-22）—— **v1.4–v1.5.3 已完成**（76 项测试全绿）；当前推进 v1.6
 
 ## 一、总原则
 
@@ -37,6 +37,7 @@
 | **v1.5** | 主题插件化 + Corporate Clean 默认 | ThemeMeta 发现 + `OA_THEME` 生效 + corporate-clean 默认 + risograph 备选 + 登录占位入口 + 首屏 loader（`docs/plugin-dev-theme.md`） | ✅ 已完成：63 项测试 + 双主题冒烟 |
 | **v1.5.1** | 全站文案 + 留痕详情 | 插件展示名 / 表头 / 状态 / 空态 / confirm 全量本地化；留痕列表点击查看单条记录 | ✅ 已完成：66 项测试 + Docker 验证 |
 | **v1.5.2** | 留痕插件/动作名 | 插件列用 PluginMeta.title，动作列用 action_label，随语言切换 | ✅ 已完成：67 项测试 + Docker 验证 |
+| **v1.5.3** | 个人中心 + 权限范围 | 个人中心（资料 / 权限 / 改密）、用户编辑可授予权限过滤、登录回填、公告可见 | ✅ 已完成：76 项测试 + Docker 验证 |
 | **v1.6** | 图表插件化 + ECharts | `ChartRenderer` 接口；ECharts Provider；考勤 `/stats/` JSON + 月度看板 | 图表数据与打卡记录一致；停用图表插件页面降级不报错 |
 | **v1.7** | 认证后端插件化 | `AUTHENTICATION_BACKENDS` Provider；一个无外部依赖的示例后端（如用户名/邮箱） | 切换后端可登录；默认后端仍可用 |
 | **v1.8** | 模板引擎插件化 | Django / Jinja2 Provider；先做多引擎共存或单插件切换 | 待确认深度（见第六节） |
