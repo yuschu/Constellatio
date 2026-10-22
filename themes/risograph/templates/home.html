@@ -1,37 +1,38 @@
 {% extends "base.html" %}
-{% block title %}工作台 · Constellatio{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "工作台" %} · Constellatio{% endblock %}
 {% block content %}
 <div class="r-card position-relative mb-4">
   <span class="r-register-mark"></span>
-  <h2 class="mb-2">工作台</h2>
+  <h2 class="mb-2">{% trans "工作台" %}</h2>
   <p class="mb-0" style="font-size:.9rem; color:rgba(26,26,26,.6);">
-    欢迎，{{ request.user.last_name|default:request.user.username }}。
+    {% blocktranslate with name=request.user.last_name|default:request.user.username %}欢迎，{{ name }}。{% endblocktranslate %}
   </p>
 </div>
 <div class="row g-4">
   <div class="col-md-4">
     <div class="r-card h-100">
-      <h3 class="fs-5 mb-2">插件架构</h3>
-      <p class="mb-0" style="font-size:.8rem; color:rgba(26,26,26,.6);">万物皆可插件：容器唯一固定，业务与基础设施全部可插拔。</p>
+      <h3 class="fs-5 mb-2">{% trans "插件架构" %}</h3>
+      <p class="mb-0" style="font-size:.8rem; color:rgba(26,26,26,.6);">{% trans "万物皆可插件：容器唯一固定，业务与基础设施全部可插拔。" %}</p>
     </div>
   </div>
   <div class="col-md-4">
     <div class="r-card h-100">
       <h3 class="fs-5 mb-2">Risograph</h3>
-      <p class="mb-0" style="font-size:.8rem; color:rgba(26,26,26,.6);">有限色板 · 硬边阴影 · 等宽字体 · 瞬时动效。</p>
+      <p class="mb-0" style="font-size:.8rem; color:rgba(26,26,26,.6);">{% trans "有限色板 · 硬边阴影 · 等宽字体 · 瞬时动效。" %}</p>
     </div>
   </div>
   <div class="col-md-4">
     <div class="r-card h-100">
-      <h3 class="fs-5 mb-2">已启用插件</h3>
-      <p class="mb-0" style="font-size:.8rem; color:rgba(26,26,26,.6);">侧栏菜单由插件注册表自动聚合。</p>
+      <h3 class="fs-5 mb-2">{% trans "已启用插件" %}</h3>
+      <p class="mb-0" style="font-size:.8rem; color:rgba(26,26,26,.6);">{% trans "侧栏菜单由插件注册表自动聚合。" %}</p>
     </div>
   </div>
   <div class="col-md-4">
     <div class="r-card h-100">
-      <h3 class="fs-5 mb-2">插件开关</h3>
+      <h3 class="fs-5 mb-2">{% trans "插件开关" %}</h3>
       <p class="mb-0" style="font-size:.8rem; color:rgba(26,26,26,.6);">
-        <a href="/plugins/workspace/" class="r-offset-hover">运行时启用 / 禁用插件 →</a>
+        <a href="/plugins/workspace/" class="r-offset-hover">{% trans "运行时启用 / 禁用插件 →" %}</a>
       </p>
     </div>
   </div>

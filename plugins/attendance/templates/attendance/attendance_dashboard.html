@@ -1,8 +1,9 @@
 {% extends "base.html" %}
-{% block title %}考勤打卡 · Constellatio{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "考勤打卡" %} · Constellatio{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-  <h2 class="mb-0">考勤打卡</h2>
+  <h2 class="mb-0">{% trans "考勤打卡" %}</h2>
   <span class="r-badge">{{ today|date:"Y-m-d" }}</span>
 </div>
 <div class="row g-4">
@@ -22,11 +23,11 @@
       <div class="d-flex gap-3 mt-4">
         <form method="post" action="{% url 'attendance:attendance_check' %}">
           {% csrf_token %}
-          <button class="r-btn" type="submit" name="action" value="in" {% if record and record.check_in %}disabled{% endif %}>签到</button>
+          <button class="r-btn" type="submit" name="action" value="in" {% if record and record.check_in %}disabled{% endif %}>{% trans "签到" %}</button>
         </form>
         <form method="post" action="{% url 'attendance:attendance_check' %}">
           {% csrf_token %}
-          <button class="r-btn" type="submit" name="action" value="out" {% if not record or not record.check_in or record.check_out %}disabled{% endif %}>签退</button>
+          <button class="r-btn" type="submit" name="action" value="out" {% if not record or not record.check_in or record.check_out %}disabled{% endif %}>{% trans "签退" %}</button>
         </form>
       </div>
     </div>

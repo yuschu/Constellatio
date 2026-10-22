@@ -43,12 +43,15 @@ INSTALLED_APPS = [
     'plugins.blockchain',
     'plugins.workspace',
     'plugins.structure',
+    'plugins.language',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',   # 容器内静态托管（无需 nginx）
     'django.contrib.sessions.middleware.SessionMiddleware',
+    # 语言插件：默认中文 + 会话级 Cookie；替换 stock LocaleMiddleware
+    'plugins.language.middleware.DefaultLanguageMiddleware',
     'django.middleware.common.CommonMiddleware',
     'plugin_host.middleware.PluginRouteGuardMiddleware',  # 插件运行时启停：停用即 404
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -118,6 +121,7 @@ OA_PLUGINS = [
     {'app': 'plugins.blockchain', 'enabled': True},
     {'app': 'plugins.workspace', 'enabled': True},
     {'app': 'plugins.structure', 'enabled': True},
+    {'app': 'plugins.language', 'enabled': True},
 ]
 
 # 默认主题插件（新建 themes/<name>/ + 修改此项即换主题）
@@ -133,6 +137,11 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
+LANGUAGES = [
+    ('zh-hans', '简体中文'),
+    ('en', 'English'),
+]
+LOCALE_PATHS = [BASE_DIR / 'locale']
 LANGUAGE_CODE = 'zh-hans'
 TIME_ZONE = 'Asia/Shanghai'
 USE_I18N = True

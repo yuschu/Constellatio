@@ -1,8 +1,9 @@
 {% extends "base.html" %}
+{% load i18n %}
 {% block title %}{{ announcement.title }} · Constellatio{% endblock %}
 {% block content %}
 <div class="d-flex align-items-center gap-3 mb-4">
-  <a href="{% url 'notice:notice_list' %}" class="r-offset-hover">← 返回</a>
+  <a href="{% url 'notice:notice_list' %}" class="r-offset-hover">← {% trans "返回" %}</a>
   <h2 class="mb-0">{{ announcement.title }}</h2>
   {% if announcement.is_top %}<span class="r-badge">置顶</span>{% endif %}
 </div>

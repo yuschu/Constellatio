@@ -1,4 +1,5 @@
 from django.apps import AppConfig
+from django.utils.translation import gettext_lazy as _
 
 from plugin_host.signals import (
     counter_signature_approved, dept_deleted, user_disabled,
@@ -15,9 +16,9 @@ class UserConfig(AppConfig):
             name='user',
             version='1.2.0',
             menus=[
-                {'label': '部门', 'icon': '▣', 'url': '/plugins/user/departments/', 'perm': 'user_manage'},
-                {'label': '用户', 'icon': '☰', 'url': '/plugins/user/users/', 'perm': 'user_manage'},
-                {'label': '角色', 'icon': '◆', 'url': '/plugins/user/roles/', 'perm': 'user_manage'},
+                {'label': _('部门'), 'icon': '▣', 'url': '/plugins/user/departments/', 'perm': 'user_manage'},
+                {'label': _('用户'), 'icon': '☰', 'url': '/plugins/user/users/', 'perm': 'user_manage'},
+                {'label': _('角色'), 'icon': '◆', 'url': '/plugins/user/roles/', 'perm': 'user_manage'},
             ],
             permissions=['user_manage', 'dept_delete_approve', 'user_disable_approve'],
             urls='plugins.user.urls',

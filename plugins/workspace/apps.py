@@ -1,4 +1,5 @@
 from django.apps import AppConfig
+from django.utils.translation import gettext_lazy as _
 
 
 class WorkspaceConfig(AppConfig):
@@ -11,7 +12,7 @@ class WorkspaceConfig(AppConfig):
             name='workspace',
             version='1.1.0',
             menus=[
-                {'label': '插件开关', 'icon': '⚙', 'url': '/plugins/workspace/', 'perm': 'workspace_manage'},
+                {'label': _('插件开关'), 'icon': '⚙', 'url': '/plugins/workspace/', 'perm': 'workspace_manage'},
             ],
             permissions=['workspace_manage'],
             urls='plugins.workspace.urls',

@@ -1,8 +1,9 @@
 {% extends "base.html" %}
+{% load i18n %}
 {% block title %}{{ title }} · Constellatio{% endblock %}
 {% block content %}
 <div class="d-flex align-items-center gap-3 mb-4">
-  <a href="{% url 'user:role_list' %}" class="r-offset-hover">← 返回</a>
+  <a href="{% url 'user:role_list' %}" class="r-offset-hover">← {% trans "返回" %}</a>
   <h2 class="mb-0">{{ title }}</h2>
 </div>
 <div class="r-card position-relative" style="max-width:560px;">
@@ -18,7 +19,7 @@
       {{ form.permissions }}
       <div class="text-muted mt-1" style="font-size:.75rem;">按住 Ctrl 多选；权限码格式：插件名_权限</div>
     </div>
-    <button class="r-btn" type="submit">保存</button>
+    <button class="r-btn" type="submit">{% trans "保存" %}</button>
   </form>
 </div>
 {% endblock %}

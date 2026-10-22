@@ -1,4 +1,5 @@
 from django.apps import AppConfig
+from django.utils.translation import gettext_lazy as _
 
 
 class NoticeConfig(AppConfig):
@@ -11,7 +12,7 @@ class NoticeConfig(AppConfig):
             name='notice',
             version='0.4.0',
             menus=[
-                {'label': '公告中心', 'icon': '▣', 'url': '/plugins/notice/', 'perm': 'notice_view'},
+                {'label': _('公告中心'), 'icon': '▣', 'url': '/plugins/notice/', 'perm': 'notice_view'},
             ],
             permissions=['notice_view', 'notice_manage'],
             urls='plugins.notice.urls',

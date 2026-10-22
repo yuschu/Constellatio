@@ -2,6 +2,9 @@
 # Constellatio 容器启动脚本：迁移 → 静态收集 → 初始超管 → gunicorn
 set -e
 
+echo "[entrypoint] compile translations"
+python tools/compile_mo.py
+
 echo "[entrypoint] migrate"
 python manage.py migrate --noinput
 

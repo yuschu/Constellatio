@@ -1,8 +1,9 @@
 {% extends "base.html" %}
-{% block title %}待我审批 · Constellatio{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "待我审批" %} · Constellatio{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-  <h2 class="mb-0">待我审批</h2>
+  <h2 class="mb-0">{% trans "待我审批" %}</h2>
   <span class="r-badge">{{ approvals|length }} 条待办</span>
 </div>
 <div class="r-card">
@@ -19,7 +20,7 @@
         <td>{{ a.applicant.last_name|default:a.applicant.username }}</td>
         <td>{% if a.amount %}￥{{ a.amount }}{% else %}—{% endif %}</td>
         <td>{{ a.created_at|date:"m-d H:i" }}</td>
-        <td><a href="{% url 'approval:approval_detail' a.id %}" class="r-btn">去审批</a></td>
+        <td><a href="{% url 'approval:approval_detail' a.id %}" class="r-btn">{% trans "去审批" %}</a></td>
       </tr>
       {% empty %}
       <tr><td colspan="7" class="text-muted">暂无待审批事项</td></tr>

@@ -1,9 +1,10 @@
 {% extends "base.html" %}
-{% block title %}发起审批 · Constellatio{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "发起审批" %} · Constellatio{% endblock %}
 {% block content %}
 <div class="d-flex align-items-center gap-3 mb-4">
-  <a href="{% url 'approval:approval_list' %}" class="r-offset-hover">← 返回</a>
-  <h2 class="mb-0">发起审批</h2>
+  <a href="{% url 'approval:approval_list' %}" class="r-offset-hover">← {% trans "返回" %}</a>
+  <h2 class="mb-0">{% trans "发起审批" %}</h2>
 </div>
 <div class="r-card position-relative" style="max-width:560px;">
   <span class="r-register-mark"></span>
@@ -37,7 +38,7 @@
         {% endfor %}
       </select>
     </div>
-    <button class="r-btn" type="submit">提交审批</button>
+    <button class="r-btn" type="submit">{% trans "提交审批" %}</button>
   </form>
 </div>
 {% endblock %}

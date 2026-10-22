@@ -2,6 +2,7 @@
 
 from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import redirect, render
+from django.utils.translation import gettext as _
 
 
 def login_view(request):
@@ -16,7 +17,7 @@ def login_view(request):
         if user is not None:
             login(request, user)
             return redirect('index')
-        error = '用户名或密码错误'
+        error = _('用户名或密码错误')
 
     return render(request, 'login.html', {'error': error})
 

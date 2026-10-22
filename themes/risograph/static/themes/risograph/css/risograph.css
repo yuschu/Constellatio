@@ -155,6 +155,30 @@ a { color: var(--r-blue); text-decoration: none; }
   box-shadow: 3px 3px 0 var(--r-pink);
 }
 
+/* 语言切换（顶栏 / 登录页） */
+.r-lang {
+  font-family: var(--r-font);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.1rem 0.45rem;
+  border: 2px solid var(--r-ink);
+  border-radius: var(--r-radius);
+  background: var(--r-paper);
+  color: var(--r-ink);
+  cursor: pointer;
+  transition: all var(--r-dur) var(--r-ease);
+}
+.r-lang:hover {
+  box-shadow: 3px 3px 0 var(--r-pink);
+  transform: translate(1px, 1px);
+}
+.r-lang.is-active {
+  background: var(--r-pink);
+  color: #fff;
+}
+
 /* 徽标/标签 */
 .r-badge {
   display: inline-block;

@@ -1,4 +1,5 @@
 from django.apps import AppConfig
+from django.utils.translation import gettext_lazy as _
 
 
 class ApprovalConfig(AppConfig):
@@ -11,8 +12,8 @@ class ApprovalConfig(AppConfig):
             name='approval',
             version='1.2.0',
             menus=[
-                {'label': '审批中心', 'icon': '▣', 'url': '/plugins/approval/', 'perm': 'approval_view'},
-                {'label': '待我审批', 'icon': '☐', 'url': '/plugins/approval/pending/', 'perm': 'approval_view'},
+                {'label': _('审批中心'), 'icon': '▣', 'url': '/plugins/approval/', 'perm': 'approval_view'},
+                {'label': _('待我审批'), 'icon': '☐', 'url': '/plugins/approval/pending/', 'perm': 'approval_view'},
             ],
             permissions=['approval_view', 'approval_approve'],
             urls='plugins.approval.urls',

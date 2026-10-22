@@ -1,8 +1,9 @@
 {% extends "base.html" %}
-{% block title %}部门管理 · Constellatio{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "部门管理" %} · Constellatio{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-  <h2 class="mb-0">部门管理</h2>
+  <h2 class="mb-0">{% trans "部门管理" %}</h2>
   <span class="r-badge">user_manage</span>
 </div>
 {% if error %}<div class="r-card mb-4" style="box-shadow: var(--r-shadow-orange);">{{ error }}</div>{% endif %}
@@ -27,26 +28,26 @@
                 {% csrf_token %}
                 <input type="hidden" name="action" value="edit">
                 <input type="hidden" name="dept_id" value="{{ d.id }}">
-                <button class="r-btn" type="submit">修改</button>
+                <button class="r-btn" type="submit">{% trans "修改" %}</button>
               </form>
               <form method="post" action="{% url 'user:department_list' %}" class="d-inline">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="soft_delete">
                 <input type="hidden" name="dept_id" value="{{ d.id }}">
-                <button class="r-btn" type="submit" onclick="return confirm('软删除（停用）部门「{{ d.name }}」？即时生效并留痕。')">停用</button>
+                <button class="r-btn" type="submit" onclick="return confirm('软删除（停用）部门「{{ d.name }}」？即时生效并留痕。')">{% trans "停用" %}</button>
               </form>
               <form method="post" action="{% url 'user:department_list' %}" class="d-inline">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="hard_delete">
                 <input type="hidden" name="dept_id" value="{{ d.id }}">
-                <button class="r-btn" type="submit" onclick="return confirm('物理删除部门「{{ d.name }}」？将发起部门删除审批单，全部审批人通过后执行。')">物理删除</button>
+                <button class="r-btn" type="submit" onclick="return confirm('物理删除部门「{{ d.name }}」？将发起部门删除审批单，全部审批人通过后执行。')">{% trans "物理删除" %}</button>
               </form>
               {% else %}
               <form method="post" action="{% url 'user:department_list' %}" class="d-inline">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="edit">
                 <input type="hidden" name="dept_id" value="{{ d.id }}">
-                <button class="r-btn" type="submit">修改</button>
+                <button class="r-btn" type="submit">{% trans "修改" %}</button>
               </form>
               {% endif %}
             </td>
@@ -62,7 +63,7 @@
     <div class="r-card position-relative">
       <span class="r-register-mark"></span>
       {% if edit_dept %}
-        <h3 class="fs-5 mb-3">修改部门：{{ edit_dept.name }}</h3>
+        <h3 class="fs-5 mb-3">{% blocktranslate with name=edit_dept.name %}修改部门：{{ name }}{% endblocktranslate %}</h3>
         <form method="post" novalidate>
           {% csrf_token %}
           <input type="hidden" name="action" value="edit">
@@ -76,11 +77,11 @@
             <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">上级部门</label>
             {{ form.parent }}
           </div>
-          <button class="r-btn" type="submit">保存修改</button>
-          <a href="{% url 'user:department_list' %}" class="r-offset-hover ms-2">取消</a>
+          <button class="r-btn" type="submit">{% trans "保存修改" %}</button>
+          <a href="{% url 'user:department_list' %}" class="r-offset-hover ms-2">{% trans "取消" %}</a>
         </form>
       {% else %}
-        <h3 class="fs-5 mb-3">新建部门</h3>
+        <h3 class="fs-5 mb-3">{% trans "新建部门" %}</h3>
         <form method="post" novalidate>
           {% csrf_token %}
           <input type="hidden" name="action" value="create">
@@ -93,7 +94,7 @@
             <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">上级部门</label>
             {{ form.parent }}
           </div>
-          <button class="r-btn" type="submit">创建</button>
+          <button class="r-btn" type="submit">{% trans "创建" %}</button>
         </form>
       {% endif %}
     </div>

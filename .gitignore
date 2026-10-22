@@ -12,6 +12,9 @@ db.sqlite3
 media/
 staticfiles/
 
+# ---- i18n（.mo 由 tools/compile_mo.py 生成，不入库）----
+*.mo
+
 # ---- 环境变量与密钥 ----
 .env
 .env.*

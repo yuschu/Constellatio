@@ -1,0 +1,224 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Constellatio 1.4\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "企业办公自动化"
+msgstr "Enterprise office automation"
+
+msgid "功能"
+msgstr "Features"
+
+msgid "暂无可用功能"
+msgstr "No features available"
+
+msgid "登录"
+msgstr "Log in"
+
+msgid "返回"
+msgstr "Back"
+
+msgid "登出"
+msgstr "Log out"
+
+msgid "万物皆可插件"
+msgstr "Everything is a plugin"
+
+msgid "Risograph 印刷风"
+msgstr "Risograph print style"
+
+msgid "企业办公自动化 · Risograph 印刷风"
+msgstr "Enterprise office automation · Risograph print style"
+
+msgid "用户名"
+msgstr "Username"
+
+msgid "密码"
+msgstr "Password"
+
+msgid "输入用户名"
+msgstr "Enter username"
+
+msgid "输入密码"
+msgstr "Enter password"
+
+msgid "登 录"
+msgstr "Log in"
+
+msgid "用户名或密码错误"
+msgstr "Invalid username or password"
+
+msgid "工作台"
+msgstr "Workspace"
+
+msgid "欢迎，%(name)s。"
+msgstr "Welcome, %(name)s."
+
+msgid "插件架构"
+msgstr "Plugin architecture"
+
+msgid "万物皆可插件：容器唯一固定，业务与基础设施全部可插拔。"
+msgstr "Everything is a plugin: the container is fixed; business and infrastructure are fully pluggable."
+
+msgid "有限色板 · 硬边阴影 · 等宽字体 · 瞬时动效。"
+msgstr "Limited palette · hard-edged shadows · monospace type · instant motion."
+
+msgid "已启用插件"
+msgstr "Enabled plugins"
+
+msgid "侧栏菜单由插件注册表自动聚合。"
+msgstr "The sidebar is aggregated by the plugin registry."
+
+msgid "插件开关"
+msgstr "Plugin switches"
+
+msgid "运行时启用 / 禁用插件 →"
+msgstr "Enable / disable plugins at runtime →"
+
+msgid "部门"
+msgstr "Departments"
+
+msgid "用户"
+msgstr "Users"
+
+msgid "角色"
+msgstr "Roles"
+
+msgid "审批中心"
+msgstr "Approvals"
+
+msgid "待我审批"
+msgstr "Pending approvals"
+
+msgid "公告中心"
+msgstr "Notices"
+
+msgid "考勤打卡"
+msgstr "Attendance"
+
+msgid "留痕链"
+msgstr "Audit chain"
+
+msgid "组织架构"
+msgstr "Organization"
+
+msgid "应用结构"
+msgstr "Apply structure"
+
+msgid "发起审批"
+msgstr "New approval"
+
+msgid "审批详情"
+msgstr "Approval detail"
+
+msgid "提交审批"
+msgstr "Submit approval"
+
+msgid "会签通过"
+msgstr "Sign approve"
+
+msgid "会签驳回"
+msgstr "Sign reject"
+
+msgid "通过"
+msgstr "Approve"
+
+msgid "驳回"
+msgstr "Reject"
+
+msgid "去审批"
+msgstr "Review"
+
+msgid "发布公告"
+msgstr "Publish notice"
+
+msgid "发布"
+msgstr "Publish"
+
+msgid "操作留痕"
+msgstr "Audit trail"
+
+msgid "操作留痕链"
+msgstr "Audit chain"
+
+msgid "签到"
+msgstr "Check in"
+
+msgid "签退"
+msgstr "Check out"
+
+msgid "停用"
+msgstr "Disable"
+
+msgid "启用"
+msgstr "Enable"
+
+msgid "系统必需"
+msgstr "System required"
+
+msgid "组织架构（职能制模板）"
+msgstr "Organization (functional template)"
+
+msgid "⤓ 应用模板"
+msgstr "⤓ Apply template"
+
+msgid "部门管理"
+msgstr "Departments"
+
+msgid "用户管理"
+msgstr "Users"
+
+msgid "角色管理"
+msgstr "Roles"
+
+msgid "新建用户"
+msgstr "New user"
+
+msgid "新建角色"
+msgstr "New role"
+
+msgid "新建部门"
+msgstr "New department"
+
+msgid "修改部门：%(name)s"
+msgstr "Edit department: %(name)s"
+
+msgid "修改"
+msgstr "Edit"
+
+msgid "编辑"
+msgstr "Edit"
+
+msgid "物理删除"
+msgstr "Delete permanently"
+
+msgid "保存修改"
+msgstr "Save changes"
+
+msgid "创建"
+msgstr "Create"
+
+msgid "取消"
+msgstr "Cancel"
+
+msgid "解冻"
+msgstr "Unfreeze"
+
+msgid "禁用"
+msgstr "Disable"
+
+msgid "冻结权限"
+msgstr "Freeze permissions"
+
+msgid "保存"
+msgstr "Save"
+
+msgid "编辑用户：%(name)s"
+msgstr "Edit user: %(name)s"
+
+msgid "编辑角色：%(name)s"
+msgstr "Edit role: %(name)s"

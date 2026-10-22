@@ -1,4 +1,5 @@
 from django.apps import AppConfig
+from django.utils.translation import gettext_lazy as _
 
 
 class BlockchainConfig(AppConfig):
@@ -99,7 +100,7 @@ class BlockchainConfig(AppConfig):
             name='blockchain',
             version='1.3.0',
             menus=[
-                {'label': '留痕链', 'icon': '▣', 'url': '/plugins/blockchain/', 'perm': 'blockchain_view'},
+                {'label': _('留痕链'), 'icon': '▣', 'url': '/plugins/blockchain/', 'perm': 'blockchain_view'},
             ],
             permissions=['blockchain_view', 'blockchain_verify'],
             urls='plugins.blockchain.urls',

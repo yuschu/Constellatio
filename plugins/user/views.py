@@ -9,6 +9,7 @@ v1.2：
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.translation import gettext as _
 
 from plugin_host.signals import (
     dept_delete_requested, dept_disabled, dept_updated, user_created,
@@ -128,7 +129,7 @@ def user_create(request):
             return redirect('user:user_list')
     else:
         form = UserForm()
-    return render(request, 'user/user_form.html', {'form': form, 'title': '新建用户'})
+    return render(request, 'user/user_form.html', {'form': form, 'title': _('新建用户')})
 
 
 @require_perm('user_manage')
@@ -150,7 +151,8 @@ def user_edit(request, user_id):
     else:
         form = UserForm(instance=user)
     return render(request, 'user/user_form.html',
-                  {'form': form, 'title': f'编辑用户：{user.last_name or user.username}'})
+                  {'form': form, 'title': _('编辑用户：%(name)s') % {
+                      'name': user.last_name or user.username}})
 
 
 @require_perm('user_manage')
@@ -221,7 +223,7 @@ def role_create(request):
             return redirect('user:role_list')
     else:
         form = RoleForm()
-    return render(request, 'user/role_form.html', {'form': form, 'title': '新建角色'})
+    return render(request, 'user/role_form.html', {'form': form, 'title': _('新建角色')})
 
 
 @require_perm('user_manage')
@@ -234,4 +236,4 @@ def role_edit(request, role_id):
             return redirect('user:role_list')
     else:
         form = RoleForm(instance=role)
-    return render(request, 'user/role_form.html', {'form': form, 'title': f'编辑角色：{role.name}'})
+    return render(request, 'user/role_form.html', {'form': form, 'title': _('编辑角色：%(name)s') % {'name': role.name}})

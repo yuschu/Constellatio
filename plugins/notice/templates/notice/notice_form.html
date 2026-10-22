@@ -1,9 +1,10 @@
 {% extends "base.html" %}
-{% block title %}发布公告 · Constellatio{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "发布公告" %} · Constellatio{% endblock %}
 {% block content %}
 <div class="d-flex align-items-center gap-3 mb-4">
-  <a href="{% url 'notice:notice_list' %}" class="r-offset-hover">← 返回</a>
-  <h2 class="mb-0">发布公告</h2>
+  <a href="{% url 'notice:notice_list' %}" class="r-offset-hover">← {% trans "返回" %}</a>
+  <h2 class="mb-0">{% trans "发布公告" %}</h2>
 </div>
 <div class="r-card position-relative" style="max-width:560px;">
   <span class="r-register-mark"></span>
@@ -21,7 +22,7 @@
       <input class="form-check-input" type="checkbox" name="is_top" id="is_top">
       <label class="form-check-label" for="is_top">置顶</label>
     </div>
-    <button class="r-btn" type="submit">发布</button>
+    <button class="r-btn" type="submit">{% trans "发布" %}</button>
   </form>
 </div>
 {% endblock %}

@@ -1,9 +1,10 @@
 {% extends "base.html" %}
-{% block title %}用户管理 · Constellatio{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "用户管理" %} · Constellatio{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-  <h2 class="mb-0">用户管理</h2>
-  <a href="{% url 'user:user_create' %}" class="r-btn">＋ 新建用户</a>
+  <h2 class="mb-0">{% trans "用户管理" %}</h2>
+  <a href="{% url 'user:user_create' %}" class="r-btn">＋ {% trans "新建用户" %}</a>
 </div>
 <div class="r-card">
   <table class="r-table">
@@ -27,34 +28,34 @@
           {% if u.is_superuser %}
             <span class="text-muted" style="font-size:.8rem;">超管（不可操作）</span>
           {% else %}
-            <a href="{% url 'user:user_edit' u.id %}" class="r-offset-hover">编辑</a>
+            <a href="{% url 'user:user_edit' u.id %}" class="r-offset-hover">{% trans "编辑" %}</a>
             {% if not u.is_active %}
               <form method="post" action="{% url 'user:user_status' u.id %}" class="d-inline">
                 {% csrf_token %}
                 <input type="hidden" name="status" value="enable">
-                <button class="r-btn" type="submit">启用</button>
+                <button class="r-btn" type="submit">{% trans "启用" %}</button>
               </form>
             {% elif u.permission_frozen %}
               <form method="post" action="{% url 'user:user_status' u.id %}" class="d-inline">
                 {% csrf_token %}
                 <input type="hidden" name="status" value="unfreeze">
-                <button class="r-btn" type="submit">解冻</button>
+                <button class="r-btn" type="submit">{% trans "解冻" %}</button>
               </form>
               <form method="post" action="{% url 'user:user_status' u.id %}" class="d-inline">
                 {% csrf_token %}
                 <input type="hidden" name="status" value="disable">
-                <button class="r-btn" type="submit" onclick="return confirm('禁用用户「{{ u.last_name|default:u.username }}」？超管直接禁用，普通管理员需发起会签审批。')">禁用</button>
+                <button class="r-btn" type="submit" onclick="return confirm('禁用用户「{{ u.last_name|default:u.username }}」？超管直接禁用，普通管理员需发起会签审批。')">{% trans "禁用" %}</button>
               </form>
             {% else %}
               <form method="post" action="{% url 'user:user_status' u.id %}" class="d-inline">
                 {% csrf_token %}
                 <input type="hidden" name="status" value="freeze">
-                <button class="r-btn" type="submit" onclick="return confirm('冻结「{{ u.last_name|default:u.username }}」的权限？即时生效。')">冻结权限</button>
+                <button class="r-btn" type="submit" onclick="return confirm('冻结「{{ u.last_name|default:u.username }}」的权限？即时生效。')">{% trans "冻结权限" %}</button>
               </form>
               <form method="post" action="{% url 'user:user_status' u.id %}" class="d-inline">
                 {% csrf_token %}
                 <input type="hidden" name="status" value="disable">
-                <button class="r-btn" type="submit" onclick="return confirm('禁用用户「{{ u.last_name|default:u.username }}」？超管直接禁用，普通管理员需发起会签审批。')">禁用</button>
+                <button class="r-btn" type="submit" onclick="return confirm('禁用用户「{{ u.last_name|default:u.username }}」？超管直接禁用，普通管理员需发起会签审批。')">{% trans "禁用" %}</button>
               </form>
             {% endif %}
           {% endif %}
