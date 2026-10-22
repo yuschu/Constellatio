@@ -2,7 +2,18 @@
 
 > 关联：plugin_host 配置 / themes / 全部业务模板（UI 组件契约）
 > 版本规划：v1.5 · 文档版本：draft-01 · 2026-10-22
-> 状态：**待确认**（先确认本文件，再开发；本轮不改代码）
+> 状态：**✅ 已实现并跑通**（2026-10-22；63 项测试全绿 + 默认/备选主题冒烟）
+
+## 〇、确认记录（2026-10-22）
+
+负责人确认：
+
+1. v1.5 **冻结保留** r-* / --r-* 契约；
+2. corporate-clean 作为默认，risograph 保留为备选；
+3. --r-pink 在 Corporate Clean 中映射为品牌蓝，历史变量名不改；
+4. hero **照抄 Prompt 的 gray-900**（已知对比度不足，记录为已知例外）；
+5. 登录页增加 SSO / 忘记密码等未实现入口（占位/禁用，不伪造登录）；
+6. 改配置/环境变量 + 重启生效，不做运行时热切换；**重启后的首屏加载动画必须实现**。
 
 ## 一、背景与目标
 
@@ -37,6 +48,8 @@ v1.5 目标：
 | 默认主题 | corporate-clean |
 | 备选主题 | risograph（视觉保持现状） |
 | 依赖 | 不新增 Python / 前端依赖；继续用 Bootstrap 5 CDN + 主题 CSS |
+| 登录入口 | Corporate Clean / Risograph 登录页都加 SSO（禁用占位）与忘记密码（占位页）；不做真实认证 |
+| 加载动画 | 首屏 `.r-loader`；刷新 / 重启恢复后的第一次加载显示；服务器宕机期间浏览器只能显示连接错误 |
 
 ### 2.1 为什么保留 r-* 前缀（而不是现在改名 ui-*）
 
@@ -44,7 +57,7 @@ v1.5 目标：
 - 主题可插拔的关键是「插件只依赖稳定的组件契约，不依赖某个主题的视觉」，而不是前缀叫什么。
 - v1.5 把 r-* **文档化为通用 UI 契约**，两套主题各自实现；v1.6 如需要再统一重命名为 ui-*，插件代码可无感迁移。
 
-> 这是本版最重要的待确认项。若你希望 v1.5 直接改名 ui-*，我会把改名与两套 CSS 一起做，但回归范围会变大。
+> 该契约已确认冻结；若后续要改名 ui-*，另开迭代处理，避免与主题切换混在一起。
 
 ## 三、目录结构与清单
 
@@ -111,6 +124,7 @@ theme.json 示例：
 | .r-register-mark | 装饰角标；Corporate Clean 中隐藏 |
 | .r-grain / .r-halftone | 纹理；Corporate Clean 中关闭 |
 | .r-lang / .r-lang.is-active | 语言切换按钮 |
+| .r-loader / .r-loader__spinner / .r-loader__text / .is-hidden | 首屏加载动画（两套主题都要实现） |
 | .r-shadow-sm/md/lg/blue/orange | 少量模板内联使用的阴影工具类 |
 | .r-bg-* / .r-text-* | 少量工具类 |
 
@@ -267,9 +281,31 @@ entrypoint.sh 已有 collectstatic，会按当前主题收集；切换主题 = �
 ### 6.6 页面设计
 
 - **base.html**：白色顶部导航（品牌蓝方块 + Constellatio + 语言切换 + 用户/登出）；slate-50 页面底；白色侧栏卡片（菜单）；内容区；slate-50 页脚。移动端侧栏堆叠到顶部。
-- **home.html**：蓝色 hero（白字，修正 Prompt 里 bg-blue-600 text-gray-900 的对比度问题）+ 4 张白色卡片（插件架构 / 主题 / 已启用插件 / 插件开关），卡片 hover 上浮。
-- **login.html**：slate-50 居中；白色 12px 圆角卡片；品牌标识；用户名/密码；蓝色按钮；语言切换；不增加 SSO / 忘记密码等未实现入口。
-- 不嵌套卡片；不做彩色背景上的灰字；不做渐变；不做单侧粗边框。
+- **home.html**：蓝色 hero + **gray-900 文字**（按负责人要求照抄 Prompt；WCAG 对比度不足，记录为例外）+ 4 张白色卡片（插件架构 / 主题 / 已启用插件 / 插件开关），卡片 hover 上浮。
+- **login.html**：slate-50 居中；白色 12px 圆角卡片；品牌标识；用户名/密码；蓝色按钮；语言切换；下方增加：
+  - “企业 SSO 登录（即将上线）”按钮：`type=button disabled aria-disabled=true title=暂未接入`；
+  - “忘记密码？”链接 → `/plugins/auth/password-reset/` 占位页（提示联系管理员，不发送邮件、不伪造重置成功）。
+- 两套主题的登录页都加这两个入口，行为一致，视觉各自适配。
+- 不嵌套卡片；不做渐变；不做单侧粗边框。
+
+### 6.7 首屏加载动画（重启/刷新）
+
+> 服务器真正重启期间，页面无法由服务端渲染；浏览器会显示连接错误。这里实现的是**服务恢复后第一次页面加载**的加载动画，以及站内跳转时的短暂 loading。
+
+- 两套主题的 base.html / login.html 顶部加：
+
+~~~html
+<div class="r-loader" id="page-loader" role="status" aria-live="polite">
+  <span class="r-loader__spinner" aria-hidden="true"></span>
+  <span class="r-loader__text">加载中…</span>
+</div>
+<noscript><style>.r-loader{display:none}</style></noscript>
+~~~
+
+- CSS：固定全屏、主题背景色、居中 spinner + 文案；`.is-hidden` 时 opacity 0 / visibility hidden，200ms 过渡。
+- JS：window load 后加 `.is-hidden`；`beforeunload` 时移除 `.is-hidden`（站内跳转短暂显示）；2.5s 兜底隐藏，避免资源失败时卡住。
+- prefers-reduced-motion：停掉 spinner 旋转，仅保留静态标识。
+- 文案“加载中…”进 `locale/en/LC_MESSAGES/django.po`（Loading…）。
 
 ## 七、Risograph 迁移
 
@@ -278,7 +314,8 @@ entrypoint.sh 已有 collectstatic，会按当前主题收集；切换主题 = �
 3. themes/risograph/apps.py 保留但不加载（不再提供 label / AppConfig 能力）；
 4. themes/risograph/templates/base.html / login.html 继续引用自己的 themes/risograph/css/risograph.css；
 5. Risograph CSS 补齐第四节契约（目前基本都有；补 .r-lang 已有、.r-btn--plain 等检查）；
-6. 不改变 Risograph 视觉，确保切换回去与 v1.4 一致。
+6. Risograph 主体视觉不变；登录页增加与 Corporate Clean 一致的 SSO/忘记密码占位入口与首屏 loader，行为一致。
+7. Risograph 的 `login.html` / `base.html` 也要加 `.r-loader` 与入口；样式用 Risograph 自己的 token。
 
 ## 八、切换与部署流程
 
@@ -300,7 +337,10 @@ entrypoint.sh 已有 collectstatic，会按当前主题收集；切换主题 = �
 7. get_template('base.html').origin.name 落在当前主题目录；
 8. finders.find('themes/corporate-clean/css/corporate-clean.css') 非空；
 9. Corporate Clean CSS 包含契约选择器 .r-btn / .r-card / .r-input / .r-table / .r-badge / .r-nav 与 --r-ink；
-10. 非法清单（缺字段 / 坏 JSON / 缺 base.html）启动即报错。
+10. 非法清单（缺字段 / 坏 JSON / 缺 base.html）启动即报错；
+11. 两套主题登录页都含 SSO（disabled）与忘记密码链接；
+12. `/plugins/auth/password-reset/` 返回 200 且含“暂未开放”提示；
+13. base.html / login.html 含 `.r-loader` 标记；CSS 含 `.r-loader` / `.r-loader__spinner`。
 
 ### 9.2 HTTP 冒烟
 
@@ -308,7 +348,10 @@ entrypoint.sh 已有 collectstatic，会按当前主题收集；切换主题 = �
 2. OA_THEME=risograph 子进程/容器：同样页面 200，CSS 指向 risograph；
 3. 切换语言后主题不丢（language Cookie 与主题互不影响）；
 4. collectstatic 后 CSS 200；
-5. 可插拔自检：新增第三个最小主题（只放 base/home/login + CSS）→ 改 OA_THEME → 能启动；删除该目录后改回默认 → 正常。
+5. 可插拔自检：新增第三个最小主题（只放 base/home/login + CSS）→ 改 OA_THEME → 能启动；删除该目录后改回默认 → 正常；
+6. 登录页 SSO 按钮 disabled；忘记密码进入占位页 200；
+7. loader 标记存在，JS 有 load / beforeunload / 2.5s 兜底；
+8. OA_THEME=risograph 登录页同样有入口与 loader。
 
 ## 十、验收标准
 
@@ -316,10 +359,12 @@ entrypoint.sh 已有 collectstatic，会按当前主题收集；切换主题 = �
 2. OA_THEME=risograph + 重启 + collectstatic 后，视觉与 v1.4 的 Risograph 一致。
 3. 主题切换不改数据库、不产生迁移；业务功能、权限、语言切换全部不受影响。
 4. 两套主题都实现第四节契约；插件模板无需按主题分支。
-5. 焦点环、对比度、reduced-motion 符合第六节；无 rounded-none / 渐变 / 彩色套印。
-6. 既有 51 项测试 + 新增主题测试全绿；中英双语冒烟通过。
+5. 焦点环、reduced-motion 符合第六节；无 rounded-none / 渐变 / 彩色套印；hero 的 gray-900 对比度为例外（按负责人要求）。
+6. 全量 63 项测试全绿（既有 51 + 主题/登录/loader 等 12）；中英双语冒烟通过。
 7. 无 Tailwind / 新前端依赖 / 新 Python 依赖。
 8. Docker 一键部署后默认主题生效，切主题后重建容器生效。
+9. 登录页可见 SSO（禁用）/ 忘记密码入口；忘记密码进入占位页；不伪造登录/重置成功。
+10. 重启后首次加载与站内跳转显示 `.r-loader`，2.5s 兜底隐藏；reduced-motion 下不旋转。
 
 ## 十一、改动文件清单
 
@@ -329,6 +374,10 @@ entrypoint.sh 已有 collectstatic，会按当前主题收集；切换主题 = �
 | plugin_host/settings.py | 新增 OA_THEME 解析、TEMPLATES.DIRS、STATICFILES_DIRS；移除 themes.risograph |
 | plugin_host/tests.py | 新增：主题发现 / 默认 / 非法 / 模板与静态解析 |
 | themes/corporate-clean/ | 新增：theme.json + base/home/login + CSS |
+| themes/risograph/templates/base.html / login.html | 加 `.r-loader` 与 SSO/忘记密码入口 |
+| plugins/auth/urls.py / views.py | 新增 `/plugins/auth/password-reset/` 占位页 |
+| plugins/auth/templates/auth/password_reset_notice.html | 新增占位页 |
+| locale/en/LC_MESSAGES/django.po | 增加“加载中…” |
 | themes/risograph/theme.json | 新增 |
 | themes/risograph/apps.py | 保留、不再加载（文档标注） |
 | docker-compose.yml | 增加 OA_THEME 环境变量 |
@@ -346,23 +395,40 @@ entrypoint.sh 已有 collectstatic，会按当前主题收集；切换主题 = �
 | 主题通过 APP_DIRS 回退到旧主题 | 主题不再进 INSTALLED_APPS；DIRS 只含当前主题 |
 | 删除当前主题导致启动失败 | get_theme 启动即报错并列可用主题；不会静默回退 |
 | 视觉回归（业务页） | 逐页冒烟 + 对比截图（登录/工作台/审批/用户/公告/考勤/留痕/开关/结构） |
+| hero gray-900 对比度不足 | 负责人已确认照抄 Prompt，记录为例外；若后续要 WCAG 再改白字 |
+| 占位入口被误解为可用功能 | SSO 用 disabled + “即将上线”；忘记密码进入明确的“暂未开放”占位页 |
+| loader 因资源失败卡住 | 2.5s 兜底隐藏；noscript 直接隐藏；reduced-motion 停旋转 |
 
 **回退**：OA_THEME='risograph' + 重启 + collectstatic 即回到 v1.4 视觉；代码层可删 themes/corporate-clean 与 theming 接入（无迁移）。
 
-## 十三、待确认项
+## 十三、确认结果（2026-10-22）
 
-1. **r-* 契约**：v1.5 冻结保留（推荐，回归面小），还是现在直接改名 ui-*（更干净，改动大）？
-2. **默认主题**：确认 corporate-clean 作为默认，risograph 保留为备选？
-3. **配色映射**：--r-pink 在 Corporate Clean 中映射为品牌蓝（历史变量名不改），可接受？
-4. **Prompt 的 hero 对比度问题**：Prompt 示例写 bg-blue-600 text-gray-900，与它自己的 WCAG 规则冲突；我计划改成白字，确认？
-5. **登录页**：不增加 SSO / 忘记密码等未实现入口，只做现有用户名/密码 + 语言切换，确认？
-6. **主题切换**：改配置/环境变量 + 重启生效，不做运行时热切换，确认？
+1. v1.5 **冻结保留** r-* / --r-* 契约；
+2. corporate-clean 默认，risograph 备选；
+3. --r-pink 映射品牌蓝，历史变量名不改；
+4. hero **照抄 Prompt 的 gray-900**（已知对比度不足，记录为例外）；
+5. 登录页增加 SSO / 忘记密码入口；SSO 禁用占位，忘记密码进占位页，不伪造登录/重置；
+6. 改配置/环境变量 + 重启生效；重启恢复后的首屏加载动画必须实现（服务器宕机期间浏览器只能显示连接错误）。
 
 ## 十四、实施顺序（确认后）
 
 1. 写 plugin_host/theming.py + settings 接入 + 主题测试（先让 risograph 通过）；
 2. 给 risograph 补 theme.json，迁移出 INSTALLED_APPS；
 3. 新建 corporate-clean（theme.json + base/home/login + CSS），设为默认；
-4. 逐页冒烟 + 修 r-* 漏样式；
-5. 全量测试 + 双语冒烟 + Docker 冒烟；
-6. 文档同步 + tag v1.5.0 + push。
+4. 加 SSO/忘记密码占位入口（两套登录页）+ password-reset 占位页；
+5. 加 `.r-loader`（两套 base/login）+ 文案 + 兜底逻辑；
+6. 逐页冒烟 + 修 r-* 漏样式；
+7. 全量测试 + 双语冒烟 + Docker 冒烟；
+8. 文档同步 + tag v1.5.0 + push。
+
+## 十五、实现记录（2026-10-22）
+
+- 主题发现：`plugin_host/theming.py` 扫描 `themes/*/theme.json`，当前主题写入 `TEMPLATES[0]['DIRS']` / `STATICFILES_DIRS`；未知主题启动即报错。
+- 默认主题：`OA_THEME=corporate-clean`；`OA_THEME=risograph` 可切回备选。`themes.risograph` 已从 `INSTALLED_APPS` 移除。
+- Corporate Clean：`themes/corporate-clean/`（theme.json + base/home/login + CSS），`--r-*` 全部保留并映射企业色；`--r-pink` = 品牌蓝。
+- Risograph：补 `theme.json` 并保留 CSS；base/login 加 loader 与 SSO/忘记密码占位入口。
+- 登录占位：SSO 按钮 `disabled` + “即将上线”；忘记密码 → `/plugins/auth/password-reset/`，仅提示联系管理员。
+- 首屏 loader：两套 base/login 都有 `.r-loader`；load 后隐藏、beforeunload 显示、2.5s 兜底、noscript 隐藏、reduced-motion 停旋转。
+- 测试：63 项全绿；`collectstatic` 128 个文件；`OA_THEME=risograph` 登录页/占位页/工作台冒烟通过。
+- 已知例外：hero 按负责人要求使用 gray-900 on blue-600，对比度不足，记录在第十二节。
+- 无迁移、无新依赖；`.mo` 仍不入库。

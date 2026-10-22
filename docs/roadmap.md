@@ -2,7 +2,7 @@
 
 > 依据：`tech-stack-and-architecture.md` / `constraints-and-acceptance.md` / `development-guide.md` 的**全栈插件化**目标
 > 负责人校正（2026-10-22）：**不降级**、**补充实现**、**列入修复项**；工作约定只需「文档先行、每改必推 GitHub、每版打 tag」
-> 状态：draft-02（2026-10-22）—— **v1.4 language 已完成**（51 项测试全绿）；当前推进 v1.5
+> 状态：draft-03（2026-10-22）—— **v1.4 language、v1.5 theme 已完成**（63 项测试全绿）；当前推进 v1.6
 
 ## 一、总原则
 
@@ -16,7 +16,7 @@
 | 能力 | 文档承诺 | 当前实现 | 差距 | 计划 |
 |---|---|---|---|---|
 | 数据库后端 | MySQL / sqlite / postgres 一行切换 | MySQL / sqlite 通过环境变量切换 | postgres 未验证 | 已具备；v1.10 补验证 |
-| 主题 UI | 新建 `themes/<name>` + 改 `OA_THEME` 即换 | 固定 `themes.risograph`；`OA_THEME` 未被代码读取 | 无主题注册表、无切换、无第二主题 | **v1.5** |
+| 主题 UI | 新建 `themes/<name>` + 改 `OA_THEME` 即换 | Corporate Clean 默认 / Risograph 备选；`OA_THEME` 生效 | 已补齐主题清单、切换、第二主题 | ✅ v1.5 完成 |
 | 图表引擎 | 统一 `ChartRenderer`，ECharts 默认 | 无 | 无接口、无 ECharts、无统计接口 | **v1.6** |
 | 认证后端 | `AUTHENTICATION_BACKENDS` 可插拔 | 仅 Django 默认 ModelBackend | 无 Provider、无示例后端 | **v1.7** |
 | 模板引擎 | Django / Jinja2 可切、可共存 | 仅 DjangoTemplates | 无 Provider、无 Jinja2 | **v1.8**（深度待确认） |
@@ -34,7 +34,7 @@
 | 版本 | 主题 | 核心交付 | 验收 |
 |---|---|---|---|
 | **v1.4** | language 中英切换 | `plugins/language` + Cookie 中间件 + 翻译 catalog + 顶栏开关 | ✅ 已完成：13 项单测 + 双语 13 页冒烟 + 全量 51 项通过 |
-| **v1.5** | 主题插件化 + Corporate Clean 默认 | ThemeMeta 发现 + `OA_THEME` 真正生效 + corporate-clean 默认 + risograph 备选（`docs/plugin-dev-theme.md`） | 改 `OA_THEME` 后外壳/静态切换；Risograph 可回退 |
+| **v1.5** | 主题插件化 + Corporate Clean 默认 | ThemeMeta 发现 + `OA_THEME` 生效 + corporate-clean 默认 + risograph 备选 + 登录占位入口 + 首屏 loader（`docs/plugin-dev-theme.md`） | ✅ 已完成：63 项测试 + 双主题冒烟 |
 | **v1.6** | 图表插件化 + ECharts | `ChartRenderer` 接口；ECharts Provider；考勤 `/stats/` JSON + 月度看板 | 图表数据与打卡记录一致；停用图表插件页面降级不报错 |
 | **v1.7** | 认证后端插件化 | `AUTHENTICATION_BACKENDS` Provider；一个无外部依赖的示例后端（如用户名/邮箱） | 切换后端可登录；默认后端仍可用 |
 | **v1.8** | 模板引擎插件化 | Django / Jinja2 Provider；先做多引擎共存或单插件切换 | 待确认深度（见第六节） |

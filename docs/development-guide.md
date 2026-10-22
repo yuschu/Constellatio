@@ -2,7 +2,7 @@
 
 > 项目：Constellatio —— 基于 Django 的企业办公自动化系统（全栈插件化）
 > 适用对象：项目开发人员
-> 文档版本：v1.8 · 2026-10-21
+> 文档版本：v1.9 · 2026-10-22
 > 前置阅读：tech-stack-and-architecture.md、constraints-and-acceptance.md
 
 ---
@@ -180,12 +180,12 @@ class PluginHostConfig(AppConfig):
 
 ### 2.3 统一外壳（主题插件提供）
 
-> 外壳由**主题插件**提供（默认 `themes/risograph/templates/`），容器不持有任何外壳模板：
+> 外壳由**主题插件**提供（当前 `OA_THEME`，默认 `themes/corporate-clean/templates/`；Risograph 备选），容器不持有任何外壳模板：
 
 ```
-themes/risograph/templates/
-├── base.html   # 全局基座：Riso 顶栏 + 侧栏菜单(r-offset-hover) + 内容区 + 套印角标
-├── login.html  # 统一登录页（form action=/plugins/auth/login/，error 变量）
+themes/<key>/templates/
+├── base.html   # 全局基座：顶栏 + 侧栏菜单 + 内容区 + 首屏 loader
+├── login.html  # 统一登录页（form action=/plugins/auth/login/，error 变量，SSO/忘记密码占位）
 └── home.html   # 工作台首页（容器 views.index 渲染）
 ```
 
@@ -559,23 +559,19 @@ class BlockchainRecord(models.Model):
 
 ## 五、前端开发规范
 
-- 页面一律继承 `themes/risograph/templates/base.html`（主题插件提供），插件只写 `{% block content %}`
-- 布局栅格/表单结构用 Bootstrap 5；**视觉组件统一用 Risograph 主题类**（`r-` 前缀，见下方 5.1），禁止自造体系外样式
+- 页面一律继承当前主题的 `templates/base.html`（`OA_THEME` 选择），插件只写 `{% block content %}`
+- 布局栅格/表单结构用 Bootstrap 5；**视觉组件统一用主题契约类**（`r-*`，历史命名，v1.5 冻结），禁止自造体系外样式
 - ECharts 通过 CDN 引入，图表统一封装：
 
-### 5.1 主题：Risograph 印刷风（默认主题插件）
+### 5.1 主题：Corporate Clean（默认）+ Risograph（备选）
 
-- 主题插件：`themes/risograph`（默认主题，`OA_THEME` 可切换；换主题 = 新建 `themes/<name>/` + 注册）
-- 基座文件：`themes/risograph/static/themes/risograph/css/risograph.css`（页面统一引入）
-- 核心规则：
-  - 有限色板（2-3 主色）：纸白 `#fffbf0` / 墨黑 `#1a1a1a` / 荧光粉 `#ff6b9d` / 蓝 `#2563eb` / 荧光橙 `#ff8a00` / 绿 `#22c55e`
-  - 硬边双向阴影（零模糊 offset shadow），hover 双版套印错位：`6px 6px 0 蓝, -4px -4px 0 橙`
-  - 圆角仅 `2px`（rounded-sm）；粗体等宽字体（monospace）
-  - 扁平色块无渐变；颗粒/半调网点纹理（`.r-grain` / `.r-halftone`）
-  - 动效全部 `duration-100ms linear`（机械印刷感），禁 `ease-in-out` / opacity 过渡
-- 绝对禁止：`rounded-lg/xl/2xl/full`、`bg-gradient-*`、`shadow-md/lg/xl`、`backdrop-blur`、单方向阴影
-- 组件类：`.r-btn`（按钮）/ `.r-card` / `.r-input` / `.r-table` / `.r-nav` / `.r-badge` / `.r-register-mark`（套印规线角标）
-- 绿色角标（registration mark）：rest 偏移 `translate(8px,-8px)`，hover 归位 `(0,0)`
+- 主题 = `themes/<key>/` + `theme.json`；`OA_THEME` 选择当前主题（默认 `corporate-clean`），改后重启生效
+- 发现与解析：`plugin_host/theming.py` 扫描清单，把当前主题的 `templates/` 写入 `TEMPLATES.DIRS`、`static/` 写入 `STATICFILES_DIRS`
+- 组件契约：`.r-btn` / `.r-card` / `.r-input` / `.r-table` / `.r-nav` / `.r-badge` / `.r-lang` / `.r-loader` 与 `--r-*` 变量；两套主题都必须实现，插件模板不按主题分支
+- Corporate Clean：蓝灰配色、8/12px 圆角、shadow-sm、150/200ms、focus ring + offset；详见 `docs/plugin-dev-theme.md`
+- Risograph：有限色板、硬边套印、等宽字体、100ms；作为备选保留
+- 登录页含 SSO（禁用占位）/ 忘记密码（占位页）入口；base/login 含首屏 `.r-loader`
+- 主题不再挂 `INSTALLED_APPS`；新增主题不需要改 Python 注册表
 
 ```html
 <!-- attendance/templates/attendance/stats.html 片段 -->

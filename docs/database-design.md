@@ -1,7 +1,7 @@
 # 数据库设计文档（插件化）
 
 > 项目：Constellatio —— 基于 Django 的企业办公自动化系统（全栈插件化）
-> 文档版本：v2.1 · 2026-10-21（v1.3 新增 structure_structurerecord 应用记录表——13 张业务表；v1.2 新增 approval_approvalsigner 会签表 + 软删/冻结标志）
+> 文档版本：v2.2 · 2026-10-22（v1.5 theme 无表；v1.4 language 无表；修正 approval 字段 / blockchain 哈希公式 / 软删冻结标志）
 > 关联文档：tech-stack-and-architecture.md、constraints-and-acceptance.md、development-guide.md
 
 ---
@@ -38,6 +38,8 @@
 业务插件共 **13 张表**；框架内置表不属于任何插件，由 Django 自动管理。
 
 > v1.4 的 `language` 插件**无业务表**：语言选择只写会话级 Cookie（`django_language`），不落库、不新增迁移。
+>
+> v1.5 的 `theme` 不是数据插件：主题由 `themes/<key>/theme.json` + `OA_THEME` 决定，无表、无迁移。
 
 ## 三、ER 关系总览
 

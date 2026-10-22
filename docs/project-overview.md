@@ -3,7 +3,7 @@
 > 项目代号：**Constellatio**
 > 系统名称：基于 Django 的企业办公自动化系统（OA）
 > 设计思想：**万物皆可插件**（全栈插件化）
-> 文档版本：v1.8 · 2026-10-21（v1.0 整合部署完成）
+> 文档版本：v1.9 · 2026-10-22（v1.5 主题插件化完成）
 
 ---
 
@@ -41,11 +41,12 @@
 | workspace | 插件开关 | 运行时启用 / 停用，停用即 404 + 菜单隐藏（v1.1） |
 | structure | 组织架构模板 | 20 部门 / 31 角色 / 31 用户幂等应用（v1.3） |
 | language | 中英切换 | 默认中文 + 会话 Cookie + 纯 Python .mo 编译（v1.4） |
+| theme | 主题插件 | Corporate Clean 默认 / Risograph 备选，`OA_THEME` 切换（v1.5） |
 
 ## 四、技术栈
 
 - Python 3.13 / Django 5.2 LTS / MySQL 8.0
-- Django 模板 + Risograph 印刷风主题 + ECharts 5
+- Django 模板 + Corporate Clean 企业简洁风（默认）/ Risograph（备选）+ ECharts 5
 - Gunicorn + WhiteNoise + Docker Compose（跨平台一键部署）
 
 ## 五、快速开始
@@ -105,8 +106,9 @@ Constellatio/
 │   ├── notice/                 # 公告通知插件（已实现 v0.4）
 │   ├── attendance/             # 考勤打卡插件（已实现 v0.5）
 │   └── blockchain/             # 操作留痕上链插件（已实现 v0.6）
-├── themes/                     # 主题插件层（可插拔）
-│   └── risograph/              # Risograph 印刷风（默认主题插件，外壳模板已实现）
+├── themes/                     # 主题插件层（可插拔，theme.json 发现）
+│   ├── corporate-clean/        # 企业简洁风（默认）
+│   └── risograph/              # Risograph 印刷风（备选）
 └── docs/                       # 文档
     ├── tech-stack-and-architecture.md
     ├── constraints-and-acceptance.md
@@ -172,4 +174,5 @@ OA_PLUGINS = [
 - [x] v1.2 user 增强 + approval 会签（部门软/硬删+修改、用户状态机、密码二次确认、权限层级；会签模型）—— 2026-10-21 完成：`docs/plugin-dev-user.md`
 - [x] v1.3 structure 插件（职能制组织架构模板：20 部门/31 角色/31 用户模板幂等应用，应用上链）—— 2026-10-21 完成：`docs/plugin-dev-structure.md`
 - [x] v1.4 language 插件（默认中英文切换，13 项单测 + 双语冒烟）—— 2026-10-22 完成：`docs/plugin-dev-language.md`
+- [x] v1.5 theme 插件（Corporate Clean 默认 / Risograph 备选 + 登录占位入口 + 首屏 loader，63 项测试全绿）—— 2026-10-22 完成：`docs/plugin-dev-theme.md`
 - [ ] 测试报告

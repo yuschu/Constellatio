@@ -2,7 +2,7 @@
 
 > 项目：《基于 Django 的企业办公自动化系统的设计与实现》
 > 设计思想：万物皆可插件（全栈插件化）
-> 文档版本：v1.8 · 2026-10-21（v1.0 整合部署完成：Docker Compose 冒烟通过）
+> 文档版本：v1.9 · 2026-10-22（v1.5 主题插件化：Corporate Clean 默认 + Risograph 备选）
 > 适用范围：本项目全部设计、开发、测试、文档活动
 
 ---
@@ -12,7 +12,7 @@
 - 语言：**Python 3.13**
 - 框架：**Django 5.2 LTS**（插件容器）
 - 数据库：**MySQL 8.0**（默认）；可通过配置切换 sqlite/postgres（演示用途）
-- 前端：**Django 模板 + Risograph 印刷风主题**；**禁止引入 Vue/React 等前端框架**
+- 前端：**Django 模板 + Corporate Clean 企业简洁风（默认）/ Risograph（备选）**；**禁止引入 Vue/React 等前端框架**
 - 图表：**ECharts 5**（统计看板）
 - 服务器：Gunicorn + WhiteNoise（静态直托，免 Nginx）
 - 部署：Docker Compose（`docker compose up -d`），**Windows / macOS / Linux 多平台通用**
@@ -106,4 +106,4 @@
 | 8 | blockchain 插件 + 链校验 | 篡改检测报警 |
 | 9 | 整合联调 + 测试 + Docker + 发布 | 三项验收全过 |
 
-**当前进度**：✅ v0.1~v0.6（容器/RBAC/审批/公告/考勤/留痕）；✅ v1.0 整合部署；✅ v1.1 workspace 运行时插件启停；✅ v1.2 user 增强 + approval 会签；✅ v1.3 structure 职能制架构模板；✅ v1.4 language 中英切换（13 项单测 + 双语 13 页冒烟，全量 51 项测试通过）—— 2026-10-22；下一步：v1.5 主题插件化。
+**当前进度**：✅ v0.1~v0.6（容器/RBAC/审批/公告/考勤/留痕）；✅ v1.0 整合部署；✅ v1.1 workspace 运行时插件启停；✅ v1.2 user 增强 + approval 会签；✅ v1.3 structure 职能制架构模板；✅ v1.4 language 中英切换；✅ v1.5 主题插件化（Corporate Clean 默认 + Risograph 备选 + 登录占位入口 + 首屏 loader，63 项测试通过）—— 2026-10-22；下一步：v1.6 图表插件化 + ECharts。

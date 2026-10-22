@@ -14,7 +14,9 @@
 
 * 🧩 **万物皆可插件**：插件容器 + 全插件化业务（auth / user / approval / notice / attendance / blockchain / workspace / structure / language）
 
-* 🔌 基础设施可插拔：数据库（MySQL↔sqlite）、模板引擎、主题 UI、图表引擎、认证后端
+* 🔌 基础设施可插拔：数据库（MySQL↔sqlite）、主题 UI（Corporate Clean / Risograph）、模板引擎、图表引擎、认证后端
+
+* 🎨 主题插件化：`themes/<key>/theme.json` + `OA_THEME`，重启生效；登录页 SSO / 忘记密码占位入口 + 首屏加载动画
 
 * 📋 审批中心：请假 / 报销 / 用章，状态机流转 + 全程留痕
 
@@ -38,7 +40,7 @@
 
 ## 🛠 技术栈
 
-Python 3.13・Django 5.2 LTS・MySQL 8.0（可切 sqlite）・Risograph 印刷风主题・ECharts 5・Gunicorn・WhiteNoise・Docker Compose
+Python 3.13・Django 5.2 LTS・MySQL 8.0（可切 sqlite）・Corporate Clean 企业简洁风（默认）/ Risograph（备选）・ECharts 5・Gunicorn・WhiteNoise・Docker Compose
 
 ## 🚀 快速开始
 
@@ -99,8 +101,9 @@ Constellatio/
 │   ├── workspace/        # 运行时插件开关
 │   ├── structure/        # 职能制组织架构模板
 │   └── language/         # 中英文切换
-├── themes/               # 主题插件层（可插拔）
-│   └── risograph/        # Risograph 印刷风（默认主题插件）
+├── themes/               # 主题插件层（可插拔，theme.json 发现）
+│   ├── corporate-clean/  # 企业简洁风（默认）
+│   └── risograph/        # Risograph 印刷风（备选）
 ├── locale/               # 翻译目录（.mo 由脚本编译，不入库）
 ├── tools/                # 纯 Python .mo 编译器
 └── docs/                 # 项目文档
@@ -131,9 +134,9 @@ Constellatio/
 | [docs/plugin-dev-user.md](docs/plugin-dev-user.md)                             | 插件开发 | user 增强：部门软 / 硬删除、用户状态机、密码二次确认、权限层级（v1.2 已实现） |
 | [docs/plugin-dev-structure.md](docs/plugin-dev-structure.md)                   | 插件开发 | structure：职能制组织架构模板（角色 + 用户模板一键应用）（v1.3 已实现）  |
 | [docs/plugin-dev-language.md](docs/plugin-dev-language.md)                     | 插件开发 | language：中英文切换（v1.4 已实现）                       |
-| [docs/plugin-dev-theme.md](docs/plugin-dev-theme.md)                           | 插件开发 | theme：主题插件化 + Corporate Clean 默认主题（v1.5，待确认）   |
+| [docs/plugin-dev-theme.md](docs/plugin-dev-theme.md)                           | 插件开发 | theme：主题插件化 + Corporate Clean 默认主题（v1.5 已实现）   |
 | [docs/roadmap.md](docs/roadmap.md)                                             | 规划   | 差距矩阵、v1.5–v2.0 迭代路线、修复项与文档债务                  |
 
 ## 📌 状态
 
-**v1.4 已跑通**（language 中英切换：默认中文 / 会话 Cookie / 纯 Python 编译 .mo / 51 项测试全绿）→ 下一步：v1.5 主题插件化（`OA_THEME` 生效 + 第二主题）
+**v1.5 已跑通**（Corporate Clean 默认 + Risograph 备选 / `theme.json` 发现 / 登录占位入口 / 首屏 loader / 63 项测试全绿）→ 下一步：v1.6 图表插件化 + ECharts

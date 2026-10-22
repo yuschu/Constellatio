@@ -2,7 +2,7 @@
 
 > 项目：《基于 Django 的企业办公自动化系统的设计与实现》
 > 设计思想：**万物皆可插件**——容器内核唯一固定，从基础设施到业务模块全部可插拔、可替换
-> 文档版本：v1.8 · 2026-10-21（部署章节同步 v1.0：WhiteNoise 直托静态，去 Nginx）
+> 文档版本：v1.9 · 2026-10-22（v1.5 主题插件化：Corporate Clean 默认 + Risograph 备选）
 
 ---
 
@@ -15,7 +15,7 @@
 | **数据库引擎** | **MySQL 8.0** | 默认 | Django 原生支持 mysql / sqlite / postgres / oracle **后端切换**；每插件可挂独立数据源（database router） |
 | ORM | Django ORM | 随框架 | 每插件自带 models + migrations，各自建表 |
 | **模板引擎** | Django 模板 | 默认 | `TEMPLATES` 配置可切 Jinja2 / 多引擎共存 |
-| **主题 UI** | **Risograph 印刷风**（Bootstrap 栅格） | 默认主题插件 `themes/risograph` | 主题即插件：新建 `themes/<name>/` + 改 `OA_THEME` 即换主题 |
+| **主题 UI** | **Corporate Clean 企业简洁风**（Bootstrap 栅格） | 默认主题 `themes/corporate-clean`；Risograph 备选 | 主题即插件：`themes/<key>/theme.json` + 改 `OA_THEME` + 重启即换 |
 | **图表引擎** | **ECharts** | 默认图表插件 | 统一 chart 接口，可换 Chart.js / D3 / 原生 SVG |
 | **认证后端** | Django auth（session） | 默认 | `AUTHENTICATION_BACKENDS` 可插拔：加 LDAP / OAuth 插件 |
 | 事件总线 | Django signals | 随框架 | 插件间通信，互不 import |
@@ -31,7 +31,7 @@
 ├─────────────────────────────────────────────────────────┤
 │ 基础设施插件层（官方原生可插拔机制）                         │
 │  DB 后端(mysql/sqlite/pg) │ 模板引擎(Django/Jinja2)       │
-│  主题 UI(Bootstrap/Tailwind) │ 图表引擎(ECharts/Chart.js) │
+│  主题 UI(Corporate Clean/Risograph) │ 图表引擎(ECharts/Chart.js) │
 │  认证后端(session/LDAP/OAuth)                             │
 ├─────────────────────────────────────────────────────────┤
 │ 插件容器 plugin_host（唯一固定）                           │
@@ -52,7 +52,7 @@
 2. **基础设施插件层**（Django 官方原生可插拔机制）
    - 数据库后端：`DATABASES` 一行切换 mysql ↔ sqlite ↔ postgres
    - 模板引擎：`TEMPLATES` 配置可切 Django 模板 ↔ Jinja2
-   - 主题 UI：主题即插件（默认 `themes/risograph`），换主题 = 新建 `themes/<name>/`（模板基座 + 静态资源）+ 改 `OA_THEME`
+   - 主题 UI：主题即插件（默认 `themes/corporate-clean`，Risograph 备选），换主题 = 新建 `themes/<key>/`（theme.json + 模板基座 + 静态资源）+ 改 `OA_THEME` + 重启
    - 图表引擎：统一 `ChartRenderer` 接口，ECharts 为默认实现
    - 认证后端：`AUTHENTICATION_BACKENDS` 列表加一行 = 新增一种登录方式
 3. **业务插件层**（全部可插拔）
