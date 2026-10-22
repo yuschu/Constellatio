@@ -2,7 +2,7 @@
 
 > 依据：`tech-stack-and-architecture.md` / `constraints-and-acceptance.md` / `development-guide.md` 的**全栈插件化**目标
 > 负责人校正（2026-10-22）：**不降级**、**补充实现**、**列入修复项**；工作约定只需「文档先行、每改必推 GitHub、每版打 tag」
-> 状态：draft-06（2026-10-22）—— **v1.4–v1.5.3 已完成**（76 项测试全绿）；当前推进 v1.6
+> 状态：draft-07（2026-10-22）—— **v1.4–v1.5.4 已完成**（102 项测试全绿）；当前推进 v1.6
 
 ## 一、总原则
 
@@ -24,6 +24,7 @@
 | 业务 ECharts 看板 | 考勤月度统计用 ECharts | 普通表格 | 无图表、无 `/plugins/attendance/stats/` | **v1.6** |
 | 插件注册方式 | `OA_PLUGINS` 一行即插即用 | 还需 `INSTALLED_APPS` + `ready()` 注册 | 文档与实现不一致 | **v1.9** 一致性校验 + 文档修正 |
 | 会签详情权限 | 会签人可审批 | 非 applicant/approver 且无 `approval_view` 会被重定向 | 权限边界 | **v1.10** 修复 |
+| 插件权限准入 | 有权限才能使用插件 | v1.5.3 仅菜单过滤；blockchain / structure / approval 视图未守卫 | 菜单与 URL 口径不一致 | ✅ v1.5.4 统一 `require_perm` + 全员基线 |
 | 区块链并发 | 哈希链防篡改 | `append()` 无锁 / 无事务 | 多 worker 可能分叉 | **v1.10** 修复 |
 | 运行时开关 | 即时生效 | 静态 disabled 的插件运行中启用需重启 | 路由静态 include | **v1.10** 修复或明确边界 |
 | 代码规约 | 禁内联 onclick、raw POST、无事务多步写 | 多处存在 | 质量债务 | **v1.10** 分批清理 |
@@ -38,6 +39,7 @@
 | **v1.5.1** | 全站文案 + 留痕详情 | 插件展示名 / 表头 / 状态 / 空态 / confirm 全量本地化；留痕列表点击查看单条记录 | ✅ 已完成：66 项测试 + Docker 验证 |
 | **v1.5.2** | 留痕插件/动作名 | 插件列用 PluginMeta.title，动作列用 action_label，随语言切换 | ✅ 已完成：67 项测试 + Docker 验证 |
 | **v1.5.3** | 个人中心 + 权限范围 | 个人中心（资料 / 权限 / 改密）、用户编辑可授予权限过滤、登录回填、公告可见 | ✅ 已完成：76 项测试 + Docker 验证 |
+| **v1.5.4** | 权限等级 + 插件准入 | `plugins/user/perms.py` 等级注册表、全员基线权限、角色权限模板（`ROLE_PERMISSIONS` + `grant_role_perms`）、统一 `require_perm`、管理岗签到详情（`attendance_report_view`） | ✅ 已完成：102 项测试 + Docker 验证 |
 | **v1.6** | 图表插件化 + ECharts | `ChartRenderer` 接口；ECharts Provider；考勤 `/stats/` JSON + 月度看板 | 图表数据与打卡记录一致；停用图表插件页面降级不报错 |
 | **v1.7** | 认证后端插件化 | `AUTHENTICATION_BACKENDS` Provider；一个无外部依赖的示例后端（如用户名/邮箱） | 切换后端可登录；默认后端仍可用 |
 | **v1.8** | 模板引擎插件化 | Django / Jinja2 Provider；先做多引擎共存或单插件切换 | 待确认深度（见第六节） |

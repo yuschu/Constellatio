@@ -38,7 +38,9 @@
 
 * ◫ 组织架构模板：职能制部门树 + 31 角色 + 31 用户模板一键幂等应用，应用动作上链
 
-* 🔐 RBAC 权限：部门 / 角色 / 权限，按角色动态收敛菜单
+* 🔐 RBAC 权限：权限码按 L0–L3 分级，角色按模板授予权限；拥有对应权限才能使用对应插件，菜单与 URL 同一口径
+
+* 🧾 全员基线：考勤打卡与公告浏览登录即用；管理岗额外拥有签到详情（`attendance_report_view`）
 
 * 🐳 Docker 一键部署：`docker compose up -d`（MySQL8 + Gunicorn + WhiteNoise，跨平台）
 
@@ -139,8 +141,9 @@ Constellatio/
 | [docs/plugin-dev-structure.md](docs/plugin-dev-structure.md)                   | 插件开发 | structure：职能制组织架构模板（角色 + 用户模板一键应用）（v1.3 已实现）  |
 | [docs/plugin-dev-language.md](docs/plugin-dev-language.md)                     | 插件开发 | language：中英文切换（v1.4 已实现，v1.5.1 全站文案补全）   |
 | [docs/plugin-dev-theme.md](docs/plugin-dev-theme.md)                           | 插件开发 | theme：主题插件化 + Corporate Clean 默认主题（v1.5 已实现）   |
+| [docs/plugin-dev-rbac.md](docs/plugin-dev-rbac.md)                             | 插件开发 | RBAC：权限等级 L0–L3、全员基线、角色权限模板、插件准入（v1.5.4 已实现） |
 | [docs/roadmap.md](docs/roadmap.md)                                             | 规划   | 差距矩阵、v1.5–v2.0 迭代路线、修复项与文档债务                  |
 
 ## 📌 状态
 
-**v1.5.3 已跑通**（个人中心 / 登录失败保留用户名 / 公告对所有登录用户可见 / 用户权限范围 / 76 项测试全绿）→ 下一步：v1.6 图表插件化 + ECharts
+**v1.5.4 已跑通**（权限等级 L0–L3 / 全员基线考勤公告 / 角色模板权限 / 插件准入统一守卫 / 管理岗签到详情 / 102 项测试全绿）→ 下一步：v1.6 图表插件化 + ECharts

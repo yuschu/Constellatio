@@ -234,3 +234,33 @@ user 订阅 approval_finished：dept_delete & approved → 物理删除 Departme
 - 公告菜单去掉 notice_view 门槛：所有登录用户可见公告列表/详情；发布仍要求 notice_manage。
 - user 加入 workspace 禁停清单（个人中心依赖它）。
 - 测试：v1.5.3 全量 76 项通过（新增登录回填、公告可见、个人中心、权限范围）。
+
+## 十三、v1.5.4 增补：权限等级与全员基线
+
+### 13.1 权限等级（`plugins/user/perms.py`）
+
+| 等级 | 判定 | 权限码 |
+|---|---|---|
+| L0 超级管理员 | `is_superuser` | 全部（直接放行） |
+| L1 系统管理 | 自身/角色含 L1 码 | `user_manage` / `workspace_manage` / `structure_manage` / `blockchain_verify` |
+| L2 管理岗 | 含 L2 码 | `dept_delete_approve` / `user_disable_approve` / `approval_approve` / `attendance_report_view` / `notice_manage` / `structure_view` / `blockchain_view` |
+| L3 员工 | 仅 L3 码 | `approval_view` |
+
+- `Role.level / level_label`：角色权限中的最高等级（空权限按 L3）。
+- `User.level / level_label`：超管 L0，其余取自身权限最高等级。
+- 角色表单权限项按等级前缀显示（`[L2 管理岗] 查看签到详情`；英文 `[L2 Manager] app | codename`），并按等级排序。
+- 角色列表新增“权限等级”列；个人中心与“我的权限”页显示等级与全员基线权限。
+
+### 13.2 全员基线权限
+
+- `BASELINE_PERMS = {attendance_view, attendance_check, notice_view}`。
+- `User.has_perm` 判定链：`permission_frozen` → 拒绝；`is_superuser` → 通过；未激活 → 拒绝；基线码 → 通过；直接权限 → 角色权限。
+- 冻结权限时基线权限同样失效（登录但无操作权限）。
+- 基线不写库、不出现在“直接权限”，在“我的权限”页单独展示。
+
+### 13.3 相关改造
+
+- `plugin_host/permissions.py`：统一 `require_perm(codename)` 守卫（未登录→登录页，无权限→工作台）。
+- `plugin_host/registry.py`：菜单过滤改用 `user.has_perm`，与视图守卫同源。
+- 角色表单保存时保留目标角色已有权限，避免操作者权限范围外的权限被静默清空。
+- 测试：v1.5.4 全量 102 项通过（新增基线、菜单、准入、等级标注、模板权限等）。

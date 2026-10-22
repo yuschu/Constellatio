@@ -144,3 +144,26 @@ structure_applied(applied_by_id, dept_created, role_created, user_created)  # st
 | `plugin_host/signals.py` | 增 structure_applied |
 | `plugins/blockchain/apps.py` | 增订阅 structure_applied |
 | `README.md` / `docs/project-overview.md` 等 | 特性 + 待办同步 |
+
+## 十、v1.5.4 增补：角色权限模板
+
+### 10.1 模板权限
+
+- `template.py` 新增 `ROLE_PERMISSIONS`（角色 → 权限码集合）：
+  - 总经理：L2 管理岗全套 + `user_manage`；
+  - 11 个部门经理：`approval_view` `approval_approve` `attendance_report_view` `notice_manage` `blockchain_view` `structure_view`；
+  - HRBP：`approval_view` `attendance_report_view` `structure_view`；
+  - 系统管理员：L1 全套 + L2 只读/审批 + `blockchain_verify`；
+  - 其他专员/工程师：`approval_view`。
+- 全员基线（考勤打卡 / 公告浏览）由 user 插件自动生效，不写入角色权限。
+
+### 10.2 应用与升级
+
+- `apply_structure()`：创建缺失部门/角色/用户后，按 `ROLE_PERMISSIONS` **幂等补齐**角色权限（只增不减，不覆盖人工调整）；
+- `grant_manager_perms` 保留为**默认关闭**的选项：勾选时额外给经理类角色 `user_manage`（L1），避免部门经理默认越级；
+- 老库升级执行 `python manage.py grant_role_perms`（支持 `--dry-run`），为既有 31 个角色补齐模板权限；加 `--revoke-manager-perms` 可收回部门经理遗留的 L1 `user_manage`（总经理/系统管理员保留）；
+- 总览页准入改为 `structure_view`，应用仍为 `structure_manage`；总览角色徽标显示模板权限数。
+
+### 10.3 测试
+
+- 角色模板授予（经理含签到详情、专员不含）、幂等只增不减、`grant_role_perms` 命令、总览准入。
