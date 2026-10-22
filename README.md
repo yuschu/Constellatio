@@ -131,6 +131,7 @@ Constellatio/
 | [docs/plugin-dev-user.md](docs/plugin-dev-user.md)                             | 插件开发 | user 增强：部门软 / 硬删除、用户状态机、密码二次确认、权限层级（v1.2 已实现） |
 | [docs/plugin-dev-structure.md](docs/plugin-dev-structure.md)                   | 插件开发 | structure：职能制组织架构模板（角色 + 用户模板一键应用）（v1.3 已实现）  |
 | [docs/plugin-dev-language.md](docs/plugin-dev-language.md)                     | 插件开发 | language：中英文切换（v1.4 已实现）                       |
+| [docs/plugin-dev-theme.md](docs/plugin-dev-theme.md)                           | 插件开发 | theme：主题插件化 + Corporate Clean 默认主题（v1.5，待确认）   |
 | [docs/roadmap.md](docs/roadmap.md)                                             | 规划   | 差距矩阵、v1.5–v2.0 迭代路线、修复项与文档债务                  |
 
 ## 📌 状态

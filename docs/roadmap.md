@@ -34,7 +34,7 @@
 | 版本 | 主题 | 核心交付 | 验收 |
 |---|---|---|---|
 | **v1.4** | language 中英切换 | `plugins/language` + Cookie 中间件 + 翻译 catalog + 顶栏开关 | ✅ 已完成：13 项单测 + 双语 13 页冒烟 + 全量 51 项通过 |
-| **v1.5** | 基础设施 Provider 契约 + 主题插件化 | `InfraMeta` / Provider 注册表；`OA_THEME` 真正生效；最小第二主题证明可切换 | 改 `OA_THEME` 后外壳/静态切换；停用主题插件系统仍可启动 |
+| **v1.5** | 主题插件化 + Corporate Clean 默认 | ThemeMeta 发现 + `OA_THEME` 真正生效 + corporate-clean 默认 + risograph 备选（`docs/plugin-dev-theme.md`） | 改 `OA_THEME` 后外壳/静态切换；Risograph 可回退 |
 | **v1.6** | 图表插件化 + ECharts | `ChartRenderer` 接口；ECharts Provider；考勤 `/stats/` JSON + 月度看板 | 图表数据与打卡记录一致；停用图表插件页面降级不报错 |
 | **v1.7** | 认证后端插件化 | `AUTHENTICATION_BACKENDS` Provider；一个无外部依赖的示例后端（如用户名/邮箱） | 切换后端可登录；默认后端仍可用 |
 | **v1.8** | 模板引擎插件化 | Django / Jinja2 Provider；先做多引擎共存或单插件切换 | 待确认深度（见第六节） |
