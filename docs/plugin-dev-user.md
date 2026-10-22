@@ -264,3 +264,17 @@ user 订阅 approval_finished：dept_delete & approved → 物理删除 Departme
 - `plugin_host/registry.py`：菜单过滤改用 `user.has_perm`，与视图守卫同源。
 - 角色表单保存时保留目标角色已有权限，避免操作者权限范围外的权限被静默清空。
 - 测试：v1.5.4 全量 102 项通过（新增基线、菜单、准入、等级标注、模板权限等）。
+
+## 十四、v1.5.5 增补：密码权限与直属上级
+
+### 14.1 密码修改权限
+
+- `UserForm.can_change_password`：仅超级管理员或账号本人；其他操作者（含 `user_manage` 管理员）不渲染密码字段，提交值忽略。
+- 新建用户时非超管操作者使用默认密码 `constellatio123`。
+- 个人中心改密仍校验旧密码；超管在用户编辑页可重置任意账号密码。
+- 测试：管理员改他人密码无效、超管可改、本人可改、管理员创建用户走默认密码。
+
+### 14.2 直属上级
+
+- `User.leader`（自关联 FK，`SET_NULL`）：用户表单可维护，用于审批人留空自动指派与抄送。
+- `structure.LEADER_OF` 提供 31 个模板账号的汇报关系，应用模板或 `grant_role_perms --seed-leaders` 时只补空。

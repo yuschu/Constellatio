@@ -167,3 +167,10 @@ structure_applied(applied_by_id, dept_created, role_created, user_created)  # st
 ### 10.3 测试
 
 - 角色模板授予（经理含签到详情、专员不含）、幂等只增不减、`grant_role_perms` 命令、总览准入。
+
+## 十一、v1.5.5 增补：直属上级映射
+
+- `template.py` 新增 `LEADER_OF`（账号 → 上级账号）：部门经理 → 总经理，组内成员 → 部门负责人；总经理无上级。
+- `apply_structure()` 在创建/幂等应用后补齐上级（**只补空，不覆盖人工调整**）；`manage.py grant_role_perms --seed-leaders` 用于老库一次性补齐。
+- 该映射供审批「审批人留空时自动指派直属上级」与「抄送审批人上级」使用。
+- 测试：组员上级为部门经理、经理上级为总经理、总经理无上级、重复应用不覆盖人工调整。
