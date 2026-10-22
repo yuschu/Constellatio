@@ -5,17 +5,19 @@ from django.contrib.auth.models import Permission
 from django.utils.translation import get_language, gettext_lazy as _
 
 from .models import Department, Role, User
+from .perms import LEVEL_LABELS, ordered_permissions, permission_level
 
 DEFAULT_PASSWORD = 'constellatio123'
 
 
 class PermissionMultipleChoice(forms.ModelMultipleChoiceField):
-    """权限多选：中文显示 Permission.name，英文显示 app | codename，避免权限元数据中文残留。"""
+    """权限多选：按等级标注，中文显示 Permission.name，英文显示 app | codename。"""
 
     def label_from_instance(self, obj):
+        level = LEVEL_LABELS[permission_level(obj.codename)]
         if (get_language() or '').startswith('en'):
-            return f'{obj.content_type.app_label} | {obj.codename}'
-        return obj.name
+            return f'[{level}] {obj.content_type.app_label} | {obj.codename}'
+        return f'[{level}] {obj.name}'
 
 
 def grantable_permissions(operator, target=None):
@@ -30,7 +32,7 @@ def grantable_permissions(operator, target=None):
     if target is not None and getattr(target, 'pk', None):
         existing = set(target.user_permissions.values_list('pk', flat=True))
         qs = Permission.objects.filter(pk__in=set(qs.values_list('pk', flat=True)) | existing)
-    return qs
+    return ordered_permissions(qs)
 
 
 def grantable_roles(operator, target=None):
@@ -156,12 +158,27 @@ class PasswordForm(forms.Form):
 
 class RoleForm(forms.ModelForm):
     permissions = PermissionMultipleChoice(
-        queryset=Permission.objects.all(),
+        queryset=Permission.objects.none(),
         required=False,
-        widget=forms.SelectMultiple(attrs={'size': '12', 'class': 'r-input'}),
+        label=_('权限'),
+        help_text=_('权限按等级标注：L1 系统管理 / L2 管理岗 / L3 员工；只可授予操作者自身拥有的权限。'),
+        widget=forms.SelectMultiple(attrs={'size': '14', 'class': 'r-input'}),
     )
 
     class Meta:
         model = Role
         fields = ['name', 'permissions']
         widgets = {'name': forms.TextInput(attrs={'class': 'r-input'})}
+
+    def __init__(self, *args, operator=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        qs = Permission.objects.all()
+        if operator is not None and not operator.is_superuser:
+            ids = set(operator.user_permissions.values_list('pk', flat=True))
+            for role in operator.roles.all():
+                ids.update(role.permissions.values_list('pk', flat=True))
+            # 编辑既有角色时保留目标已有权限，避免保存时被静默清空
+            if self.instance is not None and self.instance.pk:
+                ids.update(self.instance.permissions.values_list('pk', flat=True))
+            qs = Permission.objects.filter(pk__in=ids)
+        self.fields['permissions'].queryset = ordered_permissions(qs)

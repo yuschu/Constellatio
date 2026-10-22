@@ -27,6 +27,7 @@
       <p class="r-muted mb-0">{% trans "侧栏菜单由插件注册表自动聚合。" %}</p>
     </div>
   </div>
+  {% if perms.workspace.workspace_manage %}
   <div class="col-md-4">
     <div class="r-card r-card--lift h-100">
       <h3 class="r-h3">{% trans "插件开关" %}</h3>
@@ -35,5 +36,6 @@
       </p>
     </div>
   </div>
+  {% endif %}
 </div>
 {% endblock %}

@@ -15,9 +15,10 @@
       {{ form.name }}
     </div>
     <div class="mb-3">
-      <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">{% trans "权限（权限码）" %}</label>
+      <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">{% trans "权限（按等级）" %}</label>
       {{ form.permissions }}
-      <div class="text-muted mt-1" style="font-size:.75rem;">{% trans "按住 Ctrl 多选；权限码格式：插件名_权限" %}</div>
+      {% if form.permissions.help_text %}<div class="text-muted mt-1" style="font-size:.75rem;">{{ form.permissions.help_text }}</div>{% endif %}
+      {% for e in form.permissions.errors %}<div class="text-danger" style="font-size:.8rem;">{{ e }}</div>{% endfor %}
     </div>
     <button class="r-btn" type="submit">{% trans "保存" %}</button>
   </form>

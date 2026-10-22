@@ -1,8 +1,8 @@
 """workspace 插件视图：插件开关列表与运行时启停。"""
 
-from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 
+from plugin_host.permissions import require_perm
 from plugin_host.registry import PLUGIN_REGISTRY
 from plugin_host.signals import plugin_toggled
 
@@ -10,18 +10,6 @@ from .models import PluginSwitch
 
 # 禁停清单：停用即锁死（auth 登录入口 / workspace 开关入口 / language 语言切换）
 PROTECTED = {'auth', 'user', 'workspace', 'language'}
-
-
-def require_perm(codename):
-    """插件权限装饰器：未登录 → 登录页；无权限码 → 工作台。"""
-    def deco(view):
-        @login_required
-        def wrapper(request, *args, **kwargs):
-            if not request.user.has_perm(codename):
-                return redirect('index')
-            return view(request, *args, **kwargs)
-        return wrapper
-    return deco
 
 
 @require_perm('workspace_manage')

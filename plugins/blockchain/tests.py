@@ -3,6 +3,7 @@
 import hashlib
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 from django.test import TestCase
 
 from .models import BlockchainRecord
@@ -13,6 +14,15 @@ User = get_user_model()
 class BlockchainTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('admin', password='pw')
+        # v1.5.4：留痕链接入需 blockchain_view（L2 管理岗）
+        role = self.user.roles.create(name='留痕查看')
+        role.permissions.add(Permission.objects.get(codename='blockchain_view'))
+
+    def test_list_requires_perm(self):
+        """无 blockchain_view 的普通用户被重定向工作台。"""
+        self.client.force_login(User.objects.create_user('staff', password='pw'))
+        response = self.client.get('/plugins/blockchain/')
+        self.assertEqual(response.status_code, 302)
 
     def test_append_links_chain(self):
         r1 = BlockchainRecord.append(

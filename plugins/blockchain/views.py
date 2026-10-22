@@ -1,12 +1,13 @@
-"""blockchain 插件视图：留痕列表 + 链完整性校验。"""
+"""blockchain 插件视图：留痕列表 + 链完整性校验（管理岗 blockchain_view）。"""
 
-from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, render
+
+from plugin_host.permissions import require_perm
 
 from .models import BlockchainRecord
 
 
-@login_required
+@require_perm('blockchain_view')
 def blockchain_list(request):
     """留痕链列表（倒序） + 校验结果。"""
     records = BlockchainRecord.objects.select_related('operator')[:100]
@@ -19,7 +20,7 @@ def blockchain_list(request):
     })
 
 
-@login_required
+@require_perm('blockchain_view')
 def blockchain_detail(request, record_id):
     """单条留痕详情：字段 + 链校验状态。"""
     record = get_object_or_404(

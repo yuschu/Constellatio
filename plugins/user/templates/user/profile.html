@@ -15,6 +15,7 @@
         <tr><th>{% trans "姓名" %}</th><td>{{ request.user.last_name|default:'—' }}</td></tr>
         <tr><th>{% trans "电子邮件地址" %}</th><td>{{ request.user.email|default:'—' }}</td></tr>
         <tr><th>{% trans "所属部门" %}</th><td>{{ request.user.department.name|default:'—' }}</td></tr>
+        <tr><th>{% trans "权限等级" %}</th><td><span class="r-badge r-badge--blue">{{ user_level_label }}</span>{% if is_frozen %} <span class="r-badge r-badge--orange">{% trans "权限已冻结" %}</span>{% endif %}</td></tr>
         <tr><th>{% trans "角色" %}</th>
           <td>{% for role in roles %}<span class="r-badge me-1">{{ role.name }}</span>{% empty %}—{% endfor %}</td>
         </tr>

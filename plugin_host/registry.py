@@ -58,10 +58,10 @@ def get_enabled_plugins():
 
 
 def _user_has_perm(user, codename):
-    """RBAC 权限判定：超管放行；否则查用户角色的权限码（Permission.codename）。"""
-    if user.is_superuser:
-        return True
-    return user.roles.filter(permissions__codename=codename).exists()
+    """RBAC 权限判定：统一走 User.has_perm（含超管、全员基线、冻结短路）。"""
+    if user is None or not getattr(user, 'is_authenticated', False):
+        return False
+    return bool(user.has_perm(codename))
 
 
 def get_menus(user):

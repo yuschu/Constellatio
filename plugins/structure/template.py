@@ -27,7 +27,7 @@ DEPARTMENTS = [
     ('运维组', '信息技术部'),
 ]
 
-# 身份角色（默认空权限；经理类可经 grant_manager_perms 授予 user_manage）
+# 身份角色（v1.5.4：按 ROLE_PERMISSIONS 授予；经理类可另外授予 user_manage）
 ROLES = [
     '总经理',
     '人力资源经理', '财务经理', '市场经理', '销售经理', '研发经理',
@@ -38,11 +38,40 @@ ROLES = [
     'IT运维工程师', '系统管理员',
 ]
 
-# 经理类角色：grant_manager_perms=True 时授予 user_manage
+# 经理类角色：grant_manager_perms=True 时额外授予 user_manage（L1）
 MANAGER_ROLES = {
     '总经理', '人力资源经理', '财务经理', '市场经理', '销售经理', '研发经理',
     '运营经理', '客服经理', '行政经理', '法务经理', '采购经理', 'IT经理',
 }
+
+# v1.5.4：角色权限模板（除全员基线 attendance_view/attendance_check/notice_view 外）
+STAFF_PERMS = {'approval_view'}
+MANAGER_PERMS = {
+    'approval_view', 'approval_approve', 'attendance_report_view',
+    'notice_manage', 'blockchain_view', 'structure_view',
+}
+HRBP_PERMS = {'approval_view', 'attendance_report_view', 'structure_view'}
+SYSTEM_ADMIN_PERMS = {
+    'user_manage', 'workspace_manage', 'structure_manage', 'structure_view',
+    'blockchain_view', 'blockchain_verify', 'attendance_report_view',
+    'notice_manage', 'approval_view', 'approval_approve',
+}
+
+# 角色 → 权限码集合（应用模板时幂等补齐，只增不减）
+ROLE_PERMISSIONS = {}
+for _role_name in ROLES:
+    if _role_name in MANAGER_ROLES:
+        ROLE_PERMISSIONS[_role_name] = set(MANAGER_PERMS)
+    elif _role_name == 'HRBP':
+        ROLE_PERMISSIONS[_role_name] = set(HRBP_PERMS)
+    elif _role_name == '系统管理员':
+        ROLE_PERMISSIONS[_role_name] = set(SYSTEM_ADMIN_PERMS)
+    else:
+        ROLE_PERMISSIONS[_role_name] = set(STAFF_PERMS)
+# 总经理是最高管理岗：模板权限外再授用户与组织管理（L1）
+ROLE_PERMISSIONS['总经理'] = set(MANAGER_PERMS) | {'user_manage'}
+
+ALL_ROLE_PERMISSION_CODES = set().union(*ROLE_PERMISSIONS.values())
 
 # 用户模板：(账号, 姓名, 部门, 角色)；密码统一 constellatio123
 USERS = [

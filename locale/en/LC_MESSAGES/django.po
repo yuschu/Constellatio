@@ -753,3 +753,102 @@ msgstr "Direct permissions (extra)"
 
 msgid "只能授予你自身拥有的权限"
 msgstr "You can only grant permissions you hold"
+
+msgid "L0 超级管理员"
+msgstr "L0 Superuser"
+
+msgid "L1 系统管理"
+msgstr "L1 System admin"
+
+msgid "L2 管理岗"
+msgstr "L2 Manager"
+
+msgid "L3 员工"
+msgstr "L3 Staff"
+
+msgid "权限等级"
+msgstr "Permission level"
+
+msgid "权限（按等级）"
+msgstr "Permissions (by level)"
+
+msgid "权限按等级标注：L1 系统管理 / L2 管理岗 / L3 员工；只可授予操作者自身拥有的权限。"
+msgstr "Permissions are labelled by level: L1 system admin / L2 manager / L3 staff; you can only grant permissions you hold."
+
+msgid "经理角色同时授予用户管理权限（L1）"
+msgstr "Also grant manager roles user-management permission (L1)"
+
+msgid "应用职能制架构模板？仅创建缺失项、幂等补齐角色权限，不覆盖既有数据。"
+msgstr "Apply the functional organization template? Only missing items are created and role permissions are filled idempotently; existing data is not overwritten."
+
+msgid "角色（%(count)s 个，按模板授予权限）"
+msgstr "Roles (%(count)s, permissions granted by template)"
+
+msgid "全员基线：考勤打卡、公告浏览无需角色；管理岗模板含签到详情（attendance_report_view）。"
+msgstr "Baseline for everyone: attendance clock-in and notices need no role; manager templates include attendance details (attendance_report_view)."
+
+msgid "全员基线权限"
+msgstr "Baseline permissions for everyone"
+
+msgid "登录即可用，无需分配角色；权限被冻结时同样失效。"
+msgstr "Available on login without any role; also disabled when permissions are frozen."
+
+msgid "L0 超级管理员 / L1 系统管理 / L2 管理岗 / L3 员工；等级取自身权限中的最高级。"
+msgstr "L0 superuser / L1 system admin / L2 manager / L3 staff; your level is the highest of your permissions."
+
+msgid "权限已冻结"
+msgstr "Permissions frozen"
+
+msgid "签到详情"
+msgstr "Attendance details"
+
+msgid "月份"
+msgstr "Month"
+
+msgid "全部部门"
+msgstr "All departments"
+
+msgid "姓名或账号"
+msgstr "Name or username"
+
+msgid "筛选"
+msgstr "Filter"
+
+msgid "重置"
+msgstr "Reset"
+
+msgid "签到记录"
+msgstr "Attendance records"
+
+msgid "涉及员工"
+msgstr "Employees involved"
+
+msgid "日期"
+msgstr "Date"
+
+msgid "账号"
+msgstr "Username"
+
+msgid "缺卡"
+msgstr "No check-in"
+
+msgid "迟到"
+msgstr "Late"
+
+msgid "正常"
+msgstr "On time"
+
+msgid "本月暂无签到记录"
+msgstr "No attendance records this month"
+
+msgid "上一页"
+msgstr "Previous"
+
+msgid "下一页"
+msgstr "Next"
+
+msgid "第 %(page)s / %(total_pages)s 页"
+msgstr "Page %(page)s / %(total_pages)s"
+
+msgid "迟到口径：签到时间晚于 09:00；缺卡表示当日无签到记录。"
+msgstr "Late means check-in after 09:00; no check-in means no attendance record that day."

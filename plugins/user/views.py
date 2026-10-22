@@ -13,6 +13,7 @@ from django.contrib.auth.models import Permission
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
 
+from plugin_host.permissions import require_perm
 from plugin_host.signals import (
     dept_delete_requested, dept_disabled, dept_updated, password_changed,
     user_created, user_disable_requested, user_disabled, user_status_changed,
@@ -21,18 +22,7 @@ from plugin_host.signals import (
 
 from .forms import DepartmentForm, PasswordForm, ProfileForm, RoleForm, UserForm
 from .models import Department, Role, User
-
-
-def require_perm(codename):
-    """插件权限装饰器：未登录 → 登录页；无权限码 → 工作台。"""
-    def deco(view):
-        @login_required
-        def wrapper(request, *args, **kwargs):
-            if not request.user.has_perm(codename):
-                return redirect('index')
-            return view(request, *args, **kwargs)
-        return wrapper
-    return deco
+from .perms import BASELINE_PERMS, LEVEL_LABELS, user_level
 
 
 def _clean_multi(post, field):
@@ -232,12 +222,12 @@ def role_list(request):
 @require_perm('user_manage')
 def role_create(request):
     if request.method == 'POST':
-        form = RoleForm(_clean_multi(request.POST, 'permissions'))
+        form = RoleForm(_clean_multi(request.POST, 'permissions'), operator=request.user)
         if form.is_valid():
             form.save()
             return redirect('user:role_list')
     else:
-        form = RoleForm()
+        form = RoleForm(operator=request.user)
     return render(request, 'user/role_form.html', {'form': form, 'title': _('新建角色')})
 
 
@@ -245,12 +235,13 @@ def role_create(request):
 def role_edit(request, role_id):
     role = get_object_or_404(Role, pk=role_id)
     if request.method == 'POST':
-        form = RoleForm(_clean_multi(request.POST, 'permissions'), instance=role)
+        form = RoleForm(_clean_multi(request.POST, 'permissions'),
+                        instance=role, operator=request.user)
         if form.is_valid():
             form.save()
             return redirect('user:role_list')
     else:
-        form = RoleForm(instance=role)
+        form = RoleForm(instance=role, operator=request.user)
     return render(request, 'user/role_form.html', {'form': form, 'title': _('编辑角色：%(name)s') % {'name': role.name}})
 
 
@@ -258,14 +249,25 @@ def role_edit(request, role_id):
 # ---------------------------------------------------------------------------
 # 个人中心
 # ---------------------------------------------------------------------------
+def _permission_profile_context(user):
+    """个人中心权限上下文：角色 / 直接权限 / 有效权限 / 等级 / 全员基线。"""
+    from django.contrib.auth.models import Permission
+    baseline = Permission.objects.filter(codename__in=BASELINE_PERMS)
+    return {
+        'roles': user.roles.prefetch_related('permissions'),
+        'direct_permissions': user.user_permissions.select_related('content_type'),
+        'effective_permissions': _effective_permissions(user),
+        'user_level': user_level(user),
+        'user_level_label': LEVEL_LABELS[user_level(user)],
+        'baseline_permissions': baseline,
+        'is_frozen': user.permission_frozen,
+    }
+
+
 @login_required
 def profile(request):
     """个人中心：资料摘要 + 权限入口 + 修改密码入口。"""
-    return render(request, 'user/profile.html', {
-        'roles': request.user.roles.prefetch_related('permissions'),
-        'direct_permissions': request.user.user_permissions.select_related('content_type'),
-        'effective_permissions': _effective_permissions(request.user),
-    })
+    return render(request, 'user/profile.html', _permission_profile_context(request.user))
 
 
 @login_required
@@ -284,12 +286,9 @@ def profile_edit(request):
 
 @login_required
 def profile_permissions(request):
-    """查看自己的角色、直接权限与有效权限。"""
-    return render(request, 'user/profile_permissions.html', {
-        'roles': request.user.roles.prefetch_related('permissions'),
-        'direct_permissions': request.user.user_permissions.select_related('content_type'),
-        'effective_permissions': _effective_permissions(request.user),
-    })
+    """查看自己的角色、直接权限、有效权限、等级与全员基线权限。"""
+    return render(request, 'user/profile_permissions.html',
+                  _permission_profile_context(request.user))
 
 
 @login_required

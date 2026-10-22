@@ -3,6 +3,8 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
+from .perms import BASELINE_PERMS, bare_codename
+
 
 class Department(models.Model):
     """部门表 user_department（支持软删：is_active=False 即停用，硬删走会签审批）。"""
@@ -36,6 +38,17 @@ class Role(models.Model):
     def __str__(self):
         return self.name
 
+    @property
+    def level(self):
+        """角色等级（v1.5.4）：权限中的最高等级，空权限按 L3。"""
+        from .perms import role_level
+        return role_level(self)
+
+    @property
+    def level_label(self):
+        from .perms import LEVEL_LABELS
+        return LEVEL_LABELS[self.level]
+
 
 class User(AbstractUser):
     """用户表 user_user（AUTH_USER_MODEL）。last_name 存中文姓名。
@@ -64,15 +77,32 @@ class User(AbstractUser):
         ]
 
     def has_perm(self, perm, obj=None):
-        """RBAC 判定链：权限冻结即时短路；超管/个人权限放行；否则按角色 → 权限码查询。
-        perm 支持 'user_manage' 裸码（插件权限码契约）。"""
+        """RBAC 判定链（v1.5.4）：
+        冻结短路 → 超管/未激活 → 全员基线 → 个人权限 → 角色权限码。
+        perm 支持 'user_manage' 裸码与 'app.codename' 两种写法。"""
         if self.permission_frozen:
             return False
         if self.is_superuser:
             return True
-        if self.user_permissions.filter(codename=perm).exists():
+        if not self.is_active:
+            return False
+        codename = bare_codename(perm)
+        if codename in BASELINE_PERMS:
             return True
-        return self.roles.filter(permissions__codename=perm).exists()
+        if self.user_permissions.filter(codename=codename).exists():
+            return True
+        return self.roles.filter(permissions__codename=codename).exists()
+
+    @property
+    def level(self):
+        """用户等级（v1.5.4）：超管 L0 / 自身权限最高等级。"""
+        from .perms import user_level
+        return user_level(self)
+
+    @property
+    def level_label(self):
+        from .perms import LEVEL_LABELS
+        return LEVEL_LABELS[self.level]
 
     def __str__(self):
         return f'{self.last_name or self.username}'

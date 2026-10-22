@@ -5,14 +5,18 @@ from django.contrib.auth.models import Permission
 
 from plugin_host.signals import structure_applied
 
-from .template import DEFAULT_PASSWORD, DEPARTMENTS, MANAGER_ROLES, ROLES, USERS
+from .template import (
+    ALL_ROLE_PERMISSION_CODES, DEFAULT_PASSWORD, DEPARTMENTS, MANAGER_ROLES,
+    ROLE_PERMISSIONS, ROLES, USERS,
+)
 
 
 def apply_structure(operator, grant_manager_perms=False):
     """应用模板，返回 (dept_created, role_created, user_created)。
 
     - 部门：按 name 查，已存在跳过（不覆盖/不恢复软删）
-    - 角色：get_or_create；grant_manager_perms=True 时经理类角色加 user_manage
+    - 角色：get_or_create；按 ROLE_PERMISSIONS 幂等补齐权限（只增不减）
+    - grant_manager_perms=True 时经理类角色额外授予 user_manage（L1，默认不授）
     - 用户：按 username 查，已存在跳过；新用户设默认密码 + 部门 + 角色
     """
     Department = dj_apps.get_model('user', 'Department')
@@ -39,12 +43,24 @@ def apply_structure(operator, grant_manager_perms=False):
         role_cache[rname] = role
         if created:
             role_created += 1
+
+    # 2b) 角色权限模板：幂等补齐（只增不减，不覆盖人工调整）
+    perm_cache = {
+        p.codename: p
+        for p in Permission.objects.filter(codename__in=ALL_ROLE_PERMISSION_CODES)
+    }
+    for rname, codes in ROLE_PERMISSIONS.items():
+        role = role_cache.get(rname)
+        if role is None:
+            continue
+        perms = [perm_cache[c] for c in codes if c in perm_cache]
+        if perms:
+            role.permissions.add(*perms)
     if grant_manager_perms:
-        perm = Permission.objects.get(codename='user_manage')
-        for rname in MANAGER_ROLES:
-            role = role_cache[rname]
-            if not role.permissions.filter(pk=perm.pk).exists():
-                role.permissions.add(perm)
+        mgr_perm = Permission.objects.filter(codename='user_manage').first()
+        if mgr_perm:
+            for rname in MANAGER_ROLES:
+                role_cache[rname].permissions.add(mgr_perm)
 
     # 3) 用户模板
     user_created = 0

@@ -9,13 +9,14 @@
 <div class="r-card">
   <table class="r-table">
     <thead>
-      <tr><th>ID</th><th>{% trans "角色名" %}</th><th>{% trans "权限码" %}</th><th>{% trans "成员数" %}</th><th>{% trans "操作" %}</th></tr>
+      <tr><th>ID</th><th>{% trans "角色名" %}</th><th>{% trans "权限等级" %}</th><th>{% trans "权限码" %}</th><th>{% trans "成员数" %}</th><th>{% trans "操作" %}</th></tr>
     </thead>
     <tbody>
       {% for r in roles %}
       <tr>
         <td>{{ r.id }}</td>
         <td>{{ r.name }}</td>
+        <td><span class="r-badge">{{ r.level_label }}</span></td>
         <td>
           {% for p in r.permissions.all %}<span class="r-badge r-badge--blue">{{ p.codename }}</span> {% empty %}—{% endfor %}
         </td>
@@ -23,7 +24,7 @@
         <td><a href="{% url 'user:role_edit' r.id %}" class="r-offset-hover">{% trans "编辑" %}</a></td>
       </tr>
       {% empty %}
-      <tr><td colspan="5" class="text-muted">{% trans "暂无角色" %}</td></tr>
+      <tr><td colspan="6" class="text-muted">{% trans "暂无角色" %}</td></tr>
       {% endfor %}
     </tbody>
   </table>

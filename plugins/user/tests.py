@@ -150,6 +150,54 @@ class UserPermissionScopeTests(TestCase):
                          Permission.objects.count())
 
 
+class PermissionLevelTests(TestCase):
+    """v1.5.4：权限等级标注、角色等级、个人中心全员基线展示。"""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.manager = User.objects.create_user('mgr', '', 'pw')
+        cls.manager.user_permissions.add(P.get(codename='user_manage'))
+        cls.role = Role.objects.create(name='人力资源经理')
+        cls.role.permissions.add(P.get(codename='attendance_report_view'))
+        cls.manager.roles.add(cls.role)
+
+    def test_form_label_carries_level(self):
+        form = UserForm(operator=self.manager)
+        label = form.fields['user_permissions'].label_from_instance(
+            P.get(codename='attendance_report_view'))
+        self.assertIn('L2 管理岗', label)
+        self.assertIn('查看签到详情', label)
+
+    def test_form_label_english(self):
+        from django.utils import translation
+        with translation.override('en'):
+            form = UserForm(operator=self.manager)
+            label = form.fields['user_permissions'].label_from_instance(
+                P.get(codename='attendance_report_view'))
+        self.assertIn('[L2 Manager]', label)
+        self.assertIn('attendance', label)
+
+    def test_role_level_and_empty_role(self):
+        self.assertEqual(self.role.level, 20)
+        self.assertEqual(self.role.level_label, 'L2 管理岗')
+        empty = Role.objects.create(name='空权限角色')
+        self.assertEqual(empty.level_label, 'L3 员工')
+
+    def test_role_list_shows_level(self):
+        admin = User.objects.create_superuser('root2', '', 'pw')
+        self.client.force_login(admin)
+        response = self.client.get(reverse('user:role_list'))
+        self.assertContains(response, '权限等级')
+        self.assertContains(response, 'L2 管理岗')
+
+    def test_profile_shows_level_and_baseline(self):
+        self.client.force_login(self.manager)
+        response = self.client.get(reverse('user:profile_permissions'))
+        self.assertContains(response, 'L1 系统管理')
+        self.assertContains(response, '全员基线权限')
+        self.assertContains(response, '考勤打卡')
+
+
 class ProfileTests(TestCase):
     """个人中心：资料编辑 / 权限查看 / 修改密码 / 顶栏入口。"""
 

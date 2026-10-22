@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "签到详情" %} · Constellatio{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">{% trans "签到详情" %}</h2>
+  <span class="r-badge">{{ month_value }}</span>
+</div>
+
+<div class="r-card mb-4">
+  <form method="get" class="d-flex flex-wrap align-items-end gap-3">
+    <div>
+      <label class="form-label" for="month">{% trans "月份" %}</label>
+      <input class="r-input" type="month" id="month" name="month" value="{{ month_value }}">
+    </div>
+    <div>
+      <label class="form-label" for="department">{% trans "部门" %}</label>
+      <select class="r-input" id="department" name="department">
+        <option value="">{% trans "全部部门" %}</option>
+        {% for dept in departments %}
+        <option value="{{ dept.id }}" {% if department_id == dept.id|stringformat:"s" %}selected{% endif %}>{{ dept.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="form-label" for="q">{% trans "姓名或账号" %}</label>
+      <input class="r-input" type="search" id="q" name="q" value="{{ keyword }}" placeholder="{% trans "筛选" %}">
+    </div>
+    <div class="d-flex gap-2">
+      <button class="r-btn" type="submit">{% trans "筛选" %}</button>
+      <a class="r-btn r-btn--plain" href="{% url 'attendance:attendance_records' %}">{% trans "重置" %}</a>
+    </div>
+  </form>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-md-4">
+    <div class="r-card">
+      <div class="text-muted" style="font-size:.75rem;">{% trans "签到记录" %}</div>
+      <div class="fs-3">{{ total }}</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="r-card">
+      <div class="text-muted" style="font-size:.75rem;">{% trans "涉及员工" %}</div>
+      <div class="fs-3">{{ user_count }}</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="r-card">
+      <div class="text-muted" style="font-size:.75rem;">{% trans "迟到次数" %}</div>
+      <div class="fs-3">{{ late_count }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="r-card">
+  <table class="r-table">
+    <thead>
+      <tr>
+        <th>{% trans "日期" %}</th>
+        <th>{% trans "姓名" %}</th>
+        <th>{% trans "账号" %}</th>
+        <th>{% trans "部门" %}</th>
+        <th>{% trans "签到" %}</th>
+        <th>{% trans "签退" %}</th>
+        <th>{% trans "状态" %}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td>{{ row.record.date|date:"Y-m-d" }}</td>
+        <td>{{ row.record.user.last_name|default:row.record.user.username }}</td>
+        <td>{{ row.record.user.username }}</td>
+        <td>{{ row.record.user.department.name|default:'—' }}</td>
+        <td>{% if row.record.check_in %}{{ row.record.check_in|date:"H:i" }}{% else %}—{% endif %}</td>
+        <td>{% if row.record.check_out %}{{ row.record.check_out|date:"H:i" }}{% else %}—{% endif %}</td>
+        <td>
+          {% if row.missing %}
+            <span class="r-badge">{% trans "缺卡" %}</span>
+          {% elif row.late %}
+            <span class="r-badge r-badge--orange">{% trans "迟到" %}</span>
+          {% else %}
+            <span class="r-badge r-badge--blue">{% trans "正常" %}</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" class="text-muted">{% trans "本月暂无签到记录" %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="d-flex justify-content-between align-items-center mt-3" style="font-size:.8rem;">
+    <span class="text-muted">
+      {% blocktranslate with page=page_obj.number total_pages=page_obj.paginator.num_pages %}第 {{ page }} / {{ total_pages }} 页{% endblocktranslate %}
+    </span>
+    <span class="d-flex gap-2">
+      {% if page_obj.has_previous %}
+      <a class="r-offset-hover" href="?month={{ month_value }}&department={{ department_id }}&q={{ keyword|urlencode }}&page={{ page_obj.previous_page_number }}">← {% trans "上一页" %}</a>
+      {% endif %}
+      {% if page_obj.has_next %}
+      <a class="r-offset-hover" href="?month={{ month_value }}&department={{ department_id }}&q={{ keyword|urlencode }}&page={{ page_obj.next_page_number }}">{% trans "下一页" %} →</a>
+      {% endif %}
+    </span>
+  </div>
+  {% endif %}
+</div>
+<p class="text-muted mt-3 mb-0" style="font-size:.75rem;">{% trans "迟到口径：签到时间晚于 09:00；缺卡表示当日无签到记录。" %}</p>
+{% endblock %}

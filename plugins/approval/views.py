@@ -4,6 +4,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
+from plugin_host.permissions import require_perm
+
 from .models import Approval
 from .services import approve, reject, sign_approve, sign_reject, submit
 
@@ -21,14 +23,14 @@ def _can_act(user, approval):
     return user == approval.approver or user.has_perm('approval_approve')
 
 
-@login_required
+@require_perm('approval_view')
 def approval_list(request):
     """我发起的审批。"""
     approvals = Approval.objects.filter(applicant=request.user)
     return render(request, 'approval/approval_list.html', {'approvals': approvals})
 
 
-@login_required
+@require_perm('approval_view')
 def approval_pending(request):
     """待我审批：普通单（approver=我） + 会签单（我是 signer 且未签）。"""
     approvals = Approval.objects.filter(
@@ -40,7 +42,7 @@ def approval_pending(request):
     return render(request, 'approval/approval_pending.html', {'approvals': merged})
 
 
-@login_required
+@require_perm('approval_view')
 def approval_create(request):
     """发起审批（提交即进入待审批）。"""
     if request.method == 'POST':

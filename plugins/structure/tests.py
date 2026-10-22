@@ -8,6 +8,8 @@ from django.urls import reverse
 from . import template
 from .services import apply_structure
 
+from plugins.user.models import Role
+
 User = get_user_model()
 
 
@@ -60,6 +62,65 @@ class StructureApplyTests(TestCase):
         self.assertFalse(
             User.objects.get(username='hr_qian').roles.filter(
                 permissions__pk=mgr.pk).exists())
+
+    def test_role_permission_template(self):
+        """v1.5.4：应用模板即按角色授予权限（管理岗含签到详情，员工不含）。"""
+        self._apply(grant=False)
+        self.assertTrue(User.objects.get(username='hr_wang').has_perm('attendance_report_view'))
+        self.assertTrue(User.objects.get(username='gm_zhang').has_perm('user_manage'))
+        self.assertTrue(User.objects.get(username='it_zhou').has_perm('workspace_manage'))
+        self.assertTrue(User.objects.get(username='hr_qian').has_perm('approval_view'))
+        self.assertFalse(User.objects.get(username='hr_qian').has_perm('attendance_report_view'))
+
+    def test_role_permission_template_is_idempotent_additive(self):
+        """权限模板幂等：重复应用不抹掉人工追加的权限。"""
+        from plugins.user.models import Role
+        self._apply(grant=False)
+        role = Role.objects.get(name='招聘专员')
+        extra = Permission.objects.get(codename='notice_manage')
+        role.permissions.add(extra)
+        self._apply(grant=False)
+        self.assertTrue(role.permissions.filter(pk=extra.pk).exists())
+        self.assertTrue(role.permissions.filter(codename='approval_view').exists())
+
+    def test_overview_requires_structure_view(self):
+        """总览准入：无 structure_view 302；有则 200。"""
+        noperm = User.objects.create_user('noperm2', '', 'pw')
+        self.client.force_login(noperm)
+        self.assertEqual(self.client.get(reverse('structure:overview')).status_code, 302)
+        _role = Role.objects.create(name='架构查看')
+        _role.permissions.add(Permission.objects.get(codename='structure_view'))
+        noperm.roles.add(_role)
+        self.assertEqual(self.client.get(reverse('structure:overview')).status_code, 200)
+
+    def test_grant_role_perms_command(self):
+        """管理命令：为既有角色幂等补齐模板权限（升级老库用）。"""
+        import io
+        from django.core.management import call_command
+        Role.objects.create(name='人力资源经理')
+        call_command('grant_role_perms', stdout=io.StringIO())
+        role = Role.objects.get(name='人力资源经理')
+        self.assertTrue(role.permissions.filter(codename='attendance_report_view').exists())
+        self.assertTrue(role.permissions.filter(codename='approval_approve').exists())
+        # 幂等：再跑一次不报错、不重复
+        call_command('grant_role_perms', stdout=io.StringIO())
+        self.assertEqual(role.permissions.filter(codename='attendance_report_view').count(), 1)
+
+    def test_grant_role_perms_revoke_manager_user_manage(self):
+        """升级选项：收回部门经理 L1 user_manage，保留总经理/系统管理员。"""
+        import io
+        from django.core.management import call_command
+        user_manage = Permission.objects.get(codename='user_manage')
+        manager_role = Role.objects.create(name='人力资源经理')
+        manager_role.permissions.add(user_manage)
+        gm_role = Role.objects.create(name='总经理')
+        gm_role.permissions.add(user_manage)
+        call_command('grant_role_perms', '--revoke-manager-perms',
+                     stdout=io.StringIO())
+        self.assertFalse(manager_role.permissions.filter(codename='user_manage').exists())
+        self.assertTrue(gm_role.permissions.filter(codename='user_manage').exists())
+        self.assertTrue(
+            manager_role.permissions.filter(codename='attendance_report_view').exists())
 
     def test_apply_requires_perm(self):
         """权限守卫：无 structure_manage 的 apply 请求被拒。"""

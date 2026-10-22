@@ -8,10 +8,16 @@
   <h2 class="mb-0">{% trans "我的权限" %}</h2>
 </div>
 <div class="r-card mb-4">
+  <h3 class="fs-5 mb-3">{% trans "权限等级" %}</h3>
+  <p class="mb-2"><span class="r-badge r-badge--blue">{{ user_level_label }}</span></p>
+  <p class="text-muted mb-0" style="font-size:.75rem;">{% trans "L0 超级管理员 / L1 系统管理 / L2 管理岗 / L3 员工；等级取自身权限中的最高级。" %}</p>
+</div>
+<div class="r-card mb-4">
   <h3 class="fs-5 mb-3">{% trans "角色" %}</h3>
   {% for role in roles %}
     <div class="mb-3">
       <span class="r-badge">{{ role.name }}</span>
+      <span class="r-badge r-badge--blue">{{ role.level_label }}</span>
       {% for p in role.permissions.all %}
         <span class="r-badge r-badge--blue me-1">{% if LANGUAGE_CODE == 'en' %}{{ p.content_type.app_label }} | {{ p.codename }}{% else %}{{ p.name }}{% endif %}</span>
       {% endfor %}
@@ -19,6 +25,13 @@
   {% empty %}
     <p class="text-muted">{% trans "暂无角色" %}</p>
   {% endfor %}
+</div>
+<div class="r-card mb-4">
+  <h3 class="fs-5 mb-3">{% trans "全员基线权限" %}</h3>
+  {% for p in baseline_permissions %}
+    <span class="r-badge me-1">{% if LANGUAGE_CODE == 'en' %}{{ p.content_type.app_label }} | {{ p.codename }}{% else %}{{ p.name }}{% endif %}</span>
+  {% endfor %}
+  <p class="text-muted mt-2 mb-0" style="font-size:.75rem;">{% trans "登录即可用，无需分配角色；权限被冻结时同样失效。" %}</p>
 </div>
 <div class="r-card mb-4">
   <h3 class="fs-5 mb-3">{% trans "直接权限" %}</h3>

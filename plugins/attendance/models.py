@@ -24,6 +24,8 @@ class Attendance(models.Model):
         permissions = [
             ('attendance_view', '查看考勤'),
             ('attendance_check', '考勤打卡'),
+            # v1.5.4：管理岗查看全员签到详情
+            ('attendance_report_view', '查看签到详情'),
         ]
 
     def __str__(self):
