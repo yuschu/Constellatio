@@ -179,6 +179,51 @@ a { color: var(--r-blue); text-decoration: none; }
   color: #fff;
 }
 
+/* 首屏加载动画（v1.5） */
+.r-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background: var(--r-paper);
+  transition: opacity 200ms linear, visibility 200ms linear;
+}
+.r-loader.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.r-loader__spinner {
+  width: 32px;
+  height: 32px;
+  border: 4px solid var(--r-ink);
+  border-top-color: var(--r-pink);
+  border-radius: 50%;
+  animation: r-spin 0.8s linear infinite;
+}
+.r-loader__text {
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@keyframes r-spin { to { transform: rotate(360deg); } }
+
+/* 登录页占位入口（v1.5） */
+.r-login-alt {
+  margin-top: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
 /* 徽标/标签 */
 .r-badge {
   display: inline-block;
@@ -261,4 +306,5 @@ a { color: var(--r-blue); text-decoration: none; }
     animation-duration: 0.01ms !important;
   }
   .r-offset-hover:hover { transform: none; }
+  .r-loader__spinner { animation: none; }
 }

@@ -32,8 +32,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     # 插件容器（唯一固定核心）
     'plugin_host',
-    # 主题插件层（可插拔）
-    'themes.risograph',
+    # 主题不再作为 Django app 加载；由 OA_THEME + theming.py 解析模板/静态目录
     # 业务插件层（全部可插拔；未实现阶段先注册，ready() 空跑无害）
     'plugins.auth',
     'plugins.user',
@@ -124,8 +123,14 @@ OA_PLUGINS = [
     {'app': 'plugins.language', 'enabled': True},
 ]
 
-# 默认主题插件（新建 themes/<name>/ + 修改此项即换主题）
-OA_THEME = 'themes.risograph'
+# 主题插件：themes/<key>/theme.json；改 OA_THEME + 重启生效
+OA_THEME = os.environ.get('OA_THEME', 'corporate-clean')
+
+from plugin_host.theming import get_theme  # noqa: E402  (依赖 BASE_DIR)
+
+_active_theme = get_theme(BASE_DIR, OA_THEME)
+TEMPLATES[0]['DIRS'] = [str(_active_theme.templates)]
+STATICFILES_DIRS = [str(_active_theme.static)]
 
 # ---------------------------------------------------------------------------
 # 密码校验 / 国际化 / 静态

@@ -222,3 +222,30 @@ msgstr "Edit user: %(name)s"
 
 msgid "编辑角色：%(name)s"
 msgstr "Edit role: %(name)s"
+
+msgid "加载中…"
+msgstr "Loading…"
+
+msgid "暂未接入"
+msgstr "Not connected yet"
+
+msgid "企业 SSO 登录（即将上线）"
+msgstr "Enterprise SSO (coming soon)"
+
+msgid "忘记密码？"
+msgstr "Forgot password?"
+
+msgid "密码重置"
+msgstr "Password reset"
+
+msgid "密码重置暂未开放"
+msgstr "Password reset is not available yet"
+
+msgid "请联系管理员重置密码。"
+msgstr "Please contact your administrator to reset your password."
+
+msgid "返回登录"
+msgstr "Back to login"
+
+msgid "蓝灰配色 · 圆角卡片 · 轻阴影 · 200ms 以内交互。"
+msgstr "Blue-gray palette · rounded cards · soft shadows · interactions under 200ms."

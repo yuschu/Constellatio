@@ -32,6 +32,7 @@ services:
       DJANGO_DEBUG: ${DJANGO_DEBUG:-0}
       SECRET_KEY: ${SECRET_KEY:-django-insecure-compose-default-change-me}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-*}
+      OA_THEME: ${OA_THEME:-corporate-clean}
       DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME:-admin}
       DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:-Constellatio@2026}
       GUNICORN_WORKERS: ${GUNICORN_WORKERS:-3}

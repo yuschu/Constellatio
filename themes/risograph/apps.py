@@ -2,10 +2,10 @@ from django.apps import AppConfig
 
 
 class RisographThemeConfig(AppConfig):
-    """Risograph 印刷风主题插件（默认主题）。
+    """历史 AppConfig（v1.5 起不再加载）。
 
-    主题插件职责：提供模板基座（templates/）与静态资源（static/），
-    通过 OA_THEME 配置切换；新增主题 = 新建 themes/<name>/ 并注册。
+    v1.5 起主题由 themes/<key>/theme.json 发现，TEMPLATES.DIRS / STATICFILES_DIRS
+    指向 OA_THEME 选中的主题；本文件保留仅作历史参考，不从 INSTALLED_APPS 加载。
     """
 
     default_auto_field = "django.db.models.BigAutoField"

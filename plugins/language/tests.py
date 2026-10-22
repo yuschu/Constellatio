@@ -95,6 +95,7 @@ class TranslationCatalogTest(LanguageTestMixin, TestCase):
             self.assertEqual(str(_('工作台')), 'Workspace')
             self.assertEqual(str(_('审批中心')), 'Approvals')
             self.assertEqual(str(_('插件开关')), 'Plugin switches')
+            self.assertEqual(str(_('加载中…')), 'Loading…')
 
     def test_rendered_home_is_english(self):
         user = get_user_model().objects.create_user('languser', password='pw')

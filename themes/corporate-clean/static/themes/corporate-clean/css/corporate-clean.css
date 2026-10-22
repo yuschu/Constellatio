@@ -1,0 +1,378 @@
+/* ============================================================
+   Constellatio · Corporate Clean 主题（v1.5 默认）
+   企业简洁风：蓝灰配色 / 圆角 / 轻阴影 / 200ms 以内交互
+   说明：保留 r-* 类与 --r-* 变量作为主题契约（历史命名）
+   ============================================================ */
+
+:root {
+  --r-paper: #f8fafc;
+  --r-paper-2: #f1f5f9;
+  --r-ink: #111827;
+  --r-pink: #2563eb;     /* 历史变量名：Corporate Clean 映射为品牌蓝 */
+  --r-blue: #1d4ed8;
+  --r-orange: #d97706;
+  --r-green: #16a34a;
+
+  --r-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
+  --r-radius: 8px;
+
+  --r-ease: cubic-bezier(0, 0, 0.2, 1);
+  --r-dur: 150ms;
+
+  --r-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --r-shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.06);
+  --r-shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
+  --r-shadow-blue: 0 1px 2px rgba(37, 99, 235, 0.12);
+  --r-shadow-orange: 0 1px 2px rgba(220, 38, 38, 0.12);
+}
+
+* { box-sizing: border-box; }
+
+body.r-body {
+  background: var(--r-paper);
+  color: var(--r-ink);
+  font-family: var(--r-font);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--r-font);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--r-ink);
+}
+
+a { color: var(--r-pink); text-decoration: none; }
+a:hover { color: var(--r-blue); }
+
+/* ---------- 顶栏 ---------- */
+.r-nav {
+  background: #ffffff;
+  border: none;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: var(--r-shadow-sm);
+}
+.r-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--r-ink);
+  font-weight: 600;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+.r-brand:hover { color: var(--r-ink); }
+.r-brand-mark {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: var(--r-pink);
+}
+.r-nav-link {
+  color: #4b5563;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+.r-nav-link:hover { color: var(--r-pink); }
+
+/* 语言切换 */
+.r-lang {
+  font-family: var(--r-font);
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all 150ms var(--r-ease);
+}
+.r-lang:hover { border-color: var(--r-pink); color: var(--r-pink); }
+.r-lang.is-active { background: var(--r-pink); border-color: var(--r-pink); color: #ffffff; }
+.r-lang:focus-visible { outline: none; box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px rgba(37, 99, 235, 0.45); }
+
+/* ---------- 侧栏 ---------- */
+.r-card--sidebar { padding: 1rem; }
+.r-sidebar-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #6b7280;
+  margin-bottom: 0.75rem;
+}
+.r-menu-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.55rem;
+  border-radius: 8px;
+  color: #374151;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 150ms var(--r-ease);
+}
+.r-menu-link:hover {
+  background: #eff6ff;
+  color: var(--r-blue);
+  transform: translateX(2px);
+}
+.r-menu-icon { width: 1.1rem; text-align: center; opacity: 0.7; }
+
+/* ---------- 卡片 ---------- */
+.r-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: var(--r-shadow-sm);
+  padding: 1.5rem;
+  transition: transform 200ms var(--r-ease), box-shadow 200ms var(--r-ease);
+}
+.r-card + .r-card { margin-top: 1rem; }
+.r-card:hover { transform: translateY(-2px); box-shadow: var(--r-shadow-md); }
+.r-card--sidebar:hover,
+.r-card--login:hover { transform: none; box-shadow: var(--r-shadow-sm); }
+.r-card--lift { cursor: default; }
+.r-card--login { padding: 2rem; }
+
+/* ---------- 按钮 ---------- */
+.r-btn {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--r-pink);
+  color: #ffffff;
+  font-family: var(--r-font);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: center;
+  text-transform: none;
+  letter-spacing: 0;
+  box-shadow: var(--r-shadow-sm);
+  cursor: pointer;
+  transition: all 150ms var(--r-ease);
+}
+.r-btn:hover {
+  background: var(--r-blue);
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: var(--r-shadow-md);
+}
+.r-btn:active {
+  transform: scale(0.98) translateY(0);
+  box-shadow: var(--r-shadow-sm);
+}
+.r-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px rgba(37, 99, 235, 0.45);
+}
+.r-btn:disabled,
+.r-btn[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+.r-btn--blue { background: var(--r-blue); }
+.r-btn--plain {
+  background: #ffffff;
+  color: #374151;
+  border-color: #d1d5db;
+}
+.r-btn--plain:hover {
+  background: #f9fafb;
+  color: var(--r-ink);
+  border-color: #9ca3af;
+}
+
+/* ---------- 表单 ---------- */
+.r-input, .r-select, .r-textarea {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--r-ink);
+  font-family: var(--r-font);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  transition: border-color 150ms var(--r-ease), box-shadow 150ms var(--r-ease);
+}
+.r-input::placeholder { color: #9ca3af; }
+.r-input:focus, .r-select:focus, .r-textarea:focus {
+  outline: none;
+  border-color: var(--r-pink);
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px rgba(37, 99, 235, 0.22);
+}
+.form-label {
+  font-size: 0.78rem !important;
+  font-weight: 500;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  color: #374151;
+  margin-bottom: 0.35rem;
+}
+
+/* ---------- 表格 ---------- */
+.r-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.r-table th, .r-table td {
+  padding: 0.7rem 0.75rem;
+  border: none;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+  vertical-align: middle;
+}
+.r-table th {
+  background: #f9fafb;
+  color: #6b7280;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  white-space: nowrap;
+}
+.r-table tbody tr { transition: background 150ms var(--r-ease); }
+.r-table tbody tr:hover td,
+.r-table tbody tr:hover th { background: #f9fafb; }
+.r-table tr:last-child td { border-bottom: none; }
+
+/* ---------- 徽标 ---------- */
+.r-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1.5;
+}
+.r-badge--blue { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+.r-badge--pink { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+.r-badge--green { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; }
+.r-badge--orange { background: #fffbeb; border-color: #fde68a; color: #b45309; }
+
+/* ---------- 链接 hover ---------- */
+.r-offset-hover {
+  transition: all 150ms var(--r-ease);
+}
+.r-offset-hover:hover {
+  color: var(--r-blue);
+  transform: translateY(-1px);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ---------- Risograph 装饰件在 Corporate Clean 中关闭 ---------- */
+.r-register-mark { display: none; }
+.r-grain::after { display: none; }
+.r-halftone { background-image: none; }
+
+/* ---------- 首页 hero（按负责人要求照抄 Prompt 的 gray-900） ---------- */
+.r-hero {
+  background: var(--r-pink);
+  color: #111827;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: var(--r-shadow-sm);
+}
+.r-hero h2 { color: #111827; margin-bottom: 0.5rem; }
+.r-hero-text { color: #111827; font-size: 0.95rem; }
+.r-h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; }
+.r-muted { color: #6b7280; font-size: 0.875rem; }
+.r-small { font-size: 0.8rem; }
+
+/* ---------- 登录页 ---------- */
+.r-login-wrap { max-width: 420px; width: 100%; }
+.r-login-alt {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+/* ---------- 页脚 ---------- */
+.r-footer {
+  border-top: 1px solid #e5e7eb;
+  background: var(--r-paper-2);
+  padding: 1.25rem 0;
+  color: #6b7280;
+  font-size: 0.78rem;
+}
+
+/* ---------- 加载动画 ---------- */
+.r-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background: var(--r-paper);
+  transition: opacity 200ms var(--r-ease), visibility 200ms var(--r-ease);
+}
+.r-loader.is-hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.r-loader__spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid #dbeafe;
+  border-top-color: var(--r-pink);
+  border-radius: 50%;
+  animation: r-spin 0.8s linear infinite;
+}
+.r-loader__text { color: #6b7280; font-size: 0.8rem; letter-spacing: 0.02em; }
+
+@keyframes r-spin { to { transform: rotate(360deg); } }
+
+/* ---------- 工具类（契约保留） ---------- */
+.r-shadow-sm { box-shadow: var(--r-shadow-sm); }
+.r-shadow-md { box-shadow: var(--r-shadow-md); }
+.r-shadow-lg { box-shadow: var(--r-shadow-lg); }
+.r-shadow-blue { box-shadow: var(--r-shadow-blue); }
+.r-shadow-orange { box-shadow: var(--r-shadow-orange); }
+.r-bg-paper { background: var(--r-paper); }
+.r-bg-paper-2 { background: var(--r-paper-2); }
+.r-bg-pink { background: var(--r-pink); }
+.r-bg-blue { background: var(--r-blue); }
+.r-bg-orange { background: var(--r-orange); }
+.r-bg-green { background: var(--r-green); }
+.r-text-ink { color: var(--r-ink); }
+.r-text-white { color: #ffffff; }
+.r-text-muted { color: #6b7280; }
+
+/* ---------- 响应式 ---------- */
+@media (max-width: 767.98px) {
+  .r-nav .container { flex-wrap: wrap; }
+  .r-card { padding: 1.25rem; }
+  .r-hero { padding: 1.5rem; }
+  .r-card--sidebar { margin-bottom: 0.5rem; }
+}
+
+/* ---------- 减少动效 ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  .r-card:hover, .r-btn:hover, .r-offset-hover:hover, .r-menu-link:hover { transform: none; }
+  .r-loader__spinner { animation: none; }
+}

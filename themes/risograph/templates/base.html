@@ -10,6 +10,12 @@
 </head>
 <body class="r-grain" style="background: var(--r-paper); color: var(--r-ink);">
 
+  <div class="r-loader" id="page-loader" role="status" aria-live="polite">
+    <span class="r-loader__spinner" aria-hidden="true"></span>
+    <span class="r-loader__text">{% trans "加载中…" %}</span>
+  </div>
+  <noscript><style>.r-loader{display:none}</style></noscript>
+
   <!-- 顶栏（印刷风导航：墨黑上下边框） -->
   <nav class="r-nav py-2">
     <div class="container d-flex justify-content-between align-items-center gap-3">
@@ -67,6 +73,16 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    (function () {
+      var el = document.getElementById('page-loader');
+      if (!el) return;
+      function hide() { el.classList.add('is-hidden'); }
+      window.addEventListener('load', hide);
+      window.setTimeout(hide, 2500);
+      window.addEventListener('beforeunload', function () { el.classList.remove('is-hidden'); });
+    })();
+  </script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>

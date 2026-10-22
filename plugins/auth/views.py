@@ -25,3 +25,8 @@ def login_view(request):
 def logout_view(request):
     logout(request)
     return redirect('index')
+
+
+def password_reset_notice(request):
+    """密码重置占位页：v1.5 只提供入口，不发送邮件、不伪造重置。"""
+    return render(request, 'auth/password_reset_notice.html')

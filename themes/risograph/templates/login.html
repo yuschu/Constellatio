@@ -9,6 +9,12 @@
 </head>
 <body class="r-grain" style="background: var(--r-paper); color: var(--r-ink);">
 
+  <div class="r-loader" id="page-loader" role="status" aria-live="polite">
+    <span class="r-loader__spinner" aria-hidden="true"></span>
+    <span class="r-loader__text">{% trans "加载中…" %}</span>
+  </div>
+  <noscript><style>.r-loader{display:none}</style></noscript>
+
   <div class="min-vh-100 d-flex align-items-center justify-content-center px-3">
     <div style="max-width:420px; width:100%;">
 
@@ -49,6 +55,11 @@
           </div>
           <button class="r-btn w-100" type="submit">{% trans "登 录" %}</button>
         </form>
+
+        <div class="r-login-alt">
+          <button class="r-btn r-btn--plain w-100" type="button" disabled aria-disabled="true" title="{% trans '暂未接入' %}">{% trans "企业 SSO 登录（即将上线）" %}</button>
+          <a class="r-offset-hover" href="{% url 'auth:password_reset_notice' %}">{% trans "忘记密码？" %}</a>
+        </div>
       </div>
 
       <p class="text-center mt-3" style="font-size:.7rem; color:rgba(26,26,26,.6);">
@@ -57,5 +68,15 @@
     </div>
   </div>
 
+  <script>
+    (function () {
+      var el = document.getElementById('page-loader');
+      if (!el) return;
+      function hide() { el.classList.add('is-hidden'); }
+      window.addEventListener('load', hide);
+      window.setTimeout(hide, 2500);
+      window.addEventListener('beforeunload', function () { el.classList.remove('is-hidden'); });
+    })();
+  </script>
 </body>
 </html>

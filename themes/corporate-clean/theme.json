@@ -1,0 +1,7 @@
+{
+  "name": "Corporate Clean",
+  "version": "1.0.0",
+  "description": "企业简洁风：蓝灰配色、圆角卡片、轻阴影、200ms 以内交互",
+  "templates": "templates",
+  "static": "static"
+}
