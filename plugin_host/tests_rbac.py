@@ -108,7 +108,7 @@ class AttendanceRecordsTests(TestCase):
         response = self.client.get('/plugins/attendance/records/', {'q': '员工甲'})
         self.assertContains(response, '员工甲')
         response = self.client.get('/plugins/attendance/records/', {'q': '不存在'})
-        self.assertContains(response, '本月暂无签到记录')
+        self.assertContains(response, '当前条件下暂无签到记录')
 
     def test_staff_can_still_clock_in(self):
         other = User.objects.create_user('other', password='pw')

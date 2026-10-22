@@ -121,6 +121,12 @@ a:hover { color: var(--r-blue); }
   color: var(--r-blue);
   transform: translateX(2px);
 }
+.r-menu-link.is-active {
+  background: #eff6ff;
+  color: var(--r-blue);
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--r-blue);
+}
 .r-menu-icon { width: 1.1rem; text-align: center; opacity: 0.7; }
 
 /* ---------- 卡片 ---------- */

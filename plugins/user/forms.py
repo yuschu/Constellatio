@@ -60,7 +60,11 @@ class DepartmentForm(forms.ModelForm):
 
 
 class UserForm(forms.ModelForm):
-    """用户创建/编辑：初始密码仅新建时生效；权限/角色只展示操作者可授予的范围。"""
+    """用户创建/编辑：初始密码仅新建时生效；权限/角色只展示操作者可授予的范围。
+
+    v1.5.5 密码权限：仅超级管理员与账号本人可设置/修改密码，
+    其他操作者不渲染密码字段，提交的密码值也不会生效。
+    """
 
     password = forms.CharField(
         required=False, widget=forms.PasswordInput(attrs={'class': 'r-input', 'autocomplete': 'new-password'}),
@@ -78,20 +82,40 @@ class UserForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ['username', 'last_name', 'email', 'department', 'roles',
+        fields = ['username', 'last_name', 'email', 'department', 'leader', 'roles',
                   'user_permissions', 'is_active']
         widgets = {
             'username': forms.TextInput(attrs={'class': 'r-input'}),
             'last_name': forms.TextInput(attrs={'class': 'r-input'}),
             'email': forms.EmailInput(attrs={'class': 'r-input'}),
+            'leader': forms.Select(attrs={'class': 'r-input'}),
             'roles': forms.SelectMultiple(attrs={'size': '12', 'class': 'r-input'}),
             'is_active': forms.CheckboxInput(),
         }
 
     def __init__(self, *args, operator=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.operator = operator
         self.fields['user_permissions'].queryset = grantable_permissions(operator, self.instance)
         self.fields['roles'].queryset = grantable_roles(operator, self.instance)
+        leaders = User.objects.filter(is_active=True)
+        if getattr(self.instance, 'pk', None):
+            leaders = leaders.exclude(pk=self.instance.pk)
+        self.fields['leader'].queryset = leaders.order_by('last_name', 'username')
+        self.fields['leader'].help_text = _('用于审批人留空时自动指派与抄送；可留空')
+        if not self.can_change_password:
+            self.fields.pop('password', None)
+            self.fields.pop('password_confirm', None)
+
+    @property
+    def can_change_password(self):
+        """密码修改权限：超级管理员，或账号本人；其他角色一律不可。"""
+        if self.operator is None:
+            return True
+        if self.operator.is_superuser:
+            return True
+        return bool(getattr(self.instance, 'pk', None)
+                    and self.instance.pk == self.operator.pk)
 
     def clean(self):
         cleaned = super().clean()
@@ -104,7 +128,7 @@ class UserForm(forms.ModelForm):
     def save(self, commit=True):
         user = super().save(commit=False)
         pwd = self.cleaned_data.get('password')
-        if pwd:
+        if pwd and self.can_change_password:
             user.set_password(pwd)
         elif not user.pk:
             user.set_password(DEFAULT_PASSWORD)

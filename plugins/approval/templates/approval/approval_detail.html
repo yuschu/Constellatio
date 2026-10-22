@@ -14,7 +14,13 @@
       <table class="r-table">
         <tr><th>{% trans "类型" %}</th><td>{% trans approval.get_approval_type_display %}</td></tr>
         <tr><th>{% trans "标题" %}</th><td>{{ approval.title }}</td></tr>
-        <tr><th>{% trans "内容" %}</th><td>{{ approval.content|default:'—' }}</td></tr>
+        <tr><th>{% trans "部门" %}</th><td>{{ approval.department_name|default:'—' }}</td></tr>
+        {% for label, value in form_rows %}
+        <tr><th>{{ label }}</th><td style="white-space:pre-wrap;">{{ value }}</td></tr>
+        {% endfor %}
+        {% if not approval.form_data and approval.content %}
+        <tr><th>{% trans "内容" %}</th><td style="white-space:pre-wrap;">{{ approval.content }}</td></tr>
+        {% endif %}
         <tr><th>{% trans "金额" %}</th><td>{% if approval.amount %}￥{{ approval.amount }}{% else %}—{% endif %}</td></tr>
         <tr><th>{% trans "申请人" %}</th><td>{{ approval.applicant.last_name|default:approval.applicant.username }}</td></tr>
         <tr><th>{% trans "审批人" %}</th><td>{{ approval.approver.last_name|default:approval.approver.username }}</td></tr>
@@ -36,10 +42,18 @@
       <div class="text-muted" style="font-size:.8rem;">{% trans "暂无流转记录" %}</div>
       {% endfor %}
     </div>
+    <div class="r-card mb-4">
+      <h3 class="fs-5 mb-3">{% trans "抄送" %}</h3>
+      {% for c in cc_users %}
+      <span class="r-badge r-badge--blue me-1">{{ c.last_name|default:c.username }}</span>
+      {% empty %}
+      <div class="text-muted" style="font-size:.8rem;">{% trans "暂无抄送人" %}</div>
+      {% endfor %}
+      <p class="text-muted mt-2 mb-0" style="font-size:.75rem;">{% trans "审批人收到申请与审批完成时，自动抄送其上级。" %}</p>
+    </div>
     {% if is_counter %}
     <div class="r-card mb-4">
-      <h3 class="fs-5 mb-3">{% blocktranslate with count=signers|length %}会签人（{{ count }} 人，全部通过才生效）{% endblocktranslate %}</h3>
-      {% for s in signers %}
+      <h3 class="fs-5 mb-3">{% blocktranslate with count=signers|length %}会签人（{{ count }} 人，全部通过才生效）{% endblocktranslate %}</h3>      {% for s in signers %}
       <div class="d-flex gap-2 mb-2" style="font-size:.85rem;">
         <span class="r-badge {% if s.signed %}r-badge--blue{% else %}r-badge--orange{% endif %}">
           {% if s.signed %}{% trans "已签" %}{% else %}{% trans "待签" %}{% endif %}

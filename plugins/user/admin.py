@@ -20,9 +20,9 @@ class RoleAdmin(admin.ModelAdmin):
 
 @admin.register(User)
 class ConstellatioUserAdmin(UserAdmin):
-    list_display = ('id', 'username', 'last_name', 'department', 'is_active', 'is_superuser')
+    list_display = ('id', 'username', 'last_name', 'department', 'leader', 'is_active', 'is_superuser')
     list_filter = ('is_active', 'is_superuser', 'department', 'roles')
     filter_horizontal = ('groups', 'user_permissions', 'roles')
     fieldsets = UserAdmin.fieldsets + (
-        ('组织信息', {'fields': ('department', 'roles')}),
+        ('组织信息', {'fields': ('department', 'leader', 'roles')}),
     )

@@ -4,14 +4,36 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
   <h2 class="mb-0">{% trans "签到详情" %}</h2>
-  <span class="r-badge">{{ month_value }}</span>
+  <span class="r-badge">{{ start|date:"Y-m-d H:i" }} ~ {{ end|date:"Y-m-d H:i" }}</span>
 </div>
 
 <div class="r-card mb-4">
   <form method="get" class="d-flex flex-wrap align-items-end gap-3">
     <div>
-      <label class="form-label" for="month">{% trans "月份" %}</label>
-      <input class="r-input" type="month" id="month" name="month" value="{{ month_value }}">
+      <label class="form-label" for="start">{% trans "开始时间" %}</label>
+      <input class="r-input" type="datetime-local" id="start" name="start" value="{{ start_value }}">
+    </div>
+    <div>
+      <label class="form-label" for="end">{% trans "结束时间" %}</label>
+      <input class="r-input" type="datetime-local" id="end" name="end" value="{{ end_value }}">
+    </div>
+    <div>
+      <label class="form-label" for="status">{% trans "签到状态" %}</label>
+      <select class="r-input" id="status" name="status">
+        <option value="">{% trans "全部状态" %}</option>
+        {% for value, label in status_choices %}
+        <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="form-label" for="sign_type">{% trans "签到类型" %}</label>
+      <select class="r-input" id="sign_type" name="sign_type">
+        <option value="">{% trans "全部类型" %}</option>
+        {% for value, label in sign_types %}
+        <option value="{{ value }}" {% if sign_type == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
     </div>
     <div>
       <label class="form-label" for="department">{% trans "部门" %}</label>
@@ -34,27 +56,33 @@
 </div>
 
 <div class="row g-4 mb-4">
-  <div class="col-md-4">
+  <div class="col-md-3">
     <div class="r-card">
       <div class="text-muted" style="font-size:.75rem;">{% trans "签到记录" %}</div>
       <div class="fs-3">{{ total }}</div>
     </div>
   </div>
-  <div class="col-md-4">
+  <div class="col-md-3">
     <div class="r-card">
       <div class="text-muted" style="font-size:.75rem;">{% trans "涉及员工" %}</div>
       <div class="fs-3">{{ user_count }}</div>
     </div>
   </div>
-  <div class="col-md-4">
+  <div class="col-md-3">
     <div class="r-card">
       <div class="text-muted" style="font-size:.75rem;">{% trans "迟到次数" %}</div>
       <div class="fs-3">{{ late_count }}</div>
     </div>
   </div>
+  <div class="col-md-3">
+    <div class="r-card">
+      <div class="text-muted" style="font-size:.75rem;">{% trans "缺卡次数" %}</div>
+      <div class="fs-3">{{ missing_count }}</div>
+    </div>
+  </div>
 </div>
 
-<div class="r-card">
+<div class="r-card mb-4">
   <table class="r-table">
     <thead>
       <tr>
@@ -62,32 +90,28 @@
         <th>{% trans "姓名" %}</th>
         <th>{% trans "账号" %}</th>
         <th>{% trans "部门" %}</th>
+        <th>{% trans "签到类型" %}</th>
         <th>{% trans "签到" %}</th>
         <th>{% trans "签退" %}</th>
         <th>{% trans "状态" %}</th>
       </tr>
     </thead>
     <tbody>
-      {% for row in rows %}
+      {% for r in rows %}
       <tr>
-        <td>{{ row.record.date|date:"Y-m-d" }}</td>
-        <td>{{ row.record.user.last_name|default:row.record.user.username }}</td>
-        <td>{{ row.record.user.username }}</td>
-        <td>{{ row.record.user.department.name|default:'—' }}</td>
-        <td>{% if row.record.check_in %}{{ row.record.check_in|date:"H:i" }}{% else %}—{% endif %}</td>
-        <td>{% if row.record.check_out %}{{ row.record.check_out|date:"H:i" }}{% else %}—{% endif %}</td>
+        <td>{{ r.date|date:"Y-m-d" }}</td>
+        <td>{{ r.user.last_name|default:r.user.username }}</td>
+        <td>{{ r.user.username }}</td>
+        <td>{{ r.user.department.name|default:'—' }}</td>
+        <td>{% trans r.get_sign_type_display %}</td>
+        <td>{% if r.check_in %}{{ r.check_in|date:"H:i" }}{% else %}—{% endif %}</td>
+        <td>{% if r.check_out %}{{ r.check_out|date:"H:i" }}{% else %}—{% endif %}</td>
         <td>
-          {% if row.missing %}
-            <span class="r-badge">{% trans "缺卡" %}</span>
-          {% elif row.late %}
-            <span class="r-badge r-badge--orange">{% trans "迟到" %}</span>
-          {% else %}
-            <span class="r-badge r-badge--blue">{% trans "正常" %}</span>
-          {% endif %}
+          <span class="r-badge {% if r.status == 'normal' %}r-badge--blue{% elif r.status == 'late' or r.status == 'early' %}r-badge--orange{% endif %}">{% trans r.get_status_display %}</span>
         </td>
       </tr>
       {% empty %}
-      <tr><td colspan="7" class="text-muted">{% trans "本月暂无签到记录" %}</td></tr>
+      <tr><td colspan="8" class="text-muted">{% trans "当前条件下暂无签到记录" %}</td></tr>
       {% endfor %}
     </tbody>
   </table>
@@ -99,14 +123,51 @@
     </span>
     <span class="d-flex gap-2">
       {% if page_obj.has_previous %}
-      <a class="r-offset-hover" href="?month={{ month_value }}&department={{ department_id }}&q={{ keyword|urlencode }}&page={{ page_obj.previous_page_number }}">← {% trans "上一页" %}</a>
+      <a class="r-offset-hover" href="?start={{ start_value }}&end={{ end_value }}&status={{ status }}&sign_type={{ sign_type }}&department={{ department_id }}&q={{ keyword|urlencode }}&page={{ page_obj.previous_page_number }}">← {% trans "上一页" %}</a>
       {% endif %}
       {% if page_obj.has_next %}
-      <a class="r-offset-hover" href="?month={{ month_value }}&department={{ department_id }}&q={{ keyword|urlencode }}&page={{ page_obj.next_page_number }}">{% trans "下一页" %} →</a>
+      <a class="r-offset-hover" href="?start={{ start_value }}&end={{ end_value }}&status={{ status }}&sign_type={{ sign_type }}&department={{ department_id }}&q={{ keyword|urlencode }}&page={{ page_obj.next_page_number }}">{% trans "下一页" %} →</a>
       {% endif %}
     </span>
   </div>
   {% endif %}
 </div>
-<p class="text-muted mt-3 mb-0" style="font-size:.75rem;">{% trans "迟到口径：签到时间晚于 09:00；缺卡表示当日无签到记录。" %}</p>
+
+<div class="r-card">
+  <h3 class="fs-5 mb-3">{% trans "补卡登记" %}</h3>
+  <form method="post" action="{% url 'attendance:attendance_makeup' %}" class="d-flex flex-wrap align-items-end gap-3">
+    {% csrf_token %}
+    <div>
+      <label class="form-label" for="makeup_user">{% trans "员工" %}</label>
+      <select class="r-input" id="makeup_user" name="user" required>
+        <option value="">{% trans "请选择员工" %}</option>
+        {% for u in employees %}
+        <option value="{{ u.id }}">{{ u.last_name|default:u.username }}（{{ u.username }}）</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="form-label" for="makeup_date">{% trans "日期" %}</label>
+      <input class="r-input" type="date" id="makeup_date" name="date" value="{{ end|date:'Y-m-d' }}" required>
+    </div>
+    <div>
+      <label class="form-label" for="makeup_in">{% trans "签到" %}</label>
+      <input class="r-input" type="time" id="makeup_in" name="check_in" value="09:00">
+    </div>
+    <div>
+      <label class="form-label" for="makeup_out">{% trans "签退" %}</label>
+      <input class="r-input" type="time" id="makeup_out" name="check_out" value="18:00">
+    </div>
+    <div>
+      <label class="form-label" for="makeup_type">{% trans "签到类型" %}</label>
+      <select class="r-input" id="makeup_type" name="sign_type">
+        {% for value, label in sign_types %}
+        <option value="{{ value }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="r-btn" type="submit">{% trans "登记补卡" %}</button>
+  </form>
+  <p class="text-muted mt-2 mb-0" style="font-size:.75rem;">{% trans "补卡由管理岗登记，状态标记为补卡，不改变原打卡时间口径。" %}</p>
+</div>
 {% endblock %}

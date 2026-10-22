@@ -110,6 +110,24 @@ USERS = [
 
 DEFAULT_PASSWORD = 'constellatio123'
 
+# 直属上级（v1.5.5）：账号 → 上级账号；用于审批人留空时的自动指派与抄送
+LEADER_OF = {
+    'gm_zhang': None,
+    # 一级部门负责人 → 总经理
+    'hr_wang': 'gm_zhang', 'fin_zheng': 'gm_zhang', 'mkt_feng': 'gm_zhang',
+    'sal_wei': 'gm_zhang', 'rd_han': 'gm_zhang', 'ops_lin': 'gm_zhang',
+    'cs_xu': 'gm_zhang', 'adm_huang': 'gm_zhang', 'legal_liu': 'gm_zhang',
+    'pur_du': 'gm_zhang', 'it_cai': 'gm_zhang',
+    # 组内成员 → 部门负责人
+    'hr_zhao': 'hr_wang', 'hr_qian': 'hr_wang', 'hr_sun': 'hr_wang', 'hr_li': 'hr_wang',
+    'fin_wu': 'fin_zheng', 'fin_chen': 'fin_zheng',
+    'mkt_chu': 'mkt_feng', 'sal_jiang': 'sal_wei',
+    'rd_yang': 'rd_han', 'rd_zhu': 'rd_han', 'rd_yan': 'rd_han', 'rd_qin': 'rd_han',
+    'ops_he': 'ops_lin', 'cs_gao': 'cs_xu', 'adm_liang': 'adm_huang',
+    'legal_shi': 'legal_liu', 'pur_xiao': 'pur_du',
+    'it_luo': 'it_cai', 'it_zhou': 'it_cai',
+}
+
 
 def dept_tree():
     """部门树：[(dept, [children...]), ...] 保持模板顺序。"""

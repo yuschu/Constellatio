@@ -50,7 +50,7 @@
           <div class="fw-bold text-uppercase mb-3" style="font-size:.8rem; letter-spacing:.08em;">{% trans "功能" %}</div>
           {% for menu in menus %}
           <div class="mb-2">
-            <a href="{{ menu.url }}" class="r-offset-hover d-block px-1 py-1" style="font-size:.85rem;">
+            <a href="{{ menu.url }}" class="r-offset-hover d-block px-1 py-1{% if menu.active %} is-active{% endif %}" style="font-size:.85rem;"{% if menu.active %} aria-current="page"{% endif %}>
               {{ menu.icon }} {{ menu.label }}
             </a>
           </div>

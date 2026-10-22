@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "抄送我的" %} · Constellatio{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">{% trans "抄送我的" %}</h2>
+  <span class="r-badge">{% blocktranslate with count=approvals|length %}共 {{ count }} 条{% endblocktranslate %}</span>
+</div>
+<div class="r-card">
+  <table class="r-table">
+    <thead>
+      <tr><th>ID</th><th>{% trans "类型" %}</th><th>{% trans "标题" %}</th><th>{% trans "申请人" %}</th><th>{% trans "审批人" %}</th><th>{% trans "状态" %}</th><th>{% trans "时间" %}</th><th>{% trans "操作" %}</th></tr>
+    </thead>
+    <tbody>
+      {% for a in approvals %}
+      <tr>
+        <td>{{ a.id }}</td>
+        <td>{% trans a.get_approval_type_display %}</td>
+        <td>{{ a.title }}</td>
+        <td>{{ a.applicant.last_name|default:a.applicant.username }}</td>
+        <td>{{ a.approver.last_name|default:a.approver.username }}</td>
+        <td>
+          {% if a.status == 'pending' %}<span class="r-badge r-badge--blue">{% trans "待审批" %}</span>
+          {% elif a.status == 'approved' %}<span class="r-badge">{% trans "已通过" %}</span>
+          {% elif a.status == 'rejected' %}<span class="r-badge r-badge--orange">{% trans "已驳回" %}</span>
+          {% else %}<span class="r-badge">{% trans "草稿" %}</span>{% endif %}
+        </td>
+        <td>{{ a.created_at|date:"m-d H:i" }}</td>
+        <td><a href="{% url 'approval:approval_detail' a.id %}" class="r-offset-hover">{% trans "详情" %}</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="8" class="text-muted">{% trans "暂无抄送记录" %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

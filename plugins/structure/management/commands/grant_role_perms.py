@@ -8,7 +8,7 @@ from django.apps import apps as dj_apps
 from django.contrib.auth.models import Permission
 from django.core.management.base import BaseCommand
 
-from plugins.structure.template import MANAGER_ROLES, ROLE_PERMISSIONS
+from plugins.structure.template import LEADER_OF, MANAGER_ROLES, ROLE_PERMISSIONS
 
 
 class Command(BaseCommand):
@@ -19,6 +19,8 @@ class Command(BaseCommand):
                             help='只打印将要补齐的权限，不写库')
         parser.add_argument('--revoke-manager-perms', action='store_true',
                             help='同时收回部门经理角色的 L1 user_manage（保留总经理/系统管理员）')
+        parser.add_argument('--seed-leaders', action='store_true',
+                            help='按模板补齐用户直属上级（只补空，不覆盖）')
 
     def handle(self, *args, **options):
         Role = dj_apps.get_model('user', 'Role')
@@ -57,8 +59,27 @@ class Command(BaseCommand):
                     revoked += 1
                     self.stdout.write(f'{role.name}: -user_manage (L1 收回，保留 L2 管理岗)')
 
+        seeded = 0
+        if options['seed_leaders']:
+            User = dj_apps.get_model('user', 'User')
+            for account, leader_account in LEADER_OF.items():
+                if not leader_account:
+                    continue
+                member = User.objects.filter(username=account).first()
+                superior = User.objects.filter(username=leader_account).first()
+                if member is None or superior is None:
+                    continue
+                if member.leader_id is None and member.pk != superior.pk:
+                    if not dry_run:
+                        member.leader = superior
+                        member.save(update_fields=['leader'])
+                    seeded += 1
+                    self.stdout.write(f'{member.username}: leader → {superior.username}')
+
         prefix = '[dry-run] ' if dry_run else ''
         message = f'{prefix}角色权限补齐：{role_count} 个角色，{granted} 项权限'
         if options['revoke_manager_perms']:
             message += f'；收回 user_manage {revoked} 项'
+        if options['seed_leaders']:
+            message += f'；补齐直属上级 {seeded} 人'
         self.stdout.write(self.style.SUCCESS(message))

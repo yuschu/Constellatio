@@ -6,8 +6,8 @@ from django.contrib.auth.models import Permission
 from plugin_host.signals import structure_applied
 
 from .template import (
-    ALL_ROLE_PERMISSION_CODES, DEFAULT_PASSWORD, DEPARTMENTS, MANAGER_ROLES,
-    ROLE_PERMISSIONS, ROLES, USERS,
+    ALL_ROLE_PERMISSION_CODES, DEFAULT_PASSWORD, DEPARTMENTS, LEADER_OF,
+    MANAGER_ROLES, ROLE_PERMISSIONS, ROLES, USERS,
 )
 
 
@@ -74,6 +74,16 @@ def apply_structure(operator, grant_manager_perms=False):
         if role_name in role_cache:
             user.roles.add(role_cache[role_name])
         user_created += 1
+
+    # 3b) 直属上级（v1.5.5）：只补空，不覆盖人工调整
+    for account, leader_account in LEADER_OF.items():
+        if not leader_account:
+            continue
+        member = User.objects.filter(username=account).first()
+        superior = User.objects.filter(username=leader_account).first()
+        if member and superior and member.leader_id is None and member.pk != superior.pk:
+            member.leader = superior
+            member.save(update_fields=['leader'])
 
     # 4) 留痕记录 + 上链信号
     from .models import StructureRecord

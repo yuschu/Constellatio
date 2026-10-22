@@ -9,6 +9,7 @@ app_name = 'approval'
 urlpatterns = [
     path('', views.approval_list, name='approval_list'),
     path('pending/', views.approval_pending, name='approval_pending'),
+    path('cc/', views.approval_cc, name='approval_cc'),
     path('new/', views.approval_create, name='approval_create'),
     path('<int:approval_id>/', views.approval_detail, name='approval_detail'),
 ]

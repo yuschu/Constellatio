@@ -62,6 +62,9 @@ class User(AbstractUser):
     department = models.ForeignKey(
         Department, null=True, blank=True, on_delete=models.SET_NULL,
         related_name='members', verbose_name='所属部门')
+    leader = models.ForeignKey(
+        'self', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='direct_reports', verbose_name='直属上级')
     roles = models.ManyToManyField(Role, blank=True, related_name='users', verbose_name='角色')
     permission_frozen = models.BooleanField('权限冻结', default=False)   # 冻结权限：登录但无操作权限
     created_at = models.DateTimeField(auto_now_add=True)

@@ -198,6 +198,70 @@ class PermissionLevelTests(TestCase):
         self.assertContains(response, '考勤打卡')
 
 
+class PasswordPermissionTests(TestCase):
+    """v1.5.5：仅超级管理员与账号本人可修改密码。"""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin = User.objects.create_superuser('root', '', 'pw')
+        cls.manager = User.objects.create_user('mgr', '', 'mgrpass')
+        cls.manager.user_permissions.add(P.get(codename='user_manage'))
+        cls.target = User.objects.create_user('target', '', 'oldpass123')
+
+    def _data(self, **extra):
+        data = {
+            'username': 'target', 'last_name': '目标', 'email': '',
+            'department': '', 'leader': '', 'roles': [], 'user_permissions': [],
+            'is_active': 'on',
+        }
+        data.update(extra)
+        return data
+
+    def test_manager_cannot_change_other_password(self):
+        form = UserForm(data=self._data(password='newpass123',
+                                       password_confirm='newpass123'),
+                        instance=self.target, operator=self.manager)
+        self.assertNotIn('password', form.fields)
+        self.assertTrue(form.is_valid())
+        form.save()
+        self.target.refresh_from_db()
+        self.assertTrue(self.target.check_password('oldpass123'))
+        self.assertFalse(self.target.check_password('newpass123'))
+
+    def test_superuser_can_change_other_password(self):
+        form = UserForm(data=self._data(password='newpass123',
+                                       password_confirm='newpass123'),
+                        instance=self.target, operator=self.admin)
+        self.assertIn('password', form.fields)
+        self.assertTrue(form.is_valid())
+        form.save()
+        self.target.refresh_from_db()
+        self.assertTrue(self.target.check_password('newpass123'))
+
+    def test_self_can_change_password(self):
+        form = UserForm(data=self._data(password='selfpass123',
+                                       password_confirm='selfpass123'),
+                        instance=self.target, operator=self.target)
+        self.assertIn('password', form.fields)
+        self.assertTrue(form.is_valid())
+        form.save()
+        self.target.refresh_from_db()
+        self.assertTrue(self.target.check_password('selfpass123'))
+
+    def test_manager_create_uses_default_password(self):
+        form = UserForm(data={
+            'username': 'fresh', 'last_name': '新人', 'email': '',
+            'department': '', 'leader': '', 'roles': [], 'user_permissions': [],
+            'is_active': 'on', 'password': 'hacker123', 'password_confirm': 'hacker123',
+        }, operator=self.manager)
+        self.assertNotIn('password', form.fields)
+        self.assertTrue(form.is_valid())
+        user = form.save()
+        self.assertEqual(user.username, 'fresh')
+        self.assertTrue(user.check_password('constellatio123'))
+        self.assertFalse(user.check_password('hacker123'))
+
+
 class ProfileTests(TestCase):
     """个人中心：资料编辑 / 权限查看 / 修改密码 / 顶栏入口。"""
 

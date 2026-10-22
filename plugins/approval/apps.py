@@ -10,11 +10,12 @@ class ApprovalConfig(AppConfig):
         from plugin_host.registry import register, PluginMeta
         register(PluginMeta(
             name='approval',
-            version='1.2.0',
+            version='1.3.0',
             title=_('审批中心'),
             menus=[
                 {'label': _('审批中心'), 'icon': '▣', 'url': '/plugins/approval/', 'perm': 'approval_view'},
                 {'label': _('待我审批'), 'icon': '☐', 'url': '/plugins/approval/pending/', 'perm': 'approval_view'},
+                {'label': _('抄送我的'), 'icon': '✉', 'url': '/plugins/approval/cc/', 'perm': 'approval_view'},
             ],
             permissions=['approval_view', 'approval_approve'],
             urls='plugins.approval.urls',

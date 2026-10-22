@@ -852,3 +852,204 @@ msgstr "Page %(page)s / %(total_pages)s"
 
 msgid "迟到口径：签到时间晚于 09:00；缺卡表示当日无签到记录。"
 msgstr "Late means check-in after 09:00; no check-in means no attendance record that day."
+
+msgid "外出"
+msgstr "Outing"
+
+msgid "加班"
+msgstr "Overtime"
+
+msgid "调休"
+msgstr "Comp time"
+
+msgid "请假时间"
+msgstr "Leave time"
+
+msgid "事由"
+msgstr "Reason"
+
+msgid "提交时间"
+msgstr "Submit time"
+
+msgid "费用事由"
+msgstr "Expense reason"
+
+msgid "申请用章时间"
+msgstr "Seal application time"
+
+msgid "用章文件及用途"
+msgstr "Seal document & purpose"
+
+msgid "外出开始时间"
+msgstr "Outing start"
+
+msgid "外出结束时间"
+msgstr "Outing end"
+
+msgid "外出事由"
+msgstr "Outing reason"
+
+msgid "加班开始时间"
+msgstr "Overtime start"
+
+msgid "加班结束时间"
+msgstr "Overtime end"
+
+msgid "加班事由"
+msgstr "Overtime reason"
+
+msgid "调休时间"
+msgstr "Comp time"
+
+msgid "调休依据（关联加班记录）"
+msgstr "Comp basis (linked overtime)"
+
+msgid "请选择部门"
+msgstr "Select a department"
+
+msgid "留空：由直属上级审批"
+msgstr "Blank: approved by direct leader"
+
+msgid "结束时间必须晚于开始时间"
+msgstr "End time must be later than start time"
+
+msgid "暂无加班记录"
+msgstr "No overtime records"
+
+msgid "请先发起并完成加班审批，再申请调休"
+msgstr "Please submit and complete an overtime approval before applying for comp time"
+
+msgid "选择审批类型"
+msgstr "Select approval type"
+
+msgid "可留空：默认由直属上级审批，并自动抄送审批人的上级。"
+msgstr "Optional: defaults to your direct leader, and CCs the approver's leader."
+
+msgid "抄送我的"
+msgstr "CC to me"
+
+msgid "抄送"
+msgstr "CC"
+
+msgid "暂无抄送人"
+msgstr "No CC recipients"
+
+msgid "审批人收到申请与审批完成时，自动抄送其上级。"
+msgstr "The approver's leader is CC'd when the request is received and when it is completed."
+
+msgid "暂无抄送记录"
+msgstr "No CC records"
+
+msgid "内勤签到"
+msgstr "Internal check-in"
+
+msgid "外勤签到"
+msgstr "Field check-in"
+
+msgid "签到类型"
+msgstr "Check-in type"
+
+msgid "签到状态"
+msgstr "Check-in status"
+
+msgid "开始时间"
+msgstr "Start time"
+
+msgid "结束时间"
+msgstr "End time"
+
+msgid "全部状态"
+msgstr "All statuses"
+
+msgid "全部类型"
+msgstr "All types"
+
+msgid "缺卡次数"
+msgstr "Missing check-ins"
+
+msgid "当前条件下暂无签到记录"
+msgstr "No attendance records match the filters"
+
+msgid "补卡登记"
+msgstr "Make-up entry"
+
+msgid "员工"
+msgstr "Employee"
+
+msgid "请选择员工"
+msgstr "Select an employee"
+
+msgid "登记补卡"
+msgstr "Register make-up"
+
+msgid "补卡由管理岗登记，状态标记为补卡，不改变原打卡时间口径。"
+msgstr "Make-up is registered by managers and marked as make-up; original check-in rules are unchanged."
+
+msgid "早退"
+msgstr "Early leave"
+
+msgid "补卡"
+msgstr "Make-up"
+
+msgid "待办聚合"
+msgstr "To-do summary"
+
+msgid "需要我处理的审批与会签"
+msgstr "Approvals and sign-offs waiting for me"
+
+msgid "进入待办"
+msgstr "Open to-dos"
+
+msgid "暂无审批权限"
+msgstr "No approval permission"
+
+msgid "考勤待处理"
+msgstr "Pending attendance"
+
+msgid "今日未签到"
+msgstr "Not checked in today"
+
+msgid "今日未签退"
+msgstr "Not checked out today"
+
+msgid "今日考勤已完成"
+msgstr "Attendance completed today"
+
+msgid "今日暂无考勤记录"
+msgstr "No attendance record today"
+
+msgid "去打卡"
+msgstr "Check in"
+
+msgid "流程快捷发起"
+msgstr "Quick request"
+
+msgid "我的考勤"
+msgstr "My attendance"
+
+msgid "插件运维"
+msgstr "Plugin ops"
+
+msgid "已启用 %(enabled)s / 共 %(total)s 个"
+msgstr "%(enabled)s of %(total)s enabled"
+
+msgid "打开插件开关"
+msgstr "Open plugin switches"
+
+msgid "公告简报"
+msgstr "Notice digest"
+
+msgid "查看全部公告"
+msgstr "View all notices"
+
+msgid "管理员视图"
+msgstr "Admin view"
+
+msgid "员工视图"
+msgstr "Employee view"
+
+msgid "直属上级"
+msgstr "Direct leader"
+
+msgid "用于审批人留空时自动指派与抄送；可留空"
+msgstr "Used for auto-assignment and CC when the approver is blank; optional"

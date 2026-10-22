@@ -19,32 +19,46 @@ def _record(approval, operator, action, comment):
         approval=approval, operator=operator, action=action, comment=comment)
 
 
+def _cc_approver_superior(approval):
+    """抄送审批人的上级（v1.5.5）：审批人收到申请时、审批完成时各抄送一次（幂等）。"""
+    if not approval.approver_id:
+        return None
+    superior = approval.approver.leader
+    if superior and superior.pk != approval.approver_id:
+        approval.cc_users.add(superior)
+        return superior
+    return None
+
+
 def submit(approval, operator, comment=''):
-    """草稿/待审批 → 待审批。"""
+    """草稿/待审批 → 待审批；同时抄送审批人的上级。"""
     if approval.status not in (Approval.Status.DRAFT, Approval.Status.PENDING):
         raise ValueError('只有草稿/待审批状态可提交')
     approval.status = Approval.Status.PENDING
     approval.save(update_fields=['status', 'updated_at'])
     _record(approval, operator, 'submit', comment)
+    _cc_approver_superior(approval)
 
 
 def approve(approval, operator, comment=''):
-    """待审批 → 已通过（普通审批）。"""
+    """待审批 → 已通过（普通审批）；结果同步申请人，并抄送审批人上级。"""
     if approval.status != Approval.Status.PENDING:
         raise ValueError('只有待审批状态可通过')
     approval.status = Approval.Status.APPROVED
     approval.save(update_fields=['status', 'updated_at'])
     _record(approval, operator, 'approve', comment)
+    _cc_approver_superior(approval)
     approval_finished.send(sender=approval.__class__, approval_id=approval.id, result='approved')
 
 
 def reject(approval, operator, comment=''):
-    """待审批 → 已驳回（普通审批 / 会签任一驳回）。"""
+    """待审批 → 已驳回（普通审批 / 会签任一驳回）；结果同步申请人，并抄送审批人上级。"""
     if approval.status != Approval.Status.PENDING:
         raise ValueError('只有待审批状态可驳回')
     approval.status = Approval.Status.REJECTED
     approval.save(update_fields=['status', 'updated_at'])
     _record(approval, operator, 'reject', comment)
+    _cc_approver_superior(approval)
     approval_finished.send(sender=approval.__class__, approval_id=approval.id, result='rejected')
 
 

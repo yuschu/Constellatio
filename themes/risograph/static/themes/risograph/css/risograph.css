@@ -264,6 +264,11 @@ a { color: var(--r-blue); text-decoration: none; }
   box-shadow: 6px 6px 0 var(--r-blue), -4px -4px 0 var(--r-orange);
   transform: translate(2px, 2px);
 }
+.r-offset-hover.is-active {
+  background: var(--r-paper-2, #f1efe6);
+  box-shadow: inset 3px 0 0 var(--r-blue);
+  font-weight: 700;
+}
 
 /* 背景色 */
 .r-bg-paper   { background: var(--r-paper); }

@@ -4,12 +4,65 @@
 {% block content %}
 <div class="r-card position-relative mb-4">
   <span class="r-register-mark"></span>
-  <h2 class="mb-2">{% trans "工作台" %}</h2>
-  <p class="mb-0" style="font-size:.9rem; color:rgba(26,26,26,.6);">
-    {% blocktranslate with name=request.user.last_name|default:request.user.username %}欢迎，{{ name }}。{% endblocktranslate %}
-  </p>
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div>
+      <h2 class="mb-2">{% trans "工作台" %}</h2>
+      <p class="mb-0" style="font-size:.9rem; color:rgba(26,26,26,.6);">
+        {% blocktranslate with name=request.user.last_name|default:request.user.username %}欢迎，{{ name }}。{% endblocktranslate %}
+      </p>
+    </div>
+    <span class="r-badge">{% if is_admin_view %}{% trans "管理员视图" %}{% else %}{% trans "员工视图" %}{% endif %}</span>
+  </div>
 </div>
-<div class="row g-4">
+
+<div class="fw-bold text-uppercase mb-3" style="font-size:.8rem; letter-spacing:.08em;">{% trans "待办聚合" %}</div>
+<div class="row g-4 mb-4">
+  <div class="col-md-6">
+    <div class="r-card h-100">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <h3 class="fs-5 mb-2">{% trans "待我审批" %}</h3>
+          <p class="mb-0" style="font-size:.8rem; color:rgba(26,26,26,.6);">{% trans "需要我处理的审批与会签" %}</p>
+        </div>
+        <span class="fs-2">{{ pending_approvals }}</span>
+      </div>
+      {% if can_approval %}
+      <a href="{% url 'approval:approval_pending' %}" class="r-btn mt-3">{% trans "进入待办" %} →</a>
+      {% else %}
+      <span class="r-badge mt-3">{% trans "暂无审批权限" %}</span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="r-card h-100">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <h3 class="fs-5 mb-2">{% trans "考勤待处理" %}</h3>
+          <p class="mb-0" style="font-size:.8rem; color:rgba(26,26,26,.6);">{% if attendance_today %}{{ attendance_today.label }}{% else %}{% trans "今日暂无考勤记录" %}{% endif %}</p>
+        </div>
+        {% if attendance_today %}
+        <span class="r-badge {% if attendance_today.state == 'done' %}r-badge--blue{% else %}r-badge--orange{% endif %}">{{ attendance_today.label }}</span>
+        {% endif %}
+      </div>
+      <a href="{% url 'attendance:attendance_dashboard' %}" class="r-btn mt-3">{% trans "去打卡" %} →</a>
+    </div>
+  </div>
+</div>
+
+{% if shortcuts %}
+<div class="fw-bold text-uppercase mb-3" style="font-size:.8rem; letter-spacing:.08em;">{% trans "流程快捷发起" %}</div>
+<div class="r-card mb-4">
+  <div class="d-flex flex-wrap gap-2">
+    {% for s in shortcuts %}
+    <a href="{{ s.url }}" class="r-btn">{{ s.icon }} {{ s.label }}</a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if can_plugin_ops %}
+<div class="fw-bold text-uppercase mb-3" style="font-size:.8rem; letter-spacing:.08em;">{% trans "插件运维" %}</div>
+<div class="row g-4 mb-4">
   <div class="col-md-4">
     <div class="r-card h-100">
       <h3 class="fs-5 mb-2">{% trans "插件架构" %}</h3>
@@ -18,25 +71,35 @@
   </div>
   <div class="col-md-4">
     <div class="r-card h-100">
-      <h3 class="fs-5 mb-2">Risograph</h3>
-      <p class="mb-0" style="font-size:.8rem; color:rgba(26,26,26,.6);">{% trans "有限色板 · 硬边阴影 · 等宽字体 · 瞬时动效。" %}</p>
-    </div>
-  </div>
-  <div class="col-md-4">
-    <div class="r-card h-100">
       <h3 class="fs-5 mb-2">{% trans "已启用插件" %}</h3>
-      <p class="mb-0" style="font-size:.8rem; color:rgba(26,26,26,.6);">{% trans "侧栏菜单由插件注册表自动聚合。" %}</p>
+      <p class="mb-2" style="font-size:.8rem; color:rgba(26,26,26,.6);">{% blocktranslate with enabled=enabled_count total=plugin_total %}已启用 {{ enabled }} / 共 {{ total }} 个{% endblocktranslate %}</p>
+      <div>
+        {% for key, title in enabled_plugins %}<span class="r-badge me-1 mb-1">{{ title }}</span>{% endfor %}
+      </div>
     </div>
   </div>
-  {% if perms.workspace.workspace_manage %}
   <div class="col-md-4">
     <div class="r-card h-100">
       <h3 class="fs-5 mb-2">{% trans "插件开关" %}</h3>
-      <p class="mb-0" style="font-size:.8rem; color:rgba(26,26,26,.6);">
-        <a href="/plugins/workspace/" class="r-offset-hover">{% trans "运行时启用 / 禁用插件 →" %}</a>
-      </p>
+      <p class="mb-2" style="font-size:.8rem; color:rgba(26,26,26,.6);">{% trans "运行时启用 / 禁用插件，即时生效。" %}</p>
+      <a href="{% url 'workspace:switch_list' %}" class="r-btn">{% trans "打开插件开关" %} →</a>
     </div>
   </div>
-  {% endif %}
+</div>
+{% endif %}
+
+<div class="fw-bold text-uppercase mb-3" style="font-size:.8rem; letter-spacing:.08em;">{% trans "公告简报" %}</div>
+<div class="r-card">
+  {% for notice in notices %}
+  <div class="d-flex justify-content-between gap-3 border-bottom py-2" style="font-size:.85rem;">
+    <a href="{% url 'notice:notice_detail' notice.id %}">
+      {% if notice.is_top %}<span class="r-badge me-1">{% trans "置顶" %}</span>{% endif %}{{ notice.title }}
+    </a>
+    <span style="white-space:nowrap; color:rgba(26,26,26,.6);">{{ notice.created_at|date:"m-d H:i" }}</span>
+  </div>
+  {% empty %}
+  <p class="mb-0" style="font-size:.85rem; color:rgba(26,26,26,.6);">{% trans "暂无公告" %}</p>
+  {% endfor %}
+  <a href="/plugins/notice/" class="r-btn mt-3">{% trans "查看全部公告" %} →</a>
 </div>
 {% endblock %}

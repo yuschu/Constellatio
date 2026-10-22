@@ -12,18 +12,24 @@
       <span class="r-register-mark"></span>
       <h3 class="fs-5 mb-3">{% trans "今日状态" %}</h3>
       {% if record and record.check_in and record.check_out %}
-        <p class="r-badge">{% trans "已签退" %}</p>
+        <p class="r-badge">{% trans record.get_status_display %} · {% trans record.get_sign_type_display %}</p>
         <p class="mt-3 text-muted" style="font-size:.85rem;">{% blocktranslate with check_in=record.check_in|date:"H:i" check_out=record.check_out|date:"H:i" %}签到 {{ check_in }} · 签退 {{ check_out }}{% endblocktranslate %}</p>
       {% elif record and record.check_in %}
-        <p class="r-badge r-badge--blue">{% trans "已签到" %}</p>
+        <p class="r-badge r-badge--blue">{% trans "已签到" %} · {% trans record.get_sign_type_display %}</p>
         <p class="mt-3 text-muted" style="font-size:.85rem;">{% blocktranslate with check_in=record.check_in|date:"H:i" now=now|date:"H:i" %}签到 {{ check_in }} · 当前 {{ now }}{% endblocktranslate %}</p>
       {% else %}
         <p class="r-badge r-badge--orange">{% trans "未打卡" %}</p>
       {% endif %}
-      <div class="d-flex gap-3 mt-4">
+      <div class="d-flex flex-wrap gap-3 mt-4 align-items-end">
         <form method="post" action="{% url 'attendance:attendance_check' %}">
           {% csrf_token %}
-          <button class="r-btn" type="submit" name="action" value="in" {% if record and record.check_in %}disabled{% endif %}>{% trans "签到" %}</button>
+          <label class="form-label" for="sign_type" style="font-size:.75rem;">{% trans "签到类型" %}</label>
+          <select class="r-input" id="sign_type" name="sign_type">
+            {% for value, label in sign_types %}
+            <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+          <button class="r-btn mt-2" type="submit" name="action" value="in" {% if record and record.check_in %}disabled{% endif %}>{% trans "签到" %}</button>
         </form>
         <form method="post" action="{% url 'attendance:attendance_check' %}">
           {% csrf_token %}

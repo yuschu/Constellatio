@@ -122,6 +122,20 @@ class StructureApplyTests(TestCase):
         self.assertTrue(
             manager_role.permissions.filter(codename='attendance_report_view').exists())
 
+    def test_apply_seeds_leaders(self):
+        """v1.5.5：应用模板补齐直属上级（组员→部门负责人→总经理）。"""
+        self._apply()
+        self.assertEqual(User.objects.get(username='hr_qian').leader.username, 'hr_wang')
+        self.assertEqual(User.objects.get(username='hr_wang').leader.username, 'gm_zhang')
+        self.assertIsNone(User.objects.get(username='gm_zhang').leader)
+        # 幂等：人工调整不覆盖
+        hr_qian = User.objects.get(username='hr_qian')
+        hr_qian.leader = User.objects.get(username='gm_zhang')
+        hr_qian.save(update_fields=['leader'])
+        self._apply()
+        hr_qian.refresh_from_db()
+        self.assertEqual(hr_qian.leader.username, 'gm_zhang')
+
     def test_apply_requires_perm(self):
         """权限守卫：无 structure_manage 的 apply 请求被拒。"""
         self.client.force_login(self.admin)

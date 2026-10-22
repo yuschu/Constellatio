@@ -45,7 +45,7 @@
         <div class="r-card r-card--sidebar">
           <div class="r-sidebar-title">{% trans "功能" %}</div>
           {% for menu in menus %}
-          <a href="{{ menu.url }}" class="r-menu-link">
+          <a href="{{ menu.url }}" class="r-menu-link{% if menu.active %} is-active{% endif %}"{% if menu.active %} aria-current="page"{% endif %}>
             <span class="r-menu-icon">{{ menu.icon }}</span>{{ menu.label }}
           </a>
           {% empty %}

@@ -11,6 +11,9 @@ class Approval(models.Model):
         LEAVE = 'leave', '请假'
         EXPENSE = 'expense', '报销'
         SEAL = 'seal', '用章'
+        OUTING = 'outing', '外出'
+        OVERTIME = 'overtime', '加班'
+        COMP = 'comp', '调休'
         DEPT_DELETE = 'dept_delete', '部门删除（会签）'
         USER_DISABLE = 'user_disable', '用户禁用（会签）'
 
@@ -25,12 +28,21 @@ class Approval(models.Model):
     content = models.TextField('内容', blank=True)
     amount = models.DecimalField('金额', max_digits=12, decimal_places=2, null=True, blank=True)
     biz_id = models.PositiveIntegerField('业务对象ID', null=True, blank=True)  # 会签单：部门ID/用户ID
+    # v1.5.5：动态表单数据（请假/报销/用章/外出/加班/调休）
+    form_data = models.JSONField('表单数据', default=dict, blank=True)
+    department_id = models.PositiveIntegerField('部门ID', null=True, blank=True)
+    department_name = models.CharField('部门名称', max_length=100, blank=True, default='')
     applicant = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
         related_name='approvals', verbose_name='申请人')
     approver = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
-        related_name='approval_tasks', verbose_name='审批人')
+        related_name='approval_tasks', verbose_name='审批人',
+        null=True, blank=True)
+    # v1.5.5：抄送人（审批人上级、结果抄送）
+    cc_users = models.ManyToManyField(
+        settings.AUTH_USER_MODEL, blank=True, related_name='cc_approvals',
+        verbose_name='抄送人')
     status = models.CharField(
         '状态', max_length=20, choices=Status.choices, default=Status.DRAFT)
     created_at = models.DateTimeField(auto_now_add=True)
