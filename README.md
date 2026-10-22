@@ -18,13 +18,15 @@
 
 * 🎨 主题插件化：`themes/<key>/theme.json` + `OA_THEME`，重启生效；登录页 SSO / 忘记密码占位入口 + 首屏加载动画
 
+* 🌐 全站 UI 中英切换：插件名 / 表头 / 状态 / 空态 / 确认文案随语言切换（用户名与业务数据除外）
+
 * 📋 审批中心：请假 / 报销 / 用章，状态机流转 + 全程留痕
 
 * 📢 公告通知：发布 / 置顶 / 已读统计
 
 * 🕐 考勤打卡：上下班打卡 + 月度统计看板（ECharts）
 
-* ⛓ 区块链留痕：关键操作上链（SHA-256 哈希链），篡改即断链报警
+* ⛓ 区块链留痕：关键操作上链（SHA-256 哈希链），列表可点击查看单条记录详情，篡改即断链报警
 
 * ⚙ 插件开关：工作台运行时启用 / 禁用插件，即时生效（停用即隐藏菜单 + 404），操作上链
 
@@ -133,10 +135,10 @@ Constellatio/
 | [docs/plugin-dev-workspace.md](docs/plugin-dev-workspace.md)                   | 插件开发 | workspace：工作台可启用 / 禁用功能（v1.1 已实现）             |
 | [docs/plugin-dev-user.md](docs/plugin-dev-user.md)                             | 插件开发 | user 增强：部门软 / 硬删除、用户状态机、密码二次确认、权限层级（v1.2 已实现） |
 | [docs/plugin-dev-structure.md](docs/plugin-dev-structure.md)                   | 插件开发 | structure：职能制组织架构模板（角色 + 用户模板一键应用）（v1.3 已实现）  |
-| [docs/plugin-dev-language.md](docs/plugin-dev-language.md)                     | 插件开发 | language：中英文切换（v1.4 已实现）                       |
+| [docs/plugin-dev-language.md](docs/plugin-dev-language.md)                     | 插件开发 | language：中英文切换（v1.4 已实现，v1.5.1 全站文案补全）   |
 | [docs/plugin-dev-theme.md](docs/plugin-dev-theme.md)                           | 插件开发 | theme：主题插件化 + Corporate Clean 默认主题（v1.5 已实现）   |
 | [docs/roadmap.md](docs/roadmap.md)                                             | 规划   | 差距矩阵、v1.5–v2.0 迭代路线、修复项与文档债务                  |
 
 ## 📌 状态
 
-**v1.5 已跑通**（Corporate Clean 默认 + Risograph 备选 / `theme.json` 发现 / 登录占位入口 / 首屏 loader / 63 项测试全绿）→ 下一步：v1.6 图表插件化 + ECharts
+**v1.5.1 已跑通**（Corporate Clean 默认 + Risograph 备选 / 全站 UI 中英切换补全 / 留痕详情 / 66 项测试全绿）→ 下一步：v1.6 图表插件化 + ECharts

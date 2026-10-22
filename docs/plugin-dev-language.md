@@ -1,8 +1,8 @@
 # 插件开发文档：language（语言切换插件，默认中英文）
 
 > 关联插件：plugin_host 容器（中间件 / 注册表）、themes.risograph（外壳）、各业务插件（菜单 / 页标题）
-> 版本规划：v1.4 · 文档版本：draft-04（已实现）· 2026-10-22
-> 状态：**✅ 已实现并跑通**（13 项单测全绿 + 中英双语 13 页 HTTP 冒烟；全量 51 项测试通过）
+> 版本规划：v1.4 / v1.5.1 补全 · 文档版本：draft-05（已实现）· 2026-10-22
+> 状态：**✅ v1.4 实现 + v1.5.1 全站 UI 文案补全**（66 项测试全绿；中英双语页面冒烟）
 
 ## 〇、draft-02 复核结论（先看这节）
 
@@ -36,7 +36,7 @@ draft-01 写于 v1.3 之前，有 4 处与当前 Django 5.2 / 代码现状不一
 | 翻译机制 | Django i18n：源码中文为 msgid，`locale/en/LC_MESSAGES/django.po` 提供英文；`zh-hans` 直接回退 msgid |
 | 编译 | `tools/compile_mo.py` 纯 Python 生成 `.mo`；`.mo` 不入库；`entrypoint.sh` 启动时编译 |
 | 菜单国际化 | `PluginMeta.menus` 的 label 改 `gettext_lazy`；模板渲染时按当前语言求值 |
-| 覆盖范围 | 外壳 + 12 个菜单 + 页标题 + 主按钮 + 登录错误；不做全站逐字翻译（明细见第六节） |
+| 覆盖范围 | v1.4：外壳 + 菜单 + 页标题 + 主按钮；v1.5.1 补全表头 / 字段 / 状态 / 空态 / 确认文案 / 权限选项（用户名与业务数据除外） |
 | 权限 | 所有用户（含未登录的登录页）；无权限码 |
 | 上链 | 不上链（个人显示偏好，非审计事件）；不发信号 |
 
@@ -155,7 +155,7 @@ tools/compile_mo.py                  # 纯 Python .po → .mo（无 gettext 依�
 - 本地流程：改 `.po` → `python tools/compile_mo.py` → `runserver` / `test`。
 - 缺少 `.mo` 时英文会静默回退中文，不算崩溃，但验收不通过。
 
-## 六、覆盖范围（v1.4 精确边界）
+## 六、覆盖范围（v1.4 起始 + v1.5.1 补全）
 
 | 文件 | 覆盖内容 |
 |---|---|
@@ -173,7 +173,9 @@ tools/compile_mo.py                  # 纯 Python .po → .mo（无 gettext 依�
 | `plugins/auth/views.py` | 用户名或密码错误 |
 | `plugins/user/views.py` | 动态 title 的 4 个字符串 |
 
-**明确不做**：表头 / 字段标签 / 空状态说明、表格内的业务数据、JS `confirm()` 文案、Django Admin、表单校验消息、日志与异常文案。未覆盖区域保持中文，属文档声明的范围，不算缺陷。
+**v1.5.1 已补全**：所有业务页的表头、字段标签、状态徽标、空状态、JS `confirm()` 文案、表单校验消息、插件展示名、权限选项、留痕详情页。
+
+**仍不翻译**：用户名 / 用户姓名 / 业务数据（部门名、角色名、公告与审批标题正文等）、Django Admin、日志与异常堆栈。
 
 ## 七、测试计划
 
@@ -207,10 +209,10 @@ tools/compile_mo.py                  # 纯 Python .po → .mo（无 gettext 依�
 2. 切 EN 后外壳、菜单、页标题、主按钮立即变英文，无需重新登录
 3. 切回中文恢复；语言选择是会话 Cookie，关浏览器回中文
 4. 登录页可切换，未登录也可用
-5. 第六节列出的范围全部生效；未覆盖区域保持中文且有文档说明
+5. 第六节列出的范围全部生效；英文页除用户名 / 业务数据 / 语言名“中文”外无中文文案
 6. `manage.py test` 全绿（新增 ≥10 项）
 7. 容器内 entrypoint 自动编译，无 gettext 二进制依赖
-8. 既有 38 项测试与 6 个插件页回归通过；可插拔自检通过
+8. 既有测试与全部插件页回归通过；可插拔自检通过
 
 ## 九、改动文件清单
 
@@ -250,7 +252,7 @@ tools/compile_mo.py                  # 纯 Python .po → .mo（无 gettext 依�
 1. `language` **加入 workspace 禁停清单**（外壳级能力）。
 2. **默认中文，忽略浏览器 `Accept-Language`**。
 3. 语言选择用**会话 Cookie**（关浏览器恢复中文），不写入用户表。
-4. 覆盖范围按第六节；表头 / 字段 / JS confirm 暂不翻译。
+4. 覆盖范围按第六节；v1.5.1 已把表头 / 字段 / 状态 / 空态 / confirm 补全。
 5. `.mo` **不入库**，由 entrypoint 与测试前编译。
 
 版本顺序：v1.4 language 先做，基础设施补齐（v1.5–v1.8）后置；路线见 `docs/roadmap.md`。
@@ -260,8 +262,9 @@ tools/compile_mo.py                  # 纯 Python .po → .mo（无 gettext 依�
 - 插件：`plugins/language/`（apps / urls / views / middleware / tests）
 - 中间件：`DefaultLanguageMiddleware`（Cookie 优先，否则 `zh-hans`；不跟随 `Accept-Language`）
 - 配置：`settings.LANGUAGES` / `LOCALE_PATHS` / MIDDLEWARE / INSTALLED_APPS / OA_PLUGINS
-- 翻译：`locale/en/LC_MESSAGES/django.po`（72 条在用）+ `tools/compile_mo.py`
-- 模板：`base.html` / `login.html` / `home.html` + 8 个 `apps.py` 菜单 + 16 个业务模板的标题 / h2 / 主按钮
+- 翻译：`locale/en/LC_MESSAGES/django.po`（200+ 条在用）+ `tools/compile_mo.py`
+- 模板：`base.html` / `login.html` / `home.html` + 8 个 `apps.py` 菜单与展示名 + 全部业务模板（表头 / 字段 / 状态 / 空态 / confirm）
 - 禁停：`workspace.PROTECTED` 增加 `language`
-- 测试：`plugins/language/tests.py` 13 项；全量 **51 项全绿**
+- 测试：`plugins/language/tests.py` 13 项；全量 **66 项全绿**（v1.5.1）
 - 冒烟：中文 / 英文各 13 个页面 200；登录页可切换；语言 Cookie 为会话级；`.mo` 不入库
+- v1.5.1：插件开关展示名、表头、状态、留痕详情、权限选项全部随语言切换；英文页扫描仅剩语言名“中文”与业务数据。

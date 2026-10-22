@@ -556,6 +556,7 @@ class BlockchainRecord(models.Model):
 - 订阅信号：`apps.py ready()` 中 connect 13 个信号（approval_finished / notice_published / attendance_checked / user_created / user_updated / plugin_toggled / dept_deleted / dept_disabled / dept_updated / user_status_changed / user_disabled / password_changed / structure_applied），回调 `BlockchainRecord.append(...)` —— **只订阅，不反向依赖任何业务插件**
 - 权限：`blockchain_view`（查看留痕）、`blockchain_verify`（链完整性校验）
 - 校验入口：`BlockchainRecord.verify_chain()` → 页面显示"链完整"或"第 N 条被篡改"
+- 详情：列表行尾"查看" → `/plugins/blockchain/<id>/`，展示插件/动作/目标/操作人/三种哈希/时间
 
 ## 五、前端开发规范
 
@@ -590,9 +591,10 @@ class BlockchainRecord(models.Model):
 </script>
 ```
 
-### 5.2 多语言（v1.4）
+### 5.2 多语言（v1.4 / v1.5.1 全站补全）
 
 - 插件：`plugins/language/`（无模型、无迁移、无侧栏菜单）
+- 覆盖：v1.5.1 起全站 UI 文案（表头 / 字段 / 状态 / 空态 / confirm / 插件展示名 / 权限选项 / 留痕详情）；用户名与业务数据不翻译
 - 默认中文：`DefaultLanguageMiddleware`（继承 LocaleMiddleware）读 Cookie，无有效 Cookie 时固定 `settings.LANGUAGE_CODE`，不跟随 `Accept-Language`
 - 切换：`POST /plugins/language/switch/`（`lang` + `next`），写会话级 Cookie `django_language`
 - 翻译：源码中文为 msgid，`locale/en/LC_MESSAGES/django.po` 提供英文；`python tools/compile_mo.py` 生成 `.mo`（不入库）
@@ -904,6 +906,7 @@ git commit -m "docs: 补充开发指南"
 |---|---|---|---|
 | name | str | ✓ | 插件唯一名，小写英文，全局唯一 |
 | version | str | ✓ | 语义化版本（SemVer） |
+| title | str | 可选 | 展示名（建议 `gettext_lazy`）；缺省回退 name |
 | menus | list[dict] | ✓ | 导航菜单：`{label, icon, url}` |
 | permissions | list[str] | ✓ | 权限码，格式 `插件名_权限` |
 | urls | str | ✓ | 路由模块路径 |
