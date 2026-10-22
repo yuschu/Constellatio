@@ -38,6 +38,9 @@
 | notice | 公告通知 | 发布/置顶/已读统计 |
 | attendance | 考勤打卡 | 上下班打卡 + 月度统计看板（ECharts） |
 | blockchain | 操作留痕上链 | 订阅全局信号写入哈希链，篡改即断链报警 |
+| workspace | 插件开关 | 运行时启用 / 停用，停用即 404 + 菜单隐藏（v1.1） |
+| structure | 组织架构模板 | 20 部门 / 31 角色 / 31 用户幂等应用（v1.3） |
+| language | 中英切换 | 默认中文 + 会话 Cookie + 纯 Python .mo 编译（v1.4） |
 
 ## 四、技术栈
 
@@ -168,5 +171,5 @@ OA_PLUGINS = [
 - [x] v1.1 workspace 插件（工作台可启用/禁用功能，运行时开关，停用即 404+菜单隐藏，操作上链）—— 2026-10-21 完成：`docs/plugin-dev-workspace.md`
 - [x] v1.2 user 增强 + approval 会签（部门软/硬删+修改、用户状态机、密码二次确认、权限层级；会签模型）—— 2026-10-21 完成：`docs/plugin-dev-user.md`
 - [x] v1.3 structure 插件（职能制组织架构模板：20 部门/31 角色/31 用户模板幂等应用，应用上链）—— 2026-10-21 完成：`docs/plugin-dev-structure.md`
-- [ ] v1.4 language 插件（默认中英文切换）—— 开发文档：`docs/plugin-dev-language.md`
+- [x] v1.4 language 插件（默认中英文切换，13 项单测 + 双语冒烟）—— 2026-10-22 完成：`docs/plugin-dev-language.md`
 - [ ] 测试报告

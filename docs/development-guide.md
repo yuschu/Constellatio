@@ -32,7 +32,7 @@
 ### Git 提交流程
 
 - 每阶段一个 commit：`feat(plugin_host)` / `feat(user)` / `feat(approval)` / `feat(notice)` / `feat(attendance)` / `feat(blockchain)` / `feat(deploy)`
-- 完成一阶段打 tag：`v0.1`（容器）→ `v0.2`（auth+user）→ `v0.3`（approval）→ `v0.4`（notice）→ `v0.5`（attendance）→ `v0.6`（blockchain）→ `v1.0`（整合完成）
+- v0.1–v0.6 是提交节点；实际 tag 从 `v1.0.0` 起（`v1.0.0` → `v1.1.0` → `v1.2.0` → `v1.3.0` → `v1.4.0`）
 
 ### 关键依赖规则
 
@@ -553,13 +553,13 @@ class BlockchainRecord(models.Model):
         return True, None
 ```
 
-- 订阅信号：`apps.py ready()` 中 connect `approval_finished` / `notice_published` / `attendance_checked` / `user_created` / `user_updated` 五个信号，回调 `BlockchainRecord.append(...)` —— **只订阅，不反向依赖任何业务插件**
+- 订阅信号：`apps.py ready()` 中 connect 13 个信号（approval_finished / notice_published / attendance_checked / user_created / user_updated / plugin_toggled / dept_deleted / dept_disabled / dept_updated / user_status_changed / user_disabled / password_changed / structure_applied），回调 `BlockchainRecord.append(...)` —— **只订阅，不反向依赖任何业务插件**
 - 权限：`blockchain_view`（查看留痕）、`blockchain_verify`（链完整性校验）
 - 校验入口：`BlockchainRecord.verify_chain()` → 页面显示"链完整"或"第 N 条被篡改"
 
 ## 五、前端开发规范
 
-- 页面一律继承 `plugin_host/templates/base.html`，插件只写 `{% block content %}`
+- 页面一律继承 `themes/risograph/templates/base.html`（主题插件提供），插件只写 `{% block content %}`
 - 布局栅格/表单结构用 Bootstrap 5；**视觉组件统一用 Risograph 主题类**（`r-` 前缀，见下方 5.1），禁止自造体系外样式
 - ECharts 通过 CDN 引入，图表统一封装：
 
@@ -593,6 +593,15 @@ class BlockchainRecord(models.Model):
     });
 </script>
 ```
+
+### 5.2 多语言（v1.4）
+
+- 插件：`plugins/language/`（无模型、无迁移、无侧栏菜单）
+- 默认中文：`DefaultLanguageMiddleware`（继承 LocaleMiddleware）读 Cookie，无有效 Cookie 时固定 `settings.LANGUAGE_CODE`，不跟随 `Accept-Language`
+- 切换：`POST /plugins/language/switch/`（`lang` + `next`），写会话级 Cookie `django_language`
+- 翻译：源码中文为 msgid，`locale/en/LC_MESSAGES/django.po` 提供英文；`python tools/compile_mo.py` 生成 `.mo`（不入库）
+- 编译：`entrypoint.sh` 启动时执行；本地改完 `.po` 也要先编译再跑 `runserver` / `test`
+- 测试：`python manage.py test plugins.language`
 
 ## 六、数据库开发
 
@@ -920,6 +929,8 @@ git commit -m "docs: 补充开发指南"
 | notice_published | notice | announcement_id | — |
 | attendance_checked | attendance | user_id, date | — |
 | user_created / user_updated | user | user_id | 各插件同步 |
+
+> 完整信号以 `plugin_host/signals.py` 为准；v1.4 共 **16 个**，上表只列最早的核心 4 个。
 
 兼容规则：对外信号载荷**只增不改**；改字段须升插件主版本。
 

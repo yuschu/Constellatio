@@ -37,6 +37,8 @@
 
 业务插件共 **13 张表**；框架内置表不属于任何插件，由 Django 自动管理。
 
+> v1.4 的 `language` 插件**无业务表**：语言选择只写会话级 Cookie（`django_language`），不落库、不新增迁移。
+
 ## 三、ER 关系总览
 
 ```
@@ -77,6 +79,7 @@
 | id | BIGINT | PK, AUTO_INCREMENT | 主键 |
 | name | VARCHAR(100) | UNIQUE, NOT NULL | 部门名称 |
 | parent_id | FK user_department.id | NULL, ON DELETE SET NULL | 上级部门 |
+| is_active | BOOL | NOT NULL, DEFAULT True | 软删除标志（False=停用） |
 | created_at | DATETIME | NOT NULL | 创建时间 |
 | updated_at | DATETIME | NOT NULL | 更新时间 |
 
@@ -91,6 +94,7 @@
 | first_name | VARCHAR(150) | NULL | 备用 |
 | email | VARCHAR(254) | NULL | 邮箱 |
 | is_staff / is_active / is_superuser | BOOL | NOT NULL | Django 内置标志 |
+| permission_frozen | BOOL | NOT NULL, DEFAULT False | 冻结权限（登录仍可，has_perm 恒 False） |
 | date_joined | DATETIME | NOT NULL | 注册时间 |
 | department_id | FK user_department | NULL, ON DELETE SET NULL | 所属部门 |
 | roles | M2M → user_role | 见中间表 | 用户角色 |
@@ -122,12 +126,14 @@ UNIQUE(user_id, role_id)
 | 字段 | 类型 | 约束 | 说明 |
 |---|---|---|---|
 | id | BIGINT | PK | 主键 |
-| type | VARCHAR(20) | NOT NULL | leave(请假) / reimburse(报销) / stamp(用章) |
+| approval_type | VARCHAR(20) | NOT NULL | leave / expense / seal / dept_delete / user_disable |
 | title | VARCHAR(200) | NOT NULL | 审批标题 |
 | content | TEXT | NOT NULL | 申请内容 |
+| amount | DECIMAL(12,2) | NULL | 金额（报销用） |
+| biz_id | INT | NULL | 会签业务对象 ID（部门 / 用户） |
 | applicant_id | FK user_user | PROTECT | 申请人 |
+| approver_id | FK user_user | PROTECT | 审批人 |
 | status | VARCHAR(20) | NOT NULL, DEFAULT 'draft' | draft / pending / approved / rejected |
-| current_approver_id | FK user_user | NULL, ON DELETE SET NULL | 当前审批人 |
 | created_at / updated_at | DATETIME | NOT NULL | 审计字段 |
 
 索引：(status)、(applicant_id)
@@ -138,12 +144,25 @@ UNIQUE(user_id, role_id)
 |---|---|---|---|
 | id | BIGINT | PK | 主键 |
 | approval_id | FK approval_approval | CASCADE | 所属审批单 |
-| approver_id | FK user_user | PROTECT | 操作人 |
-| action | VARCHAR(20) | NOT NULL | submit / approve / reject |
+| operator_id | FK user_user | PROTECT | 操作人 |
+| action | VARCHAR(20) | NOT NULL | submit / approve / reject / sign_approve / sign_reject |
 | comment | TEXT | NULL | 审批意见 |
 | created_at | DATETIME | NOT NULL | 操作时间 |
 
 索引：(approval_id)
+
+**approval_approvalsigner（会签人，v1.2 落地）**
+
+| 字段 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| id | BIGINT | PK | |
+| approval_id | FK approval_approval | CASCADE | 审批单 |
+| signer_id | FK user_user | PROTECT | 会签人 |
+| signed | BOOL | NOT NULL, DEFAULT False | 是否已签 |
+| signed_at | DATETIME | NULL | 签批时间 |
+| comment | TEXT | NULL | 个人意见 |
+
+UNIQUE(approval_id, signer_id)
 
 ### 4.3 notice 插件（plugins/notice）
 
@@ -200,7 +219,7 @@ UNIQUE(user_id, date) —— 一天一卡防重复
 | operator_id | FK user_user | NULL, ON DELETE SET NULL | 操作人 |
 | payload_hash | CHAR(64) | NOT NULL | 内容哈希（SHA-256） |
 | prev_hash | CHAR(64) | NOT NULL | 前一条记录哈希（创世 = 64 个 0） |
-| record_hash | CHAR(64) | NOT NULL, UNIQUE | 本条哈希 = SHA256(prev_hash + payload_hash + created_at) |
+| record_hash | CHAR(64) | NOT NULL, UNIQUE | 本条哈希 = SHA256(prev_hash + payload_hash) |
 | created_at | DATETIME | NOT NULL | 上链时间 |
 
 索引：(prev_hash) UNIQUE、(record_hash) UNIQUE、(plugin, action)
