@@ -14,6 +14,7 @@
     <div class="mb-3">
       <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">{% trans field.label %}</label>
       {{ field }}
+      {% if field.help_text %}<div class="text-muted" style="font-size:.75rem;">{{ field.help_text }}</div>{% endif %}
       {% for e in field.errors %}<div class="text-danger" style="font-size:.8rem;">{{ e }}</div>{% endfor %}
     </div>
     {% endfor %}

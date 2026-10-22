@@ -42,7 +42,7 @@
           {% csrf_token %}
           <div class="mb-3">
             <label class="form-label" for="id_username">{% trans "用户名" %}</label>
-            <input class="r-input" id="id_username" type="text" name="username" autocomplete="username" placeholder="{% trans '输入用户名' %}" required autofocus>
+            <input class="r-input" id="id_username" type="text" name="username" value="{{ username }}" autocomplete="username" placeholder="{% trans '输入用户名' %}" required autofocus>
           </div>
           <div class="mb-4">
             <label class="form-label" for="id_password">{% trans "密码" %}</label>

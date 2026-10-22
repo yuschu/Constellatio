@@ -35,3 +35,12 @@ class NoticeTest(TestCase):
         a = self._announcement()
         AnnouncementRead.objects.create(announcement=a, user=self.reader)
         self.assertEqual(a.read_records.filter(user=self.reader).count(), 1)
+
+    def test_normal_user_can_see_menu_and_detail(self):
+        """公告对所有登录用户可见：无 notice_view 也能看到菜单和详情。"""
+        a = self._announcement()
+        self.client.force_login(self.reader)
+        home = self.client.get('/')
+        self.assertContains(home, '公告中心')
+        self.assertEqual(self.client.get('/plugins/notice/').status_code, 200)
+        self.assertEqual(self.client.get(f'/plugins/notice/{a.id}/').status_code, 200)

@@ -13,7 +13,8 @@ class NoticeConfig(AppConfig):
             version='0.4.0',
             title=_('公告通知'),
             menus=[
-                {'label': _('公告中心'), 'icon': '▣', 'url': '/plugins/notice/', 'perm': 'notice_view'},
+                # 公告对所有登录用户可见；发布仍由 notice_manage 控制
+                {'label': _('公告中心'), 'icon': '▣', 'url': '/plugins/notice/'},
             ],
             permissions=['notice_view', 'notice_manage'],
             urls='plugins.notice.urls',

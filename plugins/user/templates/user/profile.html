@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "个人中心" %} · Constellatio{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">{% trans "个人中心" %}</h2>
+  <span class="r-badge">{{ request.user.username }}</span>
+</div>
+<div class="row g-4">
+  <div class="col-md-7">
+    <div class="r-card">
+      <h3 class="fs-5 mb-3">{% trans "账号信息" %}</h3>
+      <table class="r-table">
+        <tr><th>{% trans "用户名" %}</th><td>{{ request.user.username }}</td></tr>
+        <tr><th>{% trans "姓名" %}</th><td>{{ request.user.last_name|default:'—' }}</td></tr>
+        <tr><th>{% trans "电子邮件地址" %}</th><td>{{ request.user.email|default:'—' }}</td></tr>
+        <tr><th>{% trans "所属部门" %}</th><td>{{ request.user.department.name|default:'—' }}</td></tr>
+        <tr><th>{% trans "角色" %}</th>
+          <td>{% for role in roles %}<span class="r-badge me-1">{{ role.name }}</span>{% empty %}—{% endfor %}</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+  <div class="col-md-5">
+    <div class="r-card">
+      <h3 class="fs-5 mb-3">{% trans "账号操作" %}</h3>
+      <div class="d-flex flex-column gap-2">
+        <a href="{% url 'user:profile_edit' %}" class="r-btn">{% trans "编辑资料" %}</a>
+        <a href="{% url 'user:profile_permissions' %}" class="r-btn r-btn--plain">{% trans "查看权限" %}</a>
+        <a href="{% url 'user:profile_password' %}" class="r-btn r-btn--plain">{% trans "修改密码" %}</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

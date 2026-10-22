@@ -30,7 +30,7 @@
           <button type="submit" name="lang" value="en" class="r-lang{% if LANGUAGE_CODE == 'en' %} is-active{% endif %}">EN</button>
         </form>
         {% if request.user.is_authenticated %}
-          <span class="r-badge">{{ request.user.last_name|default:request.user.username }}</span>
+          <a href="{% url 'user:profile' %}" class="r-badge">{{ request.user.last_name|default:request.user.username }}</a>
           <a href="/plugins/auth/logout/" class="r-nav-link">{% trans "登出" %}</a>
         {% else %}
           <a href="/plugins/auth/login/" class="r-nav-link">{% trans "登录" %}</a>

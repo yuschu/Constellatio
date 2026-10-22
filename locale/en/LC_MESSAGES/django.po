@@ -696,3 +696,60 @@ msgstr "Password changed"
 
 msgid "组织架构应用"
 msgstr "Structure applied"
+
+msgid "个人中心"
+msgstr "Profile"
+
+msgid "账号信息"
+msgstr "Account information"
+
+msgid "账号操作"
+msgstr "Account actions"
+
+msgid "编辑资料"
+msgstr "Edit profile"
+
+msgid "查看权限"
+msgstr "View permissions"
+
+msgid "修改密码"
+msgstr "Change password"
+
+msgid "我的权限"
+msgstr "My permissions"
+
+msgid "直接权限"
+msgstr "Direct permissions"
+
+msgid "有效权限"
+msgstr "Effective permissions"
+
+msgid "超级管理员：拥有全部权限"
+msgstr "Superuser: all permissions"
+
+msgid "暂无直接权限"
+msgstr "No direct permissions"
+
+msgid "暂无权限"
+msgstr "No permissions"
+
+msgid "当前密码"
+msgstr "Current password"
+
+msgid "新密码"
+msgstr "New password"
+
+msgid "确认新密码"
+msgstr "Confirm new password"
+
+msgid "当前密码错误"
+msgstr "Current password is incorrect"
+
+msgid "两次输入的新密码不一致"
+msgstr "The new passwords do not match"
+
+msgid "直接权限（额外）"
+msgstr "Direct permissions (extra)"
+
+msgid "只能授予你自身拥有的权限"
+msgstr "You can only grant permissions you hold"

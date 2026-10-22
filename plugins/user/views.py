@@ -7,16 +7,19 @@ v1.2：
 - 密码二次确认（表单层）；超管 L0 最高，操作目标为超管一律拒绝
 """
 
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import Permission
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
 
 from plugin_host.signals import (
-    dept_delete_requested, dept_disabled, dept_updated, user_created,
-    user_disable_requested, user_disabled, user_status_changed, user_updated,
+    dept_delete_requested, dept_disabled, dept_updated, password_changed,
+    user_created, user_disable_requested, user_disabled, user_status_changed,
+    user_updated,
 )
 
-from .forms import DepartmentForm, RoleForm, UserForm
+from .forms import DepartmentForm, PasswordForm, ProfileForm, RoleForm, UserForm
 from .models import Department, Role, User
 
 
@@ -41,6 +44,16 @@ def _clean_multi(post, field):
     else:
         data.pop(field, None)
     return data
+
+
+def _effective_permissions(user):
+    """用户的有效权限：超管全部；否则个人权限 + 角色权限去重。"""
+    if user.is_superuser:
+        return Permission.objects.select_related('content_type')
+    ids = set(user.user_permissions.values_list('pk', flat=True))
+    for role in user.roles.all():
+        ids.update(role.permissions.values_list('pk', flat=True))
+    return Permission.objects.filter(pk__in=ids).select_related('content_type')
 
 
 def _guard_superuser(request, target):
@@ -122,7 +135,8 @@ def user_list(request):
 @require_perm('user_manage')
 def user_create(request):
     if request.method == 'POST':
-        form = UserForm(_clean_multi(request.POST, 'roles'))
+        data = _clean_multi(_clean_multi(request.POST, 'roles'), 'user_permissions')
+        form = UserForm(data, operator=request.user)
         if form.is_valid():
             user = form.save()
             user_created.send(sender=user.__class__, user_id=user.pk)
@@ -138,7 +152,8 @@ def user_edit(request, user_id):
     if _guard_superuser(request, user):
         return redirect('user:user_list')
     if request.method == 'POST':
-        form = UserForm(_clean_multi(request.POST, 'roles'), instance=user)
+        data = _clean_multi(_clean_multi(request.POST, 'roles'), 'user_permissions')
+        form = UserForm(data, instance=user, operator=request.user)
         if form.is_valid():
             pwd_changed = bool(form.cleaned_data.get('password'))
             form.save()
@@ -237,3 +252,58 @@ def role_edit(request, role_id):
     else:
         form = RoleForm(instance=role)
     return render(request, 'user/role_form.html', {'form': form, 'title': _('编辑角色：%(name)s') % {'name': role.name}})
+
+
+
+# ---------------------------------------------------------------------------
+# 个人中心
+# ---------------------------------------------------------------------------
+@login_required
+def profile(request):
+    """个人中心：资料摘要 + 权限入口 + 修改密码入口。"""
+    return render(request, 'user/profile.html', {
+        'roles': request.user.roles.prefetch_related('permissions'),
+        'direct_permissions': request.user.user_permissions.select_related('content_type'),
+        'effective_permissions': _effective_permissions(request.user),
+    })
+
+
+@login_required
+def profile_edit(request):
+    """编辑自己的资料：只允许姓名 / 邮箱，不触碰角色与权限。"""
+    if request.method == 'POST':
+        form = ProfileForm(request.POST, instance=request.user)
+        if form.is_valid():
+            form.save()
+            user_updated.send(sender=request.user.__class__, user_id=request.user.pk)
+            return redirect('user:profile')
+    else:
+        form = ProfileForm(instance=request.user)
+    return render(request, 'user/profile_edit.html', {'form': form})
+
+
+@login_required
+def profile_permissions(request):
+    """查看自己的角色、直接权限与有效权限。"""
+    return render(request, 'user/profile_permissions.html', {
+        'roles': request.user.roles.prefetch_related('permissions'),
+        'direct_permissions': request.user.user_permissions.select_related('content_type'),
+        'effective_permissions': _effective_permissions(request.user),
+    })
+
+
+@login_required
+def profile_password(request):
+    """修改自己的密码：验证旧密码、二次确认、更新会话、发信号。"""
+    if request.method == 'POST':
+        form = PasswordForm(request.POST, user=request.user)
+        if form.is_valid():
+            request.user.set_password(form.cleaned_data['new_password'])
+            request.user.save(update_fields=['password'])
+            update_session_auth_hash(request, request.user)
+            password_changed.send(sender=request.user.__class__,
+                                  user_id=request.user.pk, operator_id=request.user.pk)
+            return redirect('user:profile')
+    else:
+        form = PasswordForm(user=request.user)
+    return render(request, 'user/profile_password.html', {'form': form})

@@ -9,7 +9,7 @@ from plugin_host.signals import plugin_toggled
 from .models import PluginSwitch
 
 # 禁停清单：停用即锁死（auth 登录入口 / workspace 开关入口 / language 语言切换）
-PROTECTED = {'auth', 'workspace', 'language'}
+PROTECTED = {'auth', 'user', 'workspace', 'language'}
 
 
 def require_perm(codename):

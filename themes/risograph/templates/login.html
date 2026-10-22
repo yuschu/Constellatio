@@ -47,7 +47,7 @@
           {% csrf_token %}
           <div class="mb-3">
             <label class="form-label" style="font-size:.75rem; text-transform:uppercase; letter-spacing:.06em;">{% trans "用户名" %}</label>
-            <input class="r-input" type="text" name="username" autocomplete="username" placeholder="{% trans '输入用户名' %}" required autofocus>
+            <input class="r-input" type="text" name="username" autocomplete="username" value="{{ username }}" placeholder="{% trans '输入用户名' %}" required autofocus>
           </div>
           <div class="mb-4">
             <label class="form-label" style="font-size:.75rem; text-transform:uppercase; letter-spacing:.06em;">{% trans "密码" %}</label>

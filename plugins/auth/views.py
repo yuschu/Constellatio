@@ -10,6 +10,7 @@ def login_view(request):
         return redirect('index')
 
     error = None
+    username = ''
     if request.method == 'POST':
         username = request.POST.get('username', '').strip()
         password = request.POST.get('password', '')
@@ -19,7 +20,8 @@ def login_view(request):
             return redirect('index')
         error = _('用户名或密码错误')
 
-    return render(request, 'login.html', {'error': error})
+    # 失败时回填用户名；密码出于安全不回填
+    return render(request, 'login.html', {'error': error, 'username': username})
 
 
 def logout_view(request):

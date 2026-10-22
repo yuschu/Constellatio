@@ -127,3 +127,82 @@ class DeptHardDeleteCallbackTests(TestCase):
         start_counter_signature(approval, [operator], operator)
         sign_approve(approval, operator, '同意')
         self.assertFalse(Department.objects.filter(pk=self.dept.pk).exists())
+
+
+class UserPermissionScopeTests(TestCase):
+    """编辑用户时只展示操作者可授予的权限。"""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.manager = User.objects.create_user('mgr', '', 'pw')
+        cls.manager.user_permissions.add(Permission.objects.get(codename='user_manage'))
+        cls.admin = User.objects.create_superuser('root', '', 'pw')
+
+    def test_manager_only_sees_own_permissions(self):
+        form = UserForm(operator=self.manager)
+        qs = form.fields['user_permissions'].queryset
+        self.assertIn(Permission.objects.get(codename='user_manage'), qs)
+        self.assertNotIn(Permission.objects.get(codename='dept_delete_approve'), qs)
+
+    def test_superuser_sees_all_permissions(self):
+        form = UserForm(operator=self.admin)
+        self.assertEqual(form.fields['user_permissions'].queryset.count(),
+                         Permission.objects.count())
+
+
+class ProfileTests(TestCase):
+    """个人中心：资料编辑 / 权限查看 / 修改密码 / 顶栏入口。"""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user(
+            'me', '', 'oldpass123', last_name='旧名')
+        role = Role.objects.create(name='员工')
+        role.permissions.add(Permission.objects.get(codename='user_manage'))
+        cls.user.roles.add(role)
+        cls.perm = Permission.objects.get(codename='user_manage')
+
+    def setUp(self):
+        self.client.force_login(self.user)
+
+    def test_profile_and_topbar_link(self):
+        response = self.client.get(reverse('user:profile'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '个人中心')
+        self.assertContains(response, '编辑资料')
+        home = self.client.get('/')
+        self.assertContains(home, '/plugins/user/profile/')
+
+    def test_profile_permissions_page(self):
+        response = self.client.get(reverse('user:profile_permissions'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '员工')
+        self.assertContains(response, self.perm.name)
+
+    def test_profile_edit(self):
+        response = self.client.post(reverse('user:profile_edit'), {
+            'last_name': '新名', 'email': 'new@example.com'})
+        self.assertEqual(response.status_code, 302)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.last_name, '新名')
+        self.assertEqual(self.user.email, 'new@example.com')
+
+    def test_password_change(self):
+        response = self.client.post(reverse('user:profile_password'), {
+            'old_password': 'oldpass123',
+            'new_password': 'newpass123',
+            'confirm_password': 'newpass123',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('newpass123'))
+        self.assertEqual(self.client.get(reverse('user:profile')).status_code, 200)
+
+    def test_password_wrong_old(self):
+        response = self.client.post(reverse('user:profile_password'), {
+            'old_password': 'bad',
+            'new_password': 'newpass123',
+            'confirm_password': 'newpass123',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '当前密码错误')

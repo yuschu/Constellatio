@@ -11,6 +11,12 @@ class AuthPlaceholderTest(TestCase):
         self.assertContains(response, '忘记密码')
         self.assertContains(response, 'aria-disabled="true"')
 
+    def test_login_error_preserves_username(self):
+        response = self.client.post('/plugins/auth/login/', {
+            'username': 'alice', 'password': 'bad'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'value="alice"')
+
     def test_password_reset_notice(self):
         response = self.client.get('/plugins/auth/password-reset/')
         self.assertEqual(response.status_code, 200)

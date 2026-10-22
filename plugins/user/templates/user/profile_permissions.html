@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% get_current_language as LANGUAGE_CODE %}
+{% block title %}{% trans "我的权限" %} · Constellatio{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'user:profile' %}" class="r-offset-hover">← {% trans "返回" %}</a>
+  <h2 class="mb-0">{% trans "我的权限" %}</h2>
+</div>
+<div class="r-card mb-4">
+  <h3 class="fs-5 mb-3">{% trans "角色" %}</h3>
+  {% for role in roles %}
+    <div class="mb-3">
+      <span class="r-badge">{{ role.name }}</span>
+      {% for p in role.permissions.all %}
+        <span class="r-badge r-badge--blue me-1">{% if LANGUAGE_CODE == 'en' %}{{ p.content_type.app_label }} | {{ p.codename }}{% else %}{{ p.name }}{% endif %}</span>
+      {% endfor %}
+    </div>
+  {% empty %}
+    <p class="text-muted">{% trans "暂无角色" %}</p>
+  {% endfor %}
+</div>
+<div class="r-card mb-4">
+  <h3 class="fs-5 mb-3">{% trans "直接权限" %}</h3>
+  {% for p in direct_permissions %}
+    <span class="r-badge r-badge--blue me-1">{% if LANGUAGE_CODE == 'en' %}{{ p.content_type.app_label }} | {{ p.codename }}{% else %}{{ p.name }}{% endif %}</span>
+  {% empty %}
+    <p class="text-muted">{% trans "暂无直接权限" %}</p>
+  {% endfor %}
+</div>
+<div class="r-card">
+  <h3 class="fs-5 mb-3">{% trans "有效权限" %}</h3>
+  {% if request.user.is_superuser %}
+    <p class="r-badge">{% trans "超级管理员：拥有全部权限" %}</p>
+  {% else %}
+    {% for p in effective_permissions %}
+      <span class="r-badge me-1">{% if LANGUAGE_CODE == 'en' %}{{ p.content_type.app_label }} | {{ p.codename }}{% else %}{{ p.name }}{% endif %}</span>
+    {% empty %}
+      <p class="text-muted">{% trans "暂无权限" %}</p>
+    {% endfor %}
+  {% endif %}
+</div>
+{% endblock %}
