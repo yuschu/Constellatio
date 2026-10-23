@@ -92,3 +92,19 @@
 - 审批人上级由 `leader` 字段确定；未设置上级时无抄送，不阻断审批。
 - 补卡不改变原打卡时间口径，仅作为状态标记与补录。
 - 签到详情仍为管理岗权限（`attendance_report_view`），员工在工作台看到「我的考勤」入口。
+
+## 五、v1.5.14 增补：报销金额与用章附件
+
+- 报销：新增「金额*」（`DecimalField`，2 位小数、≥0），落库 `Approval.amount` 并写入 `form_data['amount']`。
+- 用章：原「用章文件及用途」拆为「用章文件*」（附件上传）与「用途」；附件存 `Approval.attachment`，`MEDIA_ROOT/media/approval_attachments/%Y/%m/`。
+- 附件限制：pdf/doc/docx/xls/xlsx/png/jpg/jpeg，单文件 ≤10MB；`.exe` 等被拒。
+- 下载：`/plugins/approval/<id>/attachment/`，申请人/审批人/会签人/抄送人/`approval_view` 可下载，其余 302。
+- 表单改 `multipart/form-data`；compose 增加 `media_data` 卷持久化附件。
+
+## 六、v1.5.15 增补：审批路由与用章盖章占位
+
+- **L3 隐藏待我审批**：菜单 / 视图 / 工作台卡片均改为 `approval_approve`；L3 仍可用审批中心与抄送我的。
+- **调休时间段**：改为「调休开始时间* / 调休结束时间*」，结束须晚于开始。
+- **管辖部门路由**（`routing.py`）：请假/外出/加班/调休 → 人力资源部；报销 → 财务部；用章 → 行政部；优先取部门经理角色，其次部门内具备 `approval_approve` 的用户；缺失时回退手动审批人 / 直属上级 / 超管。
+- **电子盖章占位**（`eseal.py`）：用章通过后写入 `form_data.e_seal` 占位文本并记录 `e_seal` 流转；详情显示「电子盖章 · 待接入」，真实电子章插件接入时只替换 `apply_e_seal`。
+- **信息提醒插件**：开发计划见 `docs/plugin-dev-notify.md`（v1.15）。

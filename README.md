@@ -150,8 +150,17 @@ Constellatio/
 | [docs/plugin-dev-v158.md](docs/plugin-dev-v158.md)                             | 插件开发 | v1.5.8：功能区主题切换（运行时换肤，Cookie + ThemeLoader） |
 | [docs/plugin-dev-v159.md](docs/plugin-dev-v159.md)                             | 插件开发 | v1.5.9：组织架构合并（当前架构 + 模板详情页 / 应用模板） |
 | [docs/plugin-dev-v1510.md](docs/plugin-dev-v1510.md)                           | 插件开发 | v1.5.10：角色卡片点击弹窗（成员明细）+ 角色列表滚动自适应 |
+| [docs/plugin-dev-v1511.md](docs/plugin-dev-v1511.md)                           | 插件开发 | v1.5.11：组织架构角色列表布局修正（等高等宽 + 内层滚动，消除无效空白） |
+| [docs/plugin-dev-v1512.md](docs/plugin-dev-v1512.md)                           | 插件开发 | v1.5.12：角色成员弹窗修复 + 用户资料页（成员可点击查看） |
+| [docs/plugin-dev-v1513.md](docs/plugin-dev-v1513.md)                           | 插件开发 | v1.5.13：角色弹窗居中浮出（居中 + 缩放淡入，尊重 reduced-motion） |
+| [docs/plugin-dev-v1514.md](docs/plugin-dev-v1514.md)                           | 插件开发 | v1.5.14：报销金额* + 用章文件附件*（下载权限、media 卷） |
+| [docs/plugin-dev-v1515.md](docs/plugin-dev-v1515.md)                           | 插件开发 | v1.5.15：L3 隐藏待办 / 调休时间段 / 管辖部门路由 / 电子盖章占位 |
+| [docs/plugin-dev-v1516.md](docs/plugin-dev-v1516.md)                           | 插件开发 | v1.5.16：驳回申请重新申请 / 删除（对申请人隐藏，留痕保留） |
+| [docs/plugin-dev-v1517.md](docs/plugin-dev-v1517.md)                           | 插件开发 | v1.5.17：重新申请表单化 + 替换驳回单 / 审批终态 / 抄送 L3 隐藏 |
+| [docs/plugin-dev-v1518.md](docs/plugin-dev-v1518.md)                           | 插件开发 | v1.5.18：审批人限定业务负责人（必选）+ 抄送直系领导 |
+| [docs/plugin-dev-notify.md](docs/plugin-dev-notify.md)                         | 计划   | notify：信息提醒插件（站内信优先 / 公告 / 审批消息，v1.15 计划） |
 | [docs/roadmap.md](docs/roadmap.md)                                             | 规划   | 差距矩阵、v1.5–v2.0 迭代路线、修复项与文档债务                  |
 
 ## 📌 状态
 
-**v1.5.10 已跑通**（组织架构角色卡片可点击弹窗展示成员 / 角色列表限高滚动自适应 / 164 项测试全绿）→ 下一步：v1.6 图表插件化 + ECharts
+**v1.5.18 已跑通**（审批人限定管辖部门业务负责人且必选无留空 / 抄送申请人直系领导 / 184 项测试全绿）→ 下一步：v1.6 图表插件化 + ECharts；v1.15 站内信·信息提醒插件（计划）

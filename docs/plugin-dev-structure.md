@@ -234,3 +234,18 @@ structure_applied(applied_by_id, dept_created, role_created, user_created)  # st
 - 角色列表容器 `overflow-y:auto`，`max-height:min(60vh, 32rem)` + `flex-grow-1`，随视口自适应并出现滚动条。
 - 数据：`role_rows` 增加 `members`（`prefetch_related('users__department')`），前端通过 `json_script` 读取、`textContent` 渲染，无新增内联 onclick、无新表 / 迁移。
 - 测试：成员明细与计数、弹窗骨架标记、滚动容器、空角色、双语。
+
+## 十五、v1.5.11 增补：角色列表布局修正
+
+- 左右卡片改为等高同宽：`row align-items-stretch` + 两列 `d-flex` + 卡片 `h-100 w-100`。
+- 限高从内层列表上移到卡片：`max-height:min(62vh, 34rem)` + `overflow:hidden`；内层（角色列表 / 部门树）`flex-grow-1 + min-height:0 + overflow-y:auto` 撑满卡片。
+- 消除卡片底部空白带；角色多时仅右卡内部滚动，页面不被拉长；移动端上下堆叠各自滚动。
+
+## 十六、v1.5.12 增补：角色成员弹窗修复 + 用户资料
+
+- **Bug 根因**：页面内联脚本在 `base.html` 末尾的 `bootstrap.bundle.js` 之前执行，`window.bootstrap` 未定义抛错，点击事件未绑定。
+- **修复**：脚本包进 `DOMContentLoaded`，并加 `if (!window.bootstrap) return;` 守卫。
+- **成员可点击**：弹窗成员行改为链接 `/plugins/structure/user/<id>/`（`structure_view` 只读资料：姓名 / 账号 / 部门 / 角色 / 直属上级（可继续跳转）/ 状态（在职·停用·权限冻结）/ 邮箱 / 创建时间 / 直接下属数）。
+- **其他入口**：责任人清单姓名列同样链接资料页；具备 `user_manage` 时资料页显示「用户管理 →」。
+- **数据/权限**：`members` 增加 `url`；无新表、无迁移；资料页与关系树同口径（页面级、可看全员）。
+- **测试**：5 项新增（权限 302 / 资料渲染 / 404 / 管理入口可见性 / 清单链接），既有 164 项不回归。
