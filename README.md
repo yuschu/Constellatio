@@ -141,13 +141,14 @@ Constellatio/
 | [docs/plugin-dev-workspace.md](docs/plugin-dev-workspace.md)                   | 插件开发 | workspace：工作台可启用 / 禁用功能（v1.1 已实现）             |
 | [docs/plugin-dev-user.md](docs/plugin-dev-user.md)                             | 插件开发 | user 增强：部门软 / 硬删除、用户状态机、密码二次确认、权限层级（v1.2 已实现） |
 | [docs/plugin-dev-structure.md](docs/plugin-dev-structure.md)                   | 插件开发 | structure：职能制组织架构模板（角色 + 用户模板一键应用）（v1.3 已实现）  |
-| [docs/plugin-dev-language.md](docs/plugin-dev-language.md)                     | 插件开发 | language：中英文切换（v1.4 已实现，v1.5.1 全站文案补全）   |
+| [docs/plugin-dev-language.md](docs/plugin-dev-language.md)                     | 插件开发 | language：语言切换（v1.4 已实现，v1.5.1 全站文案补全，v1.5.7 插件化 / 可停用）   |
 | [docs/plugin-dev-theme.md](docs/plugin-dev-theme.md)                           | 插件开发 | theme：主题插件化 + Corporate Clean 默认主题（v1.5 已实现）   |
 | [docs/plugin-dev-rbac.md](docs/plugin-dev-rbac.md)                             | 插件开发 | RBAC：权限等级 L0–L3、全员基线、角色权限模板、插件准入（v1.5.4 已实现） |
 | [docs/plugin-dev-v155.md](docs/plugin-dev-v155.md)                             | 插件开发 | v1.5.5：审批动态表单 / 抄送、签到筛选 / 补卡、工作台、菜单高亮、密码权限 |
 | [docs/plugin-dev-v156.md](docs/plugin-dev-v156.md)                             | 插件开发 | v1.5.6：组织关系树（责任划分）、责任人清单、汇报环 / 停用标记 |
+| [docs/plugin-dev-v157.md](docs/plugin-dev-v157.md)                             | 插件开发 | v1.5.7：语言插件化 / 可停用、开关式插件 UI、plugin_switch 兜底命令 |
 | [docs/roadmap.md](docs/roadmap.md)                                             | 规划   | 差距矩阵、v1.5–v2.0 迭代路线、修复项与文档债务                  |
 
 ## 📌 状态
 
-**v1.5.6 已跑通**（组织关系树按直属上级归并 + 直接下属 / 含下级合计 + 责任人清单 + 汇报环与停用标记 / 144 项测试全绿）→ 下一步：v1.6 图表插件化 + ECharts
+**v1.5.7 已跑通**（语言插件化可停用 / 默认语言中间件归容器 / 持久语言偏好 / auth·user·structure 可停用 + plugin_switch 兜底 / 开关式插件 UI / 入口随启停收敛 / 153 项测试全绿）→ 下一步：v1.6 图表插件化 + ECharts

@@ -15,10 +15,10 @@
 | 形态 | 新插件 `plugins/workspace`（"万物皆可插件"：管理能力本身也是插件） |
 | 运行时开关 | 新建表 `workspace_pluginswitch`（app_key, enabled）持久化，**DB 优先覆盖** settings.OA_PLUGINS 静态配置 |
 | 生效机制 | `registry.get_enabled_plugins()` 改造：先读 DB 开关，无记录回退静态配置；菜单/权限收敛基于它 → 一次请求即生效；**路由即时生效**：新增 `plugin_host.middleware.PluginRouteGuardMiddleware`（URLConf 静态 include 无法按请求刷新，中间件对停用插件请求直接 404） |
-| 防锁死 | `auth`、`workspace` 自身禁止停用；v1.4 起 `language`、v1.5.3 起 `user` 也加入禁停（外壳 / 个人中心依赖） |
+| 防锁死 | v1.5.7 起禁停清单只剩 `workspace`（开关入口自身）；`auth / user / structure / language` 均可停用。停用 `auth` 后登录入口 404（已登录会话仍可用），用 `manage.py plugin_switch on auth` 兜底恢复 |
 | 权限 | 新权限码 `workspace_manage`（普通管理员即可操作，即时生效） |
 | 上链 | 开关操作发 `plugin_toggled` 信号 → blockchain 订阅上链 |
-| 页面 | home 工作台新增"插件开关"入口卡片 → `/plugins/workspace/` 开关页（插件列表 + 开关按钮） |
+| 页面 | home 工作台新增"插件开关"入口卡片 → `/plugins/workspace/` 开关页（插件列表 + **开关（toggle）**） |
 
 ## 三、数据模型（plugins/workspace/models.py）
 
@@ -39,7 +39,7 @@ Meta：permissions = [('workspace_manage', '插件开关管理')]
 | 路由 | 视图 | 说明 |
 |---|---|---|
 | `/plugins/workspace/` | switch_list | 列出全部已注册插件 + 当前开关状态（登录 + workspace_manage） |
-| `/plugins/workspace/<app_key>/toggle/` | switch_toggle | POST；校验禁停清单（auth/workspace）；写 DB → 发 `plugin_toggled` → 上链；返回列表页 |
+| `/plugins/workspace/<app_key>/toggle/` | switch_toggle | POST；只拦截 `workspace`（v1.5.7，其余插件均可停用）；写 DB → 发 `plugin_toggled` → 上链；返回列表页 |
 
 ## 五、信号与上链
 
@@ -72,7 +72,7 @@ def get_enabled_plugins():
 ## 六、页面
 
 - home.html 增一张"插件开关"卡片（链接 `/plugins/workspace/`），位于"已启用插件"卡片旁
-- workspace 插件模板：`workspace/switch_list.html` —— 表格：插件名 / 版本 / 菜单数 / 开关按钮（Riso r-btn）
+- workspace 插件模板：`workspace/switch_list.html` —— 表格：插件名 / 版本 / 菜单数 / 状态 / **开关**（v1.5.7 起为 Bootstrap `form-check form-switch`，勾选即提交；受保护插件为禁用开关 +「系统必需」）
 
 ## 七、验收标准
 
@@ -98,3 +98,32 @@ def get_enabled_plugins():
 | `plugins/blockchain/apps.py` | 增订阅 plugin_toggled |
 | `themes/risograph/templates/home.html` | 增入口卡片 |
 | `plugin_host/settings.py` | MIDDLEWARE + OA_PLUGINS 增 workspace 条目 |
+
+## 十、v1.5.7 增补：可停用范围与开关式 UI
+
+### 10.1 禁停清单收敛
+
+- PROTECTED = {'workspace'}：只保护开关入口自身，避免「关掉开关页」导致无法再从 UI 恢复。
+- uth / user / structure / language 均可运行时停用；停用 uth 后登录/登出入口 404，已登录会话继续可用。
+- 风险提示 CRITICAL_WARNINGS：开关页在 uth / user / structure 行下展示停用后果与恢复命令。
+
+### 10.2 开关 UI
+
+- 每行渲染 Bootstrap orm-check form-switch 复选框（ole="switch"），勾选变化由页面脚本提交表单（不新增内联 onclick）；
+oscript 下保留「应用」按钮。
+- 受保护插件渲染为已勾选且禁用的开关 +「系统必需」。
+- 表单 POST 语义不变：nabled=1 启用、缺省即停用；plugin_toggled 与上链逻辑不变。
+
+### 10.3 兜底命令
+
+`ash
+python manage.py plugin_switch list          # 查看全部插件与生效状态
+python manage.py plugin_switch off notice
+python manage.py plugin_switch on auth       # 停用 auth 后用它恢复登录入口
+`
+
+命令不依赖 HTTP、不受禁停清单限制；写 PluginSwitch 并发 plugin_toggled（operator=None）。
+
+### 10.4 工作台入口收敛
+
+停用的插件不再出现在工作台：公告简报卡（notice）、待我审批卡（approval）、考勤待处理卡与「去打卡」（attendance）、插件运维卡（workspace）、流程快捷发起（approval / attendance）均按 plugins_enabled 收敛。

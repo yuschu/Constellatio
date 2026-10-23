@@ -2,7 +2,7 @@
 
 > 依据：`tech-stack-and-architecture.md` / `constraints-and-acceptance.md` / `development-guide.md` 的**全栈插件化**目标
 > 负责人校正（2026-10-22）：**不降级**、**补充实现**、**列入修复项**；工作约定只需「文档先行、每改必推 GitHub、每版打 tag」
-> 状态：draft-09（2026-10-23）—— **v1.4–v1.5.6 已完成**（144 项测试全绿）；当前推进 v1.6
+> 状态：draft-10（2026-10-23）—— **v1.4–v1.5.7 已完成**（153 项测试全绿）；当前推进 v1.6
 
 ## 一、总原则
 
@@ -44,6 +44,7 @@
 | **v1.5.4** | 权限等级 + 插件准入 | `plugins/user/perms.py` 等级注册表、全员基线权限、角色权限模板（`ROLE_PERMISSIONS` + `grant_role_perms`）、统一 `require_perm`、管理岗签到详情（`attendance_report_view`） | ✅ 已完成：102 项测试 + Docker 验证 |
 | **v1.5.5** | 审批动态表单 + 考勤筛选 + 工作台 | 六类审批动态表单、直属上级与抄送、签到状态/类型/时间范围筛选与补卡、工作台待办优先与管理员/员工视图、侧栏高亮、密码权限收紧（`docs/plugin-dev-v155.md`） | ✅ 已完成：138 项测试 + Docker 验证 |
 | **v1.5.6** | 组织关系树（责任划分） | 架构总览新增用户关系树：真实账号按 `User.leader` 归并、多级汇报链、直接下属/含下级合计、汇报环与停用显式标记、责任人清单；修复总览「用户模板」分组空白（`docs/plugin-dev-v156.md`） | ✅ 已完成：144 项测试 + Docker 重建与三视角冒烟 |
+| **v1.5.7** | 插件主权（语言插件化 + 可停用 + 开关 UI） | language 改名「语言」并移出禁停清单、默认语言中间件迁入容器、持久 Cookie 沿用最后语言；`auth / user / structure` 可停用 + 风险提示 + `manage.py plugin_switch` 兜底；停用/启用按钮改为开关；工作台与外壳入口随插件启停收敛（`docs/plugin-dev-v157.md`） | ✅ 已完成：153 项测试 + Docker 重建与冒烟 |
 | **v1.6** | 图表插件化 + ECharts | `ChartRenderer` 接口；ECharts Provider；考勤 `/stats/` JSON + 月度看板 | 图表数据与打卡记录一致；停用图表插件页面降级不报错 |
 | **v1.7** | 认证后端插件化 | `AUTHENTICATION_BACKENDS` Provider；一个无外部依赖的示例后端（如用户名/邮箱） | 切换后端可登录；默认后端仍可用 |
 | **v1.8** | 模板引擎插件化 | Django / Jinja2 Provider；先做多引擎共存或单插件切换 | 待确认深度（见第六节） |

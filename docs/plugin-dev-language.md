@@ -31,8 +31,8 @@ draft-01 写于 v1.3 之前，有 4 处与当前 Django 5.2 / 代码现状不一
 | 形态 | 新插件 `plugins/language`，切换能力本身插件化；无模型、无迁移、无侧栏菜单 |
 | 默认语言 | `settings.LANGUAGE_CODE = 'zh-hans'` 不变；无有效 Cookie 时固定中文，不跟随浏览器 `Accept-Language` |
 | 可选语言 | `settings.LANGUAGES = [('zh-hans', '简体中文'), ('en', 'English')]` |
-| 存储 | 会话级 Cookie `django_language`（`LANGUAGE_COOKIE_AGE=None`），浏览器关闭即回默认；不写 session、不落用户表 |
-| 生效机制 | `DefaultLanguageMiddleware` 读 Cookie → `translation.activate()`；下一次请求即生效，无需重启 |
+| 存储 | **v1.5.7 起持久 Cookie** `django_language`（`LANGUAGE_COOKIE_AGE` = 1 年）；插件停用后仍沿用最后设置的语言；不写 session、不落用户表 |
+| 生效机制 | v1.5.7 起中间件归属容器 `plugin_host.middleware.DefaultLanguageMiddleware`（读 Cookie → `translation.activate()`）；下一次请求即生效，无需重启；插件停用只收走切换入口 |
 | 翻译机制 | Django i18n：源码中文为 msgid，`locale/en/LC_MESSAGES/django.po` 提供英文；`zh-hans` 直接回退 msgid |
 | 编译 | `tools/compile_mo.py` 纯 Python 生成 `.mo`；`.mo` 不入库；`entrypoint.sh` 启动时编译 |
 | 菜单国际化 | `PluginMeta.menus` 的 label 改 `gettext_lazy`；模板渲染时按当前语言求值 |
@@ -257,6 +257,8 @@ tools/compile_mo.py                  # 纯 Python .po → .mo（无 gettext 依�
 
 版本顺序：v1.4 language 先做，基础设施补齐（v1.5–v1.8）后置；路线见 `docs/roadmap.md`。
 
+> **v1.5.7 变更（覆盖上表第 1、3 项）**：language 不再加入禁停清单（负责人要求「语言插件不再系统必需」）；Cookie 改为持久（1 年），停用插件后沿用最后设置的语言。详见 §十三。
+
 ## 十二、实现记录（2026-10-22）
 
 - 插件：`plugins/language/`（apps / urls / views / middleware / tests）
@@ -269,3 +271,26 @@ tools/compile_mo.py                  # 纯 Python .po → .mo（无 gettext 依�
 - v1.5.2：留痕链的插件列改用 `PluginMeta.title`，动作列改用 `action_label` 映射，不再显示 `notice` / `notice_published` 这类机器键
 - 冒烟：中文 / 英文各 13 个页面 200；登录页可切换；语言 Cookie 为会话级；`.mo` 不入库
 - v1.5.1：插件开关展示名、表头、状态、留痕详情、权限选项全部随语言切换；英文页扫描仅剩语言名“中文”与业务数据。
+
+## 十三、v1.5.7 增补：语言插件化（不再是系统必需）
+
+### 13.1 变更
+
+| 项 | v1.5.7 结论 |
+|---|---|
+| 插件定位 | 展示名由「中英文切换」改为「语言」（ersion='1.5.7'）；OA_PLUGINS 条目不变 |
+| 是否必需 | **否**。移出 workspace.PROTECTED（禁停清单只剩 workspace），可由管理员运行时停用 |
+| 中间件归属 | DefaultLanguageMiddleware 迁到 plugin_host/middleware.py（容器级）；删除 plugins/language/middleware.py，插件停用/卸载不影响默认语言 |
+| 语言偏好 | 切换写持久 Cookie（settings.LANGUAGE_COOKIE_AGE = 1 年，samesite='Lax'）；停用插件后继续按该 Cookie 生效 = 沿用最后设置的语言 |
+| 切换入口 | 顶栏与登录页表单按 {% if 'language' in plugins_enabled %} 渲染；停用后无 404 死表单 |
+| 路由 | 停用后 /plugins/language/switch/ 由 PluginRouteGuardMiddleware 直接 404 |
+| 数据 | 无新表、无迁移；语言偏好只在 Cookie |
+
+### 13.2 测试
+
+中间件迁移后默认中文 / Cookie 生效 / 非法值回退不变；Cookie 为持久 Cookie；停用后首页仍英文、入口消失、路由 404、开关页可停用；language 不在禁停清单。
+
+### 13.3 边界
+
+- 停用语言插件后**无法通过 UI 切换**语言，只能改 Cookie；需要多语言切换时重新启用插件。
+- 静态停用（OA_PLUGINS enabled=False）仍需重启（v1.10）。
