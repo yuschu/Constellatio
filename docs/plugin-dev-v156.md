@@ -2,7 +2,7 @@
 
 > 关联插件：structure（页面与树构建）、user（`User.leader` 数据源）
 > 版本：v1.5.6 · 文档日期：2026-10-23
-> 状态：**✅ 已实现**（144 项测试全绿 + 本地 HTTP 三视角冒烟；Docker 重建待验证）
+> 状态：**✅ 已实现**（144 项测试全绿 + Docker 重建部署 + 三视角 HTTP 冒烟）
 
 ## 一、需求
 
@@ -97,7 +97,8 @@
 | `manage.py check` | 0 issue |
 | `makemigrations --check --dry-run` | No changes detected（无迁移） |
 | 全量单测 | **144 项通过**（基线 138 + 新增 6） |
-| HTTP 冒烟（本地 sqlite 独立冒烟库，template 31 账号 + admin） | admin / hr_wang：结构页 200，关系树与责任人清单渲染，张总直接下属 11；hr_qian：302 收敛回工作台；英文切换 `Reporting tree (responsibility)` / `11 direct report(s)` 正常 |
-| Docker 重建 | **未执行**（本机 Docker Desktop 引擎管道在当前会话不可达），待负责人环境验证 |
+| 本地 HTTP 冒烟（独立 sqlite 冒烟库，template 31 账号 + admin） | admin / hr_wang：结构页 200，关系树与责任人清单渲染，张总直接下属 11；hr_qian：302 收敛回工作台；英文切换 `Reporting tree (responsibility)` / `11 direct report(s)` 正常 |
+| Docker 重建 | `docker compose up -d --build` 成功；`constellatio-web-1` 已按 v1.5.6 重建并运行（`http://localhost:8000`） |
+| Docker HTTP 冒烟 | admin / hr_wang：结构页 200，关系树与责任人清单渲染；hr_qian：302 收敛回工作台；英文切换 `Reporting tree (responsibility)` / `Responsibility roster` / `direct report(s)` 正常 |
 
 > 冒烟用独立 `smoke.sqlite3`（已删除，未入库）；`db.sqlite3` 仍是旧快照结构（缺 `leader` 列），不用于冒烟。
