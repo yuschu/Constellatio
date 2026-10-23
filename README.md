@@ -147,8 +147,9 @@ Constellatio/
 | [docs/plugin-dev-v155.md](docs/plugin-dev-v155.md)                             | 插件开发 | v1.5.5：审批动态表单 / 抄送、签到筛选 / 补卡、工作台、菜单高亮、密码权限 |
 | [docs/plugin-dev-v156.md](docs/plugin-dev-v156.md)                             | 插件开发 | v1.5.6：组织关系树（责任划分）、责任人清单、汇报环 / 停用标记 |
 | [docs/plugin-dev-v157.md](docs/plugin-dev-v157.md)                             | 插件开发 | v1.5.7：语言插件化 / 可停用、开关式插件 UI、plugin_switch 兜底命令 |
+| [docs/plugin-dev-v158.md](docs/plugin-dev-v158.md)                             | 插件开发 | v1.5.8：功能区主题切换（运行时换肤，Cookie + ThemeLoader） |
 | [docs/roadmap.md](docs/roadmap.md)                                             | 规划   | 差距矩阵、v1.5–v2.0 迭代路线、修复项与文档债务                  |
 
 ## 📌 状态
 
-**v1.5.7 已跑通**（语言插件化可停用 / 默认语言中间件归容器 / 持久语言偏好 / auth·user·structure 可停用 + plugin_switch 兜底 / 开关式插件 UI / 入口随启停收敛 / 153 项测试全绿）→ 下一步：v1.6 图表插件化 + ECharts
+**v1.5.8 已跑通**（功能区主题切换 / 双主题运行时换肤 / Cookie 偏好 1 年 / 非法值回退 OA_THEME / 158 项测试全绿）→ 下一步：v1.6 图表插件化 + ECharts

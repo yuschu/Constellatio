@@ -15,6 +15,8 @@
 5. 登录页增加 SSO / 忘记密码等未实现入口（占位/禁用，不伪造登录）；
 6. 改配置/环境变量 + 重启生效，不做运行时热切换；**重启后的首屏加载动画必须实现**。
 
+> **v1.5.8 变更**：第 6 条升级——主题支持**运行时切换**（功能区按钮 + `oa_theme` Cookie，`OA_THEME` 退化为默认/回退主题），详见文末 §十五。
+
 ## 一、背景与目标
 
 v1.4 已把 language 插件跑通，下一步按 roadmap 做「基础设施 Provider 契约 + 主题插件化」。
@@ -434,3 +436,28 @@ entrypoint.sh 已有 collectstatic，会按当前主题收集；切换主题 = �
 - 访问：http://localhost:8000 （默认超管 admin / Constellatio@2026，若已改密码以实际为准）。
 - 已知例外：hero 按负责人要求使用 gray-900 on blue-600，对比度不足，记录在第十二节。
 - 无迁移、无新依赖；`.mo` 仍不入库。
+
+## 十五、v1.5.8 增补：运行时主题切换（功能区）
+
+### 15.1 变更
+
+| 项 | v1.5.8 结论 |
+|---|---|
+| 入口 | 侧栏「功能」区底部「主题」按钮组，当前主题高亮；POST /theme/switch/ |
+| 存储 | Cookie oa_theme（持久 1 年，samesite='Lax'）；无新表、无迁移 |
+| 默认/回退 | 无 Cookie 或非法值 → settings.OA_THEME（启动仍校验）；未知主题不写 Cookie |
+| 生效机制 | ThemeMiddleware 每请求读 Cookie → contextvar；ThemeLoader 按当前主题解析 templates；未命中回退 app 模板 |
+| 模板加载 | APP_DIRS=False + 显式 loaders（ThemeLoader → pp_directories），**不使用 cached loader**（按请求主题变化，缓存会串主题） |
+| 静态资源 | 两套主题 static 都进 STATICFILES_DIRS，collectstatic 一次收集；路径 	hemes/<key>/ 隔离 |
+| 权限 | 登录用户即可；显示偏好，不上链 |
+| 旧方式 | OA_THEME 环境变量仍可改默认主题；不再需要重启才能换肤 |
+
+### 15.2 边界
+
+- 运行时切换只影响主题模板（base / home / login）与主题 CSS；插件业务模板共用，-* 契约不变。
+- 不做主题级权限、不做 per-user DB 偏好（Cookie 1 年）。
+- 主题扩展方式不变：新增 	hemes/<key>/ + 	heme.json + base/home/login + CSS，自动出现在功能区。
+
+### 15.3 测试
+
+默认 corporate；oa_theme=risograph 渲染 risograph 且不出现 corporate CSS；切换视图写持久 Cookie 并 302；非法主题不改 Cookie / Cookie 非法回退；GET 405、外部 next 拦回 /；两套 CSS 可 inders.find。
