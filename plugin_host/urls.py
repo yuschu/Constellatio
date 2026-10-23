@@ -13,6 +13,7 @@ from . import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.index, name='index'),
+    path('theme/switch/', views.theme_switch, name='theme_switch'),   # v1.5.8 运行时主题切换
 ]
 
 # 动态挂载已启用插件的路由（/plugins/<name>/ 前缀）

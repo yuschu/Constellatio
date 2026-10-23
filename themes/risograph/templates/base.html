@@ -59,6 +59,14 @@
           {% empty %}
           <div class="text-muted" style="font-size:.8rem;">{% trans "暂无可用功能" %}</div>
           {% endfor %}
+          <div class="fw-bold text-uppercase mt-3 mb-2" style="font-size:.8rem; letter-spacing:.08em;">{% trans "主题" %}</div>
+          <form method="post" action="{% url 'theme_switch' %}" class="d-flex flex-wrap gap-1 mb-0">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            {% for key, name in themes %}
+            <button type="submit" name="theme" value="{{ key }}" class="r-lang{% if key == current_theme %} is-active{% endif %}">{{ name }}</button>
+            {% endfor %}
+          </form>
         </div>
       </aside>
 

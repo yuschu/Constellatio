@@ -1,7 +1,7 @@
-"""容器中间件：语言默认值 + 插件路由请求级守卫。
+"""容器中间件：主题选择 + 语言默认值 + 插件路由请求级守卫。
 
-语言中间件归属容器（v1.5.7）：language 插件改为普通可停用插件后，
-默认中文与实际语言偏好仍由容器生效——停用插件只收走切换入口，不重置语言。
+v1.5.7：语言中间件归属容器——language 插件停用后仍沿用最后设置的语言。
+v1.5.8：主题运行时切换——按 Cookie 选择主题，模板由 ThemeLoader 按请求解析。
 """
 
 from django.conf import settings
@@ -10,6 +10,30 @@ from django.middleware.locale import LocaleMiddleware
 from django.utils import translation
 
 from plugin_host.registry import get_enabled_plugins
+from plugin_host.theming import (
+    THEME_COOKIE_NAME, discover_themes, reset_current_theme, resolve_theme_key,
+    set_current_theme,
+)
+
+
+class ThemeMiddleware:
+    """按 `oa_theme` Cookie 选择主题；非法值回退 OA_THEME。
+
+    主题在本次请求内通过 contextvar 生效：ThemeLoader 解析模板时读取；
+    响应结束后复位，避免线程复用串主题。
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        key = resolve_theme_key(request.COOKIES.get(THEME_COOKIE_NAME))
+        request.theme = discover_themes(settings.BASE_DIR)[key]
+        token = set_current_theme(key)
+        try:
+            return self.get_response(request)
+        finally:
+            reset_current_theme(token)
 
 
 class DefaultLanguageMiddleware(LocaleMiddleware):

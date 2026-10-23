@@ -1,14 +1,18 @@
-"""容器视图：工作台首页（v1.5.5 待办优先 + 管理员 / 员工视图分流）。"""
+"""容器视图：工作台首页（v1.5.5 待办优先 + 管理员 / 员工视图分流） + 主题切换（v1.5.8）。"""
 
 from django.apps import apps as dj_apps
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _t
 from django.utils.translation import gettext_lazy as _
+from django.views.decorators.http import require_POST
 
 from .registry import PLUGIN_REGISTRY, get_enabled_plugins
+from .theming import THEME_COOKIE_NAME, discover_themes
 
 # 流程快捷发起：审批类型 → (代码, 图标)
 APPROVAL_SHORTCUTS = [
@@ -95,3 +99,22 @@ def index(request):
         'enabled_count': len(enabled),
         'is_admin_view': can_plugin_ops,
     })
+
+
+@require_POST
+def theme_switch(request):
+    """v1.5.8：切换主题（POST theme=<key>），写 Cookie 后回到 next / Referer / 工作台。"""
+    key = request.POST.get('theme')
+    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or '/'
+    if not url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure()):
+        next_url = '/'
+
+    response = redirect(next_url)
+    if key in discover_themes(settings.BASE_DIR):
+        response.set_cookie(
+            THEME_COOKIE_NAME, key,
+            max_age=settings.THEME_COOKIE_AGE, samesite='Lax')
+    return response

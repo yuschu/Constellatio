@@ -51,6 +51,8 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     # 语言默认值（容器级，v1.5.7）：language 插件停用后仍沿用最后设置的语言
     'plugin_host.middleware.DefaultLanguageMiddleware',
+    # 主题运行时切换（v1.5.8）：Cookie oa_theme → 当前请求主题
+    'plugin_host.middleware.ThemeMiddleware',
     'django.middleware.common.CommonMiddleware',
     'plugin_host.middleware.PluginRouteGuardMiddleware',  # 插件运行时启停：停用即 404
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -65,14 +67,20 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [],
-        'APP_DIRS': True,
+        'APP_DIRS': False,      # v1.5.8：改为显式 loaders，支持按请求切换主题模板
         'OPTIONS': {
+            'loaders': [
+                # 主题模板（当前请求主题优先，未命中回退插件 app 模板）
+                'plugin_host.theming.ThemeLoader',
+                'django.template.loaders.app_directories.Loader',
+            ],
             'context_processors': [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                # 容器：向模板注入插件聚合菜单
+                # 容器：向模板注入插件聚合菜单 + 当前主题
                 'plugin_host.context_processors.menus',
+                'plugin_host.context_processors.themes',
             ],
         },
     },
@@ -123,14 +131,17 @@ OA_PLUGINS = [
     {'app': 'plugins.language', 'enabled': True},
 ]
 
-# 主题插件：themes/<key>/theme.json；改 OA_THEME + 重启生效
+# 主题插件：themes/<key>/theme.json；OA_THEME 是默认/回退主题（v1.5.8 起支持运行时切换）
 OA_THEME = os.environ.get('OA_THEME', 'corporate-clean')
+THEME_COOKIE_AGE = 60 * 60 * 24 * 365   # 主题偏好 Cookie 1 年
 
-from plugin_host.theming import get_theme  # noqa: E402  (依赖 BASE_DIR)
+from plugin_host.theming import discover_themes, get_theme  # noqa: E402  (依赖 BASE_DIR)
 
-_active_theme = get_theme(BASE_DIR, OA_THEME)
-TEMPLATES[0]['DIRS'] = [str(_active_theme.templates)]
-STATICFILES_DIRS = [str(_active_theme.static)]
+_active_theme = get_theme(BASE_DIR, OA_THEME)   # 启动即校验 OA_THEME
+# 两套主题的静态资源都收集，运行时切换后 CSS 可用（路径按 themes/<key>/ 命名空间隔离）
+STATICFILES_DIRS = [
+    str(theme.static) for _, theme in sorted(discover_themes(BASE_DIR).items())
+]
 
 # ---------------------------------------------------------------------------
 # 密码校验 / 国际化 / 静态

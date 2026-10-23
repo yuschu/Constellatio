@@ -1,6 +1,9 @@
-"""容器上下文处理器：向模板注入插件聚合菜单（含当前 Tab 高亮）。"""
+"""容器上下文处理器：插件菜单（含当前 Tab 高亮）、启用插件名、主题列表。"""
+
+from django.conf import settings
 
 from .registry import get_enabled_plugins, get_menus
+from .theming import discover_themes
 
 
 def _mark_active(menus, path):
@@ -34,3 +37,10 @@ def menus(request):
     else:
         menu_items = []
     return {'menus': menu_items, 'plugins_enabled': enabled}
+
+
+def themes(request):
+    """注入可选主题与当前主题（v1.5.8 运行时切换，功能区与任一页面可用）。"""
+    items = [(key, meta.name) for key, meta in discover_themes(settings.BASE_DIR).items()]
+    current = getattr(getattr(request, 'theme', None), 'key', settings.OA_THEME)
+    return {'themes': items, 'current_theme': current}

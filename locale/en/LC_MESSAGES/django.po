@@ -1116,3 +1116,9 @@ msgstr "Disabling closes account, department and role management; sessions and l
 
 msgid "停用后组织架构与关系树入口关闭，组织数据不受影响"
 msgstr "Disabling closes the organization and reporting-tree entry; organization data is unaffected"
+
+msgid "主题"
+msgstr "Theme"
+
+msgid "切换主题"
+msgstr "Switch theme"
