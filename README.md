@@ -148,8 +148,9 @@ Constellatio/
 | [docs/plugin-dev-v156.md](docs/plugin-dev-v156.md)                             | 插件开发 | v1.5.6：组织关系树（责任划分）、责任人清单、汇报环 / 停用标记 |
 | [docs/plugin-dev-v157.md](docs/plugin-dev-v157.md)                             | 插件开发 | v1.5.7：语言插件化 / 可停用、开关式插件 UI、plugin_switch 兜底命令 |
 | [docs/plugin-dev-v158.md](docs/plugin-dev-v158.md)                             | 插件开发 | v1.5.8：功能区主题切换（运行时换肤，Cookie + ThemeLoader） |
+| [docs/plugin-dev-v159.md](docs/plugin-dev-v159.md)                             | 插件开发 | v1.5.9：组织架构合并（当前架构 + 模板详情页 / 应用模板） |
 | [docs/roadmap.md](docs/roadmap.md)                                             | 规划   | 差距矩阵、v1.5–v2.0 迭代路线、修复项与文档债务                  |
 
 ## 📌 状态
 
-**v1.5.8 已跑通**（功能区主题切换 / 双主题运行时换肤 / Cookie 偏好 1 年 / 非法值回退 OA_THEME / 158 项测试全绿）→ 下一步：v1.6 图表插件化 + ECharts
+**v1.5.9 已跑通**（组织架构合并为单一入口 / 当前架构展示真实部门·角色·关系树 / 【查看模板】进入模板详情与应用模板 / 163 项测试全绿）→ 下一步：v1.6 图表插件化 + ECharts

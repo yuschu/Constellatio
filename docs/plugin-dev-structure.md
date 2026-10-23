@@ -96,8 +96,9 @@
 
 | 路由 | 视图 | 权限 | 说明 |
 |---|---|---|---|
-| `/plugins/structure/` | structure_overview | 登录可见 | 架构总览：部门树 + 角色清单 + 用户模板分组预览（只读） |
-| `/plugins/structure/apply/` | structure_apply（POST） | structure_manage | 幂等应用：创建缺失部门/角色/用户；返回统计；上链 |
+| `/plugins/structure/` | structure_overview | `structure_view` | 组织架构（当前架构）：真实部门树 + 真实角色 + 关系树 + 责任人清单 + 【查看模板】 |
+| `/plugins/structure/template/` | structure_template | `structure_view` | 模板架构详情：模板部门/角色/用户 + 应用表单（`structure_manage`） |
+| `/plugins/structure/apply/` | structure_apply（POST） | `structure_manage` | 幂等应用：创建缺失部门/角色/用户；返回统计；上链；成功后回模板页 |
 
 ## 五、数据模型
 
@@ -201,3 +202,28 @@ structure_applied(applied_by_id, dept_created, role_created, user_created)  # st
 ### 12.4 测试
 
 树层级与计数、多根、成环（含自环）不递归不重复、停用保留、总览渲染与 `structure_view` 守卫、用户模板分组回归。
+
+## 十三、v1.5.9 增补：合并组织架构与模板详情
+
+### 13.1 菜单与路由
+
+- 侧栏合并为单一「组织架构」菜单（`structure_view`，`/plugins/structure/`）；不再单列「应用结构」。
+- 新增 `/plugins/structure/template/`（`structure_view`）：模板部门树 / 模板角色 / 用户模板 + 应用表单（`structure_manage`）。
+- `/plugins/structure/apply/` 保留为 POST 动作，成功后回模板页。
+
+### 13.2 当前架构（组织架构页）
+
+- 统计：部门（启用 / 总数）、在岗账号、角色总数、汇报链起点。
+- 当前部门树：真实 `user.Department`（层级、成员数、停用标记），由 `hierarchy.build_department_tree()` 计算。
+- 当前角色：真实 `user.Role`（权限数、成员数）。
+- 用户关系树 + 责任人清单（v1.5.6 口径不变）。
+- 【查看模板】按钮进入模板详情；最近应用记录保留。
+
+### 13.3 模板架构（模板详情页）
+
+- 模板部门树（20 个，一级 + 二级）、模板角色（31 个，含模板权限数）、用户模板（31 个，按部门分组）。
+- 应用模板表单只在 `structure_manage` 时渲染；勾选 `grant_manager_perms` 后应用，幂等只增不减。
+
+### 13.4 测试
+
+真实部门树（层级 / 成员数 / 停用 / 统计）、组织架构页当前数据与【查看模板】、模板页渲染与权限、应用表单可见性、单菜单注册、既有关系树与守卫回归。

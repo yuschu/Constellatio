@@ -58,8 +58,8 @@
 | approval | 我发起的 / 待我审批 / 发起 | `approval_view`（L3，模板全员授予） | 审批中心 / 待我审批 |
 | approval | 详情 | 申请人 / 审批人 / `approval_view` | — |
 | blockchain | 列表 / 详情 | `blockchain_view`（L2） | 留痕链（管理岗） |
-| structure | 总览 | `structure_view`（L2） | 组织架构（管理岗） |
-| structure | 应用模板 | `structure_manage`（L1） | 应用结构（L1） |
+| structure | 总览 / 模板详情 | `structure_view`（L2） | 组织架构（管理岗） |
+| structure | 应用模板（模板页内） | `structure_manage`（L1） | 组织架构 → 查看模板 → 应用模板 |
 | user | 部门 / 用户 / 角色 / 个人中心 | `user_manage`（L1）；个人中心仅本人 | 部门 / 用户 / 角色 |
 | workspace | 插件开关 | `workspace_manage`（L1） | 插件开关（L1） |
 

@@ -2,7 +2,7 @@
 
 > 依据：`tech-stack-and-architecture.md` / `constraints-and-acceptance.md` / `development-guide.md` 的**全栈插件化**目标
 > 负责人校正（2026-10-22）：**不降级**、**补充实现**、**列入修复项**；工作约定只需「文档先行、每改必推 GitHub、每版打 tag」
-> 状态：draft-11（2026-10-23）—— **v1.4–v1.5.8 已完成**（158 项测试全绿）；当前推进 v1.6
+> 状态：draft-12（2026-10-23）—— **v1.4–v1.5.9 已完成**（163 项测试全绿）；当前推进 v1.6
 
 ## 一、总原则
 
@@ -46,6 +46,7 @@
 | **v1.5.6** | 组织关系树（责任划分） | 架构总览新增用户关系树：真实账号按 `User.leader` 归并、多级汇报链、直接下属/含下级合计、汇报环与停用显式标记、责任人清单；修复总览「用户模板」分组空白（`docs/plugin-dev-v156.md`） | ✅ 已完成：144 项测试 + Docker 重建与三视角冒烟 |
 | **v1.5.7** | 插件主权（语言插件化 + 可停用 + 开关 UI） | language 改名「语言」并移出禁停清单、默认语言中间件迁入容器、持久 Cookie 沿用最后语言；`auth / user / structure` 可停用 + 风险提示 + `manage.py plugin_switch` 兜底；停用/启用按钮改为开关；工作台与外壳入口随插件启停收敛（`docs/plugin-dev-v157.md`） | ✅ 已完成：153 项测试 + Docker 重建与冒烟 |
 | **v1.5.8** | 功能区主题切换（运行时换肤） | 侧栏「功能」区新增主题按钮组；`oa_theme` Cookie + `ThemeMiddleware` + `ThemeLoader` 按请求换模板；两套主题静态资源同收；非法值回退 `OA_THEME`（`docs/plugin-dev-v158.md`） | ✅ 已完成：158 项测试 + Docker 双主题冒烟 |
+| **v1.5.9** | 组织架构合并（当前架构 + 模板详情） | 「组织架构」与「应用结构」合并为单一菜单；组织架构页只展示当前架构（真实部门树 / 角色 / 关系树 / 责任人清单）；模板架构移到 `/plugins/structure/template/`，从【查看模板】进入，应用模板留在模板页（`docs/plugin-dev-v159.md`） | ✅ 已完成：163 项测试 + Docker 双视角冒烟 |
 | **v1.6** | 图表插件化 + ECharts | `ChartRenderer` 接口；ECharts Provider；考勤 `/stats/` JSON + 月度看板 | 图表数据与打卡记录一致；停用图表插件页面降级不报错 |
 | **v1.7** | 认证后端插件化 | `AUTHENTICATION_BACKENDS` Provider；一个无外部依赖的示例后端（如用户名/邮箱） | 切换后端可登录；默认后端仍可用 |
 | **v1.8** | 模板引擎插件化 | Django / Jinja2 Provider；先做多引擎共存或单插件切换 | 待确认深度（见第六节） |
