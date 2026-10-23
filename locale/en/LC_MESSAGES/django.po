@@ -1053,3 +1053,48 @@ msgstr "Direct leader"
 
 msgid "用于审批人留空时自动指派与抄送；可留空"
 msgstr "Used for auto-assignment and CC when the approver is blank; optional"
+
+msgid "用户关系树（责任划分）"
+msgstr "Reporting tree (responsibility)"
+
+msgid "按直属上级归并；汇报环与停用账号显式标记"
+msgstr "Grouped by direct leader; reporting cycles and disabled accounts are flagged"
+
+msgid "账号总数"
+msgstr "Accounts"
+
+msgid "已设直属上级"
+msgstr "With direct leader"
+
+msgid "汇报链起点"
+msgstr "Reporting roots"
+
+msgid "汇报环 / 停用"
+msgstr "Cycles / disabled"
+
+msgid "直接下属 %(count)s"
+msgstr "%(count)s direct report(s)"
+
+msgid "汇报环"
+msgstr "Reporting cycle"
+
+msgid "责任人清单"
+msgstr "Responsibility roster"
+
+msgid "直接下属为直属下级账号数；含下级合计为子树账号数（不含本人）"
+msgstr "Direct reports = accounts reporting here; total = whole subtree excluding self"
+
+msgid "直接下属"
+msgstr "Direct reports"
+
+msgid "含下级合计"
+msgstr "Total in subtree"
+
+msgid "在职"
+msgstr "Active"
+
+msgid "暂无用户数据，请先在用户管理创建账号或应用架构模板。"
+msgstr "No accounts yet. Create accounts under User management or apply the structure template."
+
+msgid "暂无用户数据"
+msgstr "No account data"

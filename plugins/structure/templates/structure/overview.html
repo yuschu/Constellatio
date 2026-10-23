@@ -25,6 +25,92 @@
   {% endfor %}
 </div>
 {% endif %}
+
+<div class="r-card mb-4">
+  <div class="d-flex justify-content-between align-items-baseline mb-3">
+    <h3 class="fs-5 mb-0">{% trans "用户关系树（责任划分）" %}</h3>
+    <span class="text-muted" style="font-size:.75rem;">{% trans "按直属上级归并；汇报环与停用账号显式标记" %}</span>
+  </div>
+  <div class="row g-3 mb-3">
+    <div class="col-md-3">
+      <div class="r-card">
+        <div class="text-muted" style="font-size:.75rem;">{% trans "账号总数" %}</div>
+        <div class="fs-3">{{ org_stats.total }}</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="r-card">
+        <div class="text-muted" style="font-size:.75rem;">{% trans "已设直属上级" %}</div>
+        <div class="fs-3">{{ org_stats.with_leader }}</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="r-card">
+        <div class="text-muted" style="font-size:.75rem;">{% trans "汇报链起点" %}</div>
+        <div class="fs-3">{{ org_stats.roots }}</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="r-card">
+        <div class="text-muted" style="font-size:.75rem;">{% trans "汇报环 / 停用" %}</div>
+        <div class="fs-3">{{ org_stats.cycles }} / {{ org_stats.inactive }}</div>
+      </div>
+    </div>
+  </div>
+  {% if org_roots %}
+  <ul class="list-unstyled mb-0">
+    {% for node in org_roots %}{% include "structure/_tree_node.html" with node=node %}{% endfor %}
+  </ul>
+  {% else %}
+  <p class="text-muted mb-0" style="font-size:.85rem;">{% trans "暂无用户数据，请先在用户管理创建账号或应用架构模板。" %}</p>
+  {% endif %}
+</div>
+
+<div class="r-card mb-4">
+  <div class="d-flex justify-content-between align-items-baseline mb-3">
+    <h3 class="fs-5 mb-0">{% trans "责任人清单" %}</h3>
+    <span class="text-muted" style="font-size:.75rem;">{% trans "直接下属为直属下级账号数；含下级合计为子树账号数（不含本人）" %}</span>
+  </div>
+  <table class="r-table">
+    <thead>
+      <tr>
+        <th>{% trans "姓名" %}</th>
+        <th>{% trans "账号" %}</th>
+        <th>{% trans "部门" %}</th>
+        <th>{% trans "角色" %}</th>
+        <th>{% trans "直属上级" %}</th>
+        <th>{% trans "直接下属" %}</th>
+        <th>{% trans "含下级合计" %}</th>
+        <th>{% trans "状态" %}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in org_rows %}
+      <tr>
+        <td>{{ row.name }}</td>
+        <td>{{ row.account }}</td>
+        <td>{{ row.dept|default:"—" }}</td>
+        <td>{{ row.roles|join:" / "|default:"—" }}</td>
+        <td>{{ row.leader_name|default:"—" }}</td>
+        <td>{{ row.direct_count }}</td>
+        <td>{{ row.total_count }}</td>
+        <td>
+          {% if row.is_cycle %}
+          <span class="r-badge r-badge--orange">{% trans "汇报环" %}</span>
+          {% elif not row.is_active %}
+          <span class="r-badge r-badge--pink">{% trans "停用" %}</span>
+          {% else %}
+          <span class="r-badge r-badge--green">{% trans "在职" %}</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="8" class="text-muted">{% trans "暂无用户数据" %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
 <div class="row g-4">
   <div class="col-md-5">
     <div class="r-card h-100">

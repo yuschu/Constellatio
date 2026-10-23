@@ -153,3 +153,120 @@ class StructureApplyTests(TestCase):
         self.assertEqual(got[-1]['dept_created'], 20)
         from .models import StructureRecord
         self.assertEqual(StructureRecord.objects.count(), 1)
+
+    def test_overview_renders_user_template_groups(self):
+        """v1.5.6 回归：用户模板分组真实渲染（此前 users_by_dept 未注入上下文，区块为空）。"""
+        self._apply()
+        self.client.force_login(self.admin)
+        resp = self.client.get(reverse('structure:overview'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, '钱招聘')
+        self.assertContains(resp, '招聘组')
+        self.assertContains(resp, 'IT运维工程师')
+
+
+class UserHierarchyTests(TestCase):
+    """v1.5.6：组织关系树（真实账号 + leader），责任划分口径。"""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.gm = User.objects.create_user('tree_gm', last_name='张总', password='pw')
+        cls.mgr = User.objects.create_user('tree_mgr', last_name='王经理', password='pw',
+                                           leader=cls.gm)
+        cls.staff_a = User.objects.create_user('tree_a', last_name='钱招聘', password='pw',
+                                               leader=cls.mgr)
+        cls.staff_b = User.objects.create_user('tree_b', last_name='孙培训', password='pw',
+                                               leader=cls.mgr)
+        cls.solo = User.objects.create_user('tree_solo', last_name='独立账号', password='pw')
+
+    def test_tree_levels_and_counts(self):
+        """层级与计数：根/子/孙、depth、直接下属、含下级合计。"""
+        from .hierarchy import build_user_tree
+        tree = build_user_tree()
+        root_ids = {n['id'] for n in tree['roots']}
+        self.assertEqual(root_ids, {self.gm.pk, self.solo.pk})
+        mgr = next(n for n in tree['roots'][0]['children'] if n['id'] == self.mgr.pk)
+        self.assertEqual(mgr['depth'], 1)
+        self.assertEqual(mgr['direct_count'], 2)
+        self.assertEqual(mgr['total_count'], 2)
+        self.assertEqual({c['id'] for c in mgr['children']},
+                         {self.staff_a.pk, self.staff_b.pk})
+        self.assertEqual({c['depth'] for c in mgr['children']}, {2})
+        self.assertEqual(tree['stats'], {
+            'total': 5, 'with_leader': 3, 'roots': 2, 'cycles': 0, 'inactive': 0,
+        })
+        self.assertEqual(len(tree['rows']), 5)
+        self.assertEqual(tree['rows'][0]['id'], self.gm.pk)
+        self.assertEqual(tree['rows'][0]['direct_count'], 1)
+        self.assertEqual(tree['rows'][0]['total_count'], 3)
+        self.assertEqual(len({row['id'] for row in tree['rows']}), 5)
+
+    def test_cycle_is_broken_and_marked(self):
+        """A→B→A 与自环：提为根并标 is_cycle，不递归死循环、行不重复。"""
+        from .hierarchy import build_user_tree
+        a = User.objects.create_user('cycle_a', password='pw')
+        b = User.objects.create_user('cycle_b', password='pw', leader=a)
+        a.leader = b
+        a.save(update_fields=['leader'])
+        c = User.objects.create_user('cycle_c', password='pw', leader=a)
+        d = User.objects.create_user('self_d', password='pw')
+        d.leader = d
+        d.save(update_fields=['leader'])
+
+        tree = build_user_tree()
+        roots = {n['id']: n for n in tree['roots']}
+        self.assertTrue(roots[a.pk]['is_cycle'])
+        self.assertTrue(roots[b.pk]['is_cycle'])
+        self.assertTrue(roots[d.pk]['is_cycle'])
+        # 环外账号仍挂在环上节点下，不丢节点
+        self.assertEqual({ch['id'] for ch in roots[a.pk]['children']}, {c.pk})
+        ids = [row['id'] for row in tree['rows']]
+        self.assertEqual(len(ids), len(set(ids)))
+        self.assertEqual(set(ids) & {a.pk, b.pk, c.pk, d.pk}, {a.pk, b.pk, c.pk, d.pk})
+        self.assertEqual(tree['stats']['cycles'], 3)
+
+    def test_inactive_account_kept_and_marked(self):
+        """停用账号保留在树中（责任链不拆），stats.inactive 计数。"""
+        from .hierarchy import build_user_tree
+        self.gm.is_active = False
+        self.gm.save(update_fields=['is_active'])
+        tree = build_user_tree()
+        gm_node = next(n for n in tree['roots'] if n['id'] == self.gm.pk)
+        self.assertFalse(gm_node['is_active'])
+        self.assertEqual([c['id'] for c in gm_node['children']], [self.mgr.pk])
+        self.assertEqual(tree['stats']['inactive'], 1)
+        row = next(r for r in tree['rows'] if r['id'] == self.gm.pk)
+        self.assertFalse(row['is_active'])
+
+
+class StructureOverviewTreeTests(TestCase):
+    """v1.5.6：总览页关系树渲染与准入。"""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.viewer = User.objects.create_user('tree_viewer', last_name='查看者', password='pw')
+        role = Role.objects.create(name='关系树查看')
+        role.permissions.add(Permission.objects.get(codename='structure_view'))
+        cls.viewer.roles.add(role)
+        cls.boss = User.objects.create_user('tree_boss', last_name='老板', password='pw')
+        cls.worker = User.objects.create_user('tree_worker', last_name='员工甲', password='pw',
+                                              leader=cls.boss)
+
+    def test_overview_shows_tree_and_responsibility(self):
+        self.client.force_login(self.viewer)
+        resp = self.client.get(reverse('structure:overview'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, '用户关系树（责任划分）')
+        self.assertContains(resp, '责任人清单')
+        self.assertContains(resp, '老板')
+        self.assertContains(resp, '员工甲')
+        self.assertContains(resp, '直属上级')
+        self.assertEqual(resp.context['org_stats']['total'], 3)
+        self.assertEqual(resp.context['org_stats']['roots'], 2)
+
+    def test_tree_requires_structure_view(self):
+        noperm = User.objects.create_user('tree_noperm', password='pw')
+        self.client.force_login(noperm)
+        self.assertEqual(
+            self.client.get(reverse('structure:overview')).status_code, 302)
+

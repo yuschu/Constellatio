@@ -4,13 +4,14 @@ from django.shortcuts import redirect, render
 
 from plugin_host.permissions import require_perm
 
+from .hierarchy import build_user_tree
 from .services import apply_structure
 from .template import ROLE_PERMISSIONS, dept_tree, ROLES, USERS
 
 
 @require_perm('structure_view')
 def structure_overview(request):
-    """总览：部门树 + 角色清单（含模板权限数） + 用户模板分组（按部门）。"""
+    """总览：用户关系树（责任划分） + 部门树 + 角色清单 + 用户模板分组。"""
     users_by_dept = {}
     for account, name, dept, role in USERS:
         users_by_dept.setdefault(dept, []).append({'account': account, 'name': name, 'role': role})
@@ -19,10 +20,15 @@ def structure_overview(request):
          'codes': sorted(ROLE_PERMISSIONS.get(name, set()))}
         for name in ROLES
     ]
+    org_tree = build_user_tree()
     return render(request, 'structure/overview.html', {
         'dept_tree': dept_tree(),
         'role_rows': role_rows,
         'user_count': len(USERS),
+        'users_by_dept': users_by_dept,
+        'org_roots': org_tree['roots'],
+        'org_rows': org_tree['rows'],
+        'org_stats': org_tree['stats'],
         'last_records': _last_records(),
     })
 

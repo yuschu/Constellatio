@@ -1,0 +1,17 @@
+{% load i18n %}<li>
+  <div class="d-flex flex-wrap align-items-center gap-2 py-1" style="font-size:.85rem;">
+    <span class="fw-semibold">{{ node.name }}</span>
+    <span class="text-muted" style="font-size:.75rem;">{{ node.account }}{% if node.dept %} · {{ node.dept }}{% endif %}</span>
+    {% for role in node.roles %}<span class="r-badge">{{ role }}</span>{% endfor %}
+    {% if node.direct_count %}
+    <span class="r-badge r-badge--blue">{% blocktranslate with count=node.direct_count %}直接下属 {{ count }}{% endblocktranslate %}</span>
+    {% endif %}
+    {% if node.is_cycle %}<span class="r-badge r-badge--orange">{% trans "汇报环" %}</span>{% endif %}
+    {% if not node.is_active %}<span class="r-badge r-badge--pink">{% trans "停用" %}</span>{% endif %}
+  </div>
+  {% if node.children %}
+  <ul class="list-unstyled ms-4 mb-0">
+    {% for child in node.children %}{% include "structure/_tree_node.html" with node=child %}{% endfor %}
+  </ul>
+  {% endif %}
+</li>
