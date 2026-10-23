@@ -1,10 +1,11 @@
-"""structure 插件：组织关系树（真实账号 + 直属上级），用于责任划分。
+"""structure 插件：组织关系树（真实账号 + 直属上级）与真实部门树。
 
-数据源是 `user.User.leader`，纯只读计算，不建表、不写数据。
+数据源是 `user.User.leader` / `user.Department`，纯只读计算，不建表、不写数据。
 树口径见 docs/plugin-dev-v156.md §二：无上级为根、成环提为根并标记、停用保留。
 """
 
 from django.apps import apps as dj_apps
+from django.db.models import Count
 
 
 def _display_name(user):
@@ -140,3 +141,49 @@ def _flatten(node, out=None):
     for child in node['children']:
         _flatten(child, out)
     return out
+
+
+def build_department_tree():
+    """真实部门树（v1.5.9 当前架构页用）。
+
+    返回 {'roots': [...], 'stats': {'total', 'active', 'members'}}；
+    节点：name / is_active / member_count / children（成员数按 User.department 聚合）。
+    """
+    Department = dj_apps.get_model('user', 'Department')
+    User = dj_apps.get_model('user', 'User')
+    departments = list(Department.objects.order_by('name'))
+    by_id = {dept.pk: dept for dept in departments}
+    member_counts = {
+        row['department_id']: row['total']
+        for row in User.objects.values('department_id').annotate(total=Count('id'))
+        if row['department_id'] is not None
+    }
+    children = {}
+    for dept in departments:
+        # 上级缺失（已删除）的一律提为根，避免丢节点
+        parent_id = dept.parent_id if dept.parent_id in by_id else None
+        children.setdefault(parent_id, []).append(dept.pk)
+
+    def make_node(dept_id, visited):
+        dept = by_id[dept_id]
+        return {
+            'id': dept_id,
+            'name': dept.name,
+            'is_active': dept.is_active,
+            'member_count': member_counts.get(dept_id, 0),
+            'children': [
+                make_node(kid, visited | {dept_id})
+                for kid in children.get(dept_id, ())
+                if kid not in visited
+            ],
+        }
+
+    roots = [make_node(pk, frozenset()) for pk in children.get(None, ())]
+    return {
+        'roots': roots,
+        'stats': {
+            'total': len(departments),
+            'active': sum(1 for dept in departments if dept.is_active),
+            'members': sum(member_counts.values()),
+        },
+    }

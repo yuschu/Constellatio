@@ -1122,3 +1122,45 @@ msgstr "Theme"
 
 msgid "切换主题"
 msgstr "Switch theme"
+
+msgid "查看模板"
+msgstr "View template"
+
+msgid "部门（启用 / 总数）"
+msgstr "Departments (active / total)"
+
+msgid "在岗账号"
+msgstr "Accounts"
+
+msgid "角色总数"
+msgstr "Roles"
+
+msgid "当前部门树"
+msgstr "Current departments"
+
+msgid "当前角色"
+msgstr "Current roles"
+
+msgid "权限数"
+msgstr "Permissions"
+
+msgid "成员 %(count)s"
+msgstr "%(count)s member(s)"
+
+msgid "暂无部门数据，可在「查看模板」中应用职能制模板。"
+msgstr "No departments yet. Apply the functional template in “View template”."
+
+msgid "暂无角色数据，可应用模板或到用户管理创建。"
+msgstr "No roles yet. Apply the template or create roles under User management."
+
+msgid "模板架构"
+msgstr "Template structure"
+
+msgid "返回组织架构"
+msgstr "Back to organization"
+
+msgid "模板部门树（%(count)s 个一级部门，共 %(dept_count)s 个）"
+msgstr "Template departments (%(count)s top-level, %(dept_count)s total)"
+
+msgid "模板角色（%(count)s 个，按模板授予权限）"
+msgstr "Template roles (%(count)s, permissions from template)"

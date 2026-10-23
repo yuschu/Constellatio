@@ -1,0 +1,14 @@
+{% load i18n %}<li>
+  <div class="d-flex justify-content-between align-items-center py-1" style="font-size:.9rem;">
+    <span>
+      <strong>{{ node.name }}</strong>
+      {% if not node.is_active %}<span class="r-badge r-badge--pink">{% trans "停用" %}</span>{% endif %}
+    </span>
+    <span class="text-muted" style="font-size:.75rem;">{% blocktranslate with count=node.member_count %}成员 {{ count }}{% endblocktranslate %}</span>
+  </div>
+  {% if node.children %}
+  <ul class="list-unstyled ms-4 mb-0">
+    {% for child in node.children %}{% include "structure/_dept_node.html" with node=child %}{% endfor %}
+  </ul>
+  {% endif %}
+</li>

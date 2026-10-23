@@ -142,7 +142,7 @@ class PluginViewGuardTests(TestCase):
         self.assertEqual(self.client.get('/plugins/structure/').status_code, 302)
         self.client.force_login(self.manager)
         self.assertEqual(self.client.get('/plugins/structure/').status_code, 200)
-        self.assertContains(self.client.get('/plugins/structure/'), '按模板授予权限')
+        self.assertContains(self.client.get('/plugins/structure/'), '查看模板')
 
     def test_approval_views_guard(self):
         self.client.force_login(self.staff)

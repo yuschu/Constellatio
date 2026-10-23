@@ -154,15 +154,60 @@ class StructureApplyTests(TestCase):
         from .models import StructureRecord
         self.assertEqual(StructureRecord.objects.count(), 1)
 
-    def test_overview_renders_user_template_groups(self):
-        """v1.5.6 回归：用户模板分组真实渲染（此前 users_by_dept 未注入上下文，区块为空）。"""
+    def test_template_page_renders_user_template_groups(self):
+        """v1.5.9：模板架构独立页面渲染模板部门/角色/用户（原总览的模板区块）。"""
         self._apply()
         self.client.force_login(self.admin)
-        resp = self.client.get(reverse('structure:overview'))
+        resp = self.client.get(reverse('structure:template'))
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, '钱招聘')
         self.assertContains(resp, '招聘组')
         self.assertContains(resp, 'IT运维工程师')
+        self.assertContains(resp, '返回组织架构')
+
+    def test_overview_shows_current_architecture(self):
+        """v1.5.9：组织架构页展示真实部门/角色，并给出「查看模板」入口。"""
+        from plugins.user.models import Department
+        dept = Department.objects.create(name='当前研发部')
+        Role.objects.create(name='当前工程师')
+        self.admin.department = dept
+        self.admin.save(update_fields=['department'])
+        self.client.force_login(self.admin)
+        resp = self.client.get(reverse('structure:overview'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, '当前部门树')
+        self.assertContains(resp, '当前研发部')
+        self.assertContains(resp, '当前角色')
+        self.assertContains(resp, '当前工程师')
+        self.assertContains(resp, '查看模板')
+
+    def test_single_structure_menu(self):
+        """v1.5.9：组织架构与应用结构合并为单一菜单入口。"""
+        from plugin_host.registry import PLUGIN_REGISTRY
+        menus = PLUGIN_REGISTRY['structure'].menus
+        self.assertEqual(len(menus), 1)
+        self.assertEqual(str(menus[0]['label']), '组织架构')
+        self.assertEqual(menus[0]['url'], '/plugins/structure/')
+
+    def test_template_page_apply_form_only_with_manage(self):
+        """模板页：structure_view 可看，应用表单只对 structure_manage 渲染。"""
+        viewer = User.objects.create_user('tpl_viewer', password='pw')
+        role = Role.objects.create(name='模板查看')
+        role.permissions.add(Permission.objects.get(codename='structure_view'))
+        viewer.roles.add(role)
+        self.client.force_login(viewer)
+        resp = self.client.get(reverse('structure:template'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotContains(resp, '⤓ 应用模板')
+
+        self.client.force_login(self.admin)
+        resp = self.client.get(reverse('structure:template'))
+        self.assertContains(resp, '⤓ 应用模板')
+
+    def test_template_page_requires_structure_view(self):
+        noperm = User.objects.create_user('tpl_noperm', password='pw')
+        self.client.force_login(noperm)
+        self.assertEqual(self.client.get(reverse('structure:template')).status_code, 302)
 
 
 class UserHierarchyTests(TestCase):
@@ -237,6 +282,24 @@ class UserHierarchyTests(TestCase):
         self.assertEqual(tree['stats']['inactive'], 1)
         row = next(r for r in tree['rows'] if r['id'] == self.gm.pk)
         self.assertFalse(row['is_active'])
+
+    def test_department_tree(self):
+        """v1.5.9：真实部门树——层级、成员数、停用标记与统计。"""
+        from plugins.user.models import Department
+        from .hierarchy import build_department_tree
+        root = Department.objects.create(name='总公司')
+        branch = Department.objects.create(name='研发中心', parent=root)
+        frozen = Department.objects.create(name='停用组', parent=root, is_active=False)
+        User.objects.create_user('dept_a', password='pw', department=branch)
+        User.objects.create_user('dept_b', password='pw', department=branch)
+
+        data = build_department_tree()
+        self.assertEqual(data['stats'], {'total': 3, 'active': 2, 'members': 2})
+        root_node = next(n for n in data['roots'] if n['id'] == root.pk)
+        children = {n['name']: n for n in root_node['children']}
+        self.assertEqual(children['研发中心']['member_count'], 2)
+        self.assertFalse(children['停用组']['is_active'])
+        self.assertEqual({n['id'] for n in data['roots']}, {root.pk})
 
 
 class StructureOverviewTreeTests(TestCase):

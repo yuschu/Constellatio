@@ -10,11 +10,11 @@ class StructureConfig(AppConfig):
         from plugin_host.registry import register, PluginMeta
         register(PluginMeta(
             name='structure',
-            version='1.3.0',
+            version='1.5.9',
             title=_('组织架构模板'),
+            # v1.5.9：合并「组织架构」与「应用结构」——只保留一个入口，模板详情从页面进入
             menus=[
                 {'label': _('组织架构'), 'icon': '◫', 'url': '/plugins/structure/', 'perm': 'structure_view'},
-                {'label': _('应用结构'), 'icon': '⤓', 'url': '/plugins/structure/apply/', 'perm': 'structure_manage'},
             ],
             permissions=['structure_manage', 'structure_view'],
             urls='plugins.structure.urls',

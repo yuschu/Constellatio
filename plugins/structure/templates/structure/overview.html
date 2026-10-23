@@ -3,18 +3,37 @@
 {% block title %}{% trans "组织架构" %} · Constellatio{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-  <h2 class="mb-0">{% trans "组织架构（职能制模板）" %}</h2>
-  <form method="post" action="{% url 'structure:apply' %}" class="d-inline">
-    {% csrf_token %}
-    <div class="d-flex align-items-center gap-3">
-      <label class="form-label mb-0" style="font-size:.75rem;">
-        <input type="checkbox" name="grant_manager_perms" value="1"> {% trans "经理角色同时授予用户管理权限（L1）" %}
-      </label>
-      {% blocktranslate asvar confirm_apply %}应用职能制架构模板？仅创建缺失项、幂等补齐角色权限，不覆盖既有数据。{% endblocktranslate %}
-      <button class="r-btn" type="submit" onclick="return confirm('{{ confirm_apply|escapejs }}')">{% trans "⤓ 应用模板" %}</button>
-    </div>
-  </form>
+  <h2 class="mb-0">{% trans "组织架构" %}</h2>
+  <a href="{% url 'structure:template' %}" class="r-btn r-btn--plain">{% trans "查看模板" %} →</a>
 </div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="r-card">
+      <div class="text-muted" style="font-size:.75rem;">{% trans "部门（启用 / 总数）" %}</div>
+      <div class="fs-3">{{ dept_stats.active }} / {{ dept_stats.total }}</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="r-card">
+      <div class="text-muted" style="font-size:.75rem;">{% trans "在岗账号" %}</div>
+      <div class="fs-3">{{ org_stats.total }}</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="r-card">
+      <div class="text-muted" style="font-size:.75rem;">{% trans "角色总数" %}</div>
+      <div class="fs-3">{{ role_rows|length }}</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="r-card">
+      <div class="text-muted" style="font-size:.75rem;">{% trans "汇报链起点" %}</div>
+      <div class="fs-3">{{ org_stats.roots }}</div>
+    </div>
+  </div>
+</div>
+
 {% if last_records %}
 <div class="r-card mb-4" style="font-size:.8rem;">
   <span class="r-badge r-badge--blue">{% trans "最近应用" %}</span>
@@ -26,36 +45,48 @@
 </div>
 {% endif %}
 
+<div class="row g-4 mb-4">
+  <div class="col-md-6">
+    <div class="r-card h-100">
+      <h3 class="fs-5 mb-3">{% trans "当前部门树" %}</h3>
+      {% if dept_org %}
+      <ul class="list-unstyled mb-0">
+        {% for node in dept_org %}{% include "structure/_dept_node.html" with node=node %}{% endfor %}
+      </ul>
+      {% else %}
+      <p class="text-muted mb-0" style="font-size:.85rem;">{% trans "暂无部门数据，可在「查看模板」中应用职能制模板。" %}</p>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="r-card h-100">
+      <h3 class="fs-5 mb-3">{% trans "当前角色" %}</h3>
+      {% if role_rows %}
+      <table class="r-table">
+        <thead>
+          <tr><th>{% trans "角色" %}</th><th>{% trans "权限数" %}</th><th>{% trans "成员数" %}</th></tr>
+        </thead>
+        <tbody>
+          {% for r in role_rows %}
+          <tr>
+            <td>{{ r.name }}</td>
+            <td>{{ r.perm_count }}</td>
+            <td>{{ r.member_count }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="text-muted mb-0" style="font-size:.85rem;">{% trans "暂无角色数据，可应用模板或到用户管理创建。" %}</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
 <div class="r-card mb-4">
   <div class="d-flex justify-content-between align-items-baseline mb-3">
     <h3 class="fs-5 mb-0">{% trans "用户关系树（责任划分）" %}</h3>
     <span class="text-muted" style="font-size:.75rem;">{% trans "按直属上级归并；汇报环与停用账号显式标记" %}</span>
-  </div>
-  <div class="row g-3 mb-3">
-    <div class="col-md-3">
-      <div class="r-card">
-        <div class="text-muted" style="font-size:.75rem;">{% trans "账号总数" %}</div>
-        <div class="fs-3">{{ org_stats.total }}</div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="r-card">
-        <div class="text-muted" style="font-size:.75rem;">{% trans "已设直属上级" %}</div>
-        <div class="fs-3">{{ org_stats.with_leader }}</div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="r-card">
-        <div class="text-muted" style="font-size:.75rem;">{% trans "汇报链起点" %}</div>
-        <div class="fs-3">{{ org_stats.roots }}</div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="r-card">
-        <div class="text-muted" style="font-size:.75rem;">{% trans "汇报环 / 停用" %}</div>
-        <div class="fs-3">{{ org_stats.cycles }} / {{ org_stats.inactive }}</div>
-      </div>
-    </div>
   </div>
   {% if org_roots %}
   <ul class="list-unstyled mb-0">
@@ -66,7 +97,7 @@
   {% endif %}
 </div>
 
-<div class="r-card mb-4">
+<div class="r-card">
   <div class="d-flex justify-content-between align-items-baseline mb-3">
     <h3 class="fs-5 mb-0">{% trans "责任人清单" %}</h3>
     <span class="text-muted" style="font-size:.75rem;">{% trans "直接下属为直属下级账号数；含下级合计为子树账号数（不含本人）" %}</span>
@@ -109,52 +140,5 @@
       {% endfor %}
     </tbody>
   </table>
-</div>
-
-<div class="row g-4">
-  <div class="col-md-5">
-    <div class="r-card h-100">
-      <h3 class="fs-5 mb-3">{% blocktranslate with count=dept_tree|length %}部门树（{{ count }} 个一级部门）{% endblocktranslate %}</h3>
-      <ul class="list-unstyled mb-0" style="font-size:.9rem;">
-        {% for dept, children in dept_tree %}
-        <li class="mb-1">
-          <strong>{{ dept }}</strong>
-          {% if children %}
-          <ul class="list-unstyled ms-4 text-muted">
-            {% for c in children %}<li>└ {{ c }}</li>{% endfor %}
-          </ul>
-          {% endif %}
-        </li>
-        {% endfor %}
-      </ul>
-    </div>
-  </div>
-  <div class="col-md-7">
-    <div class="r-card mb-4">
-      <h3 class="fs-5 mb-3">{% blocktranslate with count=role_rows|length %}角色（{{ count }} 个，按模板授予权限）{% endblocktranslate %}</h3>
-      <div>
-        {% for r in role_rows %}
-        <span class="r-badge me-2 mb-2" title="{{ r.codes|join:', ' }}">{{ r.name }}{% if r.perm_count %} · {{ r.perm_count }}{% endif %}</span>
-        {% endfor %}
-      </div>
-      <p class="text-muted mt-3 mb-0" style="font-size:.75rem;">{% trans "全员基线：考勤打卡、公告浏览无需角色；管理岗模板含签到详情（attendance_report_view）。" %}</p>
-    </div>
-    <div class="r-card">
-      <h3 class="fs-5 mb-3">{% blocktranslate with count=user_count %}用户模板（{{ count }} 个，密码统一 constellatio123）{% endblocktranslate %}</h3>
-      <div class="row g-3">
-        {% for dept, users in users_by_dept.items %}
-        <div class="col-md-6">
-          <div class="fw-bold mb-2" style="font-size:.85rem;">{{ dept }}</div>
-          {% for u in users %}
-          <div class="d-flex justify-content-between" style="font-size:.8rem;">
-            <span>{{ u.name }}（{{ u.account }}）</span>
-            <span class="text-muted">{{ u.role }}</span>
-          </div>
-          {% endfor %}
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-  </div>
 </div>
 {% endblock %}

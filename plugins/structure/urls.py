@@ -8,5 +8,6 @@ app_name = 'structure'
 
 urlpatterns = [
     path('', views.structure_overview, name='overview'),
+    path('template/', views.structure_template, name='template'),   # v1.5.9 模板架构详情
     path('apply/', views.structure_apply, name='apply'),
 ]

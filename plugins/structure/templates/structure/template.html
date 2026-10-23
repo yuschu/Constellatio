@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "模板架构" %} · Constellatio{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4">
+  <div>
+    <h2 class="mb-1">{% trans "模板架构" %}</h2>
+    <a href="{% url 'structure:overview' %}" class="r-small">← {% trans "返回组织架构" %}</a>
+  </div>
+  {% if can_apply %}
+  <form method="post" action="{% url 'structure:apply' %}" class="d-inline">
+    {% csrf_token %}
+    <div class="d-flex align-items-center gap-3">
+      <label class="form-label mb-0" style="font-size:.75rem;">
+        <input type="checkbox" name="grant_manager_perms" value="1"> {% trans "经理角色同时授予用户管理权限（L1）" %}
+      </label>
+      {% blocktranslate asvar confirm_apply %}应用职能制架构模板？仅创建缺失项、幂等补齐角色权限，不覆盖既有数据。{% endblocktranslate %}
+      <button class="r-btn" type="submit" onclick="return confirm('{{ confirm_apply|escapejs }}')">{% trans "⤓ 应用模板" %}</button>
+    </div>
+  </form>
+  {% endif %}
+</div>
+
+{% if last_records %}
+<div class="r-card mb-4" style="font-size:.8rem;">
+  <span class="r-badge r-badge--blue">{% trans "最近应用" %}</span>
+  {% for rec in last_records %}
+  <span class="me-3">#{{ rec.pk }} {{ rec.applied_by.last_name|default:rec.applied_by.username }}
+    {% blocktranslate with dept=rec.dept_created role=rec.role_created user=rec.user_created %}+{{ dept }}部门/+{{ role }}角色/+{{ user }}用户{% endblocktranslate %}
+    {{ rec.applied_at|date:"m-d H:i" }}</span>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="row g-4">
+  <div class="col-md-5">
+    <div class="r-card h-100">
+      <h3 class="fs-5 mb-3">{% blocktranslate with count=dept_tree|length %}模板部门树（{{ count }} 个一级部门，共 {{ dept_count }} 个）{% endblocktranslate %}</h3>
+      <ul class="list-unstyled mb-0" style="font-size:.9rem;">
+        {% for dept, children in dept_tree %}
+        <li class="mb-1">
+          <strong>{{ dept }}</strong>
+          {% if children %}
+          <ul class="list-unstyled ms-4 text-muted">
+            {% for c in children %}<li>└ {{ c }}</li>{% endfor %}
+          </ul>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  <div class="col-md-7">
+    <div class="r-card mb-4">
+      <h3 class="fs-5 mb-3">{% blocktranslate with count=role_rows|length %}模板角色（{{ count }} 个，按模板授予权限）{% endblocktranslate %}</h3>
+      <div>
+        {% for r in role_rows %}
+        <span class="r-badge me-2 mb-2" title="{{ r.codes|join:', ' }}">{{ r.name }}{% if r.perm_count %} · {{ r.perm_count }}{% endif %}</span>
+        {% endfor %}
+      </div>
+      <p class="text-muted mt-3 mb-0" style="font-size:.75rem;">{% trans "全员基线：考勤打卡、公告浏览无需角色；管理岗模板含签到详情（attendance_report_view）。" %}</p>
+    </div>
+    <div class="r-card">
+      <h3 class="fs-5 mb-3">{% blocktranslate with count=user_count %}用户模板（{{ count }} 个，密码统一 constellatio123）{% endblocktranslate %}</h3>
+      <div class="row g-3">
+        {% for dept, users in users_by_dept.items %}
+        <div class="col-md-6">
+          <div class="fw-bold mb-2" style="font-size:.85rem;">{{ dept }}</div>
+          {% for u in users %}
+          <div class="d-flex justify-content-between" style="font-size:.8rem;">
+            <span>{{ u.name }}（{{ u.account }}）</span>
+            <span class="text-muted">{{ u.role }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
