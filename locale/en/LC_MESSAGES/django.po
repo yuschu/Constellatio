@@ -1164,3 +1164,18 @@ msgstr "Template departments (%(count)s top-level, %(dept_count)s total)"
 
 msgid "模板角色（%(count)s 个，按模板授予权限）"
 msgstr "Template roles (%(count)s, permissions from template)"
+
+msgid "关闭"
+msgstr "Close"
+
+msgid "角色成员"
+msgstr "Role members"
+
+msgid "该角色暂无成员"
+msgstr "No members in this role yet"
+
+msgid "点击角色查看成员"
+msgstr "Click a role to see its members"
+
+msgid "共 {count} 人"
+msgstr "{count} member(s) in total"

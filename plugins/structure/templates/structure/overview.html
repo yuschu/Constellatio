@@ -59,29 +59,92 @@
     </div>
   </div>
   <div class="col-md-6">
-    <div class="r-card h-100">
-      <h3 class="fs-5 mb-3">{% trans "当前角色" %}</h3>
+    <div class="r-card h-100 d-flex flex-column">
+      <div class="d-flex justify-content-between align-items-baseline mb-2">
+        <h3 class="fs-5 mb-0">{% trans "当前角色" %}</h3>
+        <span class="text-muted" style="font-size:.75rem;">{% trans "点击角色查看成员" %}</span>
+      </div>
       {% if role_rows %}
-      <table class="r-table">
-        <thead>
-          <tr><th>{% trans "角色" %}</th><th>{% trans "权限数" %}</th><th>{% trans "成员数" %}</th></tr>
-        </thead>
-        <tbody>
-          {% for r in role_rows %}
-          <tr>
-            <td>{{ r.name }}</td>
-            <td>{{ r.perm_count }}</td>
-            <td>{{ r.member_count }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      <div class="role-scroll flex-grow-1" style="overflow-y:auto; max-height:min(60vh, 32rem); min-height:0;">
+        {% for r in role_rows %}
+        <button type="button" class="role-card w-100 text-start border rounded-3 p-2 mb-2 bg-transparent"
+                data-role-index="{{ forloop.counter0 }}" aria-haspopup="dialog">
+          <div class="d-flex justify-content-between align-items-center gap-2">
+            <span class="fw-semibold">{{ r.name }}</span>
+            <span class="d-flex gap-1">
+              <span class="r-badge">{% trans "权限数" %} {{ r.perm_count }}</span>
+              <span class="r-badge r-badge--blue">{% trans "成员数" %} {{ r.member_count }}</span>
+            </span>
+          </div>
+        </button>
+        {% endfor %}
+      </div>
       {% else %}
       <p class="text-muted mb-0" style="font-size:.85rem;">{% trans "暂无角色数据，可应用模板或到用户管理创建。" %}</p>
       {% endif %}
     </div>
   </div>
 </div>
+
+<div class="modal fade" id="roleModal" tabindex="-1" aria-labelledby="roleModalLabel" aria-hidden="true"
+     data-empty="{% trans '该角色暂无成员' %}" data-disabled="{% trans '停用' %}">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="roleModalLabel">{% trans "角色成员" %}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans '关闭' %}"></button>
+      </div>
+      <div class="modal-body">
+        {% blocktranslate asvar member_tpl %}共 {count} 人{% endblocktranslate %}
+        <p class="text-muted mb-2" style="font-size:.8rem;" id="roleModalMeta" data-template="{{ member_tpl }}"></p>
+        <ul class="list-unstyled mb-0" id="roleModalList"></ul>
+      </div>
+    </div>
+  </div>
+</div>
+{{ role_rows|json_script:"role-members" }}
+<script>
+  (function () {
+    var data = JSON.parse(document.getElementById('role-members').textContent);
+    var modalEl = document.getElementById('roleModal');
+    var modal = new bootstrap.Modal(modalEl);
+    var title = document.getElementById('roleModalLabel');
+    var meta = document.getElementById('roleModalMeta');
+    var list = document.getElementById('roleModalList');
+
+    document.querySelectorAll('[data-role-index]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var role = data[Number(btn.dataset.roleIndex)];
+        if (!role) { return; }
+        title.textContent = role.name;
+        meta.textContent = role.member_count
+          ? meta.dataset.template.replace('{count}', role.member_count)
+          : modalEl.dataset.empty;
+        list.replaceChildren();
+        role.members.forEach(function (member) {
+          var item = document.createElement('li');
+          item.className = 'd-flex justify-content-between border-bottom py-2';
+          item.style.fontSize = '.85rem';
+          var who = document.createElement('span');
+          who.textContent = member.name + '（' + member.account + '）';
+          var dept = document.createElement('span');
+          dept.className = 'text-muted';
+          dept.textContent = member.dept || '—';
+          item.appendChild(who);
+          item.appendChild(dept);
+          if (!member.is_active) {
+            var badge = document.createElement('span');
+            badge.className = 'r-badge r-badge--pink ms-2';
+            badge.textContent = modalEl.dataset.disabled;
+            item.appendChild(badge);
+          }
+          list.appendChild(item);
+        });
+        modal.show();
+      });
+    });
+  })();
+</script>
 
 <div class="r-card mb-4">
   <div class="d-flex justify-content-between align-items-baseline mb-3">

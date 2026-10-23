@@ -6,7 +6,6 @@
 """
 
 from django.apps import apps as dj_apps
-from django.db.models import Count
 from django.shortcuts import redirect, render
 
 from plugin_host.permissions import require_perm
@@ -23,17 +22,25 @@ def structure_overview(request):
 
     dept_tree_data = build_department_tree()
     org_tree = build_user_tree()
-    role_rows = [
-        {
+    # v1.5.10：角色卡片携带成员明细，供前端弹窗展示（prefetch 避免 N+1）
+    role_rows = []
+    for role in Role.objects.prefetch_related(
+            'permissions', 'users__department').order_by('name'):
+        members = [
+            {
+                'name': user.last_name or user.username,
+                'account': user.username,
+                'dept': user.department.name if user.department_id else '',
+                'is_active': user.is_active,
+            }
+            for user in role.users.all()
+        ]
+        role_rows.append({
             'name': role.name,
-            'perm_count': role.permission_total,
-            'member_count': role.member_total,
-        }
-        for role in Role.objects.annotate(
-            permission_total=Count('permissions', distinct=True),
-            member_total=Count('users', distinct=True),
-        ).order_by('name')
-    ]
+            'perm_count': len(role.permissions.all()),
+            'member_count': len(members),
+            'members': members,
+        })
     return render(request, 'structure/overview.html', {
         'dept_org': dept_tree_data['roots'],
         'dept_stats': dept_tree_data['stats'],

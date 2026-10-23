@@ -181,6 +181,28 @@ class StructureApplyTests(TestCase):
         self.assertContains(resp, '当前工程师')
         self.assertContains(resp, '查看模板')
 
+    def test_role_cards_carry_members_and_modal(self):
+        """v1.5.10：角色卡片可点击，携带成员明细供弹窗；容器带滚动。"""
+        from plugins.user.models import Department
+        dept = Department.objects.create(name='角色成员部')
+        role = Role.objects.create(name='角色卡片测试')
+        member = User.objects.create_user('role_member', last_name='成员甲', password='pw')
+        member.department = dept
+        member.save(update_fields=['department'])
+        member.roles.add(role)
+
+        self.client.force_login(self.admin)
+        resp = self.client.get(reverse('structure:overview'))
+        rows = {row['name']: row for row in resp.context['role_rows']}
+        self.assertEqual(rows['角色卡片测试']['member_count'], 1)
+        self.assertEqual(rows['角色卡片测试']['members'][0]['account'], 'role_member')
+        self.assertEqual(rows['角色卡片测试']['members'][0]['dept'], '角色成员部')
+        self.assertContains(resp, 'role-scroll')
+        self.assertContains(resp, 'data-role-index=')
+        self.assertContains(resp, 'id="roleModal"')
+        self.assertContains(resp, 'id="role-members"')
+        self.assertContains(resp, '"account": "role_member"')
+
     def test_single_structure_menu(self):
         """v1.5.9：组织架构与应用结构合并为单一菜单入口。"""
         from plugin_host.registry import PLUGIN_REGISTRY
