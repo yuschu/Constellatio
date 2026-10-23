@@ -227,3 +227,10 @@ structure_applied(applied_by_id, dept_created, role_created, user_created)  # st
 ### 13.4 测试
 
 真实部门树（层级 / 成员数 / 停用 / 统计）、组织架构页当前数据与【查看模板】、模板页渲染与权限、应用表单可见性、单菜单注册、既有关系树与守卫回归。
+
+## 十四、v1.5.10 增补：角色卡片弹窗
+
+- 「当前角色」由表格改为**可点击角色卡片**：名称 + 权限数 + 成员数；点击弹出 Bootstrap modal 展示该角色成员（姓名 / 账号 / 部门 / 停用标记），空角色显示「该角色暂无成员」。
+- 角色列表容器 `overflow-y:auto`，`max-height:min(60vh, 32rem)` + `flex-grow-1`，随视口自适应并出现滚动条。
+- 数据：`role_rows` 增加 `members`（`prefetch_related('users__department')`），前端通过 `json_script` 读取、`textContent` 渲染，无新增内联 onclick、无新表 / 迁移。
+- 测试：成员明细与计数、弹窗骨架标记、滚动容器、空角色、双语。
