@@ -30,6 +30,9 @@ class Approval(models.Model):
     biz_id = models.PositiveIntegerField('业务对象ID', null=True, blank=True)  # 会签单：部门ID/用户ID
     # v1.5.5：动态表单数据（请假/报销/用章/外出/加班/调休）
     form_data = models.JSONField('表单数据', default=dict, blank=True)
+    # v1.5.14：用章申请附件（单个文件，下载走权限视图）
+    attachment = models.FileField(
+        '用章附件', upload_to='approval_attachments/%Y/%m/', null=True, blank=True)
     department_id = models.PositiveIntegerField('部门ID', null=True, blank=True)
     department_name = models.CharField('部门名称', max_length=100, blank=True, default='')
     applicant = models.ForeignKey(
@@ -45,6 +48,12 @@ class Approval(models.Model):
         verbose_name='抄送人')
     status = models.CharField(
         '状态', max_length=20, choices=Status.choices, default=Status.DRAFT)
+    # v1.5.16：申请人在「我发起的」里隐藏已驳回申请（仅隐藏，不删除留痕）
+    applicant_hidden = models.BooleanField('申请人已隐藏', default=False)
+    # v1.5.17：重新申请后指向替换该驳回单的新单
+    replaced_by = models.OneToOneField(
+        'self', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='replaces_rejected', verbose_name='替换为')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

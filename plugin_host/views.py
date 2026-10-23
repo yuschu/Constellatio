@@ -67,6 +67,7 @@ def _recent_notices(limit=3):
 def index(request):
     user = request.user
     can_approval = user.has_perm('approval_view')
+    can_approve = user.has_perm('approval_approve')   # v1.5.15：L3 不显示「待我审批」
     can_report = user.has_perm('attendance_report_view')
     can_plugin_ops = user.is_superuser or user.has_perm('workspace_manage')
 
@@ -88,11 +89,13 @@ def index(request):
         })
 
     return render(request, 'home.html', {
-        'pending_approvals': _pending_approvals(user) if 'approval' in enabled_names else 0,
+        'pending_approvals': _pending_approvals(user)
+        if 'approval' in enabled_names and can_approve else 0,
         'attendance_today': _attendance_today(user) if 'attendance' in enabled_names else None,
         'notices': _recent_notices() if 'notice' in enabled_names else [],
         'shortcuts': shortcuts,
         'can_approval': can_approval,
+        'can_approve': can_approve,
         'can_plugin_ops': can_plugin_ops,
         'enabled_plugins': [(key, meta.title) for key, meta in enabled],
         'plugin_total': len(PLUGIN_REGISTRY),

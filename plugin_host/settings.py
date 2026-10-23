@@ -168,4 +168,8 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'   # collectstatic 产物（容器/gunicorn 服务）
 
+# v1.5.14：审批附件（用章文件）落盘目录；下载统一走权限视图，不做公开静态目录
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

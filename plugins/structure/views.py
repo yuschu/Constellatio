@@ -1,12 +1,14 @@
-"""structure 插件视图（v1.5.9）。
+"""structure 插件视图（v1.5.12）。
 
 - `/plugins/structure/`：组织架构页，展示**当前架构**（真实部门 / 角色 / 用户关系树）；
 - `/plugins/structure/template/`：**模板架构**详情 + 应用模板表单（应用需 structure_manage）；
-- `/plugins/structure/apply/`：POST 应用模板。
+- `/plugins/structure/apply/`：POST 应用模板；
+- `/plugins/structure/user/<id>/`：角色成员 → 用户资料（只读）。
 """
 
 from django.apps import apps as dj_apps
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 
 from plugin_host.permissions import require_perm
 
@@ -32,6 +34,7 @@ def structure_overview(request):
                 'account': user.username,
                 'dept': user.department.name if user.department_id else '',
                 'is_active': user.is_active,
+                'url': reverse('structure:user_detail', args=[user.pk]),
             }
             for user in role.users.all()
         ]
@@ -78,6 +81,23 @@ def structure_template(request):
 def _last_records():
     from .models import StructureRecord
     return StructureRecord.objects.select_related('applied_by')[:5]
+
+
+@require_perm('structure_view')
+def structure_user_detail(request, user_id):
+    """角色成员 → 用户资料（只读，v1.5.12）。
+
+    与组织关系树同权限口径（structure_view 可看全员，不做行级隔离）。
+    """
+    User = dj_apps.get_model('user', 'User')
+    target = get_object_or_404(
+        User.objects.select_related('department', 'leader').prefetch_related('roles'),
+        pk=user_id)
+    return render(request, 'structure/user_detail.html', {
+        'target': target,
+        'is_self': target.pk == request.user.pk,
+        'can_manage': request.user.has_perm('user_manage'),
+    })
 
 
 @require_perm('structure_manage')

@@ -14,14 +14,37 @@
       <table class="r-table">
         <tr><th>{% trans "类型" %}</th><td>{% trans approval.get_approval_type_display %}</td></tr>
         <tr><th>{% trans "标题" %}</th><td>{{ approval.title }}</td></tr>
-        <tr><th>{% trans "部门" %}</th><td>{{ approval.department_name|default:'—' }}</td></tr>
+        {% if approval.department_name %}
+        <tr><th>{% trans "部门" %}</th><td>{{ approval.department_name }}</td></tr>
+        {% endif %}
         {% for label, value in form_rows %}
         <tr><th>{{ label }}</th><td style="white-space:pre-wrap;">{{ value }}</td></tr>
         {% endfor %}
+        {% if approval.attachment %}
+        <tr>
+          <th>{% trans "附件" %}</th>
+          <td>
+            <a href="{% url 'approval:approval_attachment' approval.pk %}" class="r-offset-hover">
+              {% trans "下载附件" %} · {{ approval.attachment.name|cut:"approval_attachments/"|truncatechars:40 }}
+            </a>
+          </td>
+        </tr>
+        {% endif %}
         {% if not approval.form_data and approval.content %}
         <tr><th>{% trans "内容" %}</th><td style="white-space:pre-wrap;">{{ approval.content }}</td></tr>
         {% endif %}
-        <tr><th>{% trans "金额" %}</th><td>{% if approval.amount %}￥{{ approval.amount }}{% else %}—{% endif %}</td></tr>
+        {% if approval.amount %}
+        <tr><th>{% trans "金额" %}</th><td>￥{{ approval.amount }}</td></tr>
+        {% endif %}
+        {% if approval.form_data.e_seal %}
+        <tr>
+          <th>{% trans "电子盖章" %}</th>
+          <td>
+            <span class="r-badge r-badge--orange">{% trans "待接入" %}</span>
+            <span style="font-size:.85rem;">{{ approval.form_data.e_seal.text }}</span>
+          </td>
+        </tr>
+        {% endif %}
         <tr><th>{% trans "申请人" %}</th><td>{{ approval.applicant.last_name|default:approval.applicant.username }}</td></tr>
         <tr><th>{% trans "审批人" %}</th><td>{{ approval.approver.last_name|default:approval.approver.username }}</td></tr>
         <tr><th>{% trans "发起时间" %}</th><td>{{ approval.created_at|date:"Y-m-d H:i" }}</td></tr>
@@ -33,7 +56,7 @@
       <h3 class="fs-5 mb-3">{% trans "流转记录" %}</h3>
       {% for r in records %}
       <div class="d-flex gap-2 mb-2" style="font-size:.85rem;">
-        <span class="r-badge r-badge--blue">{% trans r.action %}</span>
+        <span class="r-badge r-badge--blue">{% if r.action == 'e_seal' %}{% trans "电子盖章" %}{% elif r.action == 'resubmit' %}{% trans "重新申请" %}{% elif r.action == 'replaced' %}{% trans "已替换" %}{% else %}{% trans r.action %}{% endif %}</span>
         <span>{{ r.operator.last_name|default:r.operator.username }}</span>
         <span class="text-muted">{{ r.created_at|date:"m-d H:i" }}</span>
         {% if r.comment %}<span class="text-muted">：{{ r.comment }}</span>{% endif %}
@@ -42,15 +65,15 @@
       <div class="text-muted" style="font-size:.8rem;">{% trans "暂无流转记录" %}</div>
       {% endfor %}
     </div>
+    {% if cc_users %}
     <div class="r-card mb-4">
       <h3 class="fs-5 mb-3">{% trans "抄送" %}</h3>
       {% for c in cc_users %}
       <span class="r-badge r-badge--blue me-1">{{ c.last_name|default:c.username }}</span>
-      {% empty %}
-      <div class="text-muted" style="font-size:.8rem;">{% trans "暂无抄送人" %}</div>
       {% endfor %}
       <p class="text-muted mt-2 mb-0" style="font-size:.75rem;">{% trans "审批人收到申请与审批完成时，自动抄送其上级。" %}</p>
     </div>
+    {% endif %}
     {% if is_counter %}
     <div class="r-card mb-4">
       <h3 class="fs-5 mb-3">{% blocktranslate with count=signers|length %}会签人（{{ count }} 人，全部通过才生效）{% endblocktranslate %}</h3>      {% for s in signers %}
@@ -77,16 +100,32 @@
         </div>
         <div class="d-flex gap-3">
           {% if is_counter %}
-          <button class="r-btn" type="submit" name="action" value="sign_approve">{% trans "会签通过" %}</button>
-          <button class="r-btn" type="submit" name="action" value="sign_reject" style="box-shadow: var(--r-shadow-orange);">{% trans "会签驳回" %}</button>
+          <button class="r-btn" type="submit" name="action" value="sign_approve"
+                  data-confirm="{% trans '确认会签通过？确认后不可修改。' %}">{% trans "会签通过" %}</button>
+          <button class="r-btn" type="submit" name="action" value="sign_reject" style="box-shadow: var(--r-shadow-orange);"
+                  data-confirm="{% trans '确认会签驳回？确认后不可修改。' %}">{% trans "会签驳回" %}</button>
           {% else %}
-          <button class="r-btn" type="submit" name="action" value="approve">{% trans "通过" %}</button>
-          <button class="r-btn" type="submit" name="action" value="reject" style="box-shadow: var(--r-shadow-orange);">{% trans "驳回" %}</button>
+          <button class="r-btn" type="submit" name="action" value="approve"
+                  data-confirm="{% trans '确认通过该申请？确认后不可修改。' %}">{% trans "通过" %}</button>
+          <button class="r-btn" type="submit" name="action" value="reject" style="box-shadow: var(--r-shadow-orange);"
+                  data-confirm="{% trans '确认驳回该申请？确认后不可修改。' %}">{% trans "驳回" %}</button>
           {% endif %}
         </div>
+        <p class="text-muted mt-3 mb-0" style="font-size:.75rem;">{% trans "审批操作需二次确认；确认后状态不可修改。" %}</p>
       </form>
+    </div>
+    {% elif not status_pending %}
+    <div class="r-card">
+      <p class="text-muted mb-0" style="font-size:.85rem;">{% trans "该申请已处理，不可修改。" %}</p>
     </div>
     {% endif %}
   </div>
 </div>
+<script>
+  document.querySelectorAll('button[data-confirm]').forEach(function (btn) {
+    btn.addEventListener('click', function (event) {
+      if (!window.confirm(btn.dataset.confirm)) { event.preventDefault(); }
+    });
+  });
+</script>
 {% endblock %}

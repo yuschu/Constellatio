@@ -16,7 +16,7 @@
 
 <div class="r-sidebar-title">{% trans "待办聚合" %}</div>
 <div class="row g-4 mb-4">
-  {% if 'approval' in plugins_enabled %}
+  {% if 'approval' in plugins_enabled and can_approve %}
   <div class="col-md-6">
     <div class="r-card r-card--lift h-100">
       <div class="d-flex justify-content-between align-items-start">

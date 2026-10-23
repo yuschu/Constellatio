@@ -14,8 +14,9 @@ class ApprovalConfig(AppConfig):
             title=_('审批中心'),
             menus=[
                 {'label': _('审批中心'), 'icon': '▣', 'url': '/plugins/approval/', 'perm': 'approval_view'},
-                {'label': _('待我审批'), 'icon': '☐', 'url': '/plugins/approval/pending/', 'perm': 'approval_view'},
-                {'label': _('抄送我的'), 'icon': '✉', 'url': '/plugins/approval/cc/', 'perm': 'approval_view'},
+                # v1.5.15：待我审批仅管理岗可见（L3 隐藏）
+                {'label': _('待我审批'), 'icon': '☐', 'url': '/plugins/approval/pending/', 'perm': 'approval_approve'},
+                {'label': _('抄送我的'), 'icon': '✉', 'url': '/plugins/approval/cc/', 'perm': 'approval_approve'},
             ],
             permissions=['approval_view', 'approval_approve'],
             urls='plugins.approval.urls',

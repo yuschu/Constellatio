@@ -45,27 +45,29 @@
 </div>
 {% endif %}
 
-<div class="row g-4 mb-4">
-  <div class="col-md-6">
-    <div class="r-card h-100">
-      <h3 class="fs-5 mb-3">{% trans "当前部门树" %}</h3>
+<div class="row g-4 mb-4 align-items-stretch">
+  <div class="col-md-6 d-flex">
+    <div class="r-card h-100 w-100 d-flex flex-column" style="max-height:min(62vh, 34rem); overflow:hidden;">
+      <h3 class="fs-5 mb-3 flex-shrink-0">{% trans "当前部门树" %}</h3>
       {% if dept_org %}
-      <ul class="list-unstyled mb-0">
-        {% for node in dept_org %}{% include "structure/_dept_node.html" with node=node %}{% endfor %}
-      </ul>
+      <div class="flex-grow-1" style="overflow-y:auto; min-height:0;">
+        <ul class="list-unstyled mb-0">
+          {% for node in dept_org %}{% include "structure/_dept_node.html" with node=node %}{% endfor %}
+        </ul>
+      </div>
       {% else %}
       <p class="text-muted mb-0" style="font-size:.85rem;">{% trans "暂无部门数据，可在「查看模板」中应用职能制模板。" %}</p>
       {% endif %}
     </div>
   </div>
-  <div class="col-md-6">
-    <div class="r-card h-100 d-flex flex-column">
-      <div class="d-flex justify-content-between align-items-baseline mb-2">
+  <div class="col-md-6 d-flex">
+    <div class="r-card h-100 w-100 d-flex flex-column" style="max-height:min(62vh, 34rem); overflow:hidden;">
+      <div class="d-flex justify-content-between align-items-baseline mb-2 flex-shrink-0">
         <h3 class="fs-5 mb-0">{% trans "当前角色" %}</h3>
         <span class="text-muted" style="font-size:.75rem;">{% trans "点击角色查看成员" %}</span>
       </div>
       {% if role_rows %}
-      <div class="role-scroll flex-grow-1" style="overflow-y:auto; max-height:min(60vh, 32rem); min-height:0;">
+      <div class="role-scroll flex-grow-1" style="overflow-y:auto; min-height:0;">
         {% for r in role_rows %}
         <button type="button" class="role-card w-100 text-start border rounded-3 p-2 mb-2 bg-transparent"
                 data-role-index="{{ forloop.counter0 }}" aria-haspopup="dialog">
@@ -88,7 +90,7 @@
 
 <div class="modal fade" id="roleModal" tabindex="-1" aria-labelledby="roleModalLabel" aria-hidden="true"
      data-empty="{% trans '该角色暂无成员' %}" data-disabled="{% trans '停用' %}">
-  <div class="modal-dialog modal-dialog-scrollable">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="roleModalLabel">{% trans "角色成员" %}</h5>
@@ -102,10 +104,25 @@
     </div>
   </div>
 </div>
+<style>
+  /* v1.5.13：角色弹窗居中 + 浮出（缩放淡入）动画 */
+  #roleModal .modal-dialog {
+    transform: translateY(14px) scale(.96);
+    opacity: 0;
+    transition: transform .18s ease, opacity .18s ease;
+  }
+  #roleModal.show .modal-dialog { transform: none; opacity: 1; }
+  @media (prefers-reduced-motion: reduce) {
+    #roleModal .modal-dialog { transition: none; transform: none; opacity: 1; }
+  }
+</style>
 {{ role_rows|json_script:"role-members" }}
 <script>
-  (function () {
-    var data = JSON.parse(document.getElementById('role-members').textContent);
+  document.addEventListener('DOMContentLoaded', function () {
+    if (!window.bootstrap) { return; }
+    var dataEl = document.getElementById('role-members');
+    if (!dataEl) { return; }
+    var data = JSON.parse(dataEl.textContent);
     var modalEl = document.getElementById('roleModal');
     var modal = new bootstrap.Modal(modalEl);
     var title = document.getElementById('roleModalLabel');
@@ -122,28 +139,34 @@
           : modalEl.dataset.empty;
         list.replaceChildren();
         role.members.forEach(function (member) {
-          var item = document.createElement('li');
-          item.className = 'd-flex justify-content-between border-bottom py-2';
-          item.style.fontSize = '.85rem';
+          var row = document.createElement('li');
+          row.className = 'border-bottom';
+          var link = document.createElement('a');
+          link.className = 'd-flex justify-content-between align-items-center py-2 r-offset-hover';
+          link.style.fontSize = '.85rem';
+          link.href = member.url;
           var who = document.createElement('span');
           who.textContent = member.name + '（' + member.account + '）';
+          var side = document.createElement('span');
+          side.className = 'd-flex align-items-center gap-2 text-muted';
           var dept = document.createElement('span');
-          dept.className = 'text-muted';
           dept.textContent = member.dept || '—';
-          item.appendChild(who);
-          item.appendChild(dept);
+          side.appendChild(dept);
           if (!member.is_active) {
             var badge = document.createElement('span');
-            badge.className = 'r-badge r-badge--pink ms-2';
+            badge.className = 'r-badge r-badge--pink';
             badge.textContent = modalEl.dataset.disabled;
-            item.appendChild(badge);
+            side.appendChild(badge);
           }
-          list.appendChild(item);
+          link.appendChild(who);
+          link.appendChild(side);
+          row.appendChild(link);
+          list.appendChild(row);
         });
         modal.show();
       });
     });
-  })();
+  });
 </script>
 
 <div class="r-card mb-4">
@@ -181,7 +204,7 @@
     <tbody>
       {% for row in org_rows %}
       <tr>
-        <td>{{ row.name }}</td>
+        <td><a href="{% url 'structure:user_detail' row.id %}" class="r-offset-hover">{{ row.name }}</a></td>
         <td>{{ row.account }}</td>
         <td>{{ row.dept|default:"—" }}</td>
         <td>{{ row.roles|join:" / "|default:"—" }}</td>

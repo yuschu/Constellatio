@@ -25,7 +25,17 @@
           {% elif a.status == 'rejected' %}<span class="r-badge r-badge--orange">{% trans "已驳回" %}</span>
           {% else %}<span class="r-badge">{% trans "草稿" %}</span>{% endif %}
         </td>
-        <td><a href="{% url 'approval:approval_detail' a.id %}" class="r-offset-hover">{% trans "详情" %}</a></td>
+        <td class="d-flex flex-wrap gap-2 align-items-center">
+          <a href="{% url 'approval:approval_detail' a.id %}" class="r-offset-hover">{% trans "详情" %}</a>
+          {% if a.status == 'rejected' %}
+          <a href="{% url 'approval:approval_create' %}?reapply={{ a.id }}" class="r-btn r-btn--plain">{% trans "重新申请" %}</a>
+          <form method="post" action="{% url 'approval:approval_hide' a.id %}" class="d-inline m-0"
+                data-confirm="{% trans '删除后仅对你隐藏，不影响审批留痕，确定继续？' %}">
+            {% csrf_token %}
+            <button class="r-btn r-btn--plain" type="submit">{% trans "删除申请" %}</button>
+          </form>
+          {% endif %}
+        </td>
       </tr>
       {% empty %}
       <tr><td colspan="7" class="text-muted">{% trans "暂无审批记录" %}</td></tr>
@@ -33,4 +43,11 @@
     </tbody>
   </table>
 </div>
+<script>
+  document.querySelectorAll('form[data-confirm]').forEach(function (form) {
+    form.addEventListener('submit', function (event) {
+      if (!window.confirm(form.dataset.confirm)) { event.preventDefault(); }
+    });
+  });
+</script>
 {% endblock %}

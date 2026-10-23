@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{{ target.last_name|default:target.username }} · {% trans "用户资料" %}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4">
+  <div>
+    <h2 class="mb-1">{{ target.last_name|default:target.username }}</h2>
+    <a href="{% url 'structure:overview' %}" class="r-small">← {% trans "返回组织架构" %}</a>
+  </div>
+  {% if can_manage %}
+  <a href="{% url 'user:user_edit' target.pk %}" class="r-btn r-btn--plain">{% trans "用户管理" %} →</a>
+  {% endif %}
+</div>
+
+<div class="row g-4">
+  <div class="col-md-6">
+    <div class="r-card h-100">
+      <h3 class="fs-5 mb-3">{% trans "基本信息" %}</h3>
+      <table class="r-table">
+        <tbody>
+          <tr><th>{% trans "姓名" %}</th><td>{{ target.last_name|default:"—" }}</td></tr>
+          <tr><th>{% trans "账号" %}</th><td>{{ target.username }}</td></tr>
+          <tr><th>{% trans "部门" %}</th><td>{{ target.department.name|default:"—" }}</td></tr>
+          <tr>
+            <th>{% trans "直属上级" %}</th>
+            <td>
+              {% if target.leader %}
+              <a href="{% url 'structure:user_detail' target.leader.pk %}" class="r-offset-hover">{{ target.leader.last_name|default:target.leader.username }}</a>
+              {% else %}—{% endif %}
+            </td>
+          </tr>
+          <tr>
+            <th>{% trans "状态" %}</th>
+            <td>
+              {% if not target.is_active %}
+              <span class="r-badge r-badge--pink">{% trans "停用" %}</span>
+              {% elif target.permission_frozen %}
+              <span class="r-badge r-badge--orange">{% trans "权限冻结" %}</span>
+              {% else %}
+              <span class="r-badge r-badge--green">{% trans "在职" %}</span>
+              {% endif %}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="r-card h-100">
+      <h3 class="fs-5 mb-3">{% trans "角色与联系方式" %}</h3>
+      <table class="r-table">
+        <tbody>
+          <tr>
+            <th>{% trans "角色" %}</th>
+            <td>
+              {% for role in target.roles.all %}<span class="r-badge me-1 mb-1">{{ role.name }}</span>{% empty %}—{% endfor %}
+            </td>
+          </tr>
+          <tr><th>{% trans "邮箱" %}</th><td>{{ target.email|default:"—" }}</td></tr>
+          <tr><th>{% trans "创建时间" %}</th><td>{{ target.created_at|date:"Y-m-d H:i" }}</td></tr>
+          <tr><th>{% trans "直接下属" %}</th><td>{{ target.direct_reports.count }}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

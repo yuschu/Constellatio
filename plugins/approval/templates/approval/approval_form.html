@@ -1,12 +1,18 @@
 {% extends "base.html" %}
 {% load i18n %}
-{% block title %}{% trans "发起审批" %} · Constellatio{% endblock %}
+{% block title %}{% if reapply_of %}{% trans "重新申请" %}{% else %}{% trans "发起审批" %}{% endif %} · Constellatio{% endblock %}
 {% block content %}
 <div class="d-flex align-items-center gap-3 mb-4">
   <a href="{% url 'approval:approval_list' %}" class="r-offset-hover">← {% trans "返回" %}</a>
-  <h2 class="mb-0">{% trans "发起审批" %}</h2>
+  <h2 class="mb-0">{% if reapply_of %}{% trans "重新申请" %} · #{{ reapply_of.id }}{% else %}{% trans "发起审批" %}{% endif %}</h2>
 </div>
 
+{% if reapply_of %}
+<div class="r-card mb-4" style="font-size:.85rem;">
+  {% blocktranslate with id=reapply_of.id %}原申请 #{{ id }} 已驳回。修改内容后确认重新发起，确认后原记录将被新申请替换（留痕保留）。{% endblocktranslate %}
+  <span class="r-badge r-badge--blue ms-2">{% trans reapply_of.get_approval_type_display %}</span>
+</div>
+{% else %}
 <div class="r-card mb-4">
   <div class="r-sidebar-title">{% trans "选择审批类型" %}</div>
   <div class="d-flex flex-wrap gap-2">
@@ -15,12 +21,14 @@
     {% endfor %}
   </div>
 </div>
+{% endif %}
 
 <div class="r-card position-relative" style="max-width:620px;">
   <span class="r-register-mark"></span>
-  <form method="post" novalidate>
+  <form method="post" enctype="multipart/form-data" novalidate>
     {% csrf_token %}
     <input type="hidden" name="approval_type" value="{{ type_key }}">
+    {% if reapply_of %}<input type="hidden" name="reapply_of" value="{{ reapply_of.id }}">{% endif %}
 
     {% if form.non_field_errors %}
     <div class="text-danger mb-3" style="font-size:.85rem;">{{ form.non_field_errors }}</div>
@@ -47,13 +55,16 @@
     </div>
 
     <div class="mb-3">
-      <label class="form-label" for="{{ form.approver.id_for_label }}" style="font-size:.75rem; text-transform:uppercase;">{% trans "审批人" %}</label>
+      <label class="form-label" for="{{ form.approver.id_for_label }}" style="font-size:.75rem; text-transform:uppercase;">{% trans "审批人" %} <span class="text-danger">*</span></label>
       {{ form.approver }}
       {% for e in form.approver.errors %}<div class="text-danger" style="font-size:.8rem;">{{ e }}</div>{% endfor %}
-      <div class="text-muted mt-1" style="font-size:.75rem;">{% trans "可留空：默认由直属上级审批，并自动抄送审批人的上级。" %}</div>
+      <div class="text-muted mt-1" style="font-size:.75rem;">{% trans "审批人限定为该审批类型的业务负责人（管辖部门经理）；提交后自动抄送申请人的直系领导。" %}</div>
     </div>
 
-    <button class="r-btn" type="submit">{% trans "提交审批" %}</button>
+    <div class="d-flex align-items-center gap-3">
+      <button class="r-btn" type="submit">{% if reapply_of %}{% trans "确认重新发起" %}{% else %}{% trans "提交审批" %}{% endif %}</button>
+      {% if reapply_of %}<a href="{% url 'approval:approval_list' %}" class="r-offset-hover">{% trans "取消" %}</a>{% endif %}
+    </div>
   </form>
 </div>
 {% endblock %}

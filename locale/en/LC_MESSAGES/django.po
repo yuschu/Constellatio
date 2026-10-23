@@ -1179,3 +1179,90 @@ msgstr "Click a role to see its members"
 
 msgid "共 {count} 人"
 msgstr "{count} member(s) in total"
+
+msgid "用户资料"
+msgstr "User profile"
+
+msgid "基本信息"
+msgstr "Basic information"
+
+msgid "角色与联系方式"
+msgstr "Roles and contact"
+
+msgid "邮箱"
+msgstr "Email"
+
+msgid "创建时间"
+msgstr "Created at"
+
+msgid "用章文件"
+msgstr "Seal document"
+
+msgid "用途"
+msgstr "Purpose"
+
+msgid "附件"
+msgstr "Attachment"
+
+msgid "下载附件"
+msgstr "Download attachment"
+
+msgid "文件不能超过 %(mb)sMB"
+msgstr "File must not exceed %(mb)sMB"
+
+msgid "调休开始时间"
+msgstr "Comp time start"
+
+msgid "调休结束时间"
+msgstr "Comp time end"
+
+msgid "电子盖章"
+msgstr "E-seal"
+
+msgid "待接入"
+msgstr "Pending integration"
+
+msgid "审批人默认由系统按审批类型分配至管辖部门（人力资源 / 财务 / 行政）；手动选择仅在无法路由时生效，并自动抄送审批人的上级。"
+msgstr "The approver is routed to the governing department (HR / Finance / Admin) by approval type; manual choice applies only when routing is unavailable, and the approver's superior is CC'd automatically."
+
+msgid "重新申请"
+msgstr "Apply again"
+
+msgid "删除申请"
+msgstr "Delete application"
+
+msgid "删除后仅对你隐藏，不影响审批留痕，确定继续？"
+msgstr "This only hides it for you and keeps the audit trail. Continue?"
+
+msgid "确认重新发起"
+msgstr "Confirm resubmit"
+
+msgid "已替换"
+msgstr "Replaced"
+
+msgid "该申请已处理，不可修改。"
+msgstr "This request is finalized and cannot be changed."
+
+msgid "确认通过该申请？确认后不可修改。"
+msgstr "Approve this request? It cannot be changed afterwards."
+
+msgid "确认驳回该申请？确认后不可修改。"
+msgstr "Reject this request? It cannot be changed afterwards."
+
+msgid "确认会签通过？确认后不可修改。"
+msgstr "Sign to approve? It cannot be changed afterwards."
+
+msgid "确认会签驳回？确认后不可修改。"
+msgstr "Sign to reject? It cannot be changed afterwards."
+
+msgid "审批操作需二次确认；确认后状态不可修改。"
+msgstr "Approval actions require confirmation; the status is final afterwards."
+
+msgid "原申请 #%(id)s 已驳回。修改内容后确认重新发起，确认后原记录将被新申请替换（留痕保留）。"
+msgstr "Application #%(id)s was rejected. Edit the fields and resubmit; it will replace the rejected record (audit trail kept)."
+
+msgid "审批人限定为该审批类型的业务负责人（管辖部门经理）；提交后自动抄送申请人的直系领导。"
+msgstr "Approver is limited to the owning manager for this approval type; the applicant's direct leader is CC'd on submit."
+
+msgid "请选择有效的业务负责人"
+msgstr "Please choose a valid owning manager"

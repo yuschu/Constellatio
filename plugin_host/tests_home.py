@@ -48,12 +48,18 @@ class WorkbenchTests(TestCase):
         self.assertContains(response, '/plugins/workspace/')
 
     def test_pending_count(self):
+        manager = User.objects.create_user('mgr_pending', '', 'pw', last_name='经理')
+        grant(manager, 'approval_view', 'approval_approve')
         Approval.objects.create(
             approval_type=Approval.Type.LEAVE, title='请假',
-            applicant=self.staff, approver=self.staff, status=Approval.Status.PENDING)
+            applicant=self.staff, approver=manager, status=Approval.Status.PENDING)
+        # v1.5.15：L3 不显示待办计数
         self.client.force_login(self.staff)
-        response = self.client.get('/')
-        self.assertEqual(response.context['pending_approvals'], 1)
+        self.assertEqual(self.client.get('/').context['pending_approvals'], 0)
+        self.assertNotContains(self.client.get('/'), '/plugins/approval/pending/')
+        # 管理岗可见并计数
+        self.client.force_login(manager)
+        self.assertEqual(self.client.get('/').context['pending_approvals'], 1)
 
     def test_attendance_todo_states(self):
         self.client.force_login(self.staff)

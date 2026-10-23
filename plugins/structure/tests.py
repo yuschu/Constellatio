@@ -202,6 +202,14 @@ class StructureApplyTests(TestCase):
         self.assertContains(resp, 'id="roleModal"')
         self.assertContains(resp, 'id="role-members"')
         self.assertContains(resp, '"account": "role_member"')
+        self.assertContains(resp, '"url": "/plugins/structure/user/')
+        # v1.5.11：卡片等高等高、内层滚动，不再用内层 max-height 造成底部空白
+        self.assertContains(resp, 'max-height:min(62vh, 34rem)')
+        self.assertNotContains(resp, 'max-height:min(60vh, 32rem)')
+        self.assertContains(resp, 'align-items-stretch')
+        # v1.5.13：弹窗垂直居中 + 浮出动画
+        self.assertContains(resp, 'modal-dialog-centered')
+        self.assertContains(resp, '#roleModal .modal-dialog')
 
     def test_single_structure_menu(self):
         """v1.5.9：组织架构与应用结构合并为单一菜单入口。"""
@@ -355,3 +363,56 @@ class StructureOverviewTreeTests(TestCase):
         self.assertEqual(
             self.client.get(reverse('structure:overview')).status_code, 302)
 
+
+
+class StructureUserDetailTests(TestCase):
+    """v1.5.12：角色成员 → 用户资料（只读详情）。"""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.viewer = User.objects.create_user('detail_viewer', password='pw')
+        cls.viewer_role = Role.objects.create(name='资料查看')
+        cls.viewer_role.permissions.add(Permission.objects.get(codename='structure_view'))
+        cls.viewer.roles.add(cls.viewer_role)
+        cls.leader = User.objects.create_user('detail_leader', last_name='上级甲', password='pw')
+        cls.target = User.objects.create_user(
+            'detail_target', last_name='资料对象', email='t@example.com', password='pw',
+            leader=cls.leader)
+        cls.target.roles.add(cls.viewer_role)
+
+    def test_detail_requires_structure_view(self):
+        noperm = User.objects.create_user('detail_noperm', password='pw')
+        self.client.force_login(noperm)
+        resp = self.client.get(reverse('structure:user_detail', args=[self.target.pk]))
+        self.assertEqual(resp.status_code, 302)
+
+    def test_detail_shows_profile(self):
+        self.client.force_login(self.viewer)
+        resp = self.client.get(reverse('structure:user_detail', args=[self.target.pk]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, '资料对象')
+        self.assertContains(resp, 'detail_target')
+        self.assertContains(resp, 't@example.com')
+        self.assertContains(resp, '资料查看')
+        self.assertContains(resp, '上级甲')
+        self.assertContains(resp, '基本信息')
+
+    def test_unknown_user_404(self):
+        self.client.force_login(self.viewer)
+        resp = self.client.get(reverse('structure:user_detail', args=[999999]))
+        self.assertEqual(resp.status_code, 404)
+
+    def test_edit_link_only_with_user_manage(self):
+        edit_url = reverse('user:user_edit', args=[self.target.pk])
+        self.client.force_login(self.viewer)
+        self.assertNotContains(
+            self.client.get(reverse('structure:user_detail', args=[self.target.pk])), edit_url)
+        admin = User.objects.create_superuser('detail_admin', '', 'pw')
+        self.client.force_login(admin)
+        self.assertContains(
+            self.client.get(reverse('structure:user_detail', args=[self.target.pk])), edit_url)
+
+    def test_roster_links_to_user_detail(self):
+        self.client.force_login(self.viewer)
+        resp = self.client.get(reverse('structure:overview'))
+        self.assertContains(resp, reverse('structure:user_detail', args=[self.target.pk]))

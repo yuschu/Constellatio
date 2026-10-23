@@ -19,25 +19,29 @@ def _record(approval, operator, action, comment):
         approval=approval, operator=operator, action=action, comment=comment)
 
 
-def _cc_approver_superior(approval):
-    """抄送审批人的上级（v1.5.5）：审批人收到申请时、审批完成时各抄送一次（幂等）。"""
-    if not approval.approver_id:
-        return None
-    superior = approval.approver.leader
-    if superior and superior.pk != approval.approver_id:
-        approval.cc_users.add(superior)
-        return superior
+def _cc_applicant_leader(approval):
+    """抄送申请人的直系领导（v1.5.18）：发起与审批完成时各抄送一次（幂等）。
+
+    若直系领导就是申请人本人或审批人，则跳过（无需重复通知）。
+    """
+    leader = approval.applicant.leader if approval.applicant.leader_id else None
+    if leader and leader.pk not in {approval.applicant_id, approval.approver_id}:
+        approval.cc_users.add(leader)
+        return leader
     return None
 
 
-def submit(approval, operator, comment=''):
-    """草稿/待审批 → 待审批；同时抄送审批人的上级。"""
+def submit(approval, operator, comment='', action='submit'):
+    """草稿/待审批 → 待审批；同时抄送申请人的直系领导。
+
+    action 默认为 submit；重新申请时传 resubmit 以区分留痕（v1.5.16）。
+    """
     if approval.status not in (Approval.Status.DRAFT, Approval.Status.PENDING):
         raise ValueError('只有草稿/待审批状态可提交')
     approval.status = Approval.Status.PENDING
     approval.save(update_fields=['status', 'updated_at'])
-    _record(approval, operator, 'submit', comment)
-    _cc_approver_superior(approval)
+    _record(approval, operator, action, comment)
+    _cc_applicant_leader(approval)
 
 
 def approve(approval, operator, comment=''):
@@ -47,7 +51,11 @@ def approve(approval, operator, comment=''):
     approval.status = Approval.Status.APPROVED
     approval.save(update_fields=['status', 'updated_at'])
     _record(approval, operator, 'approve', comment)
-    _cc_approver_superior(approval)
+    _cc_applicant_leader(approval)
+    # v1.5.15：用章通过后执行电子盖章（当前为占位文本，待电子章插件接入）
+    if approval.approval_type == Approval.Type.SEAL:
+        from .eseal import apply_e_seal
+        _record(approval, operator, 'e_seal', apply_e_seal(approval))
     approval_finished.send(sender=approval.__class__, approval_id=approval.id, result='approved')
 
 
@@ -58,7 +66,7 @@ def reject(approval, operator, comment=''):
     approval.status = Approval.Status.REJECTED
     approval.save(update_fields=['status', 'updated_at'])
     _record(approval, operator, 'reject', comment)
-    _cc_approver_superior(approval)
+    _cc_applicant_leader(approval)
     approval_finished.send(sender=approval.__class__, approval_id=approval.id, result='rejected')
 
 

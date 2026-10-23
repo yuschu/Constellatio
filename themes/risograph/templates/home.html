@@ -17,7 +17,7 @@
 
 <div class="fw-bold text-uppercase mb-3" style="font-size:.8rem; letter-spacing:.08em;">{% trans "待办聚合" %}</div>
 <div class="row g-4 mb-4">
-  {% if 'approval' in plugins_enabled %}
+  {% if 'approval' in plugins_enabled and can_approve %}
   <div class="col-md-6">
     <div class="r-card h-100">
       <div class="d-flex justify-content-between align-items-start">

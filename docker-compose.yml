@@ -39,6 +39,8 @@ services:
     command: ["sh", "./entrypoint.sh"]
     ports:
       - "${WEB_PORT:-8000}:8000"
+    volumes:
+      - media_data:/app/media   # v1.5.14：审批附件持久化
     depends_on:
       db:
         condition: service_healthy
@@ -46,3 +48,4 @@ services:
 
 volumes:
   db_data:
+  media_data:

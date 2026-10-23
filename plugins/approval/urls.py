@@ -12,4 +12,6 @@ urlpatterns = [
     path('cc/', views.approval_cc, name='approval_cc'),
     path('new/', views.approval_create, name='approval_create'),
     path('<int:approval_id>/', views.approval_detail, name='approval_detail'),
+    path('<int:approval_id>/attachment/', views.approval_attachment, name='approval_attachment'),
+    path('<int:approval_id>/hide/', views.approval_hide, name='approval_hide'),
 ]

@@ -3,22 +3,27 @@
 from django.apps import apps as dj_apps
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 
 from plugin_host.permissions import require_perm
 
 from . import forms
-from .models import Approval
+from .models import Approval, ApprovalRecord
+from .routing import candidate_approvers as resolve_candidates
 from .services import approve, reject, sign_approve, sign_reject, submit
 
 User = get_user_model()
 
 
 def _can_act(user, approval):
-    """审批操作人校验：
+    """审批操作人校验（v1.5.17：仅待审批可操作，处理后不可修改）：
     - 会签单：必须是会签人本人且未签
     - 普通单：审批人本人 或 具备 approval_approve 权限
     """
+    if approval.status != Approval.Status.PENDING:
+        return False
     if approval.is_counter_signature():
         row = approval.signers.filter(signer=user).first()
         return row is not None and not row.signed
@@ -50,15 +55,16 @@ def _overtime_choices(user):
     return choices
 
 
-def _resolve_approver(applicant, approver_id):
-    """审批人：显式选择 → 直属上级 → 兜底启用中的超管。"""
-    if approver_id:
-        chosen = User.objects.filter(pk=approver_id, is_active=True).first()
-        if chosen is not None:
-            return chosen
-    if applicant.leader_id and applicant.leader and applicant.leader.is_active:
-        return applicant.leader
-    return User.objects.filter(is_superuser=True, is_active=True).order_by('pk').first()
+def _fallback_approvers(applicant):
+    """路由缺失时的审批人候选（v1.5.18）：申请人直属上级 + 具备审批权限的启用用户。"""
+    candidates = []
+    leader = applicant.leader if applicant.leader_id else None
+    if leader is not None and leader.is_active and leader.pk != applicant.pk:
+        candidates.append(leader)
+    for user in User.objects.filter(is_active=True).exclude(pk=applicant.pk).order_by('pk'):
+        if user.has_perm('approval_approve') and user not in candidates:
+            candidates.append(user)
+    return candidates
 
 
 def _summary(approval_type, cleaned, basis_label=''):
@@ -70,20 +76,24 @@ def _summary(approval_type, cleaned, basis_label=''):
             continue
         if name == 'basis' and basis_label:
             value = basis_label
+        value = getattr(value, 'name', value)   # 上传文件只展示文件名
         lines.append(f'{label}：{value}')
     return '\n'.join(lines)
 
 
 @require_perm('approval_view')
 def approval_list(request):
-    """我发起的审批。"""
-    approvals = Approval.objects.filter(applicant=request.user)
+    """我发起的审批（v1.5.16：已驳回且申请人隐藏的记录不再展示）。"""
+    approvals = Approval.objects.filter(applicant=request.user, applicant_hidden=False)
     return render(request, 'approval/approval_list.html', {'approvals': approvals})
 
 
-@require_perm('approval_view')
+@require_perm('approval_approve')
 def approval_pending(request):
-    """待我审批：普通单（approver=我） + 会签单（我是 signer 且未签）。"""
+    """待我审批：普通单（approver=我） + 会签单（我是 signer 且未签）。
+
+    v1.5.15：仅具备 approval_approve 的管理岗可见（L3 隐藏入口与页面）。
+    """
     approvals = Approval.objects.filter(
         approver=request.user, status=Approval.Status.PENDING)
     counter = Approval.objects.filter(
@@ -93,9 +103,9 @@ def approval_pending(request):
     return render(request, 'approval/approval_pending.html', {'approvals': merged})
 
 
-@require_perm('approval_view')
+@require_perm('approval_approve')
 def approval_cc(request):
-    """抄送我的：审批人上级自动抄送的申请（发起时 + 审批完成时）。"""
+    """抄送我的（v1.5.17：仅管理岗可见，L3 隐藏）。"""
     approvals = request.user.cc_approvals.select_related(
         'applicant', 'approver').order_by('-created_at')
     return render(request, 'approval/approval_cc.html', {'approvals': approvals})
@@ -103,20 +113,39 @@ def approval_cc(request):
 
 @require_perm('approval_view')
 def approval_create(request):
-    """发起审批：按类型渲染动态表单（v1.5.5）。"""
-    type_key = request.GET.get('type') or request.POST.get('approval_type') \
-        or Approval.Type.LEAVE
+    """发起审批 / 重新申请（v1.5.17：重新申请进入预填的可编辑表单）。"""
+    reapply_of = request.GET.get('reapply') or request.POST.get('reapply_of')
+    source = None
+    if reapply_of:
+        source = Approval.objects.filter(
+            pk=reapply_of, applicant=request.user,
+            status=Approval.Status.REJECTED).first()
+        if source is None:
+            return redirect('approval:approval_list')
+
+    type_key = (source.approval_type if source else (
+        request.GET.get('type') or request.POST.get('approval_type')
+        or Approval.Type.LEAVE))
     if type_key not in forms.FORM_CLASSES:
         type_key = Approval.Type.LEAVE
 
     departments = _departments()
-    approvers = User.objects.filter(is_active=True).exclude(
-        pk=request.user.pk).order_by('last_name', 'username')
+    # v1.5.18：审批人限定为该类审批的相关业务负责人；无路由部门时回退直属上级 / 审批权限用户
+    approvers = [u for u in resolve_candidates(type_key)
+                 if u.pk != request.user.pk]
+    if not approvers:
+        approvers = _fallback_approvers(request.user)
     overtime_choices = _overtime_choices(request.user)
+    initial = dict(source.form_data) if source else None
     form = forms.form_for_type(
-        type_key, request.POST or None, applicant=request.user,
+        type_key, request.POST or None, request.FILES or None,
+        applicant=request.user,
         departments=departments, approvers=approvers,
-        overtime_choices=overtime_choices)
+        overtime_choices=overtime_choices, initial=initial)
+    if approvers:
+        form.fields['approver'].initial = str(approvers[0].pk)
+    if source is not None and source.department_id:
+        form.fields['department'].initial = str(source.department_id)
 
     if request.method == 'POST' and form.is_valid():
         Department = None
@@ -126,17 +155,19 @@ def approval_create(request):
         if Department is not None:
             department = Department.objects.filter(
                 pk=form.cleaned_data['department']).first()
-        approver = _resolve_approver(request.user, form.cleaned_data.get('approver'))
+        approver = User.objects.filter(
+            pk=form.cleaned_data.get('approver'), is_active=True).first()
         if department is None:
             form.add_error('department', '请选择有效部门')
         elif approver is None:
-            form.add_error('approver', '未指定审批人，且当前账号没有直属上级')
+            form.add_error('approver', '请选择有效的业务负责人')
         else:
             form_data = {}
             for name, _label in forms.type_fields(type_key):
                 value = form.cleaned_data.get(name)
-                if value not in (None, ''):
-                    form_data[name] = str(value)
+                if value in (None, ''):
+                    continue
+                form_data[name] = getattr(value, 'name', str(value))
             basis_id = form_data.get('basis')
             basis_label = ''
             if basis_id:
@@ -151,8 +182,20 @@ def approval_create(request):
                 approver=approver,
                 department_id=department.pk,
                 department_name=department.name,
-                form_data=form_data)
-            submit(approval, request.user, '发起审批')
+                form_data=form_data,
+                amount=form.cleaned_data.get('amount') if type_key == Approval.Type.EXPENSE else None,
+                attachment=form.cleaned_data.get('seal_file') if type_key == Approval.Type.SEAL else None)
+            submit(approval, request.user,
+                   f'重新申请（原单 #{source.pk}）' if source else '发起审批',
+                   action='resubmit' if source else 'submit')
+            if source is not None:
+                source.replaced_by = approval
+                source.applicant_hidden = True
+                source.save(update_fields=['replaced_by', 'applicant_hidden', 'updated_at'])
+                ApprovalRecord.objects.create(
+                    approval=source, operator=request.user, action='replaced',
+                    comment=f'被 #{approval.pk} 替换')
+                return redirect('approval:approval_detail', approval_id=approval.pk)
             return redirect('approval:approval_list')
 
     return render(request, 'approval/approval_form.html', {
@@ -161,7 +204,19 @@ def approval_create(request):
         'types': [{'key': key, 'label': Approval.Type(key).label}
                   for key in forms.FORM_TYPES],
         'users': approvers,
+        'reapply_of': source,
     })
+
+
+@require_perm('approval_view')
+@require_POST
+def approval_hide(request, approval_id):
+    """删除申请记录（v1.5.16）：仅对申请人隐藏，不删除审批留痕。"""
+    approval = get_object_or_404(Approval, pk=approval_id, applicant=request.user)
+    if approval.status == Approval.Status.REJECTED:
+        approval.applicant_hidden = True
+        approval.save(update_fields=['applicant_hidden', 'updated_at'])
+    return redirect('approval:approval_list')
 
 
 @login_required
@@ -197,7 +252,9 @@ def approval_detail(request, approval_id):
         value = approval.form_data.get(name, '')
         if name == 'basis':
             value = approval.form_data.get('basis_label', value)
-        form_rows.append((label, value or '—'))
+        if value in (None, '', '—'):   # v1.5.17：详情隐藏空内容项
+            continue
+        form_rows.append((label, value))
 
     return render(request, 'approval/approval_detail.html', {
         'approval': approval,
@@ -207,4 +264,25 @@ def approval_detail(request, approval_id):
         'is_counter': approval.is_counter_signature(),
         'form_rows': form_rows,
         'cc_users': approval.cc_users.all(),
+        'status_pending': approval.status == Approval.Status.PENDING,
     })
+
+
+@login_required
+def approval_attachment(request, approval_id):
+    """用章附件下载（v1.5.14）：申请人 / 审批人 / 会签人 / 抄送人 / approval_view 可下载。"""
+    approval = get_object_or_404(Approval, pk=approval_id)
+    involved = approval.applicant_id == request.user.pk or approval.approver_id == request.user.pk
+    allowed = (
+        involved
+        or approval.signers.filter(signer=request.user).exists()
+        or approval.cc_users.filter(pk=request.user.pk).exists()
+        or request.user.has_perm('approval_view')
+    )
+    if not allowed:
+        return redirect('index')
+    if not approval.attachment:
+        return redirect('approval:approval_detail', approval_id=approval.id)
+    return FileResponse(
+        approval.attachment.open('rb'), as_attachment=True,
+        filename=approval.attachment.name.rsplit('/', 1)[-1])
