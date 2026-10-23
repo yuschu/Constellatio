@@ -174,3 +174,30 @@ structure_applied(applied_by_id, dept_created, role_created, user_created)  # st
 - `apply_structure()` 在创建/幂等应用后补齐上级（**只补空，不覆盖人工调整**）；`manage.py grant_role_perms --seed-leaders` 用于老库一次性补齐。
 - 该映射供审批「审批人留空时自动指派直属上级」与「抄送审批人上级」使用。
 - 测试：组员上级为部门经理、经理上级为总经理、总经理无上级、重复应用不覆盖人工调整。
+
+## 十二、v1.5.6 增补：用户关系树（责任划分）
+
+### 12.1 定位
+
+总览页从「模板预览」补上「真实账号的关系树」，用于责任划分：谁向谁汇报、每位责任人的直接下属与含下级规模。
+
+### 12.2 口径（详见 `docs/plugin-dev-v156.md`）
+
+- **数据源**：真实 `user.User`，不改模板常量；上级唯一来源 `User.leader`（不新增表、无迁移）。
+- **树**：无上级为根；`A→B→A` 与自环按「汇报环」处理——环上节点提为根并标 `汇报环`，环内边断开，页面不递归、节点不重复；环外下属仍挂在其上级下。
+- **停用账号**：保留在树中并标「停用」，上级停用不拆树；上级被删（`SET_NULL`）自然成为根。
+- **计数**：直接下属 = `leader` 指向本人的账号数；含下级合计 = 子树账号数（不含本人）。
+- **权限**：沿用总览 `structure_view`，不做行级数据权限；无新路由、无新菜单。
+
+### 12.3 实现落点
+
+| 文件 | 内容 |
+|---|---|
+| `plugins/structure/hierarchy.py` | `build_user_tree()` → `roots / rows / stats`；环检测（迭代 DFS 染色） |
+| `plugins/structure/views.py` | 总览注入 `org_roots / org_rows / org_stats`；修复 `users_by_dept` 未注入缺陷 |
+| `templates/structure/overview.html` | 「用户关系树（责任划分）」统计 + 树 + 「责任人清单」表 |
+| `templates/structure/_tree_node.html` | 递归节点片段（角色徽标 / 直接下属 / 汇报环 / 停用） |
+
+### 12.4 测试
+
+树层级与计数、多根、成环（含自环）不递归不重复、停用保留、总览渲染与 `structure_view` 守卫、用户模板分组回归。
