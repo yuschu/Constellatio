@@ -10,8 +10,8 @@ class LanguageConfig(AppConfig):
         from plugin_host.registry import register, PluginMeta
         register(PluginMeta(
             name='language',
-            version='1.4.0',
-            title=_('中英文切换'),
+            version='1.5.7',
+            title=_('语言'),
             menus=[],
             permissions=[],
             urls='plugins.language.urls',

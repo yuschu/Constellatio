@@ -49,8 +49,8 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',   # 容器内静态托管（无需 nginx）
     'django.contrib.sessions.middleware.SessionMiddleware',
-    # 语言插件：默认中文 + 会话级 Cookie；替换 stock LocaleMiddleware
-    'plugins.language.middleware.DefaultLanguageMiddleware',
+    # 语言默认值（容器级，v1.5.7）：language 插件停用后仍沿用最后设置的语言
+    'plugin_host.middleware.DefaultLanguageMiddleware',
     'django.middleware.common.CommonMiddleware',
     'plugin_host.middleware.PluginRouteGuardMiddleware',  # 插件运行时启停：停用即 404
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -148,6 +148,8 @@ LANGUAGES = [
 ]
 LOCALE_PATHS = [BASE_DIR / 'locale']
 LANGUAGE_CODE = 'zh-hans'
+# v1.5.7：语言偏好持久化 1 年（language 插件停用后仍沿用最后设置的语言）
+LANGUAGE_COOKIE_AGE = 60 * 60 * 24 * 365
 TIME_ZONE = 'Asia/Shanghai'
 USE_I18N = True
 USE_TZ = True

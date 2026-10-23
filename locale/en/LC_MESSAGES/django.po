@@ -1098,3 +1098,21 @@ msgstr "No accounts yet. Create accounts under User management or apply the stru
 
 msgid "暂无用户数据"
 msgstr "No account data"
+
+msgid "语言"
+msgstr "Language"
+
+msgid "开关"
+msgstr "Switch"
+
+msgid "应用"
+msgstr "Apply"
+
+msgid "停用后登录 / 登出入口关闭，已登录会话仍可用；可用 manage.py plugin_switch on auth 恢复"
+msgstr "Disabling closes the login / logout entry; signed-in sessions keep working. Restore with: manage.py plugin_switch on auth"
+
+msgid "停用后账号、部门、角色管理入口关闭，已有会话与登录仍可用"
+msgstr "Disabling closes account, department and role management; sessions and login keep working"
+
+msgid "停用后组织架构与关系树入口关闭，组织数据不受影响"
+msgstr "Disabling closes the organization and reporting-tree entry; organization data is unaffected"

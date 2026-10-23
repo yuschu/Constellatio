@@ -19,12 +19,14 @@
     <div style="max-width:420px; width:100%;">
 
       <div class="d-flex justify-content-end mb-2">
+        {% if 'language' in plugins_enabled %}
         <form method="post" action="{% url 'language:language_switch' %}" class="d-flex align-items-center gap-1 mb-0">
           {% csrf_token %}
           <input type="hidden" name="next" value="{{ request.get_full_path }}">
           <button type="submit" name="lang" value="zh-hans" class="r-lang{% if LANGUAGE_CODE == 'zh-hans' %} is-active{% endif %}">中文</button>
           <button type="submit" name="lang" value="en" class="r-lang{% if LANGUAGE_CODE == 'en' %} is-active{% endif %}">EN</button>
         </form>
+        {% endif %}
       </div>
 
       <!-- 登录卡：硬边彩色阴影 + 套印规线角标 -->

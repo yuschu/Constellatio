@@ -64,11 +64,14 @@ def _user_has_perm(user, codename):
     return bool(user.has_perm(codename))
 
 
-def get_menus(user):
+def get_menus(user, plugins=None):
     """按用户权限过滤菜单：菜单项可声明 perm（如 {'label','icon','url','perm'}），
-    无 perm 的菜单登录即可见；有 perm 的按 RBAC 过滤。"""
+    无 perm 的菜单登录即可见；有 perm 的按 RBAC 过滤。
+
+    plugins 可传入已解析的 get_enabled_plugins() 结果，避免同一次请求重复查开关表。
+    """
     menus = []
-    for name, meta in get_enabled_plugins():
+    for name, meta in (get_enabled_plugins() if plugins is None else plugins):
         for menu in meta.menus:
             perm = menu.get('perm')
             if perm and not _user_has_perm(user, perm):

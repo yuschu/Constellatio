@@ -1,6 +1,6 @@
 """容器上下文处理器：向模板注入插件聚合菜单（含当前 Tab 高亮）。"""
 
-from .registry import get_menus
+from .registry import get_enabled_plugins, get_menus
 
 
 def _mark_active(menus, path):
@@ -22,6 +22,15 @@ def _mark_active(menus, path):
 
 
 def menus(request):
+    """注入菜单与本次请求实际启用的插件名。
+
+    v1.5.7：`plugins_enabled` 供外壳按插件启停隐藏入口
+    （language 停用 → 不渲染语言表单；auth 停用 → 不渲染登录/登出链接）。
+    """
+    plugins = get_enabled_plugins()
+    enabled = {name for name, _ in plugins}
     if request.user.is_authenticated:
-        return {'menus': _mark_active(get_menus(request.user), request.path)}
-    return {'menus': []}
+        menu_items = _mark_active(get_menus(request.user, plugins), request.path)
+    else:
+        menu_items = []
+    return {'menus': menu_items, 'plugins_enabled': enabled}

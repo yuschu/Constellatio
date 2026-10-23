@@ -17,6 +17,7 @@
 
 <div class="fw-bold text-uppercase mb-3" style="font-size:.8rem; letter-spacing:.08em;">{% trans "待办聚合" %}</div>
 <div class="row g-4 mb-4">
+  {% if 'approval' in plugins_enabled %}
   <div class="col-md-6">
     <div class="r-card h-100">
       <div class="d-flex justify-content-between align-items-start">
@@ -33,6 +34,8 @@
       {% endif %}
     </div>
   </div>
+  {% endif %}
+  {% if 'attendance' in plugins_enabled %}
   <div class="col-md-6">
     <div class="r-card h-100">
       <div class="d-flex justify-content-between align-items-start">
@@ -47,6 +50,7 @@
       <a href="{% url 'attendance:attendance_dashboard' %}" class="r-btn mt-3">{% trans "去打卡" %} →</a>
     </div>
   </div>
+  {% endif %}
 </div>
 
 {% if shortcuts %}
@@ -60,7 +64,7 @@
 </div>
 {% endif %}
 
-{% if can_plugin_ops %}
+{% if can_plugin_ops and 'workspace' in plugins_enabled %}
 <div class="fw-bold text-uppercase mb-3" style="font-size:.8rem; letter-spacing:.08em;">{% trans "插件运维" %}</div>
 <div class="row g-4 mb-4">
   <div class="col-md-4">
@@ -88,6 +92,7 @@
 </div>
 {% endif %}
 
+{% if 'notice' in plugins_enabled %}
 <div class="fw-bold text-uppercase mb-3" style="font-size:.8rem; letter-spacing:.08em;">{% trans "公告简报" %}</div>
 <div class="r-card">
   {% for notice in notices %}
@@ -102,4 +107,5 @@
   {% endfor %}
   <a href="/plugins/notice/" class="r-btn mt-3">{% trans "查看全部公告" %} →</a>
 </div>
+{% endif %}
 {% endblock %}

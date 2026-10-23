@@ -24,16 +24,18 @@
         Constellatio
       </a>
       <div class="d-flex align-items-center gap-4" style="font-size:.8rem;">
+        {% if 'language' in plugins_enabled %}
         <form method="post" action="{% url 'language:language_switch' %}" class="d-flex align-items-center gap-1 mb-0">
           {% csrf_token %}
           <input type="hidden" name="next" value="{{ request.get_full_path }}">
           <button type="submit" name="lang" value="zh-hans" class="r-lang{% if LANGUAGE_CODE == 'zh-hans' %} is-active{% endif %}">中文</button>
           <button type="submit" name="lang" value="en" class="r-lang{% if LANGUAGE_CODE == 'en' %} is-active{% endif %}">EN</button>
         </form>
+        {% endif %}
         {% if request.user.is_authenticated %}
-          <a href="{% url 'user:profile' %}" class="r-badge">{{ request.user.last_name|default:request.user.username }}</a>
-          <a href="/plugins/auth/logout/">{% trans "登出" %}</a>
-        {% else %}
+          {% if 'user' in plugins_enabled %}<a href="{% url 'user:profile' %}" class="r-badge">{{ request.user.last_name|default:request.user.username }}</a>{% endif %}
+          {% if 'auth' in plugins_enabled %}<a href="/plugins/auth/logout/">{% trans "登出" %}</a>{% endif %}
+        {% elif 'auth' in plugins_enabled %}
           <a href="/plugins/auth/login/">{% trans "登录" %}</a>
         {% endif %}
       </div>

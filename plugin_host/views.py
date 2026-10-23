@@ -66,23 +66,27 @@ def index(request):
     can_report = user.has_perm('attendance_report_view')
     can_plugin_ops = user.is_superuser or user.has_perm('workspace_manage')
 
+    # v1.5.7：入口随插件启停收敛——停用的插件不再出现在工作台卡片 / 快捷入口
+    enabled = get_enabled_plugins()
+    enabled_names = {key for key, _ in enabled}
+
     shortcuts = [
         {'type': key, 'label': label, 'icon': icon,
          'url': f'/plugins/approval/new/?type={key}'}
         for key, label, icon in APPROVAL_SHORTCUTS
-    ] if can_approval else []
-    shortcuts.append({
-        'type': 'attendance_records' if can_report else 'attendance',
-        'label': _t('签到详情') if can_report else _t('我的考勤'),
-        'icon': '☷',
-        'url': '/plugins/attendance/records/' if can_report else '/plugins/attendance/',
-    })
+    ] if can_approval and 'approval' in enabled_names else []
+    if 'attendance' in enabled_names:
+        shortcuts.append({
+            'type': 'attendance_records' if can_report else 'attendance',
+            'label': _t('签到详情') if can_report else _t('我的考勤'),
+            'icon': '☷',
+            'url': '/plugins/attendance/records/' if can_report else '/plugins/attendance/',
+        })
 
-    enabled = get_enabled_plugins()
     return render(request, 'home.html', {
-        'pending_approvals': _pending_approvals(user),
-        'attendance_today': _attendance_today(user),
-        'notices': _recent_notices(),
+        'pending_approvals': _pending_approvals(user) if 'approval' in enabled_names else 0,
+        'attendance_today': _attendance_today(user) if 'attendance' in enabled_names else None,
+        'notices': _recent_notices() if 'notice' in enabled_names else [],
         'shortcuts': shortcuts,
         'can_approval': can_approval,
         'can_plugin_ops': can_plugin_ops,

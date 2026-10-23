@@ -1,6 +1,7 @@
-"""workspace 插件视图：插件开关列表与运行时启停。"""
+"""workspace 插件视图：插件开关列表与运行时启停（v1.5.7 开关式 UI）。"""
 
 from django.shortcuts import redirect, render
+from django.utils.translation import gettext_lazy as _
 
 from plugin_host.permissions import require_perm
 from plugin_host.registry import PLUGIN_REGISTRY
@@ -8,8 +9,15 @@ from plugin_host.signals import plugin_toggled
 
 from .models import PluginSwitch
 
-# 禁停清单：停用即锁死（auth 登录入口 / workspace 开关入口 / language 语言切换）
-PROTECTED = {'auth', 'user', 'workspace', 'language'}
+# 禁停清单（v1.5.7 收敛）：只保留开关入口自身；auth / user / structure / language 均可停用。
+PROTECTED = {'workspace'}
+
+# 停用这些插件会收走关键入口：开关页显式提示，命令行 plugin_switch 可兜底恢复。
+CRITICAL_WARNINGS = {
+    'auth': _('停用后登录 / 登出入口关闭，已登录会话仍可用；可用 manage.py plugin_switch on auth 恢复'),
+    'user': _('停用后账号、部门、角色管理入口关闭，已有会话与登录仍可用'),
+    'structure': _('停用后组织架构与关系树入口关闭，组织数据不受影响'),
+}
 
 
 @require_perm('workspace_manage')
@@ -23,13 +31,14 @@ def switch_list(request):
             'meta': meta,
             'enabled': switches.get(key, True),
             'protected': key in PROTECTED,
+            'warning': CRITICAL_WARNINGS.get(key, ''),
         })
     return render(request, 'workspace/switch_list.html', {'rows': rows})
 
 
 @require_perm('workspace_manage')
 def switch_toggle(request, app_key):
-    """切换插件开关：禁停清单拦截；写 DB → 发 plugin_toggled 信号 → 上链。"""
+    """切换插件开关：仅拦截 workspace；写 DB → 发 plugin_toggled 信号 → 上链。"""
     if app_key not in PLUGIN_REGISTRY or app_key in PROTECTED:
         return redirect('workspace:switch_list')
     enabled = request.POST.get('enabled') == '1'
