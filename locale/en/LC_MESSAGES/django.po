@@ -1447,6 +1447,112 @@ msgstr "Attendance chart"
 msgid "天数"
 msgstr "Days"
 
+msgid "企业单点登录"
+msgstr "Enterprise SSO"
+
+msgid "请从企业门户进入，系统会自动携带签名 Ticket 完成登录；运维人员也可在下方粘贴 Ticket 进行联调。"
+msgstr "Open Constellatio from your enterprise portal to sign in automatically with a signed ticket; operators can also paste a ticket below for testing."
+
+msgid "SSO 登录"
+msgstr "SSO sign in"
+
+msgid "账号密码登录"
+msgstr "Password sign in"
+
+msgid "Ticket 缺少用户名"
+msgstr "Ticket has no username"
+
+msgid "账号已禁用，无法登录"
+msgstr "This account is disabled and cannot sign in"
+
+msgid "企业 SSO 登录（未启用）"
+msgstr "Enterprise SSO (disabled)"
+
+msgid "插件未启用"
+msgstr "Plugin disabled"
+
+msgid "SSO 未配置共享密钥"
+msgstr "SSO shared secret is not configured"
+
+msgid "Ticket 格式错误"
+msgstr "Malformed ticket"
+
+msgid "Ticket 签名非法"
+msgstr "Invalid ticket signature"
+
+msgid "Ticket 签名校验失败"
+msgstr "Ticket signature verification failed"
+
+msgid "Ticket 内容非法"
+msgstr "Invalid ticket content"
+
+msgid "Ticket 已过期"
+msgstr "Ticket expired"
+
+msgid "Ticket 时间非法"
+msgstr "Invalid ticket timestamp"
+
+msgid "Ticket 已使用"
+msgstr "Ticket already used"
+
+msgid "消息提醒"
+msgstr "Notifications"
+
+msgid "消息中心"
+msgstr "Message center"
+
+msgid "查看消息"
+msgstr "View messages"
+
+msgid "%(count)s 条未读"
+msgstr "%(count)s unread"
+
+msgid "全部"
+msgstr "All"
+
+msgid "未读"
+msgstr "Unread"
+
+msgid "全部已读"
+msgstr "Mark all read"
+
+msgid "暂无消息"
+msgstr "No messages"
+
+msgid "我的消息"
+msgstr "My messages"
+
+msgid "企业 SSO 登录"
+msgstr "Enterprise SSO sign in"
+
+msgid "审批"
+msgstr "Approval"
+
+msgid "公告"
+msgstr "Notice"
+
+msgid "系统"
+msgstr "System"
+
+msgid "审批待办：%(title)s"
+msgstr "Approval task: %(title)s"
+
+msgid "申请人：%(name)s · 类型：%(type)s"
+msgstr "Applicant: %(name)s · Type: %(type)s"
+
+msgid "审批结果：%(title)s（%(result)s）"
+msgstr "Approval result: %(title)s (%(result)s)"
+
+msgid "类型：%(type)s"
+msgstr "Type: %(type)s"
+
+msgid "公告：%(title)s"
+msgstr "Notice: %(title)s"
+
+msgid "发布人：%(name)s"
+msgstr "Publisher: %(name)s"
+
+
 
 
 

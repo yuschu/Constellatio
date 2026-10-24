@@ -7,7 +7,9 @@ v1.2 新增会签（counter signature）：部门删除 / 用户禁用走会签�
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from plugin_host.signals import approval_finished, counter_signature_approved
+from plugin_host.signals import (
+    approval_finished, approval_submitted, counter_signature_approved,
+)
 
 from .models import Approval, ApprovalRecord
 
@@ -42,6 +44,8 @@ def submit(approval, operator, comment='', action='submit'):
     approval.save(update_fields=['status', 'updated_at'])
     _record(approval, operator, action, comment)
     _cc_applicant_leader(approval)
+    approval_submitted.send(
+        sender=approval.__class__, approval_id=approval.id, operator_id=operator.pk)
 
 
 def approve(approval, operator, comment=''):
@@ -82,6 +86,8 @@ def start_counter_signature(approval, signers, operator, comment=''):
     for signer in signers:
         approval.signers.create(signer=signer)
     _record(approval, operator, 'submit', comment or '发起会签')
+    approval_submitted.send(
+        sender=approval.__class__, approval_id=approval.id, operator_id=operator.pk)
 
 
 def _mark_signed(approval, operator, comment):

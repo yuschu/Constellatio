@@ -63,6 +63,15 @@ def _recent_notices(limit=3):
     return list(Announcement.objects.order_by('-is_top', '-created_at')[:limit])
 
 
+def _recent_notifications(user, limit=3):
+    """v1.7.0：工作台「我的消息」预览（仅本人）。"""
+    Notification = _model('notify', 'Notification')
+    if Notification is None:
+        return []
+    return list(Notification.objects.filter(
+        recipient=user).order_by('-created_at')[:limit])
+
+
 @login_required
 def index(request):
     user = request.user
@@ -111,6 +120,8 @@ def index(request):
         'pending_approvals': pending,
         'attendance_today': attendance_today,
         'notices': _recent_notices() if 'notice' in enabled_names else [],
+        'messages_preview': (_recent_notifications(user)
+                             if 'notify' in enabled_names else []),
         'shortcuts': shortcuts,
         'can_approval': can_approval,
         'can_approve': can_approve,

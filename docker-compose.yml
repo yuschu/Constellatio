@@ -36,6 +36,10 @@ services:
       DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME:-admin}
       DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:-Constellatio@2026}
       GUNICORN_WORKERS: ${GUNICORN_WORKERS:-3}
+      # v1.7.0 企业 SSO（生产务必覆盖共享密钥）
+      SSO_SHARED_SECRET: ${SSO_SHARED_SECRET:-constellatio-sso-dev-secret}
+      SSO_TICKET_TTL: ${SSO_TICKET_TTL:-300}
+      SSO_AUTO_CREATE: ${SSO_AUTO_CREATE:-1}
     command: ["sh", "./entrypoint.sh"]
     ports:
       - "${WEB_PORT:-8000}:8000"

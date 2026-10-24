@@ -226,6 +226,24 @@
     <a href="/plugins/notice/" class="r-btn r-btn--plain">{% trans "查看全部公告" %}</a>
   </div>
   {% endif %}
+
+  {% if 'notify' in plugins_enabled and messages_preview %}
+  <div class="d-flex justify-content-between align-items-center gap-2">
+    <div class="r-sidebar-title mb-0">{% trans "我的消息" %}</div>
+    <a href="{% url 'notify:notify_list' %}" class="r-offset-hover" style="font-size:.8rem;">{% trans "消息中心" %} →</a>
+  </div>
+  <div class="r-card">
+    {% for message in messages_preview %}
+    <div class="d-flex justify-content-between align-items-start gap-3 border-bottom py-2" style="font-size:.85rem;">
+      <div>
+        <a href="{% url 'notify:notify_read' message.pk %}" class="{% if not message.is_read %}fw-semibold{% endif %}">{{ message.title }}</a>
+        <div class="text-muted" style="font-size:.72rem;">{{ message.created_at|date:"m-d H:i" }}</div>
+      </div>
+      {% if not message.is_read %}<span class="r-badge r-badge--orange">{% trans "未读" %}</span>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
 </div>
 
 {% if chart %}

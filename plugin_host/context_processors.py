@@ -50,3 +50,16 @@ def themes(request):
 def charts(request):
     """注入当前图表渲染器（v1.6）；停用 / 未知 Provider 时为 None，模板降级为表格。"""
     return {'chart': get_active_chart()}
+
+
+def notifications(request):
+    """注入站内信未读数（v1.7.0）；未登录 / 插件停用 / 表未迁移时为 0。"""
+    if not getattr(request, 'user', None) or not request.user.is_authenticated:
+        return {'notify_unread': 0}
+    try:
+        from plugins.notify.models import Notification
+        count = Notification.objects.filter(
+            recipient=request.user, is_read=False).count()
+    except Exception:
+        count = 0
+    return {'notify_unread': count}

@@ -59,7 +59,11 @@
         </form>
 
         <div class="r-login-alt">
-          <button class="r-btn r-btn--plain w-100" type="button" disabled aria-disabled="true" title="{% trans '暂未接入' %}">{% trans "企业 SSO 登录（即将上线）" %}</button>
+          {% if 'sso' in plugins_enabled %}
+          <a class="r-btn r-btn--plain w-100" href="{% url 'sso:sso_entry' %}">{% trans "企业 SSO 登录" %}</a>
+          {% else %}
+          <button class="r-btn r-btn--plain w-100" type="button" disabled aria-disabled="true" title="{% trans '插件未启用' %}">{% trans "企业 SSO 登录（未启用）" %}</button>
+          {% endif %}
           <a class="r-offset-hover" href="{% url 'auth:password_reset_notice' %}">{% trans "忘记密码？" %}</a>
         </div>
       </div>

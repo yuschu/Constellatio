@@ -8,11 +8,15 @@ from django.dispatch import Signal
 
 # 全局业务信号
 approval_finished = Signal()      # 审批结束（发起/通过/驳回），携带 approval_id, result
+approval_submitted = Signal()     # 审批进入待审批（新建/重申请/会签），携带 approval_id, operator_id
 notice_published = Signal()       # 公告发布，携带 announcement_id
 attendance_checked = Signal()     # 打卡成功，携带 user_id, date
 user_created = Signal()           # 用户创建，携带 user_id
 user_updated = Signal()           # 用户更新，携带 user_id
 plugin_toggled = Signal()         # 插件开关切换，携带 app_key, enabled, operator_id
+
+# v1.7.0：企业 SSO 登录成功（user_id, via='ticket', auto_created）
+sso_login = Signal()
 
 # v1.2 user 增强 / approval 会签信号
 dept_delete_requested = Signal()  # 部门硬删请求，携带 dept_id, operator_id, title, content

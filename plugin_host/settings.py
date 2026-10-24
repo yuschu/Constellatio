@@ -43,6 +43,9 @@ INSTALLED_APPS = [
     'plugins.workspace',
     'plugins.structure',
     'plugins.language',
+    # v1.7.0：企业 SSO / 消息提醒
+    'plugins.sso',
+    'plugins.notify',
 ]
 
 MIDDLEWARE = [
@@ -83,6 +86,8 @@ TEMPLATES = [
                 'plugin_host.context_processors.themes',
                 # 图表引擎（v1.6）：停用/未知时为 None，模板降级为表格
                 'plugin_host.context_processors.charts',
+                # v1.7.0：站内信未读数（插件停用 / 表未迁移时为 0）
+                'plugin_host.context_processors.notifications',
             ],
         },
     },
@@ -131,7 +136,19 @@ OA_PLUGINS = [
     {'app': 'plugins.workspace', 'enabled': True},
     {'app': 'plugins.structure', 'enabled': True},
     {'app': 'plugins.language', 'enabled': True},
+    # v1.7.0
+    {'app': 'plugins.sso', 'enabled': True},
+    {'app': 'plugins.notify', 'enabled': True},
 ]
+
+# ---------------------------------------------------------------------------
+# v1.7.0 企业 SSO（签名 Ticket 网关）
+# ---------------------------------------------------------------------------
+# 网关使用同一共享密钥签发 ticket：base64url(payload).base64url(HMAC-SHA256)
+# 生产环境务必通过环境变量覆盖默认值
+SSO_SHARED_SECRET = os.environ.get('SSO_SHARED_SECRET', 'constellatio-sso-dev-secret')
+SSO_TICKET_TTL = int(os.environ.get('SSO_TICKET_TTL', '300'))
+SSO_AUTO_CREATE = os.environ.get('SSO_AUTO_CREATE', '1') == '1'
 
 # 主题插件：themes/<key>/theme.json；OA_THEME 是默认/回退主题（v1.5.8 起支持运行时切换）
 OA_THEME = os.environ.get('OA_THEME', 'corporate-clean')

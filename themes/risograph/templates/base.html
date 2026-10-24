@@ -33,6 +33,7 @@
         </form>
         {% endif %}
         {% if request.user.is_authenticated %}
+          {% if 'notify' in plugins_enabled %}<a href="{% url 'notify:notify_list' %}" aria-label="{% trans "消息中心" %}">✉{% if notify_unread %}<span class="r-badge ms-1">{{ notify_unread }}</span>{% endif %}</a>{% endif %}
           {% if 'user' in plugins_enabled %}<a href="{% url 'user:profile' %}" class="r-badge">{{ request.user.last_name|default:request.user.username }}</a>{% endif %}
           {% if 'auth' in plugins_enabled %}<a href="/plugins/auth/logout/">{% trans "登出" %}</a>{% endif %}
         {% elif 'auth' in plugins_enabled %}

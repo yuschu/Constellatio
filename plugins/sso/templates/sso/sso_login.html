@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "企业单点登录" %} · Constellatio{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+  <h2 class="mb-0">{% trans "企业单点登录" %}</h2>
+  <span class="r-badge">SSO</span>
+</div>
+<div class="r-card" style="max-width:560px;">
+  <p class="text-muted" style="font-size:.85rem;">
+    {% trans "请从企业门户进入，系统会自动携带签名 Ticket 完成登录；运维人员也可在下方粘贴 Ticket 进行联调。" %}
+  </p>
+  {% if error %}
+  <div class="r-badge r-badge--orange mb-3">{{ error }}</div>
+  {% endif %}
+  <form method="post" novalidate>
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <div class="mb-3">
+      <label class="form-label" for="id_ticket">Ticket</label>
+      <textarea class="r-input" id="id_ticket" name="ticket" rows="3"
+                placeholder="base64url(payload).base64url(signature)">{{ ticket }}</textarea>
+    </div>
+    <button class="r-btn" type="submit">{% trans "SSO 登录" %}</button>
+    <a href="{% url 'auth:login' %}" class="r-offset-hover ms-2">← {% trans "账号密码登录" %}</a>
+  </form>
+</div>
+{% endblock %}

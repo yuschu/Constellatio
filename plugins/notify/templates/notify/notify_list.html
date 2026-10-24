@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "消息中心" %} · Constellatio{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+  <h2 class="mb-0">{% trans "消息中心" %}</h2>
+  <span class="r-badge {% if unread %}r-badge--blue{% endif %}">
+    {% blocktranslate with count=unread %}{{ count }} 条未读{% endblocktranslate %}
+  </span>
+</div>
+
+<div class="r-card">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div class="d-flex align-items-center gap-2">
+      <a href="{% url 'notify:notify_list' %}" class="{% if status != 'unread' %}r-badge{% else %}r-offset-hover{% endif %}">{% trans "全部" %}</a>
+      <a href="{% url 'notify:notify_list' %}?status=unread" class="{% if status == 'unread' %}r-badge{% else %}r-offset-hover{% endif %}">{% trans "未读" %}</a>
+    </div>
+    {% if unread %}
+    <form method="post" action="{% url 'notify:notify_read_all' %}" class="m-0">
+      {% csrf_token %}
+      <button class="r-btn r-btn--plain" type="submit">{% trans "全部已读" %}</button>
+    </form>
+    {% endif %}
+  </div>
+
+  <div class="d-flex flex-column">
+    {% for item in notifications %}
+    <div class="d-flex justify-content-between align-items-start gap-3 py-3 border-bottom">
+      <div class="d-flex align-items-start gap-2">
+        <span class="r-badge {% if item.category == 'approval' %}r-badge--blue{% elif item.category == 'notice' %}r-badge--green{% endif %}">{{ item.get_category_display }}</span>
+        <div>
+          <a href="{% url 'notify:notify_read' item.pk %}" class="{% if not item.is_read %}fw-semibold{% endif %}">{{ item.title }}</a>
+          {% if item.body %}<div class="text-muted" style="font-size:.78rem;">{{ item.body }}</div>{% endif %}
+          <div class="text-muted" style="font-size:.72rem;">{{ item.created_at|date:"Y-m-d H:i" }}</div>
+        </div>
+      </div>
+      {% if not item.is_read %}<span class="r-badge r-badge--orange">{% trans "未读" %}</span>{% endif %}
+    </div>
+    {% empty %}
+    <p class="text-muted mb-0 py-3">{% trans "暂无消息" %}</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

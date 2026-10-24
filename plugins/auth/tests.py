@@ -4,12 +4,14 @@ from django.test import TestCase
 
 
 class AuthPlaceholderTest(TestCase):
-    def test_login_has_placeholder_entries(self):
+    def test_login_has_sso_entry(self):
+        """v1.7.0：企业 SSO 插件启用时，登录页提供可用入口（不再是禁用占位）。"""
         response = self.client.get('/plugins/auth/login/')
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'SSO')
         self.assertContains(response, '忘记密码')
-        self.assertContains(response, 'aria-disabled="true"')
+        self.assertContains(response, '/plugins/sso/')
+        self.assertNotContains(response, 'aria-disabled="true"')
 
     def test_login_error_preserves_username(self):
         response = self.client.post('/plugins/auth/login/', {

@@ -43,11 +43,14 @@ PERMISSION_LEVELS = {
     'attendance_view': LEVEL_STAFF,
     'attendance_check': LEVEL_STAFF,
     'notice_view': LEVEL_STAFF,
+    'notify_view': LEVEL_STAFF,
     'auth_login': LEVEL_STAFF,
 }
 
 # 全员基线权限：登录即用，冻结权限时同样失效
-BASELINE_PERMS = frozenset({'attendance_view', 'attendance_check', 'notice_view'})
+BASELINE_PERMS = frozenset({
+    'attendance_view', 'attendance_check', 'notice_view', 'notify_view',
+})
 
 
 def bare_codename(perm):
