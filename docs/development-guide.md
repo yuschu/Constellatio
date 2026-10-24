@@ -493,19 +493,19 @@ class Attendance(models.Model):
 - ⚠️ 时区：字段存 aware 时间，测试构造须 `timezone.make_aware`、断言用 `timezone.localtime()`
 
 - 打卡接口：`check_in` 为空则记上班，已存在则记下班（`unique_together` 防重）
-- 月度统计：按 `date__year/month` 聚合，数据源喂给 ECharts：
+- 月度统计（v1.6 已实现）：`/plugins/attendance/stats/?month=YYYY-MM[&department=<id>]`，权限 `attendance_report_view`；按日 / 状态 / 人聚合，返回 `month / dates / series / totals / users / payload`，口径与签到详情同源：
 
 ```python
-# plugins/attendance/views.py —— 统计接口返回 JSON
-def monthly_stats(request):
-    rows = (Attendance.objects
-            .filter(user=request.user, date__year=..., date__month=...)
-            .order_by('date'))
-    data = {
-        'dates': [a.date.strftime('%m-%d') for a in rows],
-        'hours': [calc_hours(a) for a in rows],
-    }
-    return JsonResponse(data)   # 前端 ECharts 直接消费
+# plugins/attendance/views.py —— 统计接口（v1.6）
+@require_perm('attendance_report_view')
+def attendance_stats(request):
+    stats, _rows = _month_stats(month_first, department_id)   # Attendance 聚合
+    chart = get_active_chart()
+    stats['payload'] = chart.payload(
+        categories=stats['dates'],
+        series=[{'key': s['key'], 'name': s['label'], 'data': s['data']}
+                for s in stats['series']]) if chart else None
+    return JsonResponse(stats)
 ```
 
 ### 4.5 blockchain 插件（操作留痕上链）
@@ -566,7 +566,22 @@ class BlockchainRecord(models.Model):
 
 - 页面一律继承当前主题的 `templates/base.html`（`OA_THEME` 选择），插件只写 `{% block content %}`
 - 布局栅格/表单结构用 Bootstrap 5；**视觉组件统一用主题契约类**（`r-*`，历史命名，v1.5 冻结），禁止自造体系外样式
-- ECharts 通过 CDN 引入，图表统一封装：
+- 图表（v1.6 / v1.6.1）：引擎走 `ChartRenderer` Provider，**本地静态资源**（`static/vendor/echarts.min.js`），不依赖 CDN；页面只消费 `payload`，停用后降级为表格。引擎已注册为 Provider 插件（`PluginSwitch(app_key='charts')`），可在插件开关页 / `manage.py plugin_switch on|off charts` 运行时启停。契约与降级见 `docs/plugin-dev-v16.md`、开关与统计见 `docs/plugin-dev-v161.md`：
+- 工作台大盘（v1.6.2）：`plugin_host/workbench.py` 按 `?range=today|week|month` 与角色聚合数据，模板 `plugin_host/templates/home_dashboard.html` 两套主题共用；图表 payload 由 `list|json_script` 注入，适配器负责点击跳转 / 告警色 / 主题取色，详见 `docs/plugin-dev-v162.md`。
+
+```html
+<!-- attendance/templates/attendance/attendance_records.html 片段（v1.6 已实现） -->
+{% if chart %}
+<div id="attendance-chart" data-stats-url="{% url 'attendance:attendance_stats' %}"></div>
+<script src="{{ chart.script_url }}"></script>
+<script src="{{ chart.adapter_url }}"></script>
+<script>
+  fetch(el.dataset.statsUrl + '?month=' + month)
+    .then(r => r.json())
+    .then(data => window.oaChartRender(el, data.payload));
+</script>
+{% endif %}
+```
 
 ### 5.1 主题：Corporate Clean（默认）+ Risograph（备选）
 
@@ -577,23 +592,6 @@ class BlockchainRecord(models.Model):
 - Risograph：有限色板、硬边套印、等宽字体、100ms；作为备选保留
 - 登录页含 SSO（禁用占位）/ 忘记密码（占位页）入口；base/login 含首屏 `.r-loader`
 - 主题不再挂 `INSTALLED_APPS`；新增主题不需要改 Python 注册表
-
-```html
-<!-- attendance/templates/attendance/stats.html 片段 -->
-<div id="chart" style="width:100%;height:400px;"></div>
-<script>
-  fetch('/plugins/attendance/stats/')
-    .then(r => r.json())
-    .then(data => {
-      const chart = echarts.init(document.getElementById('chart'));
-      chart.setOption({
-        xAxis: { type: 'category', data: data.dates },
-        yAxis: { type: 'value' },
-        series: [{ type: 'line', data: data.hours, smooth: true }]
-      });
-    });
-</script>
-```
 
 ### 5.2 多语言（v1.4 / v1.5.1 全站补全）
 

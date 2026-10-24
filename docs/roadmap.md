@@ -2,7 +2,7 @@
 
 > 依据：`tech-stack-and-architecture.md` / `constraints-and-acceptance.md` / `development-guide.md` 的**全栈插件化**目标
 > 负责人校正（2026-10-22）：**不降级**、**补充实现**、**列入修复项**；工作约定只需「文档先行、每改必推 GitHub、每版打 tag」
-> 状态：draft-21（2026-10-23）—— **v1.4–v1.5.18 已完成**（184 项测试全绿）；当前推进 v1.6
+> 状态：draft-49（2026-10-24）—— **v1.4–v1.6.20 已交付**（237 项测试全绿；tag **v1.6.20**）；下一版：v1.7 认证后端插件化
 
 ## 一、总原则
 
@@ -17,16 +17,16 @@
 |---|---|---|---|---|
 | 数据库后端 | MySQL / sqlite / postgres 一行切换 | MySQL / sqlite 通过环境变量切换 | postgres 未验证 | 已具备；v1.10 补验证 |
 | 主题 UI | 新建 `themes/<name>` + 改 `OA_THEME` 即换 | Corporate Clean 默认 / Risograph 备选；`OA_THEME` 生效 | 已补齐主题清单、切换、第二主题 | ✅ v1.5 完成 |
-| 图表引擎 | 统一 `ChartRenderer`，ECharts 默认 | 无 | 无接口、无 ECharts、无统计接口 | **v1.6** |
+| 图表引擎 | 统一 `ChartRenderer`，ECharts 默认 | `plugin_host/charts.py` + `charts/echarts` Provider；`OA_CHARTS` 选择 / 停用降级；v1.6.1 起为 Provider 插件，可运行时启停 | 已补齐清单发现、契约、运行时选择与开关 | ✅ v1.6 / v1.6.1 完成 |
 | 认证后端 | `AUTHENTICATION_BACKENDS` 可插拔 | 仅 Django 默认 ModelBackend | 无 Provider、无示例后端 | **v1.7** |
 | 模板引擎 | Django / Jinja2 可切、可共存 | 仅 DjangoTemplates | 无 Provider、无 Jinja2 | **v1.8**（深度待确认） |
 | 插件契约 | `models` / `dependencies` / `admin` / 依赖校验 | 仅 name/version/menus/permissions/urls/signals/templates/app | 字段缺失、无依赖校验 | **v1.9** |
-| 业务 ECharts 看板 | 考勤月度统计用 ECharts | 普通表格 | 无图表、无 `/plugins/attendance/stats/` | **v1.6** |
+| 业务 ECharts 看板 | 考勤月度统计用 ECharts | 签到详情月度看板 + `/plugins/attendance/stats/` JSON；停用降级表格 | 已补齐图表、统计接口、降级 | ✅ v1.6 完成 |
 | 插件注册方式 | `OA_PLUGINS` 一行即插即用 | 还需 `INSTALLED_APPS` + `ready()` 注册 | 文档与实现不一致 | **v1.9** 一致性校验 + 文档修正 |
 | 会签详情权限 | 会签人可审批 | 非 applicant/approver 且无 `approval_view` 会被重定向 | 权限边界 | **v1.10** 修复 |
 | 插件权限准入 | 有权限才能使用插件 | v1.5.3 仅菜单过滤；blockchain / structure / approval 视图未守卫 | 菜单与 URL 口径不一致 | ✅ v1.5.4 统一 `require_perm` + 全员基线 |
 | 审批表单 | 按类型动态表单 + 抄送 | v1.5.4 仅三类固定表单 | 类型少、字段固定、无抄送 | ✅ v1.5.5 六类动态表单 + 上下级抄送 |
-| 工作台 | 待办优先 + 管理员/员工视图分流 | 静态介绍卡片 | 无待办、无角色分流 | ✅ v1.5.5 四模块排序 + 视图分流 |
+| 工作台 | 待办优先 + 管理员/员工视图分流 | v1.5.5 四模块排序 / 视图分流；v1.6.2 指标卡 + 迷你图 + 趋势大盘 + 插件/组织图表 + 范围筛选 | 已完成图表化 | ✅ v1.5.5 / v1.6.2 完成 |
 | 区块链并发 | 哈希链防篡改 | `append()` 无锁 / 无事务 | 多 worker 可能分叉 | **v1.10** 修复 |
 | 运行时开关 | 即时生效 | 静态 disabled 的插件运行中启用需重启 | 路由静态 include | **v1.10** 修复或明确边界 |
 | 代码规约 | 禁内联 onclick、raw POST、无事务多步写 | 多处存在 | 质量债务 | **v1.10** 分批清理 |
@@ -56,7 +56,27 @@
 | **v1.5.16** | 驳回申请重新申请 / 隐藏 | 已驳回可一键重新申请（复制并重新待审批）；删除申请记录=对申请人隐藏（`applicant_hidden`），数据与留痕保留；迁移 0006（`docs/plugin-dev-v1516.md`） | ✅ 已完成：180 项测试 + Docker 重建 |
 | **v1.5.17** | 重申请表单化 + 审批终态 | 「重新申请」进入预填可编辑表单，确认后新单替换驳回记录（`replaced_by` + 隐藏）；审批操作二次确认且终态不可修改；详情隐藏空内容项；抄送我的对 L3 隐藏；补站内信计划（`docs/plugin-dev-v1517.md`） | ✅ 已完成：184 项测试 + Docker 重建 |
 | **v1.5.18** | 审批人限定业务负责人 + 抄送直系领导 | 审批人候选限定为管辖部门负责人（无留空、必选）；抄送改为申请人直系领导（领导=申请人/审批人时跳过）；无迁移（`docs/plugin-dev-v1518.md`） | ✅ 已完成：184 项测试 + Docker 重建 |
-| **v1.6** | 图表插件化 + ECharts | `ChartRenderer` 接口；ECharts Provider；考勤 `/stats/` JSON + 月度看板 | 图表数据与打卡记录一致；停用图表插件页面降级不报错 |
+| **v1.6** | 图表插件化 + ECharts | `ChartRenderer` 接口 + `charts/echarts` Provider（本地 ECharts 5.5.1）；考勤 `/plugins/attendance/stats/` JSON + 签到详情月度看板；`OA_CHARTS` 停用降级表格（`docs/plugin-dev-v16.md`） | ✅ 已实现：204 项测试 + Docker 重建；图表数据与打卡记录同源、停用后 200 降级 |
+| **v1.6.1** | 图表运行时开关 + 留痕链统计 | 图表引擎注册为 Provider 插件（`PluginSwitch` 运行时开关，UI / CLI 即时生效并上链）；留痕链 `/plugins/blockchain/stats/` 按日 × 来源插件统计 + 看板 / 表格降级（`docs/plugin-dev-v161.md`） | ✅ 已实现：220 项测试 + Docker 重建；开关关停后两处看板均降级表格、统计与留痕记录一致 |
+| **v1.6.2** | 工作台图表化大盘 | 4 张指标卡（数字 + 迷你图）、流程趋势多曲线、插件分布饼图、组织人员柱状图；今日 / 本周 / 本月联动筛选；管理员 / 员工视图分流；点击跳转 / 告警色 / 响应式（`docs/plugin-dev-v162.md`） | ✅ 已实现：231 项测试 + Docker 重建；管理员 / 员工区块差异、范围联动、告警、降级与两套主题均验证 |
+| **v1.6.3** | 工作台 Banner 白字 + 侧栏吸顶 | Corporate Clean hero 标题 / 欢迎语改白字（Risograph 不变）；两套主题侧栏 `position: sticky`（桌面端，菜单超长栏内滚动）；其余布局与交互不变（`docs/plugin-dev-v163.md`） | ✅ 已实现：234 项测试 + Docker 重建；Corporate 白字、Risograph 原配色、吸顶与移动端不变均验证 |
+| **v1.6.4** | 顶部导航栏吸顶 | 两套主题 `.r-nav` 改为 `position: sticky; top: 0; z-index: 1030`（白底 / 纸色底 + 原边框），滚动时导航保持在视口顶部；侧栏 sticky 与其余布局不变（`docs/plugin-dev-v164.md`） | ✅ 已实现并部署；按要求未跑自动化测试，滚动吸顶由负责人验证 |
+| **v1.6.5** | 指标卡按钮底部居中与基线对齐 | 四张指标卡改 `d-flex flex-column`，按钮 footer `mt-auto` 置底 + 水平居中，四卡等高 → 按钮同一基线；告警徽标移出 footer（`docs/plugin-dev-v165.md`） | ✅ 已实现并部署；按要求未跑自动化测试，按钮对齐由负责人验证 |
+| **v1.6.6** | 插件分布卡片紧凑化 | 去 `h-100` 高度自适应、图表 300→240px、图例 / 分页 / 文案间距收紧（饼图 option 紧凑化）（`docs/plugin-dev-v166.md`） | ✅ 已实现并部署；按要求未跑自动化测试，紧凑度由负责人验证 |
+| **v1.6.7** | 指标卡按钮统一与去箭头 | 四按钮统一 `r-btn`（审批中心去 plain）；移除文本尾部 `→`；布局 / 数据不变（`docs/plugin-dev-v167.md`） | ✅ 已实现并部署；按要求未跑自动化测试 |
+| **v1.6.8** | 部门明细表格拆分 | 「组织人员」卡只留柱状图；部门表格移出为独立「部门明细」卡片，置于两图并排行下方；数据 / 样式不变（`docs/plugin-dev-v168.md`） | ✅ 已实现并部署；按要求未跑自动化测试 |
+| **v1.6.9** | 图表双卡等宽等高 | 插件分布卡恢复 `h-100`、图表 240→300px；两卡 `col-lg-6` 等宽、行内等高，图表随容器自适应（`docs/plugin-dev-v169.md`） | ✅ 已实现并部署；按要求未跑自动化测试 |
+| **v1.6.10** | 公告简报卡片化 + 列表/详情合并 | 工作台公告改独立卡片流；公告中心列表 + 内联详情同页（`?notice=`），标题/辅助信息/正文分层；旧详情链接 302 兼容；发布后直达详情（`docs/plugin-dev-v1610.md`） | ✅ 已实现：237 项测试 + Docker 重建 |
+| **v1.6.11** | 部门管理页排版优化 | 左右分栏顶部对齐；表格宽松内边距 + 垂直居中；操作按钮等距并区分修改 / 停用 / 删除（新增 `r-btn--danger`）；表单控件等宽左对齐（`docs/plugin-dev-v1611.md`） | ✅ 已实现：237 项测试 + Docker 重建 |
+| **v1.6.12** | 角色 / 审批 / 待办三页统一排版 | 三页统一 `r-table--roomy align-middle`；表头深色；权限码流式换行；状态标签四态配色；审批操作列结构修复；待办角标与去审批按钮对齐（`docs/plugin-dev-v1612.md`） | ✅ 已实现：237 项测试 + Docker 重建 |
+| **v1.6.13** | 用户管理 + 角色权限码排版 | 用户操作区风险配色（编辑链接 / 冻结蓝 / 禁用红）、超管弱化、标签流式换行；角色权限码固定列宽自动折行、顶部对齐；两页表格与全站统一（`docs/plugin-dev-v1613.md`） | ✅ 已实现：237 项测试 + Docker 重建 |
+| **v1.6.14** | 用户管理操作项按钮化 | 编辑改白底蓝字按钮，冻结 / 启停蓝色主按钮，禁用红色危险按钮；新增 `.r-btn--action` 统一操作按钮宽度；超管行仅保留灰色提示（`docs/plugin-dev-v1614.md`） | 用户模块 25 项通过并部署；全量 235/237（2 项考勤跨日时钟边界既有问题） |
+| **v1.6.15** | 公告中心双卡片改版 | 移除列表表格，左信息卡（含「已读」按钮 + 已读人员弹窗 + 切换公告）右详情卡；元信息弱化、正文独立区块、底部返回列表（`docs/plugin-dev-v1615.md`） | notice 6 项通过并部署；全量 235/237（既有跨日边界） |
+| **v1.6.16** | 考勤 / 签到详情页面优化 | 考勤页标题改「考勤」+ 新增个人月度考勤图表卡（个人状态堆叠柱 / 降级表格）；签到详情筛选区压缩为单行自适应布局（`docs/plugin-dev-v1616.md`） | 考勤 23/25（2 项既有跨日边界）并部署；全量 235/237 |
+| **v1.6.17** | 考勤卡片收紧 / 按钮同行 / 改名 | 两卡去 `h-100` 收紧高度；签到 / 签退与类型下拉合并同行、按钮统一尺寸；插件名「考勤打卡」→「考勤」（`docs/plugin-dev-v1617.md`） | rbac / attendance / user 63/65（2 项既有跨日边界）并部署 |
+| **v1.6.18** | 今日状态卡片压缩等高 | 状态徽标与签到时间同行、标题/控件间距收紧；两卡 `h-100` 保持与本月统计等高（`docs/plugin-dev-v1618.md`） | 纯模板调整并部署 |
+| **v1.6.19** | 部门操作按钮配色调整 | 修改改白底蓝字按钮、停用改蓝色按钮，物理删除保持红色；三者统一 `r-btn--action`（`docs/plugin-dev-v1619.md`） | 纯模板调整并部署 |
+| **v1.6.20** | 部门状态徽标绿色与防折行 | 状态列 `text-nowrap` 防止「启用」折行；启用徽标改绿色（`r-badge--green`）（`docs/plugin-dev-v1620.md`） | 纯模板调整并部署 |
 | **v1.7** | 认证后端插件化 | `AUTHENTICATION_BACKENDS` Provider；一个无外部依赖的示例后端（如用户名/邮箱） | 切换后端可登录；默认后端仍可用 |
 | **v1.8** | 模板引擎插件化 | Django / Jinja2 Provider；先做多引擎共存或单插件切换 | 待确认深度（见第六节） |
 | **v1.9** | 插件契约补全 | `models` / `dependencies` / `admin`；依赖顺序与环校验；启用一致性校验 | 缺失依赖启动即报错；停用被依赖插件被拦截 |
@@ -82,16 +102,16 @@
 | `database-design.md` | v1.4 已修正：language 无表、哈希公式、approval 字段/类型、signer 表、`is_active`/`permission_frozen`；表数口径 v1.10 统一 |
 | `plugin-dev-user.md` | v1.4 已加草案警告；v1.10 按实际字段/信号完整重写 §四/§五 |
 | `plugin-dev-structure.md` | v1.4 已修正：31 用户；12 一级 + 8 二级 = 20 部门 |
-| `README.md` | v1.4 已补 workspace/structure/language 与 roadmap；考勤 ECharts 待 v1.6 |
+| `README.md` | v1.4 已补 workspace/structure/language 与 roadmap；v1.6 已补图表插件与月度看板 |
 | `project-overview.md` | v1.4 已补 language；插件示例与"一行注册"v1.10 重写 |
 | `constraints-and-acceptance.md` | v1.4 已补进度；"10 张表"口径 v1.10 统一 |
-| `development-guide.md` | v1.4 已修正外壳路径 / tag 历史 / 信号数，并补 language 章节；ECharts 与代码规约债务 v1.6–v1.10 |
+| `development-guide.md` | v1.4 已修正外壳路径 / tag 历史 / 信号数，并补 language 章节；v1.6 已把图表改为 Provider + 本地资源；代码规约债务 v1.10 |
 | `tech-stack-and-architecture.md` | Python 版本与 `PluginMeta.models` 口径 v1.9 统一；基础设施可插拔按 v1.5–v1.8 补齐 |
 
 ## 六、待确认的设计深度
 
 1. **模板引擎**：目标是"全站可切 Jinja2"，还是"多引擎共存 + 单插件示例"？全站切换要重写全部模板，成本高。
-2. **图表资源**：ECharts 用 CDN（实现快、离线不可用），还是把 `echarts.min.js` 收进静态资源（离线可用、仓库变大）？
+2. **图表资源**：✅ v1.6 决策——`echarts.min.js` 收进 Provider 静态资源（离线可用，仓库 +1 MB），不再依赖 CDN。
 3. **主题切换**：改 `OA_THEME` 后重启生效即可，还是要求运行时切换（DB/会话级）？
 4. **认证示例后端**：用"用户名或邮箱登录"这种无外部依赖的实现证明可插拔，还是直接做 LDAP/OAuth（要新依赖，需批准）？
 5. **v1.4 language**：draft-02 的 5 项是否按推荐（禁停 / 默认中文 / 会话 Cookie / 第六节范围 / `.mo` 不入库）执行？

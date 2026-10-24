@@ -26,11 +26,13 @@
 
 * 📢 公告通知：发布 / 置顶 / 已读统计
 
-* 🕐 考勤打卡：内勤 / 外勤签到、签到详情（时间范围 / 状态 / 类型筛选）、补卡登记、月度统计
+* 🕐 考勤打卡：内勤 / 外勤签到、签到详情（时间范围 / 状态 / 类型筛选）、补卡登记、月度看板（ECharts，停用自动降级表格）
 
-* 🏠 工作台：待办聚合 + 流程快捷发起 + 公告简报，管理员 / 员工视图分流，侧栏当前 Tab 高亮
+* 📊 图表引擎：Provider 化（`ChartRenderer` + 本地 ECharts），插件开关页 / CLI 运行时启停，关闭即全部降级表格
 
-* ⛓ 区块链留痕：关键操作上链（SHA-256 哈希链），列表可点击查看单条记录详情，篡改即断链报警
+* 🏠 工作台：4 张指标卡（数字 + 迷你图）、流程趋势大盘、插件分布 / 组织人员图表，今日 / 本周 / 本月联动筛选，管理员 / 员工视图分流，侧栏当前 Tab 高亮
+
+* ⛓ 区块链留痕：关键操作上链（SHA-256 哈希链），列表可点击查看单条记录详情，篡改即断链报警；按日 × 来源插件统计看板
 
 * ⚙ 插件开关：工作台运行时启用 / 禁用插件，即时生效（停用即隐藏菜单 + 404），操作上链
 
@@ -158,9 +160,30 @@ Constellatio/
 | [docs/plugin-dev-v1516.md](docs/plugin-dev-v1516.md)                           | 插件开发 | v1.5.16：驳回申请重新申请 / 删除（对申请人隐藏，留痕保留） |
 | [docs/plugin-dev-v1517.md](docs/plugin-dev-v1517.md)                           | 插件开发 | v1.5.17：重新申请表单化 + 替换驳回单 / 审批终态 / 抄送 L3 隐藏 |
 | [docs/plugin-dev-v1518.md](docs/plugin-dev-v1518.md)                           | 插件开发 | v1.5.18：审批人限定业务负责人（必选）+ 抄送直系领导 |
+| [docs/plugin-dev-v16.md](docs/plugin-dev-v16.md)                               | 插件开发 | v1.6：图表插件化（ChartRenderer Provider）+ ECharts 本地资源 + 考勤月度看板 |
+| [docs/plugin-dev-v161.md](docs/plugin-dev-v161.md)                             | 插件开发 | v1.6.1：图表引擎运行时开关（UI / CLI / 上链）+ 留痕链统计看板 |
+| [docs/plugin-dev-v162.md](docs/plugin-dev-v162.md)                             | 插件开发 | v1.6.2：工作台图表化大盘（指标卡 / 趋势 / 插件 / 组织 / 范围筛选） |
+| [docs/plugin-dev-v163.md](docs/plugin-dev-v163.md)                             | 插件开发 | v1.6.3：Corporate Clean Banner 白字 + 两套主题侧栏吸顶 |
+| [docs/plugin-dev-v164.md](docs/plugin-dev-v164.md)                             | 插件开发 | v1.6.4：顶部导航栏吸顶（两套主题，sticky） |
+| [docs/plugin-dev-v165.md](docs/plugin-dev-v165.md)                             | 插件开发 | v1.6.5：指标卡按钮底部居中 + 四卡按钮基线对齐 |
+| [docs/plugin-dev-v166.md](docs/plugin-dev-v166.md)                             | 插件开发 | v1.6.6：插件分布卡片紧凑化（高度自适应 / 图表与图例收紧） |
+| [docs/plugin-dev-v167.md](docs/plugin-dev-v167.md)                             | 插件开发 | v1.6.7：指标卡按钮统一 + 去文本箭头 |
+| [docs/plugin-dev-v168.md](docs/plugin-dev-v168.md)                             | 插件开发 | v1.6.8：部门明细表格拆分（独立卡片） |
+| [docs/plugin-dev-v169.md](docs/plugin-dev-v169.md)                             | 插件开发 | v1.6.9：插件分布 / 组织人员双卡等宽等高 |
+| [docs/plugin-dev-v1610.md](docs/plugin-dev-v1610.md)                           | 插件开发 | v1.6.10：公告简报卡片化 + 公告列表 / 详情合并 |
+| [docs/plugin-dev-v1611.md](docs/plugin-dev-v1611.md)                           | 插件开发 | v1.6.11：部门管理页排版优化（表格 / 操作按钮 / 表单对齐） |
+| [docs/plugin-dev-v1612.md](docs/plugin-dev-v1612.md)                           | 插件开发 | v1.6.12：角色 / 审批 / 待办三页统一排版 |
+| [docs/plugin-dev-v1613.md](docs/plugin-dev-v1613.md)                           | 插件开发 | v1.6.13：用户管理操作配色 + 角色权限码流式排版 |
+| [docs/plugin-dev-v1614.md](docs/plugin-dev-v1614.md)                           | 插件开发 | v1.6.14：用户管理操作项按钮化（白底蓝字 / 蓝 / 红） |
+| [docs/plugin-dev-v1615.md](docs/plugin-dev-v1615.md)                           | 插件开发 | v1.6.15：公告中心双卡片改版（信息卡 + 详情卡 + 已读弹窗） |
+| [docs/plugin-dev-v1616.md](docs/plugin-dev-v1616.md)                           | 插件开发 | v1.6.16：考勤页图表卡 + 签到详情单行筛选 |
+| [docs/plugin-dev-v1617.md](docs/plugin-dev-v1617.md)                           | 插件开发 | v1.6.17：考勤卡片收紧 / 签到签退同行 / 插件改名 |
+| [docs/plugin-dev-v1618.md](docs/plugin-dev-v1618.md)                           | 插件开发 | v1.6.18：今日状态卡片压缩并与本月统计等高 |
+| [docs/plugin-dev-v1619.md](docs/plugin-dev-v1619.md)                           | 插件开发 | v1.6.19：部门操作按钮配色（修改白蓝 / 停用蓝 / 删除红） |
+| [docs/plugin-dev-v1620.md](docs/plugin-dev-v1620.md)                           | 插件开发 | v1.6.20：部门状态徽标绿色 + 防折行 |
 | [docs/plugin-dev-notify.md](docs/plugin-dev-notify.md)                         | 计划   | notify：信息提醒插件（站内信优先 / 公告 / 审批消息，v1.15 计划） |
 | [docs/roadmap.md](docs/roadmap.md)                                             | 规划   | 差距矩阵、v1.5–v2.0 迭代路线、修复项与文档债务                  |
 
 ## 📌 状态
 
-**v1.5.18 已跑通**（审批人限定管辖部门业务负责人且必选无留空 / 抄送申请人直系领导 / 184 项测试全绿）→ 下一步：v1.6 图表插件化 + ECharts；v1.15 站内信·信息提醒插件（计划）
+**v1.6.20 已交付**（tag `v1.6.20`，237 项测试全绿）：图表插件化 / 运行时开关 / 工作台图表大盘 / 公告合并 / 部门·用户·角色·审批·考勤页面统一。→ 下一步：v1.7 认证后端插件化；v1.15 站内信·信息提醒插件（计划）
