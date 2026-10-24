@@ -17,7 +17,8 @@
 | **模板引擎** | Django 模板 | 默认 | `TEMPLATES` 配置可切 Jinja2 / 多引擎共存 |
 | **主题 UI** | **Corporate Clean 企业简洁风**（Bootstrap 栅格） | 默认主题 `themes/corporate-clean`；Risograph 备选 | 主题即插件：`themes/<key>/theme.json` + 改 `OA_THEME` + 重启即换 |
 | **图表引擎** | **ECharts** | 默认图表插件 | 统一 chart 接口，可换 Chart.js / D3 / 原生 SVG |
-| **认证后端** | Django auth（session） | 默认 | `AUTHENTICATION_BACKENDS` 可插拔：加 LDAP / OAuth 插件 |
+| **认证后端** | Django auth（session） | 默认 | `AUTHENTICATION_BACKENDS` 可插拔：加 LDAP / OAuth 插件；v1.7.0 已提供企业 SSO（HMAC Ticket 网关，`plugins/sso`）与账号密码并存 |
+| **消息提醒** | 站内信（Django ORM） | `plugins/notify` | 订阅审批/公告信号写站内信；可停用降级 |
 | 事件总线 | Django signals | 随框架 | 插件间通信，互不 import |
 | WSGI | Gunicorn | 默认 | 可换 uvicorn（ASGI） |
 | 代理/部署 | WhiteNoise + Docker Compose | 默认 | `docker compose up -d` 一键部署（MySQL8 + Gunicorn） |
@@ -56,7 +57,7 @@
    - 图表引擎：统一 `ChartRenderer` 接口，ECharts 为默认实现
    - 认证后端：`AUTHENTICATION_BACKENDS` 列表加一行 = 新增一种登录方式
 3. **业务插件层**（全部可插拔）
-   - auth（登录/认证）、user（用户/部门/角色/RBAC）、approval（审批中心）、notice（公告通知）、attendance（考勤打卡）、blockchain（操作留痕上链）
+   - auth（登录/认证）、user（用户/部门/角色/RBAC）、approval（审批中心）、notice（公告通知）、attendance（考勤打卡）、blockchain（操作留痕上链）、workspace（插件开关）、structure（组织架构模板）、language（中英切换）、sso（企业 SSO）、notify（消息提醒）
    - 删一个插件 = 从 `OA_PLUGINS` 删一行，导航/权限/路由自动消失，系统照常运行
 
 ## 三、插件契约（每个插件必须声明）
@@ -75,7 +76,7 @@ PluginMeta:
 
 **容器职责**：扫描注册 → 聚合菜单/权限 → 渲染外壳 → 转发请求到插件。
 
-## 四、功能模块（4 个核心业务插件）
+## 四、功能模块（业务插件）
 
 | 插件 | 功能 | 核心数据表 |
 |---|---|---|
@@ -85,6 +86,11 @@ PluginMeta:
 | notice | 公告通知（发布/置顶/已读） | announcement、announcement_read |
 | attendance | 考勤打卡（打卡+月度统计） | attendance |
 | blockchain | 操作留痕上链（SHA-256 哈希链，防篡改审计） | blockchain_record |
+| workspace | 插件运行时开关 | workspace_pluginswitch |
+| structure | 组织架构模板 | structure_structurerecord |
+| language | 中英切换 | 无表（Cookie） |
+| sso | 企业 SSO 签名 Ticket 登录 | 无表（session） |
+| notify | 站内消息提醒 | notify_notification |
 
 ## 五、关键设计决策
 

@@ -2,7 +2,7 @@
 
 > 依据：`tech-stack-and-architecture.md` / `constraints-and-acceptance.md` / `development-guide.md` 的**全栈插件化**目标
 > 负责人校正（2026-10-22）：**不降级**、**补充实现**、**列入修复项**；工作约定只需「文档先行、每改必推 GitHub、每版打 tag」
-> 状态：draft-49（2026-10-24）—— **v1.4–v1.6.20 已交付**（237 项测试全绿；tag **v1.6.20**）；下一版：v1.7 认证后端插件化
+> 状态：draft-50（2026-10-24）—— **v1.4–v1.6.20 已交付**（tag **v1.6.20**），**v1.7.0 企业 SSO + 消息提醒已实现**（259 项测试全绿）；下一版：v1.7.1 认证后端插件化
 
 ## 一、总原则
 
@@ -18,7 +18,7 @@
 | 数据库后端 | MySQL / sqlite / postgres 一行切换 | MySQL / sqlite 通过环境变量切换 | postgres 未验证 | 已具备；v1.10 补验证 |
 | 主题 UI | 新建 `themes/<name>` + 改 `OA_THEME` 即换 | Corporate Clean 默认 / Risograph 备选；`OA_THEME` 生效 | 已补齐主题清单、切换、第二主题 | ✅ v1.5 完成 |
 | 图表引擎 | 统一 `ChartRenderer`，ECharts 默认 | `plugin_host/charts.py` + `charts/echarts` Provider；`OA_CHARTS` 选择 / 停用降级；v1.6.1 起为 Provider 插件，可运行时启停 | 已补齐清单发现、契约、运行时选择与开关 | ✅ v1.6 / v1.6.1 完成 |
-| 认证后端 | `AUTHENTICATION_BACKENDS` 可插拔 | 仅 Django 默认 ModelBackend | 无 Provider、无示例后端 | **v1.7** |
+| 认证后端 | `AUTHENTICATION_BACKENDS` 可插拔 | 仅 Django 默认 ModelBackend | 无 Provider、无示例后端 | **v1.7.1** |
 | 模板引擎 | Django / Jinja2 可切、可共存 | 仅 DjangoTemplates | 无 Provider、无 Jinja2 | **v1.8**（深度待确认） |
 | 插件契约 | `models` / `dependencies` / `admin` / 依赖校验 | 仅 name/version/menus/permissions/urls/signals/templates/app | 字段缺失、无依赖校验 | **v1.9** |
 | 业务 ECharts 看板 | 考勤月度统计用 ECharts | 签到详情月度看板 + `/plugins/attendance/stats/` JSON；停用降级表格 | 已补齐图表、统计接口、降级 | ✅ v1.6 完成 |
@@ -77,11 +77,13 @@
 | **v1.6.18** | 今日状态卡片压缩等高 | 状态徽标与签到时间同行、标题/控件间距收紧；两卡 `h-100` 保持与本月统计等高（`docs/plugin-dev-v1618.md`） | 纯模板调整并部署 |
 | **v1.6.19** | 部门操作按钮配色调整 | 修改改白底蓝字按钮、停用改蓝色按钮，物理删除保持红色；三者统一 `r-btn--action`（`docs/plugin-dev-v1619.md`） | 纯模板调整并部署 |
 | **v1.6.20** | 部门状态徽标绿色与防折行 | 状态列 `text-nowrap` 防止「启用」折行；启用徽标改绿色（`r-badge--green`）（`docs/plugin-dev-v1620.md`） | 纯模板调整并部署 |
-| **v1.7** | 认证后端插件化 | `AUTHENTICATION_BACKENDS` Provider；一个无外部依赖的示例后端（如用户名/邮箱） | 切换后端可登录；默认后端仍可用 |
+| **v1.7** | 认证后端插件化 | `AUTHENTICATION_BACKENDS` Provider；一个无外部依赖的示例后端（如用户名/邮箱） | 切换后端可登录；默认后端仍可用（延期，见 v1.7.1） |
+| **v1.7.0** | 企业 SSO + 站内信提醒 | `plugins/sso`（HMAC Ticket 网关、自动建号、防重放、登录页入口、`sso_ticket` 命令）；`plugins/notify`（消息中心 / 顶栏未读 / 审批待办与结果 / 公告提醒 / 工作台我的消息 / 停用降级）（`docs/plugin-dev-sso.md`、`docs/plugin-dev-notify.md`） | ✅ 已实现：259 项测试 + Docker 重建 |
+| **v1.7.1** | 认证后端插件化 | `AUTHENTICATION_BACKENDS` Provider；一个无外部依赖的示例后端（如用户名/邮箱） | 切换后端可登录；默认后端仍可用 |
 | **v1.8** | 模板引擎插件化 | Django / Jinja2 Provider；先做多引擎共存或单插件切换 | 待确认深度（见第六节） |
 | **v1.9** | 插件契约补全 | `models` / `dependencies` / `admin`；依赖顺序与环校验；启用一致性校验 | 缺失依赖启动即报错；停用被依赖插件被拦截 |
 | **v1.10** | 修复包 + 文档债务 | 会签详情权限、区块链锁、开关边界、规约清理、全文档同步 | 新增测试全绿；文档与代码无已知冲突 |
-| **v1.15** | 信息提醒插件（计划） | `plugins/notify`：站内信 / 公告 / 审批结果与待办通知、消息中心与未读数（`docs/plugin-dev-notify.md`） | 审批/公告产生消息、未读与已读、越权不可见、停用降级 |
+| **v1.15** | 信息提醒插件（计划） | `plugins/notify`：站内信 / 公告 / 审批结果与待办通知、消息中心与未读数（`docs/plugin-dev-notify.md`） | ✅ 提前于 v1.7.0 完成：审批/公告产生消息、未读与已读、越权不可见、停用降级 |
 | **v2.0** | 最终文档 | 需求规格说明书、测试报告、部署文档、演示脚本（按参考附件） | 负责人验收 |
 
 > 顺序可调整：若希望先补基础设施、把 language 后置，v1.5–v1.8 可整体前移；language 文档已就绪，随时可插入。

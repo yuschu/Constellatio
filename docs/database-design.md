@@ -33,9 +33,12 @@
 | blockchain | `blockchain_record` | 业务 | 操作留痕链（哈希链，防篡改） |
 | workspace | `workspace_pluginswitch` | 业务 | 插件运行时开关（v1.1 落地，DB 覆盖静态配置） |
 | structure | `structure_structurerecord` | 业务 | 结构模板应用记录（v1.3 落地，幂等应用留痕） |
+| notify | `notify_notification` | 业务 | 站内消息（审批待办/结果、公告，v1.7.0 落地） |
 | — | `auth_permission` 等 | 框架内置 | Django 自带（auth_group / django_session / django_migrations 等） |
 
-业务插件共 **13 张表**；框架内置表不属于任何插件，由 Django 自动管理。
+业务插件共 **14 张表**；框架内置表不属于任何插件，由 Django 自动管理。
+
+> v1.7.0 的 `sso` 插件**无业务表**：登录态复用 Django session；Ticket 防重放走缓存不落库。
 
 > v1.4 的 `language` 插件**无业务表**：语言选择只写会话级 Cookie（`django_language`），不落库、不新增迁移。
 >
@@ -63,6 +66,7 @@
     user 1:N notice_announcement 1:N notice_announcementread
     user 1:N attendance_attendance
     user 1:N blockchain_record（操作人 operator）
+    user 1:N notify_notification（接收人 recipient）
 ```
 
 - 部门 1—N 用户；用户 M—N 角色；角色 M—N 权限（框架内置表）
@@ -256,7 +260,24 @@ UNIQUE(user_id, date) —— 一天一卡防重复
 
 权限码：`structure_manage`（应用模板）、`structure_view`（查看架构）。模板本身为代码常量（`plugins/structure/template.py`：20 部门/31 角色/31 用户），不落表，可扩展。
 
-### 4.8 框架内置表（不属于任何插件）
+### 4.8 `notify_notification` 站内消息（v1.7.0）
+
+| 字段 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| id | BIGINT | PK | — |
+| recipient_id | BIGINT | FK user_user, NOT NULL, CASCADE | 接收人（仅本人可见） |
+| category | VARCHAR(20) | NOT NULL | `approval` / `notice` / `system` |
+| title | VARCHAR(200) | NOT NULL | 标题（事件发生时按当前语言生成） |
+| body | TEXT | NOT NULL, DEFAULT '' | 辅助说明（申请人/类型/发布人） |
+| link | VARCHAR(300) | NOT NULL, DEFAULT '' | 站内跳转地址（跳转前做同源校验） |
+| is_read | BOOL | NOT NULL, DEFAULT False | 已读标记 |
+| read_at | DATETIME | NULL | 已读时间 |
+| created_at | DATETIME | auto_now_add | 创建时间 |
+
+索引：`(recipient_id, is_read)`；权限码：`notify_view`（全员基线，登录即用）。
+产生方式：notify 订阅 `approval_submitted` / `approval_finished` / `notice_published` 批量写入，业务插件不感知 notify。
+
+### 4.9 框架内置表（不属于任何插件）
 
 `django_migrations`、`auth_permission`、`auth_group`、`auth_group_permissions`、`django_content_type`、`django_session`、`django_admin_log` —— 由 Django 自动创建，不在插件职责内。
 
@@ -278,6 +299,7 @@ python manage.py makemigrations approval
 python manage.py makemigrations notice
 python manage.py makemigrations attendance
 python manage.py makemigrations blockchain
+python manage.py makemigrations notify
 
 # 应用全部迁移
 python manage.py migrate

@@ -562,6 +562,22 @@ class BlockchainRecord(models.Model):
 - 详情：列表行尾"查看" → `/plugins/blockchain/<id>/`，展示插件/动作/目标/操作人/三种哈希/时间
 - 展示名：插件列用 `PluginMeta.title`，动作列用 `BlockchainRecord.action_label`，随当前语言切换（v1.5.2）
 
+### 4.6 sso 企业单点登录（v1.7.0）
+
+- 插件：`plugins/sso`（无模型 / 无迁移）；登录页入口 + `/plugins/sso/login/`
+- Ticket：`base64url(payload).base64url(HMAC-SHA256(SSO_SHARED_SECRET))`，payload 含 `username/sub`、`name/email/department`、`iat/exp`
+- 校验：验签 / TTL / 防重放（缓存占位）/ `next` 同源；用户不存在按 `SSO_AUTO_CREATE` 自动建号（不可用密码）
+- 配置：`SSO_SHARED_SECRET`（生产必改）、`SSO_TICKET_TTL`、`SSO_AUTO_CREATE`；签发工具 `manage.py sso_ticket <username>`
+- 细节见 `docs/plugin-dev-sso.md`
+
+### 4.7 notify 站内消息（v1.7.0）
+
+- 插件：`plugins/notify`；模型 `Notification(recipient, category, title, body, link, is_read, read_at, created_at)`
+- 产生：只订阅 `approval_submitted` / `approval_finished` / `notice_published`，批量写入，不反向 import 业务插件
+- 入口：侧栏「消息中心」+ 顶栏未读数（`context_processors.notifications`）+ 工作台「我的消息」
+- 已读：单条 `/plugins/notify/read/<id>/`（同源链接跳转）、全部已读 POST；`notify_view` 全员基线
+- 细节见 `docs/plugin-dev-notify.md`
+
 ## 五、前端开发规范
 
 - 页面一律继承当前主题的 `templates/base.html`（`OA_THEME` 选择），插件只写 `{% block content %}`

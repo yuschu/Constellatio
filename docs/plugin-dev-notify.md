@@ -1,6 +1,6 @@
-# 插件开发计划：notify（信息提醒：站内信 / 公告 / 审批信息）
+# 插件开发：notify（信息提醒：站内信 / 公告 / 审批信息）
 
-> 状态：**计划（未开发）** · 目标版本：v1.15 · 文档日期：2026-10-23
+> 状态：**✅ 已实现（v1.7.0）** · 文档日期：2026-10-24（原计划 v1.15 提前落地）
 > 关联：approval（审批结果/待办）、notice（公告）、user（接收人）、plugin_host（信号 / 菜单 / 工作台）
 
 ## 一、目标
@@ -78,3 +78,19 @@
 - 审批待办 → 审批人收到站内信；
 - 越权访问他人消息 404；已读状态持久；全部已读生效；
 - 停用 notify → 铃铛与入口消失、业务照常。
+
+## 七、v1.7.0 实现记录（2026-10-24）
+
+| 项 | 实现 |
+|---|---|
+| 插件 | `plugins/notify`（Django app，可停用）；菜单「消息中心」`/plugins/notify/`；`notify_view` 全员基线 |
+| 模型 | `Notification(recipient, category, title, body, link, is_read, read_at, created_at)` + `(recipient, is_read)` 索引；迁移 `0001_initial` |
+| 信号 | 新增 `approval_submitted`（`services.submit` / `start_counter_signature` 发送）；订阅 `approval_submitted` / `approval_finished` / `notice_published`；通知失败不影响业务 |
+| 待办消息 | 接收人 = 审批人 + 未签会签人 + 抄送人（排除申请人）；标题「审批待办：…」 |
+| 结果消息 | 接收人 = 申请人；「审批结果：…（已通过/已驳回）」 |
+| 公告消息 | 接收人 = 全部启用账号（排除发布人），`bulk_create` 批量写入 |
+| 入口 | 顶栏 ✉ + 未读数（`plugin_host.context_processors.notifications`）、侧栏「消息中心」、工作台「我的消息」最新 3 条 |
+| 已读 | 单条 `/read/<id>/`（仅本人、仅站内链接跳转）、全部已读 POST；越权 404 |
+| 停用降级 | 插件停用 → 菜单 / 顶栏 / 工作台入口隐藏；信号处理器仍安全跳过（表未迁移时 `logger.exception` 不外抛） |
+| 测试 | 9 项：待办 / 结果 / 公告 fanout / 仅本人可见 / 已读跳转 / 越权 404 / 外链不跳 / 全部已读 / 停用隐藏 |
+

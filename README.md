@@ -16,7 +16,11 @@
 
 * 🔌 基础设施可插拔：数据库（MySQL↔sqlite）、主题 UI（Corporate Clean / Risograph）、模板引擎、图表引擎、认证后端
 
-* 🎨 主题插件化：`themes/<key>/theme.json` + `OA_THEME`，重启生效；登录页 SSO / 忘记密码占位入口 + 首屏加载动画
+* 🎨 主题插件化：`themes/<key>/theme.json` + `OA_THEME`，重启生效；登录页 SSO（已接入）/ 忘记密码入口 + 首屏加载动画
+
+* 🔑 企业 SSO：HMAC 签名 Ticket 网关登录（自动建号 / 防重放 / 登录页入口 / `sso_ticket` 命令），与账号密码登录并存
+
+* ✉ 消息提醒：顶栏未读数 + 消息中心；审批待办 / 审批结果 / 公告发布自动站内信，可停用降级
 
 * 🌐 全站 UI 中英切换：插件名 / 表头 / 状态 / 空态 / 确认文案随语言切换（用户名与业务数据除外）
 
@@ -181,9 +185,10 @@ Constellatio/
 | [docs/plugin-dev-v1618.md](docs/plugin-dev-v1618.md)                           | 插件开发 | v1.6.18：今日状态卡片压缩并与本月统计等高 |
 | [docs/plugin-dev-v1619.md](docs/plugin-dev-v1619.md)                           | 插件开发 | v1.6.19：部门操作按钮配色（修改白蓝 / 停用蓝 / 删除红） |
 | [docs/plugin-dev-v1620.md](docs/plugin-dev-v1620.md)                           | 插件开发 | v1.6.20：部门状态徽标绿色 + 防折行 |
-| [docs/plugin-dev-notify.md](docs/plugin-dev-notify.md)                         | 计划   | notify：信息提醒插件（站内信优先 / 公告 / 审批消息，v1.15 计划） |
+| [docs/plugin-dev-sso.md](docs/plugin-dev-sso.md)                               | 插件开发 | v1.7.0：企业 SSO（HMAC Ticket 网关、自动建号、防重放） |
+| [docs/plugin-dev-notify.md](docs/plugin-dev-notify.md)                         | 插件开发 | v1.7.0：消息提醒（站内信 / 审批 / 公告 / 未读 / 停用降级） |
 | [docs/roadmap.md](docs/roadmap.md)                                             | 规划   | 差距矩阵、v1.5–v2.0 迭代路线、修复项与文档债务                  |
 
 ## 📌 状态
 
-**v1.6.20 已交付**（tag `v1.6.20`，237 项测试全绿）：图表插件化 / 运行时开关 / 工作台图表大盘 / 公告合并 / 部门·用户·角色·审批·考勤页面统一。→ 下一步：v1.7 认证后端插件化；v1.15 站内信·信息提醒插件（计划）
+**v1.7.0 已实现并部署**（企业 SSO + 消息提醒，259 项测试全绿）：SSO Ticket 登录 / 消息中心与顶栏未读 / 审批与公告站内信；上一交付 **v1.6.20**（tag）。→ 下一步：v1.7.1 认证后端插件化

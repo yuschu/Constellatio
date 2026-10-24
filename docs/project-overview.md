@@ -17,8 +17,8 @@
 
 ```
 万物皆可插件：
-┌─ 业务插件层 ─ auth / user / approval / notice / attendance / blockchain ─┐
-│ 基础设施插件层 ─ DB后端 / 模板引擎 / 主题UI / 图表引擎 / 认证 │
+┌─ 业务插件层 ─ auth / user / approval / notice / attendance / blockchain / workspace / structure / language / sso / notify ─┐
+│ 基础设施插件层 ─ DB后端 / 模板引擎 / 主题UI / 图表引擎 / 认证（SSO） │
 │ 插件容器 plugin_host（唯一固定：注册表/外壳/信号/配置）        │
 └─ 部署：WhiteNoise + Gunicorn + Django + MySQL（Docker Compose）  ─┘
 ```
@@ -42,6 +42,8 @@
 | structure | 组织架构模板 | 20 部门 / 31 角色 / 31 用户幂等应用（v1.3） |
 | language | 中英切换 | 默认中文 + 会话 Cookie + 全站 UI 文案中英切换（v1.5.1） |
 | theme | 主题插件 | Corporate Clean 默认 / Risograph 备选，`OA_THEME` 切换（v1.5） |
+| sso | 企业单点登录 | HMAC 签名 Ticket 网关登录、自动建号、防重放、登录页入口（v1.7.0） |
+| notify | 消息提醒 | 站内信：审批待办 / 结果、公告发布、顶栏未读、消息中心、工作台卡片（v1.7.0） |
 
 ## 四、技术栈
 
@@ -105,7 +107,12 @@ Constellatio/
 │   ├── approval/               # 审批中心插件（已实现 v0.3）
 │   ├── notice/                 # 公告通知插件（已实现 v0.4）
 │   ├── attendance/             # 考勤打卡插件（已实现 v0.5）
-│   └── blockchain/             # 操作留痕上链插件（已实现 v0.6）
+│   ├── blockchain/             # 操作留痕上链插件（已实现 v0.6）
+│   ├── workspace/              # 运行时插件开关（v1.1）
+│   ├── structure/              # 组织架构模板（v1.3）
+│   ├── language/               # 中英切换（v1.4）
+│   ├── sso/                    # 企业 SSO 签名 Ticket 登录（v1.7.0）
+│   └── notify/                 # 站内消息提醒（v1.7.0）
 ├── themes/                     # 主题插件层（可插拔，theme.json 发现）
 │   ├── corporate-clean/        # 企业简洁风（默认）
 │   └── risograph/              # Risograph 印刷风（备选）
@@ -177,6 +184,9 @@ OA_PLUGINS = [
 - [x] v1.5 theme 插件（Corporate Clean 默认 / Risograph 备选 + 登录占位入口 + 首屏 loader）—— 2026-10-22 完成：`docs/plugin-dev-theme.md`
 - [x] v1.5.1 全站 UI 文案中英补全（插件名 / 表头 / 状态 / 空态 / confirm）+ 留痕记录点击查看详情—— 2026-10-22
 - [x] v1.5.2 留痕链插件/动作展示名本地化—— 2026-10-22
+- [x] v1.6 图表插件化（ChartRenderer Provider + ECharts 本地资源 + 考勤月度看板）—— 2026-10-23：`docs/plugin-dev-v16.md`
+- [x] v1.6.1–v1.6.20 图表开关 / 工作台大盘 / 公告合并 / 页面统一（237 项测试，tag `v1.6.20`）—— 2026-10-24
+- [x] v1.7.0 企业 SSO（签名 Ticket）+ 消息提醒站内信（259 项测试）—— 2026-10-24：`docs/plugin-dev-sso.md`、`docs/plugin-dev-notify.md`
 - [x] v1.5.3 个人中心（资料 / 权限 / 改密）、用户编辑权限范围、登录回填用户名、公告对所有登录用户可见（76 项测试全绿）—— 2026-10-22
 - [x] v1.5.4 权限等级 L0–L3、全员基线（考勤/公告）、角色模板权限、插件准入统一守卫、管理岗签到详情（102 项测试全绿）—— 2026-10-22
 - [x] v1.5.5 审批六类动态表单 + 直属上级抄送、签到状态/类型/时间筛选与补卡、工作台双视图、侧栏高亮、密码权限（138 项测试全绿）—— 2026-10-22
