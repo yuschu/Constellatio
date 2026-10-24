@@ -8,5 +8,6 @@ app_name = 'blockchain'
 
 urlpatterns = [
     path('', views.blockchain_list, name='blockchain_list'),
+    path('stats/', views.blockchain_stats, name='blockchain_stats'),
     path('<int:record_id>/', views.blockchain_detail, name='record_detail'),
 ]

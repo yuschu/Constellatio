@@ -88,19 +88,38 @@ def index(request):
             'url': '/plugins/attendance/records/' if can_report else '/plugins/attendance/',
         })
 
+    pending = (_pending_approvals(user)
+               if 'approval' in enabled_names and can_approve else 0)
+    attendance_today = _attendance_today(user) if 'attendance' in enabled_names else None
+
+    # v1.6.2：工作台图表大盘——范围筛选 + 角色分流（管理员 / 员工）
+    from .charts import get_active_chart
+    from .workbench import build_dashboard, parse_range
+
+    dashboard = build_dashboard(
+        user=user,
+        is_admin=can_plugin_ops,
+        enabled_names=enabled_names,
+        range_key=parse_range(request.GET.get('range')),
+        chart=get_active_chart(),
+        pending_approvals=pending,
+        attendance_today=attendance_today,
+    )
+    plugin_card = dashboard['cards'].get('plugins')
+
     return render(request, 'home.html', {
-        'pending_approvals': _pending_approvals(user)
-        if 'approval' in enabled_names and can_approve else 0,
-        'attendance_today': _attendance_today(user) if 'attendance' in enabled_names else None,
+        'pending_approvals': pending,
+        'attendance_today': attendance_today,
         'notices': _recent_notices() if 'notice' in enabled_names else [],
         'shortcuts': shortcuts,
         'can_approval': can_approval,
         'can_approve': can_approve,
         'can_plugin_ops': can_plugin_ops,
         'enabled_plugins': [(key, meta.title) for key, meta in enabled],
-        'plugin_total': len(PLUGIN_REGISTRY),
-        'enabled_count': len(enabled),
+        'plugin_total': plugin_card['total'] if plugin_card else len(PLUGIN_REGISTRY),
+        'enabled_count': plugin_card['enabled'] if plugin_card else len(enabled),
         'is_admin_view': can_plugin_ops,
+        **dashboard,
     })
 
 

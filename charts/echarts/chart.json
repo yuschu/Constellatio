@@ -1,0 +1,8 @@
+{
+  "name": "ECharts",
+  "version": "5.5.1",
+  "renderer": "charts.echarts.renderer.EChartsRenderer",
+  "static": "static",
+  "asset": "vendor/echarts.min.js",
+  "adapter": "js/echarts.js"
+}

@@ -12,6 +12,7 @@
   --r-blue: #1d4ed8;
   --r-orange: #d97706;
   --r-green: #16a34a;
+  --r-danger: #dc2626;   /* v1.6.2：图表告警色（待办较多 / 插件异常） */
 
   --r-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
   --r-radius: 8px;
@@ -50,6 +51,10 @@ a:hover { color: var(--r-blue); }
 
 /* ---------- 顶栏 ---------- */
 .r-nav {
+  /* v1.6.4：顶部导航吸顶（滚动时保持在视口顶部） */
+  position: sticky;
+  top: 0;
+  z-index: 1030;
   background: #ffffff;
   border: none;
   border-bottom: 1px solid #e5e7eb;
@@ -98,6 +103,15 @@ a:hover { color: var(--r-blue); }
 
 /* ---------- 侧栏 ---------- */
 .r-card--sidebar { padding: 1rem; }
+/* v1.6.3：侧栏吸顶（桌面端）——页面纵向滚动时菜单保持可见，内容长时菜单内部滚动 */
+@media (min-width: 768px) {
+  .r-card--sidebar {
+    position: sticky;
+    top: 1rem;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+  }
+}
 .r-sidebar-title {
   font-size: 0.72rem;
   font-weight: 600;
@@ -196,6 +210,34 @@ a:hover { color: var(--r-blue); }
   color: var(--r-ink);
   border-color: #9ca3af;
 }
+/* v1.6.11：危险操作按钮（部门物理删除等） */
+.r-btn--danger {
+  background: var(--r-danger);
+  border-color: var(--r-danger);
+  color: #ffffff;
+}
+.r-btn--danger:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+  color: #ffffff;
+}
+/* v1.6.14：白底蓝字操作按钮 + 统一操作按钮尺寸 */
+.r-btn--ghost {
+  background: #ffffff;
+  color: var(--r-blue);
+  border-color: #bfdbfe;
+}
+.r-btn--ghost:hover {
+  background: #eff6ff;
+  color: var(--r-blue);
+  border-color: #93c5fd;
+}
+.r-btn--action {
+  min-width: 5.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
 
 /* ---------- 表单 ---------- */
 .r-input, .r-select, .r-textarea {
@@ -240,7 +282,7 @@ a:hover { color: var(--r-blue); }
 }
 .r-table th {
   background: #f9fafb;
-  color: #6b7280;
+  color: var(--r-ink);
   font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -251,6 +293,8 @@ a:hover { color: var(--r-blue); }
 .r-table tbody tr:hover td,
 .r-table tbody tr:hover th { background: #f9fafb; }
 .r-table tr:last-child td { border-bottom: none; }
+/* v1.6.11：宽松表格（部门管理等），避免操作按钮拥挤 */
+.r-table--roomy th, .r-table--roomy td { padding: 0.85rem 0.9rem; }
 
 /* ---------- 徽标 ---------- */
 .r-badge {
@@ -287,16 +331,17 @@ a:hover { color: var(--r-blue); }
 .r-grain::after { display: none; }
 .r-halftone { background-image: none; }
 
-/* ---------- 首页 hero（按负责人要求照抄 Prompt 的 gray-900） ---------- */
+/* ---------- 首页 hero ---------- */
+/* v1.6.3：蓝色 Banner 上标题 / 欢迎语改白字（仅 Corporate Clean；Risograph 不变） */
 .r-hero {
   background: var(--r-pink);
-  color: #111827;
+  color: #ffffff;
   border-radius: 12px;
   padding: 2rem;
   box-shadow: var(--r-shadow-sm);
 }
-.r-hero h2 { color: #111827; margin-bottom: 0.5rem; }
-.r-hero-text { color: #111827; font-size: 0.95rem; }
+.r-hero h2 { color: #ffffff; margin-bottom: 0.5rem; }
+.r-hero-text { color: rgba(255, 255, 255, 0.92); font-size: 0.95rem; }
 .r-h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; }
 .r-muted { color: #6b7280; font-size: 0.875rem; }
 .r-small { font-size: 0.8rem; }

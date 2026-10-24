@@ -14,6 +14,63 @@
     <p class="r-badge r-badge--orange">{% blocktranslate with id=broken_id %}链完整性：异常（第 {{ id }} 条被篡改）{% endblocktranslate %}</p>
   {% endif %}
 </div>
+<div class="r-card mb-4">
+  <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
+    <h3 class="fs-5 mb-0">{% trans "留痕统计" %}</h3>
+    {% if chart %}
+    <div class="d-flex align-items-center gap-2">
+      <label class="form-label mb-0" for="chart_days">{% trans "时间窗口" %}</label>
+      <select class="r-input" id="chart_days">
+        <option value="7">{% trans "近 7 天" %}</option>
+        <option value="30" selected>{% trans "近 30 天" %}</option>
+        <option value="90">{% trans "近 90 天" %}</option>
+      </select>
+    </div>
+    {% else %}
+    <span class="r-badge">{% blocktranslate %}近 {{ chart_days }} 天{% endblocktranslate %}</span>
+    {% endif %}
+  </div>
+  {% if chart %}
+  <div id="blockchain-chart" style="width:100%;height:320px;"
+       data-stats-url="{% url 'blockchain:blockchain_stats' %}"
+       data-days="{{ chart_days }}"
+       data-colspan="{{ chart_colspan }}"
+       role="img" aria-label="{% trans "留痕统计" %}"></div>
+  {% endif %}
+  <div id="blockchain-chart-fallback" {% if chart %}hidden{% endif %}
+       data-empty="{% trans "该时间范围内暂无留痕记录" %}">
+    <table class="r-table">
+      <thead>
+        <tr>
+          <th>{% trans "日期" %}</th>
+          {% for label in chart_labels %}<th>{{ label }}</th>{% endfor %}
+          <th>{% trans "合计" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in chart_rows %}
+        <tr>
+          <td>{{ row.date }}</td>
+          {% for cell in row.cells %}<td>{{ cell }}</td>{% endfor %}
+          <td>{{ row.total }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="{{ chart_colspan }}" class="text-muted">{% trans "该时间范围内暂无留痕记录" %}</td></tr>
+        {% endfor %}
+      </tbody>
+      {% if chart_rows %}
+      <tfoot>
+        <tr>
+          <th>{% trans "合计" %}</th>
+          {% for cell in chart_totals %}<td>{{ cell }}</td>{% endfor %}
+          <td>{{ chart_records }}</td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+  <p class="text-muted mb-0 mt-2" style="font-size:.75rem;">{% trans "统计按来源插件聚合，与留痕记录同源；图表不可用时自动降级为表格。" %}</p>
+</div>
 <div class="r-card">
   <table class="r-table">
     <thead>
@@ -37,4 +94,69 @@
     </tbody>
   </table>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{% if chart %}
+<script src="{{ chart.script_url }}"></script>
+<script src="{{ chart.adapter_url }}"></script>
+<script>
+(function () {
+  'use strict';
+  var el = document.getElementById('blockchain-chart');
+  var fallback = document.getElementById('blockchain-chart-fallback');
+  var daysSelect = document.getElementById('chart_days');
+  if (!el || !fallback) { return; }
+
+  function showFallback() {
+    fallback.hidden = false;
+    el.hidden = true;
+  }
+
+  function showEmpty() {
+    var body = fallback.querySelector('tbody');
+    if (body) {
+      body.innerHTML = '';
+      var row = document.createElement('tr');
+      var cell = document.createElement('td');
+      cell.colSpan = Number(el.dataset.colspan || 2);
+      cell.className = 'text-muted';
+      cell.textContent = fallback.dataset.empty || '';
+      row.appendChild(cell);
+      body.appendChild(row);
+    }
+    var foot = fallback.querySelector('tfoot');
+    if (foot) { foot.hidden = true; }
+    showFallback();
+  }
+
+  function load() {
+    var days = daysSelect ? daysSelect.value : el.dataset.days;
+    fetch(el.dataset.statsUrl + '?days=' + encodeURIComponent(days), {
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json' }
+    }).then(function (response) {
+      if (!response.ok) { throw new Error('stats ' + response.status); }
+      return response.json();
+    }).then(function (data) {
+      if (!data.totals || !data.totals.records) {
+        showEmpty();
+        return;
+      }
+      el.hidden = false;
+      if (!window.oaChartRender || !window.oaChartRender(el, data.payload)) {
+        showFallback();
+        return;
+      }
+      fallback.hidden = true;
+    }).catch(function () {
+      showFallback();
+    });
+  }
+
+  if (daysSelect) { daysSelect.addEventListener('change', load); }
+  load();
+})();
+</script>
+{% endif %}
 {% endblock %}

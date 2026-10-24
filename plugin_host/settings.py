@@ -81,6 +81,8 @@ TEMPLATES = [
                 # 容器：向模板注入插件聚合菜单 + 当前主题
                 'plugin_host.context_processors.menus',
                 'plugin_host.context_processors.themes',
+                # 图表引擎（v1.6）：停用/未知时为 None，模板降级为表格
+                'plugin_host.context_processors.charts',
             ],
         },
     },
@@ -135,6 +137,10 @@ OA_PLUGINS = [
 OA_THEME = os.environ.get('OA_THEME', 'corporate-clean')
 THEME_COOKIE_AGE = 60 * 60 * 24 * 365   # 主题偏好 Cookie 1 年
 
+# 图表引擎（v1.6）：charts/<key>/chart.json；空 / none / off 视为停用（页面降级为表格）
+OA_CHARTS = os.environ.get('OA_CHARTS', 'echarts')
+
+from plugin_host.charts import discover_charts  # noqa: E402
 from plugin_host.theming import discover_themes, get_theme  # noqa: E402  (依赖 BASE_DIR)
 
 _active_theme = get_theme(BASE_DIR, OA_THEME)   # 启动即校验 OA_THEME
@@ -142,6 +148,8 @@ _active_theme = get_theme(BASE_DIR, OA_THEME)   # 启动即校验 OA_THEME
 STATICFILES_DIRS = [
     str(theme.static) for _, theme in sorted(discover_themes(BASE_DIR).items())
 ]
+# 图表 Provider 的静态目录同样收集（ECharts 本地资源离线可用）
+STATICFILES_DIRS += [str(meta.static) for meta in discover_charts(BASE_DIR).values()]
 
 # ---------------------------------------------------------------------------
 # 密码校验 / 国际化 / 静态

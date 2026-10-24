@@ -2,46 +2,58 @@
 {% load i18n %}
 {% block title %}{% trans "审批中心" %} · Constellatio{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
   <h2 class="mb-0">{% trans "审批中心" %}</h2>
   <a href="{% url 'approval:approval_create' %}" class="r-btn">＋ {% trans "发起审批" %}</a>
 </div>
 <div class="r-card">
-  <table class="r-table">
-    <thead>
-      <tr><th>ID</th><th>{% trans "类型" %}</th><th>{% trans "标题" %}</th><th>{% trans "金额" %}</th><th>{% trans "审批人" %}</th><th>{% trans "状态" %}</th><th>{% trans "操作" %}</th></tr>
-    </thead>
-    <tbody>
-      {% for a in approvals %}
-      <tr>
-        <td>{{ a.id }}</td>
-        <td>{% trans a.get_approval_type_display %}</td>
-        <td>{{ a.title }}</td>
-        <td>{% if a.amount %}￥{{ a.amount }}{% else %}—{% endif %}</td>
-        <td>{{ a.approver.last_name|default:a.approver.username }}</td>
-        <td>
-          {% if a.status == 'pending' %}<span class="r-badge r-badge--blue">{% trans "待审批" %}</span>
-          {% elif a.status == 'approved' %}<span class="r-badge">{% trans "已通过" %}</span>
-          {% elif a.status == 'rejected' %}<span class="r-badge r-badge--orange">{% trans "已驳回" %}</span>
-          {% else %}<span class="r-badge">{% trans "草稿" %}</span>{% endif %}
-        </td>
-        <td class="d-flex flex-wrap gap-2 align-items-center">
-          <a href="{% url 'approval:approval_detail' a.id %}" class="r-offset-hover">{% trans "详情" %}</a>
-          {% if a.status == 'rejected' %}
-          <a href="{% url 'approval:approval_create' %}?reapply={{ a.id }}" class="r-btn r-btn--plain">{% trans "重新申请" %}</a>
-          <form method="post" action="{% url 'approval:approval_hide' a.id %}" class="d-inline m-0"
-                data-confirm="{% trans '删除后仅对你隐藏，不影响审批留痕，确定继续？' %}">
-            {% csrf_token %}
-            <button class="r-btn r-btn--plain" type="submit">{% trans "删除申请" %}</button>
-          </form>
-          {% endif %}
-        </td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="7" class="text-muted">{% trans "暂无审批记录" %}</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="table-responsive">
+    <table class="r-table r-table--roomy align-middle">
+      <thead>
+        <tr>
+          <th scope="col">ID</th>
+          <th scope="col">{% trans "类型" %}</th>
+          <th scope="col">{% trans "标题" %}</th>
+          <th scope="col">{% trans "金额" %}</th>
+          <th scope="col">{% trans "审批人" %}</th>
+          <th scope="col">{% trans "状态" %}</th>
+          <th scope="col" class="text-nowrap">{% trans "操作" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in approvals %}
+        <tr>
+          <td>{{ a.id }}</td>
+          <td>{% trans a.get_approval_type_display %}</td>
+          <td>{{ a.title }}</td>
+          <td>{% if a.amount %}￥{{ a.amount }}{% else %}—{% endif %}</td>
+          <td>{{ a.approver.last_name|default:a.approver.username }}</td>
+          <td>
+            {% if a.status == 'pending' %}<span class="r-badge r-badge--blue">{% trans "待审批" %}</span>
+            {% elif a.status == 'approved' %}<span class="r-badge r-badge--green">{% trans "已通过" %}</span>
+            {% elif a.status == 'rejected' %}<span class="r-badge r-badge--orange">{% trans "已驳回" %}</span>
+            {% else %}<span class="r-badge">{% trans "草稿" %}</span>{% endif %}
+          </td>
+          <td class="text-nowrap">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+              <a href="{% url 'approval:approval_detail' a.id %}" class="r-offset-hover">{% trans "详情" %}</a>
+              {% if a.status == 'rejected' %}
+              <a href="{% url 'approval:approval_create' %}?reapply={{ a.id }}" class="r-btn r-btn--plain">{% trans "重新申请" %}</a>
+              <form method="post" action="{% url 'approval:approval_hide' a.id %}" class="d-inline m-0"
+                    data-confirm="{% trans '删除后仅对你隐藏，不影响审批留痕，确定继续？' %}">
+                {% csrf_token %}
+                <button class="r-btn r-btn--plain" type="submit">{% trans "删除申请" %}</button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-muted">{% trans "暂无审批记录" %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 <script>
   document.querySelectorAll('form[data-confirm]').forEach(function (form) {

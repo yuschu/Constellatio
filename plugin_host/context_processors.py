@@ -1,7 +1,8 @@
-"""容器上下文处理器：插件菜单（含当前 Tab 高亮）、启用插件名、主题列表。"""
+"""容器上下文处理器：插件菜单（含当前 Tab 高亮）、启用插件名、主题列表、图表引擎。"""
 
 from django.conf import settings
 
+from .charts import get_active_chart
 from .registry import get_enabled_plugins, get_menus
 from .theming import discover_themes
 
@@ -44,3 +45,8 @@ def themes(request):
     items = [(key, meta.name) for key, meta in discover_themes(settings.BASE_DIR).items()]
     current = getattr(getattr(request, 'theme', None), 'key', settings.OA_THEME)
     return {'themes': items, 'current_theme': current}
+
+
+def charts(request):
+    """注入当前图表渲染器（v1.6）；停用 / 未知 Provider 时为 None，模板降级为表格。"""
+    return {'chart': get_active_chart()}

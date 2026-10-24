@@ -8,16 +8,16 @@
 </div>
 
 <div class="r-card mb-4">
-  <form method="get" class="d-flex flex-wrap align-items-end gap-3">
-    <div>
+  <form method="get" class="d-flex flex-wrap align-items-end gap-2">
+    <div style="flex:1 1 9rem; min-width:8.5rem;">
       <label class="form-label" for="start">{% trans "开始时间" %}</label>
       <input class="r-input" type="datetime-local" id="start" name="start" value="{{ start_value }}">
     </div>
-    <div>
+    <div style="flex:1 1 9rem; min-width:8.5rem;">
       <label class="form-label" for="end">{% trans "结束时间" %}</label>
       <input class="r-input" type="datetime-local" id="end" name="end" value="{{ end_value }}">
     </div>
-    <div>
+    <div style="flex:1 1 7rem; min-width:6.5rem;">
       <label class="form-label" for="status">{% trans "签到状态" %}</label>
       <select class="r-input" id="status" name="status">
         <option value="">{% trans "全部状态" %}</option>
@@ -26,7 +26,7 @@
         {% endfor %}
       </select>
     </div>
-    <div>
+    <div style="flex:1 1 7rem; min-width:6.5rem;">
       <label class="form-label" for="sign_type">{% trans "签到类型" %}</label>
       <select class="r-input" id="sign_type" name="sign_type">
         <option value="">{% trans "全部类型" %}</option>
@@ -35,7 +35,7 @@
         {% endfor %}
       </select>
     </div>
-    <div>
+    <div style="flex:1 1 7rem; min-width:6.5rem;">
       <label class="form-label" for="department">{% trans "部门" %}</label>
       <select class="r-input" id="department" name="department">
         <option value="">{% trans "全部部门" %}</option>
@@ -44,11 +44,11 @@
         {% endfor %}
       </select>
     </div>
-    <div>
+    <div style="flex:1 1 8rem; min-width:7.5rem;">
       <label class="form-label" for="q">{% trans "姓名或账号" %}</label>
       <input class="r-input" type="search" id="q" name="q" value="{{ keyword }}" placeholder="{% trans "筛选" %}">
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2" style="flex:0 0 auto;">
       <button class="r-btn" type="submit">{% trans "筛选" %}</button>
       <a class="r-btn r-btn--plain" href="{% url 'attendance:attendance_records' %}">{% trans "重置" %}</a>
     </div>
@@ -80,6 +80,70 @@
       <div class="fs-3">{{ missing_count }}</div>
     </div>
   </div>
+</div>
+
+<div class="r-card mb-4">
+  <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
+    <h3 class="fs-5 mb-0">{% trans "月度看板" %}</h3>
+    {% if chart %}
+    <div class="d-flex align-items-center gap-2">
+      <label class="form-label mb-0" for="chart_month">{% trans "月份" %}</label>
+      <input class="r-input" type="month" id="chart_month" value="{{ month_value }}">
+    </div>
+    {% else %}
+    <span class="r-badge">{{ month_value }}</span>
+    {% endif %}
+  </div>
+  {% if chart %}
+  <div id="attendance-chart" style="width:100%;height:360px;"
+       data-stats-url="{% url 'attendance:attendance_stats' %}"
+       data-month="{{ month_value }}"
+       data-department="{{ department_id }}"
+       role="img" aria-label="{% trans "月度看板" %}"></div>
+  {% endif %}
+  <div id="attendance-chart-fallback" {% if chart %}hidden{% endif %}
+       data-empty="{% trans "本月暂无考勤记录" %}">
+    <table class="r-table">
+      <thead>
+        <tr>
+          <th>{% trans "日期" %}</th>
+          {% for value, label in status_choices %}
+          <th>{% trans label %}</th>
+          {% endfor %}
+          <th>{% trans "合计" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in chart_rows %}
+        <tr>
+          <td>{{ row.date }}</td>
+          <td>{{ row.normal }}</td>
+          <td>{{ row.late }}</td>
+          <td>{{ row.early }}</td>
+          <td>{{ row.missing }}</td>
+          <td>{{ row.makeup }}</td>
+          <td>{{ row.total }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-muted">{% trans "本月暂无考勤记录" %}</td></tr>
+        {% endfor %}
+      </tbody>
+      {% if chart_rows %}
+      <tfoot>
+        <tr>
+          <th>{% trans "合计" %}</th>
+          <td>{{ chart_totals.normal }}</td>
+          <td>{{ chart_totals.late }}</td>
+          <td>{{ chart_totals.early }}</td>
+          <td>{{ chart_totals.missing }}</td>
+          <td>{{ chart_totals.makeup }}</td>
+          <td>{{ chart_totals.records }}</td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+  <p class="text-muted mb-0 mt-2" style="font-size:.75rem;">{% trans "统计口径与签到记录一致；图表不可用时自动降级为表格。" %}</p>
 </div>
 
 <div class="r-card mb-4">
@@ -170,4 +234,72 @@
   </form>
   <p class="text-muted mt-2 mb-0" style="font-size:.75rem;">{% trans "补卡由管理岗登记，状态标记为补卡，不改变原打卡时间口径。" %}</p>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{% if chart %}
+<script src="{{ chart.script_url }}"></script>
+<script src="{{ chart.adapter_url }}"></script>
+<script>
+(function () {
+  'use strict';
+  var el = document.getElementById('attendance-chart');
+  var fallback = document.getElementById('attendance-chart-fallback');
+  var monthInput = document.getElementById('chart_month');
+  if (!el || !fallback) { return; }
+
+  function showFallback() {
+    fallback.hidden = false;
+    el.hidden = true;
+  }
+
+  function showEmpty() {
+    var body = fallback.querySelector('tbody');
+    if (body) {
+      body.innerHTML = '';
+      var row = document.createElement('tr');
+      var cell = document.createElement('td');
+      cell.colSpan = 7;
+      cell.className = 'text-muted';
+      cell.textContent = fallback.dataset.empty || '';
+      row.appendChild(cell);
+      body.appendChild(row);
+    }
+    var foot = fallback.querySelector('tfoot');
+    if (foot) { foot.hidden = true; }
+    showFallback();
+  }
+
+  function load() {
+    var params = new URLSearchParams();
+    var month = monthInput ? monthInput.value : el.dataset.month;
+    if (month) { params.set('month', month); }
+    if (el.dataset.department) { params.set('department', el.dataset.department); }
+    fetch(el.dataset.statsUrl + '?' + params.toString(), {
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json' }
+    }).then(function (response) {
+      if (!response.ok) { throw new Error('stats ' + response.status); }
+      return response.json();
+    }).then(function (data) {
+      if (!data.totals || !data.totals.records) {
+        showEmpty();
+        return;
+      }
+      el.hidden = false;
+      if (!window.oaChartRender || !window.oaChartRender(el, data.payload)) {
+        showFallback();
+        return;
+      }
+      fallback.hidden = true;
+    }).catch(function () {
+      showFallback();
+    });
+  }
+
+  if (monthInput) { monthInput.addEventListener('change', load); }
+  load();
+})();
+</script>
+{% endif %}
 {% endblock %}

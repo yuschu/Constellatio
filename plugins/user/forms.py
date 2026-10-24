@@ -56,7 +56,10 @@ class DepartmentForm(forms.ModelForm):
     class Meta:
         model = Department
         fields = ['name', 'parent']
-        widgets = {'name': forms.TextInput(attrs={'class': 'r-input', 'placeholder': _('部门名称')})}
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'r-input', 'placeholder': _('部门名称')}),
+            'parent': forms.Select(attrs={'class': 'r-input'}),
+        }
 
 
 class UserForm(forms.ModelForm):

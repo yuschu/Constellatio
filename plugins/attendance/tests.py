@@ -3,7 +3,7 @@
 from datetime import datetime, time, timedelta
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from .models import Attendance
@@ -164,3 +164,160 @@ class AttendanceRecordFilterTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.late_record.refresh_from_db()
         self.assertFalse(self.late_record.is_makeup)
+
+
+class AttendanceStatsTests(TestCase):
+    """v1.6：月度统计 JSON（图表数据源）与权限 / 口径 / 降级。"""
+
+    @classmethod
+    def setUpTestData(cls):
+        from django.contrib.auth.models import Permission
+        from plugins.user.models import Department, Role
+
+        cls.manager = User.objects.create_user('statsmgr', password='pw')
+        role = Role.objects.create(name='统计管理')
+        role.permissions.add(Permission.objects.get(codename='attendance_report_view'))
+        cls.manager.roles.add(role)
+        cls.staff = User.objects.create_user('statsstaff', password='pw')
+
+        cls.today = timezone.localdate()
+        cls.first = cls.today.replace(day=1)
+        cls.department = Department.objects.create(name='统计财务部')
+        cls.late_user = User.objects.create_user(
+            'late1', password='pw', last_name='迟到甲', department=cls.department)
+        cls.normal_user = User.objects.create_user(
+            'normal1', password='pw', last_name='正常乙')
+        cls.late_record = Attendance.objects.create(
+            user=cls.late_user, date=cls.first,
+            check_in=timezone.make_aware(datetime.combine(cls.first, time(9, 30))),
+            check_out=timezone.make_aware(datetime.combine(cls.first, time(18, 10))))
+        cls.normal_record = Attendance.objects.create(
+            user=cls.normal_user, date=cls.first,
+            check_in=timezone.make_aware(datetime.combine(cls.first, time(8, 50))),
+            check_out=timezone.make_aware(datetime.combine(cls.first, time(18, 5))))
+
+    def setUp(self):
+        self.client.force_login(self.manager)
+
+    def _get(self, **params):
+        return self.client.get('/plugins/attendance/stats/', params)
+
+    def test_requires_report_perm(self):
+        self.client.force_login(self.staff)
+        response = self._get()
+        self.assertEqual(response.status_code, 302)
+
+    def test_defaults_to_current_month(self):
+        response = self._get()
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['month'], self.today.strftime('%Y-%m'))
+        self.assertEqual(len(data['dates']), len(_month_days_for(self.first)))
+        self.assertEqual([item['key'] for item in data['series']],
+                         [status.value for status in Attendance.Status])
+
+    def test_aggregates_match_records(self):
+        data = self._get(month=self.first.strftime('%Y-%m')).json()
+        series = {item['key']: item for item in data['series']}
+        # 本月第 1 天：1 条迟到 + 1 条正常
+        self.assertEqual(series['normal']['data'][0], 1)
+        self.assertEqual(series['late']['data'][0], 1)
+        self.assertEqual(series['early']['data'][0], 0)
+        self.assertEqual(data['totals']['records'], 2)
+        self.assertEqual(data['totals']['late'], 1)
+        self.assertEqual({user['username'] for user in data['users']},
+                         {'late1', 'normal1'})
+        self.assertEqual(data['range']['start'], self.first.isoformat())
+
+    def test_department_filter(self):
+        data = self._get(
+            month=self.first.strftime('%Y-%m'), department=self.department.pk).json()
+        self.assertEqual(data['totals']['records'], 1)
+        self.assertEqual([user['username'] for user in data['users']], ['late1'])
+
+    def test_invalid_month_returns_400(self):
+        response = self._get(month='2026-13')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'invalid_month')
+
+    def test_payload_uses_active_chart(self):
+        data = self._get(month=self.first.strftime('%Y-%m')).json()
+        self.assertEqual(data['payload']['engine'], 'echarts')
+        self.assertEqual(data['payload']['option']['xAxis']['data'], data['dates'])
+
+    @override_settings(OA_CHARTS='')
+    def test_payload_none_when_chart_disabled(self):
+        data = self._get(month=self.first.strftime('%Y-%m')).json()
+        self.assertIsNone(data['payload'])
+        # 停用只影响图表，数据仍可查询
+        self.assertEqual(data['totals']['records'], 2)
+
+
+class AttendanceChartPageTests(TestCase):
+    """v1.6：签到详情月度看板与停用降级表格。"""
+
+    @classmethod
+    def setUpTestData(cls):
+        from django.contrib.auth.models import Permission
+        from plugins.user.models import Role
+
+        cls.manager = User.objects.create_user('chartmgr', password='pw')
+        role = Role.objects.create(name='看板管理')
+        role.permissions.add(Permission.objects.get(codename='attendance_report_view'))
+        cls.manager.roles.add(role)
+        cls.today = timezone.localdate()
+        cls.first = cls.today.replace(day=1)
+        Attendance.objects.create(
+            user=cls.manager, date=cls.first,
+            check_in=timezone.make_aware(datetime.combine(cls.first, time(8, 50))),
+            check_out=timezone.make_aware(datetime.combine(cls.first, time(18, 5))))
+
+    def setUp(self):
+        self.client.force_login(self.manager)
+
+    def test_records_page_renders_chart(self):
+        response = self.client.get('/plugins/attendance/records/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '月度看板')
+        self.assertContains(response, 'attendance-chart')
+        self.assertContains(response, 'vendor/echarts.min.js')
+        self.assertContains(response, 'js/echarts.js')
+        self.assertContains(response, 'oaChartRender')
+
+    @override_settings(OA_CHARTS='none')
+    def test_records_page_degrades_without_chart(self):
+        response = self.client.get('/plugins/attendance/records/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '月度看板')
+        self.assertContains(response, 'attendance-chart-fallback')
+        self.assertNotContains(response, 'vendor/echarts.min.js')
+        self.assertNotContains(response, 'oaChartRender')
+
+    def test_month_param_controls_board(self):
+        previous = (self.first - timedelta(days=1)).replace(day=1)
+        month_value = previous.strftime('%Y-%m')
+        response = self.client.get('/plugins/attendance/records/', {'month': month_value})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'value="{month_value}"')
+        self.assertContains(response, '本月暂无考勤记录')
+
+    def test_db_chart_switch_degrades(self):
+        """v1.6.1：workspace 运行时开关关闭图表引擎 → 页面表格、stats payload=null。"""
+        from plugins.workspace.models import PluginSwitch
+        PluginSwitch.objects.create(app_key='charts', enabled=False)
+
+        response = self.client.get('/plugins/attendance/records/')
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'vendor/echarts.min.js')
+        stats = self.client.get('/plugins/attendance/stats/').json()
+        self.assertIsNone(stats['payload'])
+        self.assertEqual(stats['totals']['records'], 1)
+
+
+def _month_days_for(first):
+    """测试辅助：与视图同口径的当月天数列表。"""
+    import calendar
+    from datetime import timedelta
+    last_day = calendar.monthrange(first.year, first.month)[1]
+    return [first + timedelta(days=offset) for offset in range(last_day)]
+

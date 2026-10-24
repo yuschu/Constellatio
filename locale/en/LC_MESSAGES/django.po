@@ -1266,3 +1266,190 @@ msgstr "Approver is limited to the owning manager for this approval type; the ap
 
 msgid "请选择有效的业务负责人"
 msgstr "Please choose a valid owning manager"
+
+msgid "月度看板"
+msgstr "Monthly chart"
+
+msgid "合计"
+msgstr "Total"
+
+msgid "本月暂无考勤记录"
+msgstr "No attendance records this month"
+
+msgid "统计口径与签到记录一致；图表不可用时自动降级为表格。"
+msgstr "Statistics share the same source as attendance records; falls back to a table when charts are unavailable."
+
+msgid "月份格式应为 YYYY-MM"
+msgstr "Month must be in YYYY-MM format"
+
+msgid "图表引擎"
+msgstr "Chart engine"
+
+msgid "停用后考勤 / 留痕统计图表全部降级为表格，统计数据接口仍可查询；可用 manage.py plugin_switch on charts 恢复"
+msgstr "Disabling falls back to tables on all attendance / audit charts; statistics endpoints keep working. Restore with: manage.py plugin_switch on charts"
+
+msgid "留痕统计"
+msgstr "Audit statistics"
+
+msgid "时间窗口"
+msgstr "Time window"
+
+msgid "近 7 天"
+msgstr "Last 7 days"
+
+msgid "近 30 天"
+msgstr "Last 30 days"
+
+msgid "近 90 天"
+msgstr "Last 90 days"
+
+msgid "近 %(chart_days)s 天"
+msgstr "Last %(chart_days)s days"
+
+msgid "该时间范围内暂无留痕记录"
+msgstr "No audit records in this window"
+
+msgid "统计按来源插件聚合，与留痕记录同源；图表不可用时自动降级为表格。"
+msgstr "Statistics aggregate by source plugin from the same records; falls back to a table when charts are unavailable."
+
+msgid "时间窗口应为 1–90 天"
+msgstr "Time window must be between 1 and 90 days"
+
+msgid "核心数据看板"
+msgstr "Core dashboard"
+
+msgid "时间范围"
+msgstr "Time range"
+
+msgid "待我审批完成率"
+msgstr "My approval completion"
+
+msgid "已完成 %(done)s / %(total)s"
+msgstr "%(done)s / %(total)s completed"
+
+msgid "待办较多"
+msgstr "Many pending"
+
+msgid "考勤概况"
+msgstr "Attendance overview"
+
+msgid "今日状态与打卡趋势"
+msgstr "Today's status and check-in trend"
+
+msgid "打卡趋势"
+msgstr "Check-in trend"
+
+msgid "打卡 %(days)s 天"
+msgstr "%(days)s day(s) checked in"
+
+msgid "流程发起"
+msgstr "Requests submitted"
+
+msgid "按类型单据数量对比"
+msgstr "Request count by type"
+
+msgid "插件运行状态"
+msgstr "Plugin health"
+
+msgid "插件未全部启用"
+msgstr "Some plugins are disabled"
+
+msgid "流程趋势大盘"
+msgstr "Request trend"
+
+msgid "单据数"
+msgstr "Requests"
+
+msgid "插件运维与组织数据"
+msgstr "Plugin ops & organization"
+
+msgid "插件分布"
+msgstr "Plugin distribution"
+
+msgid "该时间范围内暂无留痕数据"
+msgstr "No audit data in this window"
+
+msgid "组织人员"
+msgstr "Organization"
+
+msgid "人数"
+msgstr "Headcount"
+
+msgid "今日签到"
+msgstr "Checked in today"
+
+msgid "暂无部门数据"
+msgstr "No department data"
+
+msgid "完成率"
+msgstr "Completion"
+
+msgid "启用率"
+msgstr "Enabled"
+
+msgid "打卡"
+msgstr "Check-in"
+
+msgid "部门人数"
+msgstr "Headcount"
+
+msgid "今日"
+msgstr "Today"
+
+msgid "本周"
+msgstr "This week"
+
+msgid "本月"
+msgstr "This month"
+
+msgid "今日 · 24 小时"
+msgstr "Today · 24 hours"
+
+msgid "部门明细"
+msgstr "Department details"
+
+msgid "返回列表"
+msgstr "Back to list"
+
+msgid "普通"
+msgstr "Standard"
+
+msgid "公告信息"
+msgstr "Announcement info"
+
+msgid "已读人数"
+msgstr "Read count"
+
+msgid "公告状态"
+msgstr "Status"
+
+msgid "切换公告"
+msgstr "Switch announcement"
+
+msgid "已读人员"
+msgstr "Readers"
+
+msgid "已读时间"
+msgstr "Read at"
+
+msgid "暂无已读人员"
+msgstr "No readers yet"
+
+msgid "发布时间"
+msgstr "Published at"
+
+msgid "考勤"
+msgstr "Attendance"
+
+msgid "考勤图表"
+msgstr "Attendance chart"
+
+msgid "天数"
+msgstr "Days"
+
+
+
+
+
+
+

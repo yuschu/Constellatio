@@ -2,30 +2,40 @@
 {% load i18n %}
 {% block title %}{% trans "待我审批" %} · Constellatio{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
   <h2 class="mb-0">{% trans "待我审批" %}</h2>
-  <span class="r-badge">{% blocktranslate with count=approvals|length %}{{ count }} 条待办{% endblocktranslate %}</span>
+  <span class="r-badge r-badge--blue">{% blocktranslate with count=approvals|length %}{{ count }} 条待办{% endblocktranslate %}</span>
 </div>
 <div class="r-card">
-  <table class="r-table">
-    <thead>
-      <tr><th>ID</th><th>{% trans "类型" %}</th><th>{% trans "标题" %}</th><th>{% trans "申请人" %}</th><th>{% trans "金额" %}</th><th>{% trans "发起时间" %}</th><th>{% trans "操作" %}</th></tr>
-    </thead>
-    <tbody>
-      {% for a in approvals %}
-      <tr>
-        <td>{{ a.id }}</td>
-        <td>{% trans a.get_approval_type_display %}</td>
-        <td>{{ a.title }}</td>
-        <td>{{ a.applicant.last_name|default:a.applicant.username }}</td>
-        <td>{% if a.amount %}￥{{ a.amount }}{% else %}—{% endif %}</td>
-        <td>{{ a.created_at|date:"m-d H:i" }}</td>
-        <td><a href="{% url 'approval:approval_detail' a.id %}" class="r-btn">{% trans "去审批" %}</a></td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="7" class="text-muted">{% trans "暂无待审批事项" %}</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="table-responsive">
+    <table class="r-table r-table--roomy align-middle">
+      <thead>
+        <tr>
+          <th scope="col">ID</th>
+          <th scope="col">{% trans "类型" %}</th>
+          <th scope="col">{% trans "标题" %}</th>
+          <th scope="col">{% trans "申请人" %}</th>
+          <th scope="col">{% trans "金额" %}</th>
+          <th scope="col">{% trans "发起时间" %}</th>
+          <th scope="col" class="text-nowrap">{% trans "操作" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in approvals %}
+        <tr>
+          <td>{{ a.id }}</td>
+          <td>{% trans a.get_approval_type_display %}</td>
+          <td>{{ a.title }}</td>
+          <td>{{ a.applicant.last_name|default:a.applicant.username }}</td>
+          <td>{% if a.amount %}￥{{ a.amount }}{% else %}—{% endif %}</td>
+          <td>{{ a.created_at|date:"m-d H:i" }}</td>
+          <td class="text-nowrap"><a href="{% url 'approval:approval_detail' a.id %}" class="r-btn">{% trans "去审批" %}</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-muted">{% trans "暂无待审批事项" %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 {% endblock %}

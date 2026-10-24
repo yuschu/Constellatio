@@ -1,5 +1,6 @@
 """主题插件测试：发现 / 默认 / 契约 / 模板与静态解析。"""
 
+import re
 from pathlib import Path
 
 from django.conf import settings
@@ -9,6 +10,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.template.loader import get_template
 from django.test import TestCase
 
+from plugin_host.charts import discover_charts
 from plugin_host.theming import discover_themes, get_theme
 
 
@@ -21,10 +23,12 @@ class ThemeDiscoveryTest(TestCase):
         self.assertEqual(settings.OA_THEME, 'corporate-clean')
 
     def test_active_theme_dirs(self):
-        """v1.5.8：两套主题的静态目录都进 STATICFILES_DIRS；模板由 ThemeLoader 解析。"""
+        """v1.5.8：两套主题的静态目录都进 STATICFILES_DIRS；v1.6 起图表 Provider 静态目录同收。"""
         themes = discover_themes(settings.BASE_DIR)
+        charts = discover_charts(settings.BASE_DIR)
         static_dirs = {Path(p).resolve() for p in settings.STATICFILES_DIRS}
-        self.assertEqual(static_dirs, {t.static for t in themes.values()})
+        expected = {t.static for t in themes.values()} | {c.static for c in charts.values()}
+        self.assertEqual(static_dirs, expected)
         origin = get_template('base.html').origin.name.replace('\\', '/')
         self.assertIn('themes/corporate-clean/templates/base.html', origin)
 
@@ -59,6 +63,45 @@ class ThemeDiscoveryTest(TestCase):
     def test_loader_in_base(self):
         source = get_template('base.html').template.source
         self.assertIn('r-loader', source)
+
+    def test_corporate_hero_uses_white_text(self):
+        """v1.6.3：Corporate Clean 蓝色 Banner 标题 / 欢迎语为白字。"""
+        theme = get_theme(settings.BASE_DIR, 'corporate-clean')
+        css = (theme.static / 'themes/corporate-clean/css/corporate-clean.css').read_text(
+            encoding='utf-8')
+        self.assertIn('.r-hero h2 { color: #ffffff;', css)
+        self.assertIn('rgba(255, 255, 255, 0.92)', css)
+
+    def test_risograph_hero_keeps_original_colors(self):
+        """v1.6.3：Risograph 不改 hero 配色（其首页用纸色卡片，无 r-hero 规则）。"""
+        theme = get_theme(settings.BASE_DIR, 'risograph')
+        css = (theme.static / 'themes/risograph/css/risograph.css').read_text(
+            encoding='utf-8')
+        self.assertNotIn('.r-hero', css)
+
+    def test_sidebar_sticky_in_both_themes(self):
+        """v1.6.3：两套主题侧栏吸顶；Risograph 侧栏卡片带钩子类。"""
+        for key, theme in discover_themes(settings.BASE_DIR).items():
+            with self.subTest(theme=key):
+                css = (theme.static / 'themes' / key / 'css' / f'{key}.css').read_text(
+                    encoding='utf-8')
+                self.assertIn('position: sticky', css)
+                self.assertIn('.r-card--sidebar', css)
+        riso_base = (settings.BASE_DIR / 'themes/risograph/templates/base.html').read_text(
+            encoding='utf-8')
+        self.assertIn('r-card--sidebar', riso_base)
+
+    def test_top_nav_sticky_in_both_themes(self):
+        """v1.6.4：顶部导航 .r-nav 吸顶（sticky + top:0 + z-index），两套主题一致。"""
+        for key, theme in discover_themes(settings.BASE_DIR).items():
+            with self.subTest(theme=key):
+                css = (theme.static / 'themes' / key / 'css' / f'{key}.css').read_text(
+                    encoding='utf-8')
+                block = re.search(r'\.r-nav\s*\{(.*?)\}', css, re.S)
+                self.assertIsNotNone(block, f'{key} 缺少 .r-nav 规则')
+                self.assertIn('position: sticky', block.group(1))
+                self.assertIn('top: 0', block.group(1))
+                self.assertIn('z-index: 1030', block.group(1))
 
     def test_home_uses_active_theme_css(self):
         user = get_user_model().objects.create_user('themeuser', password='pw')

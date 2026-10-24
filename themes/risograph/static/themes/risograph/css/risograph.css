@@ -18,6 +18,7 @@
   --r-blue:       #2563eb;   /* 蓝 · 主色 2 */
   --r-orange:     #ff8a00;   /* 荧光橙 · 主色 3 */
   --r-green:      #22c55e;   /* 绿 · 角标/成功 */
+  --r-danger:     #e11d48;   /* v1.6.2：图表告警色（待办较多 / 插件异常） */
 
   /* 字体：粗体等宽 */
   --r-font: ui-monospace, SFMono-Regular, "Courier New", Consolas, monospace;
@@ -89,6 +90,33 @@ a { color: var(--r-blue); text-decoration: none; }
 }
 .r-btn--blue { background: var(--r-blue); box-shadow: 3px 3px 0 var(--r-pink); }
 .r-btn--plain { background: var(--r-paper); color: var(--r-ink); box-shadow: 3px 3px 0 var(--r-orange); }
+/* v1.6.11：危险操作按钮（部门物理删除等） */
+.r-btn--danger {
+  background: var(--r-danger);
+  color: #ffffff;
+  box-shadow: 3px 3px 0 var(--r-ink);
+}
+.r-btn--danger:hover {
+  background: #be123c;
+  color: #ffffff;
+}
+/* v1.6.14：白底蓝字操作按钮 + 统一操作按钮尺寸 */
+.r-btn--ghost {
+  background: var(--r-paper);
+  color: var(--r-blue);
+  border-color: var(--r-blue);
+  box-shadow: 3px 3px 0 var(--r-blue);
+}
+.r-btn--ghost:hover {
+  background: var(--r-paper-2);
+  color: var(--r-blue);
+}
+.r-btn--action {
+  min-width: 5.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
 
 /* 卡片：粗边框 + 硬边彩色阴影 */
 .r-card {
@@ -99,6 +127,16 @@ a { color: var(--r-blue); text-decoration: none; }
   padding: 1.25rem;
 }
 .r-card + .r-card { margin-top: 1rem; }
+
+/* v1.6.3：侧栏吸顶（桌面端）——页面纵向滚动时菜单保持可见 */
+@media (min-width: 768px) {
+  .r-card--sidebar {
+    position: sticky;
+    top: 1rem;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+  }
+}
 
 /* 输入框 */
 .r-input, .r-select, .r-textarea {
@@ -132,9 +170,15 @@ a { color: var(--r-blue); text-decoration: none; }
   font-size: 0.75rem;
 }
 .r-table tr:nth-child(even) td { background: var(--r-paper-2); }
+/* v1.6.11：宽松表格（部门管理等），避免操作按钮拥挤 */
+.r-table--roomy th, .r-table--roomy td { padding: 0.75rem 0.9rem; }
 
 /* 导航条 */
 .r-nav {
+  /* v1.6.4：顶部导航吸顶（滚动时保持在视口顶部） */
+  position: sticky;
+  top: 0;
+  z-index: 1030;
   background: var(--r-paper);
   border: 2px solid var(--r-ink);
   border-left: none;

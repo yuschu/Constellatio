@@ -17,6 +17,8 @@ CRITICAL_WARNINGS = {
     'auth': _('停用后登录 / 登出入口关闭，已登录会话仍可用；可用 manage.py plugin_switch on auth 恢复'),
     'user': _('停用后账号、部门、角色管理入口关闭，已有会话与登录仍可用'),
     'structure': _('停用后组织架构与关系树入口关闭，组织数据不受影响'),
+    # v1.6.1：图表 Provider 插件
+    'charts': _('停用后考勤 / 留痕统计图表全部降级为表格，统计数据接口仍可查询；可用 manage.py plugin_switch on charts 恢复'),
 }
 
 

@@ -1,15 +1,19 @@
-"""attendance 插件视图：考勤看板 + 打卡 + 签到详情（管理岗） + 补卡。"""
+"""attendance 插件视图：考勤看板 + 打卡 + 签到详情（管理岗） + 补卡 + 月度统计。"""
 
-from datetime import datetime, time as dtime
+import calendar
+from datetime import date, datetime, time as dtime, timedelta
 
 from django.apps import apps as dj_apps
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Count, Q
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
+from django.utils.translation import gettext as _
 
+from plugin_host.charts import get_active_chart
 from plugin_host.permissions import require_perm
 from plugin_host.signals import attendance_checked
 
@@ -18,10 +22,13 @@ from .models import Attendance
 # 迟到口径：签到时间晚于当日 09:00（与模型 WORK_START 一致）
 LATE_TIME = dtime(9, 0)
 
+# 月度统计的月份参数格式（?month=YYYY-MM）
+MONTH_FORMAT = '%Y-%m'
+
 
 @login_required
 def attendance_dashboard(request):
-    """考勤看板：今日状态 + 本月出勤/迟到统计（全员可用）。"""
+    """考勤看板：今日状态 + 本月出勤/迟到统计 + 本月图表（全员可用）。"""
     today = timezone.localdate()
     now = timezone.localtime()
     record = Attendance.objects.filter(user=request.user, date=today).first()
@@ -30,6 +37,21 @@ def attendance_dashboard(request):
         user=request.user, date__gte=month_start)
     late = month_records.filter(status=Attendance.Status.LATE).count()
 
+    month_stats, _rows = _month_stats(month_start, user=request.user)
+    chart = get_active_chart()
+    attendance_chart = None
+    if chart is not None:
+        attendance_chart = chart.payload(
+            kind='cartesian',
+            categories=month_stats['dates'],
+            series=[{'name': item['label'], 'data': item['data'], 'type': 'bar'}
+                    for item in month_stats['series']],
+        )
+    status_totals = [
+        {'label': item['label'], 'count': sum(item['data'])}
+        for item in month_stats['series']
+    ]
+
     return render(request, 'attendance/attendance_dashboard.html', {
         'record': record,
         'today': today,
@@ -37,6 +59,8 @@ def attendance_dashboard(request):
         'month_days': month_records.count(),
         'month_late': late,
         'sign_types': Attendance.SignType.choices,
+        'attendance_chart': attendance_chart,
+        'status_totals': status_totals,
     })
 
 
@@ -102,6 +126,78 @@ def _combine(day, value):
     return timezone.make_aware(datetime.combine(day, clock))
 
 
+def _parse_month(value):
+    """'YYYY-MM' → 当月 1 日；格式非法抛 ValueError。"""
+    parsed = datetime.strptime(value, MONTH_FORMAT)
+    return date(parsed.year, parsed.month, 1)
+
+
+def _month_days(first):
+    """当月逐日 date 列表（含 1 日到月末）。"""
+    last_day = calendar.monthrange(first.year, first.month)[1]
+    return [first + timedelta(days=offset) for offset in range(last_day)]
+
+
+def _month_stats(first, department_id=None, user=None):
+    """月度统计：与签到详情同源（Attendance），按日 / 按状态 / 按人聚合。
+
+    `user` 限定个人（考勤看板），`department_id` 限定部门（管理看板）；
+    返回 (stats, table_rows)：
+    - stats 是 JSON 契约（见 docs/plugin-dev-v16.md §2.5），供 /stats/ 与图表使用；
+    - table_rows 是只含有记录日期的降级表格行（管理页无图表时展示）。
+    """
+    days = _month_days(first)
+    records = Attendance.objects.filter(date__range=(days[0], days[-1]))
+    if department_id:
+        records = records.filter(user__department_id=department_id)
+    if user is not None:
+        records = records.filter(user=user)
+
+    per_day = {
+        (row['date'], row['status']): row['n']
+        for row in records.values('date', 'status').annotate(n=Count('id'))
+    }
+    series = []
+    totals = {}
+    for status in Attendance.Status:
+        data = [per_day.get((day, status.value), 0) for day in days]
+        series.append({'key': status.value, 'label': _(status.label), 'data': data})
+        totals[status.value] = sum(data)
+
+    per_user = {}
+    for row in records.values(
+            'user__username', 'user__last_name', 'status').annotate(n=Count('id')):
+        bucket = per_user.setdefault(row['user__username'], {
+            'username': row['user__username'],
+            'name': row['user__last_name'] or row['user__username'],
+            **{status.value: 0 for status in Attendance.Status},
+        })
+        bucket[row['status']] = row['n']
+    users = sorted(
+        per_user.values(),
+        key=lambda item: (-sum(item[status.value] for status in Attendance.Status),
+                          item['username']),
+    )
+
+    totals['records'] = sum(totals[status.value] for status in Attendance.Status)
+    table_rows = []
+    for index, day in enumerate(days):
+        counts = {item['key']: item['data'][index] for item in series}
+        total = sum(counts.values())
+        if total:
+            table_rows.append({'date': day.strftime('%m-%d'), 'total': total, **counts})
+
+    stats = {
+        'month': first.strftime(MONTH_FORMAT),
+        'range': {'start': days[0].isoformat(), 'end': days[-1].isoformat()},
+        'dates': [day.strftime('%m-%d') for day in days],
+        'series': series,
+        'totals': totals,
+        'users': users,
+    }
+    return stats, table_rows
+
+
 @require_perm('attendance_report_view')
 def attendance_records(request):
     """签到详情（管理岗）：时间范围 / 状态 / 类型 / 部门 / 姓名筛选 + 汇总 + 分页。"""
@@ -138,6 +234,15 @@ def attendance_records(request):
     late_count = records.filter(status=Attendance.Status.LATE).count()
     missing_count = records.filter(status=Attendance.Status.MISSING).count()
 
+    # v1.6 月度看板：月份与部门跟随签到详情筛选；图表停用时表格降级
+    month_param = (request.GET.get('month') or '').strip()
+    try:
+        month_first = _parse_month(month_param) if month_param else now.date().replace(day=1)
+    except ValueError:
+        month_first = now.date().replace(day=1)
+    stats_department_id = int(department_id) if department_id.isdigit() else None
+    month_stats, chart_rows = _month_stats(month_first, stats_department_id)
+
     page_obj = Paginator(records, 25).get_page(request.GET.get('page'))
 
     return render(request, 'attendance/attendance_records.html', {
@@ -159,7 +264,13 @@ def attendance_records(request):
         'sign_type': sign_type,
         'status_choices': Attendance.Status.choices,
         'sign_types': Attendance.SignType.choices,
+        # 月度看板（v1.6）：chart 为 None 时模板只渲染表格
+        'chart': get_active_chart(),
+        'month_value': month_first.strftime(MONTH_FORMAT),
+        'chart_rows': chart_rows,
+        'chart_totals': month_stats['totals'],
     })
+
 
 
 @require_perm('attendance_report_view')
@@ -179,3 +290,38 @@ def attendance_makeup(request):
             record.is_makeup = True
             record.save()
     return redirect('attendance:attendance_records')
+
+
+@require_perm('attendance_report_view')
+def attendance_stats(request):
+    """月度统计 JSON（v1.6）：图表数据源；与签到详情同权限、同口径。
+
+    `?month=YYYY-MM`（缺省当前月，非法 400）+ 可选 `department=<id>`；
+    图表引擎可用时附带 `payload`（engine + option），停用时为 null。
+    """
+    month_param = (request.GET.get('month') or '').strip()
+    if month_param:
+        try:
+            month_first = _parse_month(month_param)
+        except ValueError:
+            return JsonResponse({
+                'error': 'invalid_month',
+                'message': _('月份格式应为 YYYY-MM'),
+            }, status=400)
+    else:
+        month_first = timezone.localdate().replace(day=1)
+
+    department_id = (request.GET.get('department') or '').strip()
+    department_id = int(department_id) if department_id.isdigit() else None
+
+    stats, _table_rows = _month_stats(month_first, department_id)
+    chart = get_active_chart()
+    if chart is None:
+        stats['payload'] = None
+    else:
+        stats['payload'] = chart.payload(
+            categories=stats['dates'],
+            series=[{'key': item['key'], 'name': item['label'], 'data': item['data']}
+                    for item in stats['series']],
+        )
+    return JsonResponse(stats)

@@ -57,7 +57,7 @@ class MenuGuardTests(TestCase):
     def test_roleless_menu_has_baseline_plugins_only(self):
         self.client.force_login(User.objects.create_user('staff', password='pw'))
         home = self.client.get('/')
-        self.assertContains(home, '考勤打卡')
+        self.assertContains(home, '考勤')
         self.assertContains(home, '公告中心')
         self.assertNotContains(home, '签到详情')
         self.assertNotContains(home, '审批中心')

@@ -1,0 +1,259 @@
+{% load i18n %}
+<div id="workbench">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+    <div class="r-sidebar-title mb-0">{% trans "核心数据看板" %}</div>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <span class="text-muted" style="font-size:.75rem;">{% trans "时间范围" %}</span>
+      {% for item in range_links %}
+        {% if item.active %}
+        <span class="r-badge">{{ item.label }}</span>
+        {% else %}
+        <a class="r-btn r-btn--plain" href="{{ item.url }}">{{ item.label }}</a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    {% if cards.approval and can_approve %}
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="r-card h-100 d-flex flex-column">
+        <div class="d-flex justify-content-between align-items-start gap-2">
+          <div>
+            <h3 class="r-h3 mb-1">{% trans "待我审批" %}</h3>
+            <p class="text-muted mb-0" style="font-size:.75rem;">{% trans "需要我处理的审批与会签" %}</p>
+          </div>
+          <span class="fs-3">{{ cards.approval.pending }}</span>
+        </div>
+        {% if cards.approval.payload %}
+        <div id="wb-chart-approval" style="width:100%;height:118px;margin-top:.5rem;"
+             role="img" aria-label="{% trans "待我审批完成率" %}"></div>
+        {{ cards.approval.payload|json_script:"wb-data-approval" }}
+        {% endif %}
+        <p class="text-muted mb-0" style="font-size:.75rem;">
+          {{ range_label }}：{% blocktranslate with done=cards.approval.done total=cards.approval.total %}已完成 {{ done }} / {{ total }}{% endblocktranslate %}{% if not cards.approval.payload %}（{{ cards.approval.percent }}%）{% endif %}
+        </p>
+        {% if cards.approval.alert %}<p class="mb-0 mt-1"><span class="r-badge r-badge--orange">{% trans "待办较多" %}</span></p>{% endif %}
+        <div class="d-flex justify-content-center align-items-center mt-auto pt-2">
+          {% if can_approval %}<a href="{% url 'approval:approval_pending' %}" class="r-btn">{% trans "进入待办" %}</a>{% endif %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if cards.attendance %}
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="r-card h-100 d-flex flex-column">
+        <div class="d-flex justify-content-between align-items-start gap-2">
+          <div>
+            <h3 class="r-h3 mb-1">{% trans "考勤概况" %}</h3>
+            <p class="text-muted mb-0" style="font-size:.75rem;">{% trans "今日状态与打卡趋势" %}</p>
+          </div>
+          <span class="r-badge {% if cards.attendance.state == 'done' %}r-badge--blue{% else %}r-badge--orange{% endif %}">{{ cards.attendance.label }}</span>
+        </div>
+        {% if cards.attendance.payload %}
+        <div id="wb-chart-attendance" style="width:100%;height:118px;margin-top:.5rem;"
+             role="img" aria-label="{% trans "打卡趋势" %}"></div>
+        {{ cards.attendance.payload|json_script:"wb-data-attendance" }}
+        {% endif %}
+        <p class="text-muted mb-0" style="font-size:.75rem;">
+          {{ range_label }}：{% blocktranslate with days=cards.attendance.checked_days %}打卡 {{ days }} 天{% endblocktranslate %}
+        </p>
+        <div class="d-flex justify-content-center align-items-center mt-auto pt-2">
+          <a href="{% url 'attendance:attendance_dashboard' %}" class="r-btn">{% trans "去打卡" %}</a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if cards.flow and can_approval %}
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="r-card h-100 d-flex flex-column">
+        <div class="d-flex justify-content-between align-items-start gap-2">
+          <div>
+            <h3 class="r-h3 mb-1">{% trans "流程发起" %}</h3>
+            <p class="text-muted mb-0" style="font-size:.75rem;">{% trans "按类型单据数量对比" %}</p>
+          </div>
+          <span class="fs-3">{{ cards.flow.total }}</span>
+        </div>
+        {% if cards.flow.payload %}
+        <div id="wb-chart-flow" style="width:100%;height:118px;margin-top:.5rem;"
+             role="img" aria-label="{% trans "流程发起" %}"></div>
+        {{ cards.flow.payload|json_script:"wb-data-flow" }}
+        {% else %}
+        <p class="text-muted mb-0" style="font-size:.75rem;">
+          {% for item in cards.flow.counts %}{{ item.label }} {{ item.count }}{% if not forloop.last %} · {% endif %}{% endfor %}
+        </p>
+        {% endif %}
+        <div class="d-flex justify-content-center align-items-center mt-auto pt-2">
+          <a href="{% url 'approval:approval_list' %}" class="r-btn">{% trans "审批中心" %}</a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if cards.plugins and 'workspace' in plugins_enabled %}
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="r-card h-100 d-flex flex-column">
+        <div class="d-flex justify-content-between align-items-start gap-2">
+          <div>
+            <h3 class="r-h3 mb-1">{% trans "插件运行状态" %}</h3>
+            <p class="text-muted mb-0" style="font-size:.75rem;">{% blocktranslate with enabled=cards.plugins.enabled total=cards.plugins.total %}已启用 {{ enabled }} / 共 {{ total }} 个{% endblocktranslate %}</p>
+          </div>
+          <span class="fs-3">{{ cards.plugins.percent }}%</span>
+        </div>
+        {% if cards.plugins.payload %}
+        <div id="wb-chart-plugins" style="width:100%;height:118px;margin-top:.5rem;"
+             role="img" aria-label="{% trans "插件运行状态" %}"></div>
+        {{ cards.plugins.payload|json_script:"wb-data-plugins" }}
+        {% endif %}
+        {% if cards.plugins.alert %}<p class="mb-0 mt-1"><span class="r-badge r-badge--orange">{% trans "插件未全部启用" %}</span></p>{% endif %}
+        <div class="d-flex justify-content-center align-items-center mt-auto pt-2">
+          <a href="{% url 'workspace:switch_list' %}" class="r-btn">{% trans "打开插件开关" %}</a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if trend and can_approval %}
+  <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+    <div class="r-sidebar-title mb-0">{% trans "流程趋势大盘" %}</div>
+    <span class="text-muted" style="font-size:.75rem;">{{ trend.window_label }}</span>
+  </div>
+  <div class="r-card mb-4">
+    {% if trend.payload %}
+    <div id="wb-chart-trend" style="width:100%;height:320px;"
+         role="img" aria-label="{% trans "流程趋势大盘" %}"></div>
+    {{ trend.payload|json_script:"wb-data-trend" }}
+    {% else %}
+    <table class="r-table">
+      <thead><tr><th>{% trans "类型" %}</th><th>{% trans "单据数" %}</th></tr></thead>
+      <tbody>
+        {% for item in trend.totals %}<tr><td>{{ item.label }}</td><td>{{ item.count }}</td></tr>{% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if shortcuts %}
+  <div class="r-sidebar-title">{% trans "流程快捷发起" %}</div>
+  <div class="r-card mb-4">
+    <div class="d-flex flex-wrap gap-2">
+      {% for s in shortcuts %}
+      <a href="{{ s.url }}" class="r-btn r-btn--plain">{{ s.icon }} {{ s.label }}</a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if is_admin_view and pie or is_admin_view and dept %}
+  <div class="r-sidebar-title">{% trans "插件运维与组织数据" %}</div>
+  <div class="row g-4 mb-4">
+    {% if pie %}
+    <div class="col-12 col-lg-6">
+      <div class="r-card h-100">
+        <h3 class="r-h3 mb-1">{% trans "插件分布" %}</h3>
+        {% if pie.payload %}
+        <div id="wb-chart-pie" style="width:100%;height:300px;"
+             role="img" aria-label="{% trans "插件分布" %}"></div>
+        {{ pie.payload|json_script:"wb-data-pie" }}
+        {% else %}
+        <p class="text-muted mb-0" style="font-size:.8rem;">{% trans "该时间范围内暂无留痕数据" %}</p>
+        {% endif %}
+        {% if not pie.payload %}
+        <ul class="list-unstyled mt-1 mb-0" style="font-size:.78rem;">
+          {% for row in pie.rows %}<li class="d-flex justify-content-between"><span>{{ row.label }}</span><span>{{ row.value }}</span></li>{% endfor %}
+        </ul>
+        {% endif %}
+        <p class="text-muted mb-0 mt-1" style="font-size:.72rem;">{% trans "万物皆可插件：容器唯一固定，业务与基础设施全部可插拔。" %}</p>
+      </div>
+    </div>
+    {% endif %}
+    {% if dept %}
+    <div class="col-12 col-lg-6">
+      <div class="r-card h-100">
+        <h3 class="r-h3 mb-1">{% trans "组织人员" %}</h3>
+        {% if dept.payload %}
+        <div id="wb-chart-dept" style="width:100%;height:300px;"
+             role="img" aria-label="{% trans "组织人员" %}"></div>
+        {{ dept.payload|json_script:"wb-data-dept" }}
+        {% else %}
+        <p class="text-muted mb-0" style="font-size:.8rem;">{% trans "暂无部门数据" %}</p>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% if dept %}
+  <div class="r-card mb-4">
+    <h3 class="r-h3 mb-1">{% trans "部门明细" %}</h3>
+    <table class="r-table mt-2">
+      <thead><tr><th>{% trans "部门" %}</th><th>{% trans "人数" %}</th><th>{% trans "今日签到" %}</th><th>{% trans "待审批" %}</th></tr></thead>
+      <tbody>
+        {% for row in dept.rows %}
+        <tr><td>{{ row.name }}</td><td>{{ row.headcount }}</td><td>{{ row.checked }}</td><td>{{ row.pending }}</td></tr>
+        {% empty %}
+        <tr><td colspan="4" class="text-muted">{% trans "暂无部门数据" %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+  {% endif %}
+
+  {% if 'notice' in plugins_enabled %}
+  <div class="r-sidebar-title">{% trans "公告简报" %}</div>
+  <div class="row g-4 mb-3">
+    {% for notice in notices %}
+    <div class="col-12 col-md-6 col-xl-4">
+      <div class="r-card h-100 d-flex flex-column">
+        <div class="d-flex justify-content-between align-items-start gap-2">
+          <a href="{% url 'notice:notice_list' %}?notice={{ notice.id }}" class="r-offset-hover">{{ notice.title }}</a>
+          {% if notice.is_top %}<span class="r-badge">{% trans "置顶" %}</span>{% endif %}
+        </div>
+        <p class="text-muted mb-0 mt-2" style="font-size:.75rem;">{{ notice.created_at|date:"Y-m-d H:i" }}</p>
+      </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+      <div class="r-card"><p class="text-muted mb-0">{% trans "暂无公告" %}</p></div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="d-flex justify-content-end mb-4">
+    <a href="/plugins/notice/" class="r-btn r-btn--plain">{% trans "查看全部公告" %}</a>
+  </div>
+  {% endif %}
+</div>
+
+{% if chart %}
+<script src="{{ chart.script_url }}"></script>
+<script src="{{ chart.adapter_url }}"></script>
+<script>
+(function () {
+  'use strict';
+  if (!window.oaChartRender) { return; }
+  var pairs = [
+    ['wb-chart-approval', 'wb-data-approval'],
+    ['wb-chart-attendance', 'wb-data-attendance'],
+    ['wb-chart-flow', 'wb-data-flow'],
+    ['wb-chart-plugins', 'wb-data-plugins'],
+    ['wb-chart-trend', 'wb-data-trend'],
+    ['wb-chart-pie', 'wb-data-pie'],
+    ['wb-chart-dept', 'wb-data-dept']
+  ];
+  pairs.forEach(function (pair) {
+    var el = document.getElementById(pair[0]);
+    var data = document.getElementById(pair[1]);
+    if (!el || !data) { return; }
+    try {
+      window.oaChartRender(el, JSON.parse(data.textContent));
+    } catch (err) {
+      el.hidden = true;
+    }
+  });
+})();
+</script>
+{% endif %}

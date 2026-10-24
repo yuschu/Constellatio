@@ -1,10 +1,12 @@
 """blockchain 单元测试：链式追加 / 完整性校验 / 篡改检测。"""
 
 import hashlib
+from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
-from django.test import TestCase
+from django.test import TestCase, override_settings
+from django.utils import timezone
 
 from .models import BlockchainRecord
 
@@ -84,3 +86,88 @@ class BlockchainTest(TestCase):
         response = self.client.get(f'/plugins/blockchain/{record.id}/')
         self.assertContains(response, 'Notices')
         self.assertContains(response, 'Notice published')
+
+
+class BlockchainStatsTests(TestCase):
+    """v1.6.1：留痕统计（按日 × 来源插件）+ 权限 / 窗口 / 图表降级。"""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.viewer = User.objects.create_user('statsviewer', password='pw')
+        role = cls.viewer.roles.create(name='留痕统计')
+        role.permissions.add(Permission.objects.get(codename='blockchain_view'))
+        now = timezone.now()
+
+        def record(plugin, action, when, payload):
+            item = BlockchainRecord.append(plugin, action, payload)
+            BlockchainRecord.objects.filter(pk=item.pk).update(created_at=when)
+            return item
+
+        cls.today = timezone.localdate()
+        record('user', 'user_created', now, 'user:1')
+        record('user', 'user_updated', now, 'user:2')
+        record('notice', 'notice_published', now, 'announcement:1')
+        record('user', 'user_created', now - timedelta(days=1), 'user:3')
+        record('notice', 'notice_published', now - timedelta(days=5), 'announcement:2')
+
+    def setUp(self):
+        self.client.force_login(self.viewer)
+
+    def _get(self, **params):
+        return self.client.get('/plugins/blockchain/stats/', params)
+
+    def test_requires_blockchain_view(self):
+        self.client.force_login(User.objects.create_user('plain', password='pw'))
+        self.assertEqual(self._get().status_code, 302)
+
+    def test_default_window_aggregates_by_plugin(self):
+        data = self._get().json()
+        self.assertEqual(data['days'], 30)
+        self.assertEqual(len(data['dates']), 30)
+        self.assertEqual(data['totals']['records'], 5)
+        series = {item['key']: item for item in data['series']}
+        self.assertEqual(series['user']['label'], '用户与组织')
+        self.assertEqual(series['notice']['label'], '公告通知')
+        self.assertEqual(sum(series['user']['data']), 3)
+        self.assertEqual(sum(series['notice']['data']), 2)
+        # 按窗口内记录数倒序
+        self.assertEqual(data['series'][0]['key'], 'user')
+
+    def test_days_window_filters_old_records(self):
+        self.assertEqual(self._get(days='2').json()['totals']['records'], 4)
+        self.assertEqual(self._get(days='7').json()['totals']['records'], 5)
+
+    def test_invalid_days_returns_400(self):
+        for raw in ('0', '91', 'abc'):
+            with self.subTest(days=raw):
+                response = self._get(days=raw)
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(response.json()['error'], 'invalid_days')
+
+    def test_payload_uses_active_chart(self):
+        data = self._get(days='7').json()
+        self.assertEqual(data['payload']['engine'], 'echarts')
+        self.assertEqual(data['payload']['option']['xAxis']['data'], data['dates'])
+
+    def test_payload_none_when_chart_switch_off(self):
+        from plugins.workspace.models import PluginSwitch
+        PluginSwitch.objects.create(app_key='charts', enabled=False)
+        data = self._get(days='7').json()
+        self.assertIsNone(data['payload'])
+        self.assertEqual(data['totals']['records'], 5)
+
+    def test_list_page_renders_chart(self):
+        response = self.client.get('/plugins/blockchain/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '留痕统计')
+        self.assertContains(response, 'blockchain-chart')
+        self.assertContains(response, 'vendor/echarts.min.js')
+
+    @override_settings(OA_CHARTS='none')
+    def test_list_page_degrades_without_chart(self):
+        response = self.client.get('/plugins/blockchain/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '留痕统计')
+        self.assertContains(response, 'blockchain-chart-fallback')
+        self.assertNotContains(response, 'vendor/echarts.min.js')
+

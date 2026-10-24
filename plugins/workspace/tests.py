@@ -124,3 +124,51 @@ class PluginSwitchTests(TestCase):
         self.assertContains(resp, 'Users &amp; organization')
         self.assertContains(resp, 'Plugins')
         self.assertNotContains(resp, '用户与组织')
+
+
+class ChartPluginSwitchTests(TestCase):
+    """v1.6.1：图表引擎作为 Provider 插件进入开关体系。"""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin = User.objects.create_superuser('chartadmin', '', 'chartpass')
+
+    def setUp(self):
+        self.client.force_login(self.admin)
+
+    def test_switch_list_shows_chart_engine(self):
+        resp = self.client.get(reverse('workspace:switch_list'))
+        self.assertContains(resp, '图表引擎')
+        self.assertContains(resp, reverse('workspace:switch_toggle', args=['charts']))
+        self.assertContains(resp, '降级为表格')
+
+    def test_toggle_chart_disables_and_restores_provider(self):
+        from plugin_host.charts import get_active_chart
+
+        self.client.post(
+            reverse('workspace:switch_toggle', args=['charts']), {'enabled': '0'})
+        self.assertFalse(PluginSwitch.objects.get(app_key='charts').enabled)
+        self.assertIsNone(get_active_chart())
+
+        self.client.post(
+            reverse('workspace:switch_toggle', args=['charts']), {'enabled': '1'})
+        self.assertTrue(PluginSwitch.objects.get(app_key='charts').enabled)
+        self.assertIsNotNone(get_active_chart())
+
+    def test_cli_lists_and_toggles_chart_provider(self):
+        import io
+        from django.core.management import call_command
+
+        listing = io.StringIO()
+        call_command('plugin_switch', 'list', stdout=listing)
+        self.assertIn('charts', listing.getvalue())
+
+        call_command('plugin_switch', 'off', 'charts', stdout=io.StringIO())
+        self.assertFalse(PluginSwitch.objects.get(app_key='charts').enabled)
+        listing = io.StringIO()
+        call_command('plugin_switch', 'list', stdout=listing)
+        self.assertIn('off  charts', listing.getvalue())
+
+        call_command('plugin_switch', 'on', 'charts', stdout=io.StringIO())
+        self.assertTrue(PluginSwitch.objects.get(app_key='charts').enabled)
+
