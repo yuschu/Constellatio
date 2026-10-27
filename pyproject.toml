@@ -1,0 +1,28 @@
+[tool.ruff]
+# v1.8.0（P1-26）：静态检查基线。起步只开低争议规则集，保证既有代码可过；
+# 后续按 `docs/roadmap.md` 的「代码规约债务」逐版扩规则（例如 E501 / UP / S）。
+target-version = "py313"
+line-length = 100
+exclude = [
+    "venv",
+    "dist",
+    "staticfiles",
+    "docs/thesis",
+    "charts/echarts/static",
+    "tools",              # 一次性论文/图表脚本，不参与应用门禁（roadmap P3 债务）
+    "**/migrations/*.py",
+]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "B", "DJ"]
+ignore = [
+    "B008",   # 函数默认值里调用 forms.* 是 Django 惯例
+    "DJ012",  # 模型字段/方法顺序：既有模型已统一，暂不强制
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["plugin_host", "plugins", "charts", "themes"]
+
+[tool.ruff.lint.per-file-ignores]
+# 测试里允许 assert 与局部变量风格宽松
+"**/tests*.py" = ["B011"]

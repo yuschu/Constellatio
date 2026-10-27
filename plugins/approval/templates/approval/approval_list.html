@@ -27,7 +27,7 @@
           <td>{% trans a.get_approval_type_display %}</td>
           <td>{{ a.title }}</td>
           <td>{% if a.amount %}￥{{ a.amount }}{% else %}—{% endif %}</td>
-          <td>{{ a.approver.last_name|default:a.approver.username }}</td>
+          <td>{% if a.approver %}{{ a.approver.last_name|default:a.approver.username }}{% else %}—{% endif %}</td>
           <td>
             {% if a.status == 'pending' %}<span class="r-badge r-badge--blue">{% trans "待审批" %}</span>
             {% elif a.status == 'approved' %}<span class="r-badge r-badge--green">{% trans "已通过" %}</span>
@@ -54,6 +54,21 @@
       </tbody>
     </table>
   </div>
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="d-flex justify-content-between align-items-center mt-3" style="font-size:.8rem;">
+    <span class="text-muted">
+      {% blocktranslate with page=page_obj.number total_pages=page_obj.paginator.num_pages %}第 {{ page }} / {{ total_pages }} 页{% endblocktranslate %}
+    </span>
+    <span class="d-flex gap-2">
+      {% if page_obj.has_previous %}
+      <a class="r-offset-hover" href="?page={{ page_obj.previous_page_number }}">← {% trans "上一页" %}</a>
+      {% endif %}
+      {% if page_obj.has_next %}
+      <a class="r-offset-hover" href="?page={{ page_obj.next_page_number }}">{% trans "下一页" %} →</a>
+      {% endif %}
+    </span>
+  </div>
+  {% endif %}
 </div>
 <script>
   document.querySelectorAll('form[data-confirm]').forEach(function (form) {

@@ -2,7 +2,9 @@ from django.apps import AppConfig
 from django.utils.translation import gettext_lazy as _
 
 from plugin_host.signals import (
-    counter_signature_approved, dept_deleted, user_disabled,
+    counter_signature_approved,
+    dept_deleted,
+    user_disabled,
 )
 
 
@@ -11,7 +13,7 @@ class UserConfig(AppConfig):
     name = "plugins.user"
 
     def ready(self):
-        from plugin_host.registry import register, PluginMeta
+        from plugin_host.registry import PluginMeta, register
         register(PluginMeta(
             name='user',
             version='1.2.0',

@@ -168,16 +168,12 @@ def get_renderer(meta: ChartMeta) -> ChartRenderer:
 
 
 def chart_switch_enabled():
-    """workspace 运行时开关（v1.6.1）：app_key='charts'，DB 优先、无记录视为启用。
+    """workspace 运行时开关（v1.6.1）：与 registry.plugin_enabled 同一口径。
 
-    表未迁移 / workspace 插件停用 / 查询失败时回退静态配置（不阻断页面）。
+    DB 优先、无记录默认启用；表未迁移 / workspace 停用由 registry 统一降级。
     """
-    try:
-        from plugins.workspace.models import PluginSwitch
-        switch = PluginSwitch.objects.filter(app_key='charts').only('enabled').first()
-    except Exception:          # 表未迁移 / workspace 停用
-        return True
-    return True if switch is None else switch.enabled
+    from plugin_host.registry import plugin_enabled
+    return plugin_enabled('charts')
 
 
 def get_active_chart():

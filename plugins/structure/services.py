@@ -6,8 +6,14 @@ from django.contrib.auth.models import Permission
 from plugin_host.signals import structure_applied
 
 from .template import (
-    ALL_ROLE_PERMISSION_CODES, DEFAULT_PASSWORD, DEPARTMENTS, LEADER_OF,
-    MANAGER_ROLES, ROLE_PERMISSIONS, ROLES, USERS,
+    ALL_ROLE_PERMISSION_CODES,
+    DEFAULT_PASSWORD,
+    DEPARTMENTS,
+    LEADER_OF,
+    MANAGER_ROLES,
+    ROLE_PERMISSIONS,
+    ROLES,
+    USERS,
 )
 
 

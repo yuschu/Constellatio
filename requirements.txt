@@ -1,4 +1,5 @@
-django==5.2.*
-mysqlclient
-gunicorn
+# 运行期依赖（精确版本：构建可复现，v1.8.0 / P1-26）
+django==5.2.18
+mysqlclient==2.3.0
+gunicorn==26.2.0
 whitenoise==6.12.0

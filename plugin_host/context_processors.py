@@ -1,10 +1,15 @@
 """容器上下文处理器：插件菜单（含当前 Tab 高亮）、启用插件名、主题列表、图表引擎。"""
 
+import logging
+
 from django.conf import settings
+from django.db.utils import OperationalError, ProgrammingError
 
 from .charts import get_active_chart
 from .registry import get_enabled_plugins, get_menus
 from .theming import discover_themes
+
+logger = logging.getLogger(__name__)
 
 
 def _mark_active(menus, path):
@@ -15,7 +20,7 @@ def _mark_active(menus, path):
     """
     bases = [(menu.get('url') or '/').rstrip('/') or '/' for menu in menus]
     exact_hit = path.rstrip('/') in bases or path == '/'
-    for menu, base in zip(menus, bases):
+    for menu, base in zip(menus, bases, strict=False):
         if path == '/':
             menu['active'] = base == '/'
         elif base == path.rstrip('/'):
@@ -60,6 +65,7 @@ def notifications(request):
         from plugins.notify.models import Notification
         count = Notification.objects.filter(
             recipient=request.user, is_read=False).count()
-    except Exception:
+    except (ImportError, LookupError, OperationalError, ProgrammingError):
+        logger.warning('站内信未读数不可用，降级为 0', exc_info=True)
         count = 0
     return {'notify_unread': count}

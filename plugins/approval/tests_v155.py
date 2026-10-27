@@ -120,6 +120,8 @@ class DynamicApprovalTests(TestCase):
         overtime = Approval.objects.create(
             approval_type=Approval.Type.OVERTIME, title='加班',
             applicant=self.applicant, approver=self.leader,
+            # v1.7.1（P1-25）：调休依据只认已通过的加班单
+            status=Approval.Status.APPROVED,
             form_data={'start_time': '2026-10-20T19:00',
                        'end_time': '2026-10-20T22:00'})
         response = self.client.get(reverse('approval:approval_create'), {'type': 'comp'})
@@ -409,7 +411,7 @@ class DynamicApprovalTests(TestCase):
             approval_type=Approval.Type.LEAVE, title='已驳回单',
             applicant=self.applicant, approver=self.leader,
             status=Approval.Status.REJECTED)
-        pending = Approval.objects.create(
+        Approval.objects.create(
             approval_type=Approval.Type.LEAVE, title='待审批单',
             applicant=self.applicant, approver=self.leader,
             status=Approval.Status.PENDING)

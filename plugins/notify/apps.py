@@ -44,73 +44,82 @@ class NotifyConfig(AppConfig):
 
     def ready(self):
         from plugin_host import signals as bus
-        from plugin_host.registry import register, PluginMeta
+        from plugin_host.registry import PluginMeta, register
 
         def _on_approval_submitted(sender, approval_id, **kw):
-            Approval = _model('approval', 'Approval')
-            Signer = _model('approval', 'ApprovalSigner')
-            if Approval is None:
-                return
-            approval = Approval.objects.filter(pk=approval_id).first()
-            if approval is None:
-                return
-            recipients = []
-            if approval.approver_id:
-                recipients.append(approval.approver)
-            if Signer is not None:
-                recipients += [row.signer for row in Signer.objects.filter(
-                    approval=approval, signed=False).select_related('signer')]
-            recipients += list(approval.cc_users.all())
-            recipients = [user for user in recipients
-                          if user.pk != approval.applicant_id]
-            _bulk_create(
-                recipients,
-                category='approval',
-                title=_('审批待办：%(title)s') % {'title': approval.title},
-                body=_('申请人：%(name)s · 类型：%(type)s') % {
-                    'name': approval.applicant.last_name or approval.applicant.username,
-                    'type': approval.get_approval_type_display(),
-                },
-                link=f'/plugins/approval/{approval.pk}/',
-            )
+            try:
+                Approval = _model('approval', 'Approval')
+                Signer = _model('approval', 'ApprovalSigner')
+                if Approval is None:
+                    return
+                approval = Approval.objects.filter(pk=approval_id).first()
+                if approval is None:
+                    return
+                recipients = []
+                if approval.approver_id:
+                    recipients.append(approval.approver)
+                if Signer is not None:
+                    recipients += [row.signer for row in Signer.objects.filter(
+                        approval=approval, signed=False).select_related('signer')]
+                recipients += list(approval.cc_users.all())
+                recipients = [user for user in recipients
+                              if user.pk != approval.applicant_id]
+                _bulk_create(
+                    recipients,
+                    category='approval',
+                    title=_('审批待办：%(title)s') % {'title': approval.title},
+                    body=_('申请人：%(name)s · 类型：%(type)s') % {
+                        'name': approval.applicant.last_name or approval.applicant.username,
+                        'type': approval.get_approval_type_display(),
+                    },
+                    link=f'/plugins/approval/{approval.pk}/',
+                )
+            except Exception:      # 订阅方失败不得影响业务主流程
+                logger.exception('站内信写入失败：审批待办')
 
         def _on_approval_finished(sender, approval_id, result, **kw):
-            Approval = _model('approval', 'Approval')
-            if Approval is None:
-                return
-            approval = Approval.objects.filter(pk=approval_id).first()
-            if approval is None or approval.applicant_id is None:
-                return
-            label = _('已通过') if result == 'approved' else _('已驳回')
-            _bulk_create(
-                [approval.applicant],
-                category='approval',
-                title=_('审批结果：%(title)s（%(result)s）') % {
-                    'title': approval.title, 'result': label},
-                body=_('类型：%(type)s') % {
-                    'type': approval.get_approval_type_display()},
-                link=f'/plugins/approval/{approval.pk}/',
-            )
+            try:
+                Approval = _model('approval', 'Approval')
+                if Approval is None:
+                    return
+                approval = Approval.objects.filter(pk=approval_id).first()
+                if approval is None or approval.applicant_id is None:
+                    return
+                label = _('已通过') if result == 'approved' else _('已驳回')
+                _bulk_create(
+                    [approval.applicant],
+                    category='approval',
+                    title=_('审批结果：%(title)s（%(result)s）') % {
+                        'title': approval.title, 'result': label},
+                    body=_('类型：%(type)s') % {
+                        'type': approval.get_approval_type_display()},
+                    link=f'/plugins/approval/{approval.pk}/',
+                )
+            except Exception:      # 订阅方失败不得影响业务主流程
+                logger.exception('站内信写入失败：审批结果')
 
         def _on_notice_published(sender, announcement_id, **kw):
-            Announcement = _model('notice', 'Announcement')
-            User = _model('user', 'User')
-            if Announcement is None or User is None:
-                return
-            announcement = Announcement.objects.filter(pk=announcement_id).first()
-            if announcement is None:
-                return
-            recipients = list(User.objects.filter(is_active=True).exclude(
-                pk=announcement.publisher_id))
-            _bulk_create(
-                recipients,
-                category='notice',
-                title=_('公告：%(title)s') % {'title': announcement.title},
-                body=_('发布人：%(name)s') % {
-                    'name': announcement.publisher.last_name
-                    or announcement.publisher.username},
-                link=f'/plugins/notice/?notice={announcement.pk}',
-            )
+            try:
+                Announcement = _model('notice', 'Announcement')
+                User = _model('user', 'User')
+                if Announcement is None or User is None:
+                    return
+                announcement = Announcement.objects.filter(pk=announcement_id).first()
+                if announcement is None:
+                    return
+                recipients = list(User.objects.filter(is_active=True).exclude(
+                    pk=announcement.publisher_id))
+                _bulk_create(
+                    recipients,
+                    category='notice',
+                    title=_('公告：%(title)s') % {'title': announcement.title},
+                    body=_('发布人：%(name)s') % {
+                        'name': announcement.publisher.last_name
+                        or announcement.publisher.username},
+                    link=f'/plugins/notice/?notice={announcement.pk}',
+                )
+            except Exception:      # 订阅方失败不得影响业务主流程
+                logger.exception('站内信写入失败：公告发布')
 
         bus.approval_submitted.connect(_on_approval_submitted, weak=False)
         bus.approval_finished.connect(_on_approval_finished, weak=False)

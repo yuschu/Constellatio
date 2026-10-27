@@ -4,10 +4,10 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
+from plugin_host.signals import notice_published
 from plugins.approval import services
 from plugins.approval.models import Approval
 from plugins.notice.models import Announcement
-from plugin_host.signals import notice_published
 
 from .models import Notification
 
@@ -77,7 +77,7 @@ class NotificationFlowTests(TestCase):
     def test_read_marks_and_redirects(self):
         message = Notification.objects.create(
             recipient=self.applicant, title='审批待办',
-            link=f'/plugins/approval/1/')
+            link='/plugins/approval/1/')
         self.client.force_login(self.applicant)
         response = self.client.get(reverse('notify:notify_read', args=[message.pk]))
         self.assertEqual(response.status_code, 302)

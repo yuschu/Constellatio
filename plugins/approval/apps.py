@@ -7,7 +7,7 @@ class ApprovalConfig(AppConfig):
     name = "plugins.approval"
 
     def ready(self):
-        from plugin_host.registry import register, PluginMeta
+        from plugin_host.registry import PluginMeta, register
         register(PluginMeta(
             name='approval',
             version='1.3.0',
@@ -35,6 +35,7 @@ class ApprovalConfig(AppConfig):
 
         def _on_dept_delete_requested(sender, **kw):
             from django.apps import apps as dj_apps
+
             from .models import Approval
             from .services import start_counter_signature
             User = dj_apps.get_model('user', 'User')
@@ -57,6 +58,7 @@ class ApprovalConfig(AppConfig):
 
         def _on_user_disable_requested(sender, **kw):
             from django.apps import apps as dj_apps
+
             from .models import Approval
             from .services import start_counter_signature
             User = dj_apps.get_model('user', 'User')

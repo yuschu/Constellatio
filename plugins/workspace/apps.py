@@ -7,7 +7,7 @@ class WorkspaceConfig(AppConfig):
     name = "plugins.workspace"
 
     def ready(self):
-        from plugin_host.registry import register, PluginMeta
+        from plugin_host.registry import PluginMeta, register
         register(PluginMeta(
             name='workspace',
             version='1.1.0',

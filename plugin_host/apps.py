@@ -28,7 +28,6 @@ class PluginHostConfig(AppConfig):
                 app=None,
             ))
 
-        # Django 会先加载各插件 AppConfig 并执行其 ready()（注册 meta），
-        # 此处做注册表完整性校验。
-        from .discover import check_registry
-        check_registry()
+        # 注册表完整性校验改为 Django 系统检查（discover.check_registry）：
+        # 此处只导入模块完成注册，不直接调用——ready() 时业务插件尚未全部注册。
+        from . import discover  # noqa: F401

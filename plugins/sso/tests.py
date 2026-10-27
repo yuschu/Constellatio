@@ -71,7 +71,7 @@ class SsoLoginTests(TestCase):
         self.assertEqual(int(self.client.session['_auth_user_id']), user.pk)
 
     def test_disabled_user_rejected(self):
-        user = User.objects.create_user('sso_disabled', password='pw', is_active=False)
+        User.objects.create_user('sso_disabled', password='pw', is_active=False)
         ticket = issue({'username': 'sso_disabled'})
         response = self.client.get('/plugins/sso/login/', {'ticket': ticket})
         self.assertEqual(response.status_code, 200)
@@ -98,6 +98,7 @@ class SsoLoginTests(TestCase):
 
     def test_management_command_issues_usable_ticket(self):
         import io
+
         from django.core.management import call_command
         out = io.StringIO()
         call_command('sso_ticket', 'sso_cmd', '--name', '命令行', stdout=out)

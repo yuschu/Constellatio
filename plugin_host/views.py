@@ -11,7 +11,7 @@ from django.utils.translation import gettext as _t
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
-from .registry import PLUGIN_REGISTRY, get_enabled_plugins
+from .registry import get_enabled_plugins, plugin_counts
 from .theming import THEME_COOKIE_NAME, discover_themes
 
 # 流程快捷发起：审批类型 → (代码, 图标)
@@ -114,7 +114,7 @@ def index(request):
         pending_approvals=pending,
         attendance_today=attendance_today,
     )
-    plugin_card = dashboard['cards'].get('plugins')
+    plugin_enabled_count, plugin_total = plugin_counts()
 
     return render(request, 'home.html', {
         'pending_approvals': pending,
@@ -127,8 +127,8 @@ def index(request):
         'can_approve': can_approve,
         'can_plugin_ops': can_plugin_ops,
         'enabled_plugins': [(key, meta.title) for key, meta in enabled],
-        'plugin_total': plugin_card['total'] if plugin_card else len(PLUGIN_REGISTRY),
-        'enabled_count': plugin_card['enabled'] if plugin_card else len(enabled),
+        'plugin_total': plugin_total,
+        'enabled_count': plugin_enabled_count,
         'is_admin_view': can_plugin_ops,
         **dashboard,
     })

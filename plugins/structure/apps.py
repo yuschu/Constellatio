@@ -7,7 +7,7 @@ class StructureConfig(AppConfig):
     name = "plugins.structure"
 
     def ready(self):
-        from plugin_host.registry import register, PluginMeta
+        from plugin_host.registry import PluginMeta, register
         register(PluginMeta(
             name='structure',
             version='1.5.9',

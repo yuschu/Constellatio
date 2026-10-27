@@ -15,8 +15,14 @@ from django.utils.translation import gettext as _
 
 from plugin_host.permissions import require_perm
 from plugin_host.signals import (
-    dept_delete_requested, dept_disabled, dept_updated, password_changed,
-    user_created, user_disable_requested, user_disabled, user_status_changed,
+    dept_delete_requested,
+    dept_disabled,
+    dept_updated,
+    password_changed,
+    user_created,
+    user_disable_requested,
+    user_disabled,
+    user_status_changed,
     user_updated,
 )
 
@@ -145,14 +151,34 @@ def user_edit(request, user_id):
         data = _clean_multi(_clean_multi(request.POST, 'roles'), 'user_permissions')
         form = UserForm(data, instance=user, operator=request.user)
         if form.is_valid():
-            pwd_changed = bool(form.cleaned_data.get('password'))
-            form.save()
-            if pwd_changed:
-                from plugin_host.signals import password_changed
-                password_changed.send(sender=user.__class__, user_id=user.pk,
-                                      operator_id=request.user.pk)
-            user_updated.send(sender=user.__class__, user_id=user.pk)
-            return redirect('user:user_list')
+            # v1.7.1（P0-11）：普通管理员不能借编辑页改 is_active 绕过「禁用需会签」，
+            # 状态变更必须走 user_status（超管直接生效，其余人先冻结再发起会签）。
+            if 'is_active' in form.changed_data and not request.user.is_superuser:
+                form.add_error(
+                    'is_active',
+                    _('启用 / 禁用请使用状态操作：普通管理员禁用需会签审批'))
+            else:
+                pwd_changed = bool(form.cleaned_data.get('password'))
+                status_changed = 'is_active' in form.changed_data
+                form.save()
+                if pwd_changed:
+                    from plugin_host.signals import password_changed
+                    password_changed.send(sender=user.__class__, user_id=user.pk,
+                                          operator_id=request.user.pk)
+                if status_changed:
+                    # 与 user_status 口径一致：禁用同时冻结权限，并留痕
+                    user.refresh_from_db()
+                    if not user.is_active:
+                        user.permission_frozen = True
+                        user.save(update_fields=['permission_frozen', 'updated_at'])
+                        user_disabled.send(sender=User, user_id=user.pk,
+                                           operator_id=request.user.pk)
+                    user_status_changed.send(
+                        sender=User, user_id=user.pk,
+                        status='enabled' if user.is_active else 'disabled',
+                        operator_id=request.user.pk)
+                user_updated.send(sender=user.__class__, user_id=user.pk)
+                return redirect('user:user_list')
     else:
         form = UserForm(instance=user)
     return render(request, 'user/user_form.html',

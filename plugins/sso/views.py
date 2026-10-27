@@ -4,7 +4,6 @@ from django.apps import apps as dj_apps
 from django.conf import settings
 from django.contrib.auth import get_user_model, login
 from django.shortcuts import redirect, render
-from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _
 from django.views.decorators.csrf import ensure_csrf_cookie

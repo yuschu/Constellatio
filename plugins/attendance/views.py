@@ -1,11 +1,13 @@
 """attendance 插件视图：考勤看板 + 打卡 + 签到详情（管理岗） + 补卡 + 月度统计。"""
 
 import calendar
-from datetime import date, datetime, time as dtime, timedelta
+from datetime import date, datetime, timedelta
+from datetime import time as dtime
 
 from django.apps import apps as dj_apps
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
@@ -24,6 +26,11 @@ LATE_TIME = dtime(9, 0)
 
 # 月度统计的月份参数格式（?month=YYYY-MM）
 MONTH_FORMAT = '%Y-%m'
+
+
+def _now():
+    """当前时区感知时间（单独抽出便于测试替换打卡时刻）。"""
+    return timezone.localtime()
 
 
 @login_required
@@ -66,21 +73,39 @@ def attendance_dashboard(request):
 
 @login_required
 def attendance_check(request):
-    """打卡：action=in 签到 / action=out 签退（全员基线权限）。"""
+    """打卡：action=in 签到 / action=out 签退（全员基线权限）。
+
+    v1.7.x 防丢更新：行锁内重读当天记录，只把本次真正改动的字段写回
+    （``save(update_fields=...)``），不再整行覆盖——签退不会清掉并发签到
+    写入的 check_in，重复打卡也只落在同一行（unique_together 保证）。
+    """
     if not request.user.has_perm('attendance_check'):
         return redirect('index')
     if request.method == 'POST':
         today = timezone.localdate()
-        record, _ = Attendance.objects.get_or_create(user=request.user, date=today)
-        now = timezone.localtime()
+        now = _now()
+        action = request.POST.get('action')
         sign_type = request.POST.get('sign_type')
-        if sign_type in Attendance.SignType.values and not record.check_in:
-            record.sign_type = sign_type
-        if request.POST.get('action') == 'in' and not record.check_in:
-            record.check_in = now
-        elif request.POST.get('action') == 'out' and not record.check_out:
-            record.check_out = now
-        record.save()
+        with transaction.atomic():
+            record, _ = Attendance.objects.get_or_create(
+                user=request.user, date=today)
+            record = Attendance.objects.select_for_update().get(pk=record.pk)
+            changed = []
+            if (sign_type in Attendance.SignType.values
+                    and record.check_in is None
+                    and record.sign_type != sign_type):
+                record.sign_type = sign_type
+                changed.append('sign_type')
+            if action == 'in' and record.check_in is None:
+                record.check_in = now
+                changed.append('check_in')
+            elif action == 'out' and record.check_out is None:
+                record.check_out = now
+                changed.append('check_out')
+            if changed:
+                # 模型 save() 会由打卡时间重算 status（补卡 > 缺卡 > 迟到 >
+                # 早退 > 正常），故 status 一并写回，口径与整行保存时一致。
+                record.save(update_fields=changed + ['status', 'updated_at'])
         attendance_checked.send(
             sender=record.__class__, user_id=request.user.id, date=str(record.date))
     return redirect('attendance:attendance_dashboard')
@@ -275,20 +300,30 @@ def attendance_records(request):
 
 @require_perm('attendance_report_view')
 def attendance_makeup(request):
-    """补卡（管理岗）：为指定员工指定日期登记补卡记录。"""
+    """补卡（管理岗）：为指定员工指定日期登记补卡记录。
+
+    v1.7.x：行锁内重读记录并只写回补卡相关字段，避免与员工并发打卡互相覆盖。
+    """
     if request.method == 'POST':
         User = dj_apps.get_model('user', 'User')
         target = User.objects.filter(pk=request.POST.get('user')).first()
         day = parse_date(request.POST.get('date') or '') or timezone.localdate()
         if target is not None:
-            record, _ = Attendance.objects.get_or_create(user=target, date=day)
             sign_type = request.POST.get('sign_type')
-            if sign_type in Attendance.SignType.values:
-                record.sign_type = sign_type
-            record.check_in = _combine(day, request.POST.get('check_in'))
-            record.check_out = _combine(day, request.POST.get('check_out'))
-            record.is_makeup = True
-            record.save()
+            check_in = _combine(day, request.POST.get('check_in'))
+            check_out = _combine(day, request.POST.get('check_out'))
+            with transaction.atomic():
+                record, _ = Attendance.objects.get_or_create(user=target, date=day)
+                record = Attendance.objects.select_for_update().get(pk=record.pk)
+                if sign_type in Attendance.SignType.values:
+                    record.sign_type = sign_type
+                record.check_in = check_in
+                record.check_out = check_out
+                record.is_makeup = True
+                # status 由模型 save() 重算（is_makeup=True → 补卡），保持既有口径
+                record.save(update_fields=[
+                    'sign_type', 'check_in', 'check_out', 'is_makeup',
+                    'status', 'updated_at'])
     return redirect('attendance:attendance_records')
 
 

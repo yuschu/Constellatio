@@ -100,6 +100,7 @@ class AttendanceRecordFilterTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         from django.contrib.auth.models import Permission
+
         from plugins.user.models import Role
         cls.day = timezone.localdate()
         cls.manager = User.objects.create_user('mgr', password='pw')
@@ -172,6 +173,7 @@ class AttendanceStatsTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         from django.contrib.auth.models import Permission
+
         from plugins.user.models import Department, Role
 
         cls.manager = User.objects.create_user('statsmgr', password='pw')
@@ -259,6 +261,7 @@ class AttendanceChartPageTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         from django.contrib.auth.models import Permission
+
         from plugins.user.models import Role
 
         cls.manager = User.objects.create_user('chartmgr', password='pw')

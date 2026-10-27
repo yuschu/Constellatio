@@ -7,9 +7,8 @@
 import hashlib
 
 from django.conf import settings
-from django.db import models
+from django.db import IntegrityError, models, transaction
 from django.utils.translation import gettext_lazy as _
-
 
 ACTION_LABELS = {
     'approval_finished': _('审批结束'),
@@ -70,15 +69,29 @@ class BlockchainRecord(models.Model):
 
     @classmethod
     def append(cls, plugin, action, payload, operator=None, **kw):
-        """追加一条：record_hash = SHA256(prev_hash + payload_hash)。"""
-        last = cls.objects.order_by('-id').first()
-        prev = last.record_hash if last else '0' * 64
+        """追加一条：record_hash = SHA256(prev_hash + payload_hash)。
+
+        v1.7.x 并发加固：链尾在 ``select_for_update()`` 行锁内读取，
+        “读链尾 → 算哈希 → 插入”在同一事务内完成，避免两个并发追加
+        读到同一链尾而分叉。并发写入同一 payload 时 record_hash 可能撞上
+        唯一键，此时回滚并重试一次（重试会重新读链尾，得到不同 prev）。
+        """
         payload_hash = hashlib.sha256(payload.encode('utf-8')).hexdigest()
-        record_hash = hashlib.sha256(
-            (prev + payload_hash).encode('utf-8')).hexdigest()
-        return cls.objects.create(
-            plugin=plugin, action=action, payload_hash=payload_hash,
-            prev_hash=prev, record_hash=record_hash, operator=operator, **kw)
+        for attempt in range(2):
+            try:
+                with transaction.atomic():
+                    last = cls.objects.select_for_update().order_by('-id').first()
+                    prev = last.record_hash if last else '0' * 64
+                    record_hash = hashlib.sha256(
+                        (prev + payload_hash).encode('utf-8')).hexdigest()
+                    return cls.objects.create(
+                        plugin=plugin, action=action, payload_hash=payload_hash,
+                        prev_hash=prev, record_hash=record_hash,
+                        operator=operator, **kw)
+            except IntegrityError:
+                # 唯一键冲突：并发同 payload 抢到了同一 record_hash，重试一次
+                if attempt:
+                    raise
 
     @classmethod
     def verify_chain(cls):

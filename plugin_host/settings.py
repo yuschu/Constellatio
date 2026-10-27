@@ -198,3 +198,27 @@ MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# ---------------------------------------------------------------------------
+# 传输安全（v1.7.1 / P1-13）
+# ---------------------------------------------------------------------------
+# 默认值优先保证「本地 runserver」与「docker compose 直连 8000 端口」可用：
+# compose 没有 TLS 终止，直接开 SECURE_SSL_REDIRECT 会把所有请求跳进 https
+# 而无法访问。生产部署应由前置反向代理终止 TLS，并显式打开下面的开关：
+#   DJANGO_HTTPS=1        Cookie 仅 HTTPS 传输 + HSTS（默认关）
+#   DJANGO_SSL_REDIRECT=1 全站 301 到 HTTPS（反代已跳转时不要重复开）
+#   DJANGO_HSTS_SECONDS    HSTS 有效期，默认 31536000（1 年）
+HTTPS_ENABLED = os.environ.get('DJANGO_HTTPS', '0') == '1'
+SESSION_COOKIE_SECURE = HTTPS_ENABLED
+CSRF_COOKIE_SECURE = HTTPS_ENABLED
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+# 反代转发 X-Forwarded-Proto 后，request.is_secure() 才为 True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = os.environ.get('DJANGO_SSL_REDIRECT', '0') == '1'
+SECURE_HSTS_SECONDS = (
+    int(os.environ.get('DJANGO_HSTS_SECONDS', '31536000')) if HTTPS_ENABLED else 0
+)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = bool(HTTPS_ENABLED)
+SECURE_HSTS_PRELOAD = bool(HTTPS_ENABLED)

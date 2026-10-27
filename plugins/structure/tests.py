@@ -5,10 +5,10 @@ from django.contrib.auth.models import Permission
 from django.test import TestCase
 from django.urls import reverse
 
+from plugins.user.models import Role
+
 from . import template
 from .services import apply_structure
-
-from plugins.user.models import Role
 
 User = get_user_model()
 
@@ -96,6 +96,7 @@ class StructureApplyTests(TestCase):
     def test_grant_role_perms_command(self):
         """管理命令：为既有角色幂等补齐模板权限（升级老库用）。"""
         import io
+
         from django.core.management import call_command
         Role.objects.create(name='人力资源经理')
         call_command('grant_role_perms', stdout=io.StringIO())
@@ -109,6 +110,7 @@ class StructureApplyTests(TestCase):
     def test_grant_role_perms_revoke_manager_user_manage(self):
         """升级选项：收回部门经理 L1 user_manage，保留总经理/系统管理员。"""
         import io
+
         from django.core.management import call_command
         user_manage = Permission.objects.get(codename='user_manage')
         manager_role = Role.objects.create(name='人力资源经理')
@@ -316,10 +318,11 @@ class UserHierarchyTests(TestCase):
     def test_department_tree(self):
         """v1.5.9：真实部门树——层级、成员数、停用标记与统计。"""
         from plugins.user.models import Department
+
         from .hierarchy import build_department_tree
         root = Department.objects.create(name='总公司')
         branch = Department.objects.create(name='研发中心', parent=root)
-        frozen = Department.objects.create(name='停用组', parent=root, is_active=False)
+        Department.objects.create(name='停用组', parent=root, is_active=False)
         User.objects.create_user('dept_a', password='pw', department=branch)
         User.objects.create_user('dept_b', password='pw', department=branch)
 

@@ -7,7 +7,7 @@ class LanguageConfig(AppConfig):
     name = "plugins.language"
 
     def ready(self):
-        from plugin_host.registry import register, PluginMeta
+        from plugin_host.registry import PluginMeta, register
         register(PluginMeta(
             name='language',
             version='1.5.7',

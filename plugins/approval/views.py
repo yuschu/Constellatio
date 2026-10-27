@@ -1,10 +1,15 @@
 """approval 插件视图：发起 / 我的审批 / 待我审批 / 抄送我的 / 详情操作。"""
 
+from datetime import timedelta
+
 from django.apps import apps as dj_apps
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.db import transaction
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from plugin_host.permissions import require_perm
@@ -16,11 +21,29 @@ from .services import approve, reject, sign_approve, sign_reject, submit
 
 User = get_user_model()
 
+# v1.7.1（P1-20）：列表统一分页 25 条/页
+LIST_PAGE_SIZE = 25
+
+
+def _may_view(user, approval):
+    """对象级可见性（v1.7.1 / P0-9）：申请人 / 审批人 / 会签人 / 抄送人 / 超管。
+
+    approval_view 是 L3 全员基线码，不再作为「可看任意单据」的兜底：
+    详情与附件下载都改为按参与关系判定，避免全员横向越权。
+    """
+    if user.is_superuser:
+        return True
+    if approval.applicant_id == user.pk or approval.approver_id == user.pk:
+        return True
+    if approval.signers.filter(signer=user).exists():
+        return True
+    return approval.cc_users.filter(pk=user.pk).exists()
+
 
 def _can_act(user, approval):
     """审批操作人校验（v1.5.17：仅待审批可操作，处理后不可修改）：
     - 会签单：必须是会签人本人且未签
-    - 普通单：审批人本人 或 具备 approval_approve 权限
+    - 普通单：审批人本人 或 超级管理员（v1.7.1 / P0-10：去掉 approval_approve 全局旁路）
     """
     if approval.status != Approval.Status.PENDING:
         return False
@@ -29,7 +52,7 @@ def _can_act(user, approval):
         return row is not None and not row.signed
     if approval.approver_id is None:
         return False
-    return user == approval.approver or user.has_perm('approval_approve')
+    return user == approval.approver or user.is_superuser
 
 
 def _departments():
@@ -42,10 +65,16 @@ def _departments():
 
 
 def _overtime_choices(user):
-    """调休依据：本人近一年未被驳回的加班审批。"""
+    """调休依据：本人近一年已通过的加班审批（v1.7.1 / P1-25）。
+
+    只认 APPROVED：草稿 / 待审批 / 已驳回的加班都不能作为调休依据；
+    created_at 限近 365 天，避免陈年加班被反复使用。
+    """
+    since = timezone.now() - timedelta(days=365)
     rows = Approval.objects.filter(
         applicant=user, approval_type=Approval.Type.OVERTIME,
-    ).exclude(status=Approval.Status.REJECTED).order_by('-created_at')[:50]
+        status=Approval.Status.APPROVED, created_at__gte=since,
+    ).order_by('-created_at')[:50]
     choices = []
     for row in rows:
         start = row.form_data.get('start_time', '')
@@ -84,8 +113,17 @@ def _summary(approval_type, cleaned, basis_label=''):
 @require_perm('approval_view')
 def approval_list(request):
     """我发起的审批（v1.5.16：已驳回且申请人隐藏的记录不再展示）。"""
-    approvals = Approval.objects.filter(applicant=request.user, applicant_hidden=False)
-    return render(request, 'approval/approval_list.html', {'approvals': approvals})
+    approvals = (
+        Approval.objects
+        .filter(applicant=request.user, applicant_hidden=False)
+        .select_related('applicant', 'approver')
+    )
+    page_obj = Paginator(approvals, LIST_PAGE_SIZE).get_page(request.GET.get('page'))
+    return render(request, 'approval/approval_list.html', {
+        'approvals': page_obj,
+        'page_obj': page_obj,
+        'total': page_obj.paginator.count,
+    })
 
 
 @require_perm('approval_approve')
@@ -93,14 +131,22 @@ def approval_pending(request):
     """待我审批：普通单（approver=我） + 会签单（我是 signer 且未签）。
 
     v1.5.15：仅具备 approval_approve 的管理岗可见（L3 隐藏入口与页面）。
+    v1.7.1（P1-20）：两个查询集合并后再分页，避免只分页其中一半。
     """
     approvals = Approval.objects.filter(
-        approver=request.user, status=Approval.Status.PENDING)
+        approver=request.user, status=Approval.Status.PENDING,
+    ).select_related('applicant', 'approver')
     counter = Approval.objects.filter(
         status=Approval.Status.PENDING,
-        signers__signer=request.user, signers__signed=False)
+        signers__signer=request.user, signers__signed=False,
+    ).select_related('applicant', 'approver')
     merged = list(approvals) + [a for a in counter if a not in approvals]
-    return render(request, 'approval/approval_pending.html', {'approvals': merged})
+    page_obj = Paginator(merged, LIST_PAGE_SIZE).get_page(request.GET.get('page'))
+    return render(request, 'approval/approval_pending.html', {
+        'approvals': page_obj,
+        'page_obj': page_obj,
+        'total': len(merged),
+    })
 
 
 @require_perm('approval_approve')
@@ -108,7 +154,12 @@ def approval_cc(request):
     """抄送我的（v1.5.17：仅管理岗可见，L3 隐藏）。"""
     approvals = request.user.cc_approvals.select_related(
         'applicant', 'approver').order_by('-created_at')
-    return render(request, 'approval/approval_cc.html', {'approvals': approvals})
+    page_obj = Paginator(approvals, LIST_PAGE_SIZE).get_page(request.GET.get('page'))
+    return render(request, 'approval/approval_cc.html', {
+        'approvals': page_obj,
+        'page_obj': page_obj,
+        'total': page_obj.paginator.count,
+    })
 
 
 @require_perm('approval_view')
@@ -174,28 +225,38 @@ def approval_create(request):
                 basis_label = dict(overtime_choices).get(str(basis_id), '')
                 if basis_label:
                     form_data['basis_label'] = basis_label
-            approval = Approval.objects.create(
-                approval_type=type_key,
-                title=f'{Approval.Type(type_key).label}｜{request.user.last_name or request.user.username}',
-                content=_summary(type_key, form.cleaned_data, basis_label),
-                applicant=request.user,
-                approver=approver,
-                department_id=department.pk,
-                department_name=department.name,
-                form_data=form_data,
-                amount=form.cleaned_data.get('amount') if type_key == Approval.Type.EXPENSE else None,
-                attachment=form.cleaned_data.get('seal_file') if type_key == Approval.Type.SEAL else None)
-            submit(approval, request.user,
-                   f'重新申请（原单 #{source.pk}）' if source else '发起审批',
-                   action='resubmit' if source else 'submit')
-            if source is not None:
-                source.replaced_by = approval
-                source.applicant_hidden = True
-                source.save(update_fields=['replaced_by', 'applicant_hidden', 'updated_at'])
-                ApprovalRecord.objects.create(
-                    approval=source, operator=request.user, action='replaced',
-                    comment=f'被 #{approval.pk} 替换')
-                return redirect('approval:approval_detail', approval_id=approval.pk)
+            # v1.7.1（P1-19）：建单 → 提交 → 替换原单 放在同一事务里；
+            # 原单加行锁并二次校验，双击 / 并发重复提交只会生成一张新单。
+            with transaction.atomic():
+                locked_source = None
+                if source is not None:
+                    locked_source = Approval.objects.select_for_update().get(pk=source.pk)
+                    if (locked_source.status != Approval.Status.REJECTED
+                            or locked_source.replaced_by_id is not None):
+                        return redirect('approval:approval_list')
+                approval = Approval.objects.create(
+                    approval_type=type_key,
+                    title=f'{Approval.Type(type_key).label}｜{request.user.last_name or request.user.username}',
+                    content=_summary(type_key, form.cleaned_data, basis_label),
+                    applicant=request.user,
+                    approver=approver,
+                    department_id=department.pk,
+                    department_name=department.name,
+                    form_data=form_data,
+                    amount=form.cleaned_data.get('amount') if type_key == Approval.Type.EXPENSE else None,
+                    attachment=form.cleaned_data.get('seal_file') if type_key == Approval.Type.SEAL else None)
+                submit(approval, request.user,
+                       f'重新申请（原单 #{locked_source.pk}）' if locked_source else '发起审批',
+                       action='resubmit' if locked_source else 'submit')
+                if locked_source is not None:
+                    locked_source.replaced_by = approval
+                    locked_source.applicant_hidden = True
+                    locked_source.save(
+                        update_fields=['replaced_by', 'applicant_hidden', 'updated_at'])
+                    ApprovalRecord.objects.create(
+                        approval=locked_source, operator=request.user, action='replaced',
+                        comment=f'被 #{approval.pk} 替换')
+                    return redirect('approval:approval_detail', approval_id=approval.pk)
             return redirect('approval:approval_list')
 
     return render(request, 'approval/approval_form.html', {
@@ -223,8 +284,7 @@ def approval_hide(request, approval_id):
 def approval_detail(request, approval_id):
     """审批详情 + 通过/驳回（普通） + 会签通过/驳回（会签单）。"""
     approval = get_object_or_404(Approval, pk=approval_id)
-    involved = approval.applicant_id == request.user.pk or approval.approver_id == request.user.pk
-    if not involved and not request.user.has_perm('approval_view'):
+    if not _may_view(request.user, approval):
         return redirect('index')
 
     if request.method == 'POST':
@@ -243,7 +303,8 @@ def approval_detail(request, approval_id):
                     approve(approval, request.user, comment)
                 elif action == 'reject':
                     reject(approval, request.user, comment)
-        except ValueError:
+        except (ValueError, PermissionError):
+            # 非法流转 / 非本人审批：静默回到详情（状态未变，前端二次确认已提示）
             pass
         return redirect('approval:approval_detail', approval_id=approval.id)
 
@@ -270,16 +331,13 @@ def approval_detail(request, approval_id):
 
 @login_required
 def approval_attachment(request, approval_id):
-    """用章附件下载（v1.5.14）：申请人 / 审批人 / 会签人 / 抄送人 / approval_view 可下载。"""
+    """用章附件下载（v1.5.14）：仅单据相关人 / 超管可下载（v1.7.1 / P0-9）。
+
+    approval_view 是 L3 全员基线码，不能作为附件可见性兜底，否则任一员工
+    改 URL 里的 id 即可下载他人用章文件。
+    """
     approval = get_object_or_404(Approval, pk=approval_id)
-    involved = approval.applicant_id == request.user.pk or approval.approver_id == request.user.pk
-    allowed = (
-        involved
-        or approval.signers.filter(signer=request.user).exists()
-        or approval.cc_users.filter(pk=request.user.pk).exists()
-        or request.user.has_perm('approval_view')
-    )
-    if not allowed:
+    if not _may_view(request.user, approval):
         return redirect('index')
     if not approval.attachment:
         return redirect('approval:approval_detail', approval_id=approval.id)

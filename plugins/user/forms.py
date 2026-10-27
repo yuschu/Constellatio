@@ -2,7 +2,9 @@
 
 from django import forms
 from django.contrib.auth.models import Permission
-from django.utils.translation import get_language, gettext_lazy as _
+from django.contrib.auth.password_validation import validate_password
+from django.utils.translation import get_language
+from django.utils.translation import gettext_lazy as _
 
 from .models import Department, Role, User
 from .perms import LEVEL_LABELS, ordered_permissions, permission_level
@@ -126,6 +128,10 @@ class UserForm(forms.ModelForm):
         confirm = cleaned.get('password_confirm')
         if pwd != confirm:
             raise forms.ValidationError(_('两次输入的密码不一致'))
+        # v1.7.1（P1-14）：提交的显式密码走 AUTH_PASSWORD_VALIDATORS，
+        # 避免绕过 MinimumLength / CommonPassword / NumericPassword 校验器。
+        if pwd and self.can_change_password:
+            validate_password(pwd, self.instance)
         return cleaned
 
     def save(self, commit=True):
@@ -180,6 +186,9 @@ class PasswordForm(forms.Form):
         confirm = cleaned.get('confirm_password')
         if new and confirm and new != confirm:
             raise forms.ValidationError(_('两次输入的新密码不一致'))
+        # v1.7.1（P1-14）：改密同样受密码校验器约束
+        if new:
+            validate_password(new, self.user)
         return cleaned
 
 

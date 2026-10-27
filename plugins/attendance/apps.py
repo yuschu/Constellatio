@@ -7,7 +7,7 @@ class AttendanceConfig(AppConfig):
     name = "plugins.attendance"
 
     def ready(self):
-        from plugin_host.registry import register, PluginMeta
+        from plugin_host.registry import PluginMeta, register
         register(PluginMeta(
             name='attendance',
             version='0.6.0',

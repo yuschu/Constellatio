@@ -68,7 +68,7 @@ class NoticeTest(TestCase):
 
     def test_default_selection_is_first_announcement(self):
         """未指定 notice 时默认展示排序第一条（置顶优先）。"""
-        normal = self._announcement(title='普通', content='普通正文')
+        self._announcement(title='普通', content='普通正文')
         top = self._announcement(title='置顶', content='置顶正文', is_top=True)
         self.client.force_login(self.reader)
         response = self.client.get('/plugins/notice/')

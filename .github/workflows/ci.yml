@@ -1,0 +1,33 @@
+name: CI
+
+# v1.8.0（P1-26）：提交门禁 —— 静态检查 + 全量测试（sqlite，无需 MySQL）
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Ruff
+        run: ruff check .
+
+      - name: Django checks
+        run: python manage.py check
+
+      - name: Tests
+        env:
+          DJANGO_DEBUG: '0'
+        run: python manage.py test --noinput

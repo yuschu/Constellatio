@@ -10,9 +10,8 @@ from django.test import RequestFactory, TestCase
 from django.utils import translation
 from django.utils.translation import gettext_lazy as _
 
-from tools.compile_mo import build_mo, compile_all, parse_po_text
-
 from plugin_host.middleware import DefaultLanguageMiddleware
+from tools.compile_mo import build_mo, compile_all, parse_po_text
 
 
 class LanguageTestMixin:

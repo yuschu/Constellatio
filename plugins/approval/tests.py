@@ -85,6 +85,7 @@ class CounterSignatureTest(TestCase):
 
     def test_all_signs_approve_and_callback(self):
         from plugin_host.signals import counter_signature_approved
+
         from .models import Approval
         from .services import sign_approve, start_counter_signature
         received = []
@@ -110,7 +111,6 @@ class CounterSignatureTest(TestCase):
         self.assertEqual(a.status, Approval.Status.REJECTED)
 
     def test_outsider_cannot_sign(self):
-        from .models import Approval
         from .services import sign_approve, start_counter_signature
         a = self._approval()
         start_counter_signature(a, [self.signer_a], self.applicant)
@@ -118,7 +118,6 @@ class CounterSignatureTest(TestCase):
             sign_approve(a, self.outsider)
 
     def test_start_without_signers_raises(self):
-        from .models import Approval
         from .services import start_counter_signature
         a = self._approval()
         with self.assertRaises(ValueError):

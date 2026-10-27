@@ -2,6 +2,7 @@
 
 from django.shortcuts import redirect, render
 from django.utils.translation import gettext_lazy as _
+from django.views.decorators.http import require_POST
 
 from plugin_host.permissions import require_perm
 from plugin_host.registry import PLUGIN_REGISTRY
@@ -38,6 +39,7 @@ def switch_list(request):
     return render(request, 'workspace/switch_list.html', {'rows': rows})
 
 
+@require_POST
 @require_perm('workspace_manage')
 def switch_toggle(request, app_key):
     """切换插件开关：仅拦截 workspace；写 DB → 发 plugin_toggled 信号 → 上链。"""

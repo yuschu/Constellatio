@@ -30,6 +30,21 @@ class PluginSwitchTests(TestCase):
         self.assertNotIn('notice', keys)
         self.assertIn('auth', keys)
 
+    def test_toggle_rejects_get(self):
+        """开关切换只接受 POST：GET 不写库。"""
+        self.client.force_login(self.admin)
+        resp = self.client.get(
+            reverse('workspace:switch_toggle', args=['notice']))
+        self.assertEqual(resp.status_code, 405)
+        self.assertFalse(PluginSwitch.objects.filter(app_key='notice').exists())
+
+    def test_direct_orm_switch_takes_effect_immediately(self):
+        """直接 ORM 创建 / 删除开关也立即生效（save/delete 失效缓存）。"""
+        switch = PluginSwitch.objects.create(app_key='notice', enabled=False)
+        self.assertNotIn('notice', [k for k, _ in get_enabled_plugins()])
+        switch.delete()
+        self.assertIn('notice', [k for k, _ in get_enabled_plugins()])
+
     def test_toggle_persists_and_sends_signal(self):
         """toggle 写 DB 且触发 plugin_toggled 信号。"""
         received = []
@@ -77,6 +92,7 @@ class PluginSwitchTests(TestCase):
     def test_cli_switch_roundtrip(self):
         """兜底命令：off auth 写库，on auth 恢复（不依赖 HTTP）。"""
         import io
+
         from django.core.management import call_command
         out = io.StringIO()
         call_command('plugin_switch', 'off', 'auth', stdout=out)
@@ -157,6 +173,7 @@ class ChartPluginSwitchTests(TestCase):
 
     def test_cli_lists_and_toggles_chart_provider(self):
         import io
+
         from django.core.management import call_command
 
         listing = io.StringIO()

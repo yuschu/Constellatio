@@ -1,0 +1,4 @@
+# 开发 / CI 依赖：显式列出，不含 mysqlclient（CI 用 sqlite 跑测试，避免 C 编译依赖）
+django==5.2.18
+whitenoise==6.12.0
+ruff==0.6.9

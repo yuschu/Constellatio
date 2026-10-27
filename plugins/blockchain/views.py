@@ -2,7 +2,8 @@
 
 from datetime import timedelta
 
-from django.db.models import Count
+from django.core.cache import cache
+from django.db.models import Count, Max
 from django.db.models.functions import TruncDate
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
@@ -17,6 +18,28 @@ from .models import BlockchainRecord
 
 DEFAULT_STATS_DAYS = 30
 MAX_STATS_DAYS = 90
+
+# v1.7.1（P1-21）：链校验快照缓存秒数。
+# 列表与详情每次都全表重算，记录增长后是 O(n) 的固定开销；缓存后同一链状态
+# 在窗口内只算一次。缓存键含 (max_id, count)，追加新记录会自动换键；
+# 原地篡改（直接 UPDATE 改 payload_hash）最多延迟本窗口被发现 —— 需要即时
+# 结论时用 _verify_snapshot(force=True)（手动校验入口）。
+VERIFY_CACHE_SECONDS = 60
+
+
+def _verify_snapshot(force=False):
+    """返回 (ok, broken_id)：默认走 60 秒缓存，force=True 时全量重算。"""
+    if force:
+        return BlockchainRecord.verify_chain()
+    head = BlockchainRecord.objects.aggregate(max_id=Max('id'), total=Count('id'))
+    cache_key = f'blockchain:verify:{head["max_id"] or 0}:{head["total"]}'
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+    result = BlockchainRecord.verify_chain()
+    cache.set(cache_key, result, VERIFY_CACHE_SECONDS)
+    return result
+
 
 
 def _parse_days(raw):
@@ -55,7 +78,7 @@ def _window_stats(days):
     }
 
     plugin_totals = {}
-    for (_, plugin), count in per_day.items():
+    for (_day, plugin), count in per_day.items():
         plugin_totals[plugin] = plugin_totals.get(plugin, 0) + count
     ordered = sorted(plugin_totals, key=lambda key: (-plugin_totals[key], key))
 
@@ -94,7 +117,7 @@ def _window_stats(days):
 def blockchain_list(request):
     """留痕链列表（倒序） + 校验结果 + 近 30 天统计看板。"""
     records = BlockchainRecord.objects.select_related('operator')[:100]
-    ok, broken_id = BlockchainRecord.verify_chain()
+    ok, broken_id = _verify_snapshot()
     _stats, table = _window_stats(DEFAULT_STATS_DAYS)
     return render(request, 'blockchain/blockchain_list.html', {
         'records': records,
@@ -140,7 +163,7 @@ def blockchain_detail(request, record_id):
     """单条留痕详情：字段 + 链校验状态。"""
     record = get_object_or_404(
         BlockchainRecord.objects.select_related('operator'), pk=record_id)
-    ok, broken_id = BlockchainRecord.verify_chain()
+    ok, broken_id = _verify_snapshot()
     return render(request, 'blockchain/blockchain_detail.html', {
         'record': record,
         'verify_ok': ok,

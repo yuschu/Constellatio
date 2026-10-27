@@ -40,6 +40,10 @@ services:
       SSO_SHARED_SECRET: ${SSO_SHARED_SECRET:-constellatio-sso-dev-secret}
       SSO_TICKET_TTL: ${SSO_TICKET_TTL:-300}
       SSO_AUTO_CREATE: ${SSO_AUTO_CREATE:-1}
+      # v1.8.0 传输安全：默认直连 HTTP；前置反代终止 TLS 后改为 1
+      DJANGO_HTTPS: ${DJANGO_HTTPS:-0}
+      DJANGO_SSL_REDIRECT: ${DJANGO_SSL_REDIRECT:-0}
+      DJANGO_HSTS_SECONDS: ${DJANGO_HSTS_SECONDS:-31536000}
     command: ["sh", "./entrypoint.sh"]
     ports:
       - "${WEB_PORT:-8000}:8000"

@@ -4,7 +4,7 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
   <h2 class="mb-0">{% trans "抄送我的" %}</h2>
-  <span class="r-badge">{% blocktranslate with count=approvals|length %}共 {{ count }} 条{% endblocktranslate %}</span>
+  <span class="r-badge">{% blocktranslate with count=total %}共 {{ count }} 条{% endblocktranslate %}</span>
 </div>
 <div class="r-card">
   <table class="r-table">
@@ -18,7 +18,7 @@
         <td>{% trans a.get_approval_type_display %}</td>
         <td>{{ a.title }}</td>
         <td>{{ a.applicant.last_name|default:a.applicant.username }}</td>
-        <td>{{ a.approver.last_name|default:a.approver.username }}</td>
+        <td>{% if a.approver %}{{ a.approver.last_name|default:a.approver.username }}{% else %}—{% endif %}</td>
         <td>
           {% if a.status == 'pending' %}<span class="r-badge r-badge--blue">{% trans "待审批" %}</span>
           {% elif a.status == 'approved' %}<span class="r-badge">{% trans "已通过" %}</span>
@@ -33,5 +33,20 @@
       {% endfor %}
     </tbody>
   </table>
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="d-flex justify-content-between align-items-center mt-3" style="font-size:.8rem;">
+    <span class="text-muted">
+      {% blocktranslate with page=page_obj.number total_pages=page_obj.paginator.num_pages %}第 {{ page }} / {{ total_pages }} 页{% endblocktranslate %}
+    </span>
+    <span class="d-flex gap-2">
+      {% if page_obj.has_previous %}
+      <a class="r-offset-hover" href="?page={{ page_obj.previous_page_number }}">← {% trans "上一页" %}</a>
+      {% endif %}
+      {% if page_obj.has_next %}
+      <a class="r-offset-hover" href="?page={{ page_obj.next_page_number }}">{% trans "下一页" %} →</a>
+      {% endif %}
+    </span>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

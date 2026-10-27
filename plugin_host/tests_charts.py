@@ -10,7 +10,10 @@ from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase, override_settings
 
 from plugin_host.charts import (
-    ChartRenderer, discover_charts, get_active_chart, get_renderer,
+    ChartRenderer,
+    discover_charts,
+    get_active_chart,
+    get_renderer,
 )
 from plugin_host.registry import PLUGIN_REGISTRY
 

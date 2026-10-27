@@ -1,6 +1,5 @@
 """user 插件 v1.2 测试：部门软/硬删、用户状态机、权限层级、密码二次确认。"""
 
-from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.test import TestCase
 from django.urls import reverse
@@ -119,7 +118,7 @@ class DeptHardDeleteCallbackTests(TestCase):
     def test_counter_approved_deletes_dept(self):
         """dept_delete 会签全部通过 → 部门物理删除 + dept_deleted 上链。"""
         from plugins.approval.models import Approval
-        from plugins.approval.services import start_counter_signature, sign_approve
+        from plugins.approval.services import sign_approve, start_counter_signature
         operator = self.admin
         approval = Approval.objects.create(
             approval_type=Approval.Type.DEPT_DELETE, title='删部门',

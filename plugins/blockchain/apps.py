@@ -1,5 +1,9 @@
+import logging
+
 from django.apps import AppConfig
 from django.utils.translation import gettext_lazy as _
+
+logger = logging.getLogger(__name__)
 
 
 class BlockchainConfig(AppConfig):
@@ -8,9 +12,19 @@ class BlockchainConfig(AppConfig):
 
     def ready(self):
         from plugin_host import signals as bus
-        from plugin_host.registry import register, PluginMeta
+        from plugin_host.registry import PluginMeta, register
 
-        # 只订阅信号总线，不反向依赖任何业务插件（跨插件通信只走 signals）
+        # 只订阅信号总线，不反向依赖任何业务插件（跨插件通信只走 signals）。
+        # v1.7.x：每个 handler 内部兜底异常，留痕写入失败不得炸上游业务（审批/打卡）。
+        def _safe(label, handler):
+            """包一层：handler 抛异常时记日志并吞掉，信号发送方不受影响。"""
+            def wrapper(sender, **kw):
+                try:
+                    return handler(sender, **kw)
+                except Exception:      # 订阅方失败不得影响业务主流程
+                    logger.exception('留痕写入失败：%s', label)
+            return wrapper
+
         def _on_approval_finished(sender, **kw):
             BlockchainRecord.append(
                 plugin='approval', action='approval_finished',
@@ -82,19 +96,32 @@ class BlockchainConfig(AppConfig):
                 operator_id=kw.get('applied_by_id'))
 
         from .models import BlockchainRecord
-        bus.approval_finished.connect(_on_approval_finished, weak=False)
-        bus.notice_published.connect(_on_notice_published, weak=False)
-        bus.attendance_checked.connect(_on_attendance_checked, weak=False)
-        bus.user_created.connect(_on_user_created, weak=False)
-        bus.user_updated.connect(_on_user_updated, weak=False)
-        bus.plugin_toggled.connect(_on_plugin_toggled, weak=False)
-        bus.dept_deleted.connect(_on_dept_deleted, weak=False)
-        bus.dept_disabled.connect(_on_dept_disabled, weak=False)
-        bus.dept_updated.connect(_on_dept_updated, weak=False)
-        bus.user_status_changed.connect(_on_user_status_changed, weak=False)
-        bus.user_disabled.connect(_on_user_disabled, weak=False)
-        bus.password_changed.connect(_on_password_changed, weak=False)
-        bus.structure_applied.connect(_on_structure_applied, weak=False)
+        bus.approval_finished.connect(
+            _safe('approval_finished', _on_approval_finished), weak=False)
+        bus.notice_published.connect(
+            _safe('notice_published', _on_notice_published), weak=False)
+        bus.attendance_checked.connect(
+            _safe('attendance_checked', _on_attendance_checked), weak=False)
+        bus.user_created.connect(
+            _safe('user_created', _on_user_created), weak=False)
+        bus.user_updated.connect(
+            _safe('user_updated', _on_user_updated), weak=False)
+        bus.plugin_toggled.connect(
+            _safe('plugin_toggled', _on_plugin_toggled), weak=False)
+        bus.dept_deleted.connect(
+            _safe('dept_deleted', _on_dept_deleted), weak=False)
+        bus.dept_disabled.connect(
+            _safe('dept_disabled', _on_dept_disabled), weak=False)
+        bus.dept_updated.connect(
+            _safe('dept_updated', _on_dept_updated), weak=False)
+        bus.user_status_changed.connect(
+            _safe('user_status_changed', _on_user_status_changed), weak=False)
+        bus.user_disabled.connect(
+            _safe('user_disabled', _on_user_disabled), weak=False)
+        bus.password_changed.connect(
+            _safe('password_changed', _on_password_changed), weak=False)
+        bus.structure_applied.connect(
+            _safe('structure_applied', _on_structure_applied), weak=False)
 
         register(PluginMeta(
             name='blockchain',

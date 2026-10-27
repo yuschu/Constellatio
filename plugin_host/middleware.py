@@ -11,7 +11,10 @@ from django.utils import translation
 
 from plugin_host.registry import get_enabled_plugins
 from plugin_host.theming import (
-    THEME_COOKIE_NAME, discover_themes, reset_current_theme, resolve_theme_key,
+    THEME_COOKIE_NAME,
+    discover_themes,
+    reset_current_theme,
+    resolve_theme_key,
     set_current_theme,
 )
 

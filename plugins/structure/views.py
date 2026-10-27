@@ -14,7 +14,7 @@ from plugin_host.permissions import require_perm
 
 from .hierarchy import build_department_tree, build_user_tree
 from .services import apply_structure
-from .template import DEPARTMENTS, ROLE_PERMISSIONS, dept_tree, ROLES, USERS
+from .template import DEPARTMENTS, ROLE_PERMISSIONS, ROLES, USERS, dept_tree
 
 
 @require_perm('structure_view')
