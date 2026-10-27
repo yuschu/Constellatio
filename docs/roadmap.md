@@ -2,7 +2,7 @@
 
 > 依据：`tech-stack-and-architecture.md` / `constraints-and-acceptance.md` / `development-guide.md` 的**全栈插件化**目标
 > 负责人校正（2026-10-22）：**不降级**、**补充实现**、**列入修复项**；工作约定只需「文档先行、每改必推 GitHub、每版打 tag」
-> 状态：draft-51（2026-10-27）—— **v1.4–v1.6.20 已交付**（tag **v1.6.20**），**v1.7.0 企业 SSO + 消息提醒**（259 项测试），**v1.7.1 安全与并发修复包已交付**（tag **v1.7.1**，323 项测试全绿）；下一版：v1.7.2 认证后端插件化
+> 状态：draft-52（2026-10-27）—— **v1.4–v1.6.20 已交付**（tag **v1.6.20**），**v1.7.0 企业 SSO + 消息提醒**（259 项测试），**v1.7.1 安全与并发修复包**（323 项测试），**v1.7.2 公告极简化 + 考勤规则已交付**（352 项测试全绿）；下一版：v1.7.3 认证后端插件化
 
 ## 一、总原则
 
@@ -18,7 +18,7 @@
 | 数据库后端 | MySQL / sqlite / postgres 一行切换 | MySQL / sqlite 通过环境变量切换 | postgres 未验证 | 已具备；v1.10 补验证 |
 | 主题 UI | 新建 `themes/<name>` + 改 `OA_THEME` 即换 | Corporate Clean 默认 / Risograph 备选；`OA_THEME` 生效 | 已补齐主题清单、切换、第二主题 | ✅ v1.5 完成 |
 | 图表引擎 | 统一 `ChartRenderer`，ECharts 默认 | `plugin_host/charts.py` + `charts/echarts` Provider；`OA_CHARTS` 选择 / 停用降级；v1.6.1 起为 Provider 插件，可运行时启停 | 已补齐清单发现、契约、运行时选择与开关 | ✅ v1.6 / v1.6.1 完成 |
-| 认证后端 | `AUTHENTICATION_BACKENDS` 可插拔 | 仅 Django 默认 ModelBackend | 无 Provider、无示例后端 | **v1.7.2**（v1.7.1 让位给修复包） |
+| 认证后端 | `AUTHENTICATION_BACKENDS` 可插拔 | 仅 Django 默认 ModelBackend | 无 Provider、无示例后端 | **v1.7.3**（v1.7.1/v1.7.2 让位给修复包与体验优化） |
 | 模板引擎 | Django / Jinja2 可切、可共存 | 仅 DjangoTemplates | 无 Provider、无 Jinja2 | **v1.8**（深度待确认） |
 | 插件契约 | `models` / `dependencies` / `admin` / 依赖校验 | 仅 name/version/menus/permissions/urls/signals/templates/app | 字段缺失、无依赖校验 | **v1.9** |
 | 业务 ECharts 看板 | 考勤月度统计用 ECharts | 签到详情月度看板 + `/plugins/attendance/stats/` JSON；停用降级表格 | 已补齐图表、统计接口、降级 | ✅ v1.6 完成 |
@@ -80,7 +80,8 @@
 | **v1.7** | 认证后端插件化 | `AUTHENTICATION_BACKENDS` Provider；一个无外部依赖的示例后端（如用户名/邮箱） | 切换后端可登录；默认后端仍可用（延期，见 v1.7.1） |
 | **v1.7.0** | 企业 SSO + 站内信提醒 | `plugins/sso`（HMAC Ticket 网关、自动建号、防重放、登录页入口、`sso_ticket` 命令）；`plugins/notify`（消息中心 / 顶栏未读 / 审批待办与结果 / 公告提醒 / 工作台我的消息 / 停用降级）（`docs/plugin-dev-sso.md`、`docs/plugin-dev-notify.md`） | ✅ 已实现：259 项测试 + Docker 重建 |
 | **v1.7.1** | 安全与并发修复包（原 v1.10 候选提前） | P0-B 并发（审批行锁 / 留痕链锁 / 打卡丢更新）、P0-C 授权（对象级鉴权 / 审批人收口 / 编辑页不得改状态 / 开关仅 POST）、P1 十四项（传输安全、登录限流、注册表系统检查、开关缓存、菜单 N+1、信号隔离、分页、校验快照、工程化门禁）（`docs/plugin-dev-v171.md`） | ✅ 已交付：323 项测试 + ruff/CI + Docker 重建与 9 页冒烟 |
-| **v1.7.2** | 认证后端插件化 | `AUTHENTICATION_BACKENDS` Provider；一个无外部依赖的示例后端（如用户名/邮箱） | 切换后端可登录；默认后端仍可用 |
+| **v1.7.2** | 公告极简化 + 考勤规则 | notice：单列公告流（标题 + 正文同屏）、进入即已读、已读统计下沉为管理岗页、旧详情链接锚点兼容；attendance：`AttendanceRule` 单例（上下班 / 宽限 / 工作日 / 补卡回溯）、`/plugins/attendance/rules/` 设置页、`attendance_rule_manage` 权限、看板口径展示（`docs/plugin-dev-v172.md`） | ✅ 已交付：352 项测试 + Docker 重建与页面冒烟 |
+| **v1.7.3** | 认证后端插件化 | `AUTHENTICATION_BACKENDS` Provider；一个无外部依赖的示例后端（如用户名/邮箱） | 切换后端可登录；默认后端仍可用 |
 | **v1.8** | 模板引擎插件化 | Django / Jinja2 Provider；先做多引擎共存或单插件切换 | 待确认深度（见第六节） |
 | **v1.9** | 插件契约补全 | `models` / `dependencies` / `admin`；依赖顺序与环校验；启用一致性校验 | 缺失依赖启动即报错；停用被依赖插件被拦截 |
 | **v1.10** | 剩余修复包 + 文档债务 | P0-A 部署默认值（密钥/口令/DEBUG/HOSTS）、容器非 root 与健康检查、`entrypoint` 注入、`has_perm` 三处口径、模板内联 JS 与 inline style、静态停用边界、全文档同步 | 新增测试全绿；文档与代码无已知冲突 |

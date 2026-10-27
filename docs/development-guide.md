@@ -475,10 +475,12 @@ class AnnouncementRead(models.Model):
 - 可见性：v1.5.3 起公告菜单对**所有登录用户**可见（不再要求 `notice_view`）；发布仍要求 `notice_manage`
 - 未读标记：预取 `AnnouncementRead.objects.filter(user=u).values_list('announcement_id', flat=True)`，免 N+1
 - 详情记已读用 `get_or_create`，重复访问幂等
+- **v1.7.2 起改为单列公告流**：列表页直接展示全部公告的标题 + 正文，进入即 `bulk_create(ignore_conflicts=True)` 全部登记已读；不再有 `?notice=` 选中、切换下拉与已读弹窗；已读人员明细在 `/plugins/notice/<pk>/readers/`（仅 `notice_manage`），旧详情链接 302 到 `#notice-<pk>` 锚点（`docs/plugin-dev-v172.md`）
 
 ### 4.4 attendance 插件（考勤 + 统计）
 
 > ✅ **已实现（v0.5.0）**：签到/签退一天一卡 + 本月出勤/迟到统计 + `attendance_checked` 信号。
+> ✅ **v1.7.2**：新增 `AttendanceRule` 单例（上下班时间 / 迟到早退宽限 / 工作日 / 补卡回溯）+ `/plugins/attendance/rules/` 设置页（权限 `attendance_rule_manage`，L1）；状态判定一律读规则，**不要再硬编码 09:00 / 18:00**（`docs/plugin-dev-v172.md`）。
 
 ```python
 # plugins/attendance/models.py（已实现）
