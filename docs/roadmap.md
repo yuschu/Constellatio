@@ -2,7 +2,7 @@
 
 > 依据：`tech-stack-and-architecture.md` / `constraints-and-acceptance.md` / `development-guide.md` 的**全栈插件化**目标
 > 负责人校正（2026-10-22）：**不降级**、**补充实现**、**列入修复项**；工作约定只需「文档先行、每改必推 GitHub、每版打 tag」
-> 状态：draft-50（2026-10-24）—— **v1.4–v1.6.20 已交付**（tag **v1.6.20**），**v1.7.0 企业 SSO + 消息提醒已实现**（259 项测试全绿）；下一版：v1.7.1 认证后端插件化
+> 状态：draft-51（2026-10-27）—— **v1.4–v1.6.20 已交付**（tag **v1.6.20**），**v1.7.0 企业 SSO + 消息提醒**（259 项测试），**v1.7.1 安全与并发修复包已交付**（tag **v1.7.1**，323 项测试全绿）；下一版：v1.7.2 认证后端插件化
 
 ## 一、总原则
 
@@ -18,18 +18,18 @@
 | 数据库后端 | MySQL / sqlite / postgres 一行切换 | MySQL / sqlite 通过环境变量切换 | postgres 未验证 | 已具备；v1.10 补验证 |
 | 主题 UI | 新建 `themes/<name>` + 改 `OA_THEME` 即换 | Corporate Clean 默认 / Risograph 备选；`OA_THEME` 生效 | 已补齐主题清单、切换、第二主题 | ✅ v1.5 完成 |
 | 图表引擎 | 统一 `ChartRenderer`，ECharts 默认 | `plugin_host/charts.py` + `charts/echarts` Provider；`OA_CHARTS` 选择 / 停用降级；v1.6.1 起为 Provider 插件，可运行时启停 | 已补齐清单发现、契约、运行时选择与开关 | ✅ v1.6 / v1.6.1 完成 |
-| 认证后端 | `AUTHENTICATION_BACKENDS` 可插拔 | 仅 Django 默认 ModelBackend | 无 Provider、无示例后端 | **v1.7.1** |
+| 认证后端 | `AUTHENTICATION_BACKENDS` 可插拔 | 仅 Django 默认 ModelBackend | 无 Provider、无示例后端 | **v1.7.2**（v1.7.1 让位给修复包） |
 | 模板引擎 | Django / Jinja2 可切、可共存 | 仅 DjangoTemplates | 无 Provider、无 Jinja2 | **v1.8**（深度待确认） |
 | 插件契约 | `models` / `dependencies` / `admin` / 依赖校验 | 仅 name/version/menus/permissions/urls/signals/templates/app | 字段缺失、无依赖校验 | **v1.9** |
 | 业务 ECharts 看板 | 考勤月度统计用 ECharts | 签到详情月度看板 + `/plugins/attendance/stats/` JSON；停用降级表格 | 已补齐图表、统计接口、降级 | ✅ v1.6 完成 |
 | 插件注册方式 | `OA_PLUGINS` 一行即插即用 | 还需 `INSTALLED_APPS` + `ready()` 注册 | 文档与实现不一致 | **v1.9** 一致性校验 + 文档修正 |
-| 会签详情权限 | 会签人可审批 | 非 applicant/approver 且无 `approval_view` 会被重定向 | 权限边界 | **v1.10** 修复 |
+| 会签详情权限 | 会签人可审批 | v1.7.1 升级为对象级鉴权：申请人 / 审批人 / 会签人 / 抄送人 / 超管；`approval_view`（L3 全员）不再兜底 | 已收敛 | ✅ v1.7.1 完成 |
 | 插件权限准入 | 有权限才能使用插件 | v1.5.3 仅菜单过滤；blockchain / structure / approval 视图未守卫 | 菜单与 URL 口径不一致 | ✅ v1.5.4 统一 `require_perm` + 全员基线 |
 | 审批表单 | 按类型动态表单 + 抄送 | v1.5.4 仅三类固定表单 | 类型少、字段固定、无抄送 | ✅ v1.5.5 六类动态表单 + 上下级抄送 |
 | 工作台 | 待办优先 + 管理员/员工视图分流 | v1.5.5 四模块排序 / 视图分流；v1.6.2 指标卡 + 迷你图 + 趋势大盘 + 插件/组织图表 + 范围筛选 | 已完成图表化 | ✅ v1.5.5 / v1.6.2 完成 |
-| 区块链并发 | 哈希链防篡改 | `append()` 无锁 / 无事务 | 多 worker 可能分叉 | **v1.10** 修复 |
-| 运行时开关 | 即时生效 | 静态 disabled 的插件运行中启用需重启 | 路由静态 include | **v1.10** 修复或明确边界 |
-| 代码规约 | 禁内联 onclick、raw POST、无事务多步写 | 多处存在 | 质量债务 | **v1.10** 分批清理 |
+| 区块链并发 | 哈希链防篡改 | v1.7.1：`append()` 事务 + 链尾 `select_for_update()` + 唯一键重试一次 | 单实例已可靠；多实例分片链路仍待设计 | ✅ v1.7.1 完成（并发用例见 `plugin-dev-v171.md`） |
+| 运行时开关 | 即时生效 | v1.7.1：开关仅接受 POST、DB 开关 30s 缓存 + 写失效；静态 `enabled=False` 的插件运行中启用仍需重启 | 路由静态 include | 部分 ✅ v1.7.1；边界 v1.10 明确 |
+| 代码规约 | 禁内联 onclick、raw POST、无事务多步写 | v1.7.1：多步写已补 `transaction.atomic`（审批/重新申请/打卡/留痕）；内联 onclick 与 raw POST 仍有多处 | 质量债务（剩余部分） | **v1.10** 分批清理 |
 | 文档一致性 | 文档与代码一致 | 多处 stale（见第五节） | 文档债务 | 随版本 + v1.10 总清 |
 
 ## 三、版本路线（建议）
@@ -79,23 +79,26 @@
 | **v1.6.20** | 部门状态徽标绿色与防折行 | 状态列 `text-nowrap` 防止「启用」折行；启用徽标改绿色（`r-badge--green`）（`docs/plugin-dev-v1620.md`） | 纯模板调整并部署 |
 | **v1.7** | 认证后端插件化 | `AUTHENTICATION_BACKENDS` Provider；一个无外部依赖的示例后端（如用户名/邮箱） | 切换后端可登录；默认后端仍可用（延期，见 v1.7.1） |
 | **v1.7.0** | 企业 SSO + 站内信提醒 | `plugins/sso`（HMAC Ticket 网关、自动建号、防重放、登录页入口、`sso_ticket` 命令）；`plugins/notify`（消息中心 / 顶栏未读 / 审批待办与结果 / 公告提醒 / 工作台我的消息 / 停用降级）（`docs/plugin-dev-sso.md`、`docs/plugin-dev-notify.md`） | ✅ 已实现：259 项测试 + Docker 重建 |
-| **v1.7.1** | 认证后端插件化 | `AUTHENTICATION_BACKENDS` Provider；一个无外部依赖的示例后端（如用户名/邮箱） | 切换后端可登录；默认后端仍可用 |
+| **v1.7.1** | 安全与并发修复包（原 v1.10 候选提前） | P0-B 并发（审批行锁 / 留痕链锁 / 打卡丢更新）、P0-C 授权（对象级鉴权 / 审批人收口 / 编辑页不得改状态 / 开关仅 POST）、P1 十四项（传输安全、登录限流、注册表系统检查、开关缓存、菜单 N+1、信号隔离、分页、校验快照、工程化门禁）（`docs/plugin-dev-v171.md`） | ✅ 已交付：323 项测试 + ruff/CI + Docker 重建与 9 页冒烟 |
+| **v1.7.2** | 认证后端插件化 | `AUTHENTICATION_BACKENDS` Provider；一个无外部依赖的示例后端（如用户名/邮箱） | 切换后端可登录；默认后端仍可用 |
 | **v1.8** | 模板引擎插件化 | Django / Jinja2 Provider；先做多引擎共存或单插件切换 | 待确认深度（见第六节） |
 | **v1.9** | 插件契约补全 | `models` / `dependencies` / `admin`；依赖顺序与环校验；启用一致性校验 | 缺失依赖启动即报错；停用被依赖插件被拦截 |
-| **v1.10** | 修复包 + 文档债务 | 会签详情权限、区块链锁、开关边界、规约清理、全文档同步 | 新增测试全绿；文档与代码无已知冲突 |
+| **v1.10** | 剩余修复包 + 文档债务 | P0-A 部署默认值（密钥/口令/DEBUG/HOSTS）、容器非 root 与健康检查、`entrypoint` 注入、`has_perm` 三处口径、模板内联 JS 与 inline style、静态停用边界、全文档同步 | 新增测试全绿；文档与代码无已知冲突 |
 | **v1.15** | 信息提醒插件（计划） | `plugins/notify`：站内信 / 公告 / 审批结果与待办通知、消息中心与未读数（`docs/plugin-dev-notify.md`） | ✅ 提前于 v1.7.0 完成：审批/公告产生消息、未读与已读、越权不可见、停用降级 |
 | **v2.0** | 最终文档 | 需求规格说明书、测试报告、部署文档、演示脚本（按参考附件） | 负责人验收 |
 
 > 顺序可调整：若希望先补基础设施、把 language 后置，v1.5–v1.8 可整体前移；language 文档已就绪，随时可插入。
 
-## 四、修复项（v1.10 候选，也可提前）
+## 四、修复项（原 v1.10 候选）
 
-1. **会签详情权限**：`approval_detail` 把「会签人且未签」纳入可访问判定，或要求会签人具备 `approval_view`；补单测。
-2. **区块链并发**：`transaction.atomic` + 对最后一条做 `select_for_update`；SQLite 下用进程内锁兜底；补并发/顺序测试。
-3. **workspace 静态 disabled 显示**：`switch_list` 回退静态配置而不是默认 `True`；补单测。
-4. **静态路由边界**：要么启动时把 DB 启用的插件也纳入路由，要么明确"静态 disabled 的启用需重启"并写进文档。
-5. **代码规约债务**：内联 `onclick` → `data-` + 事件绑定；raw `request.POST` → Form；多步写补 `transaction.atomic`；分批做，不夹带功能。
-6. **测试盲区**：auth 登录/登出、注册表校验、依赖校验、路由守卫补测试。
+> v1.7.1 已完成第 1、2、6 项，以及第 3、5 项的大部分；剩余项移入 v1.10（见第三节）。
+
+1. ✅ **会签详情权限**（v1.7.1）：不再以 `approval_view` 兜底，改为对象级鉴权（申请人 / 审批人 / 会签人 / 抄送人 / 超管）；已补 10 项越权与分页用例。
+2. ✅ **区块链并发**（v1.7.1）：`transaction.atomic` + 链尾 `select_for_update`，唯一键冲突重试一次；SQLite 下为 no-op，已在文档标注。
+3. ◐ **workspace 静态 disabled 显示**（v1.7.1 部分）：开关改为 POST + 缓存失效；`switch_list` 的静态回退口径待与 v1.9 的启用一致性校验一起收口。
+4. ◻ **静态路由边界**：要么启动时把 DB 启用的插件也纳入路由，要么明确「静态 disabled 的启用需重启」并写进文档（v1.10）。
+5. ◐ **代码规约债务**（v1.7.1 部分）：多步写已补 `transaction.atomic`；内联 `onclick` 与 raw `request.POST` 仍待分批清理（v1.10）。
+6. ✅ **测试盲区**（v1.7.1）：注册表校验、开关缓存、登录限流、对象级鉴权、链写入、打卡并发均已补测；`plugin_host/tests_registry.py` 用「逐条 has_perm」参考实现验证菜单权限集合等价。
 
 ## 五、文档债务（需在对应版本同步）
 

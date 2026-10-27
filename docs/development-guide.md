@@ -82,9 +82,18 @@ python manage.py startapp blockchain plugins\blockchain
 ### 1.3 依赖清单 requirements.txt
 
 ```
-django==5.2.*
-mysqlclient
-gunicorn
+# 运行期（精确版本，构建可复现；v1.7.1 起不再用 5.2.* 浮动）
+django==5.2.18
+mysqlclient==2.3.0
+gunicorn==26.2.0
+whitenoise==6.12.0
+```
+
+```
+# 开发 / CI（requirements-dev.txt；不含 mysqlclient，CI 用 sqlite）
+django==5.2.18
+whitenoise==6.12.0
+ruff==0.6.9
 ```
 
 ## 二、插件容器 plugin_host 实现
@@ -685,6 +694,21 @@ class ApprovalFlowTest(TestCase):
 python manage.py test plugins
 ```
 
+**v1.7.1 起的测试基线**（每次提交前跑完整三条，CI 同样执行）：
+
+```bash
+python manage.py test            # 全量：323 项
+ruff check .                     # 静态检查：必须 0 问题（pyproject.toml 配置）
+python manage.py check           # 含插件注册表系统检查 plugin_host.E001
+```
+
+测试编写约定（v1.7.1 补充）：
+
+- 守卫类用例要断言**副作用**或 `Location`，只断 `status_code == 302` 无法区分「拒绝」与「成功跳转」；
+- 不要在测试里自己用 ORM 复写被测逻辑（自证式测试），要调用视图或 service；
+- 测试内 `connect()` 的信号必须 `addCleanup(disconnect)`，避免顺序敏感；
+- 需要并发语义的用例优先用「陈旧实例二次提交」这类确定性场景（SQLite 下 `select_for_update` 为 no-op）。
+
 ## 八、部署开发
 
 > ✅ **v1.0 已实现并跑通**（2026-10-21）：Docker Compose 一键拉起 MySQL8 + Web，容器冒烟通过（登录/静态/6 插件页/留痕链校验）。
@@ -792,6 +816,16 @@ docker compose up -d --build
 
 跨平台：Windows（Docker Desktop）/ macOS / Linux 通用；国内网络需在 Docker daemon 配置镜像加速器（Dockerfile 内 apt/pip 已走国内源）。
 
+**传输安全（v1.7.1）**：`docker compose` 直接暴露 8000 端口、没有 TLS 终止，所以默认保持 HTTP 可用。生产在前面加 Nginx/Caddy 终止 TLS 并转发 `X-Forwarded-Proto`，然后在 `.env` 里：
+
+```bash
+DJANGO_HTTPS=1          # 会话 / CSRF Cookie 仅 HTTPS + HSTS
+DJANGO_SSL_REDIRECT=1   # 全站 301 到 HTTPS（反代已跳转时不要重复开）
+DJANGO_HSTS_SECONDS=31536000
+```
+
+改完 `docker compose up -d` 生效，无需重建镜像。验证：`DJANGO_HTTPS=1 DJANGO_SSL_REDIRECT=1 python manage.py check --deploy` 应只剩 `SECRET_KEY` 一条警告（生产必须替换为随机长值）。
+
 ### 8.5 v1.0 冒烟记录（2026-10-21 实测）
 
 | 项 | 结果 |
@@ -854,7 +888,10 @@ git commit -m "docs: 补充开发指南"
 | 输入校验 | 用 Django Form / Serializer 校验，禁止手写 `request.POST` 裸拼装 |
 | 视图 | 类视图优先（ListView/CreateView）；加 `@login_required` + 权限装饰器 |
 | 迁移 | 改模型后必须 `makemigrations`；禁止手改数据库 |
-| 信号 | 处理函数必须幂等；禁止在信号里做重 IO 操作 |
+| 事务 | 多步写必须 `transaction.atomic()`；状态判断与写入要基于同一行锁：`Model.objects.select_for_update().get(pk=…)` 重新取实例，**不要信任调用方传入的旧对象**（v1.7.1：审批流转 / 打卡 / 重新申请 / 留痕 append） |
+| 对象级鉴权 | 列表权限码（如 `approval_view`）只用于入口；单条数据必须再判「是否相关人」（申请人 / 审批人 / 会签人 / 抄送人 / 超管），见 `approval/views.py::_may_view`（v1.7.1） |
+| 状态变更入口 | 同一状态只保留一个写入口（如用户启用/禁用只能走 `user_status`），编辑表单不得旁路会签（v1.7.1） |
+| 信号 | 处理函数必须幂等；**订阅方 handler 必须自带 try/except + logger.exception**，审计/通知失败不得阻断业务事务（v1.7.1）；禁止在信号里做重 IO 操作 |
 | 配置 | 敏感配置走环境变量 / `.env`；禁止硬编码密钥 |
 
 ### 11.3 插件规约（编码层）
@@ -890,6 +927,10 @@ git commit -m "docs: 补充开发指南"
 - 模板输出走 Django 默认自动转义；**禁止滥用 `|safe`**
 - 表单一律带 CSRF；文件上传校验类型与大小
 - 密码由框架哈希；日志禁止打印敏感字段（密码/Token/手机号）
+- 所有**显式设置**的密码必须过 `django.contrib.auth.password_validation.validate_password`（v1.7.1；默认口令路径除外）
+- 登录必须限流：同一「用户名 + `REMOTE_ADDR`」15 分钟 5 次失败即拒，成功清零；**不要用可伪造的 `X-Forwarded-For` 作为计数维度**（v1.7.1）
+- 会改状态的接口一律 `@require_POST`（v1.7.1：插件开关曾可被 GET 触发）
+- 生产传输安全：反代终止 TLS 后设 `DJANGO_HTTPS=1`（Cookie 仅 HTTPS + HSTS），必要时 `DJANGO_SSL_REDIRECT=1`；本地与 compose 直连 HTTP 时保持 `0`（v1.7.1）
 
 ### 11.7 通用规约
 

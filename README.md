@@ -50,6 +50,10 @@
 
 * 🧾 全员基线：考勤打卡与公告浏览登录即用；管理岗额外拥有签到详情（`attendance_report_view`）
 
+* 🛡 安全与并发基线（v1.7.1）：审批 / 留痕 / 打卡关键写入走行锁 + 事务；审批详情与附件按「申请人 / 审批人 / 会签人 / 抄送人」对象级鉴权；登录失败限流 + 密码校验器；传输安全开关（`DJANGO_HTTPS` / HSTS / 代理 SSL 头）
+
+* 🧪 工程化门禁（v1.7.1）：依赖精确版本 + `ruff` 静态检查 + GitHub Actions（`ruff check` / `manage.py check` / 全量测试），323 项测试全绿
+
 * 🐳 Docker 一键部署：`docker compose up -d`（MySQL8 + Gunicorn + WhiteNoise，跨平台）
 
 ## 🛠 技术栈
@@ -187,8 +191,9 @@ Constellatio/
 | [docs/plugin-dev-v1620.md](docs/plugin-dev-v1620.md)                           | 插件开发 | v1.6.20：部门状态徽标绿色 + 防折行 |
 | [docs/plugin-dev-sso.md](docs/plugin-dev-sso.md)                               | 插件开发 | v1.7.0：企业 SSO（HMAC Ticket 网关、自动建号、防重放） |
 | [docs/plugin-dev-notify.md](docs/plugin-dev-notify.md)                         | 插件开发 | v1.7.0：消息提醒（站内信 / 审批 / 公告 / 未读 / 停用降级） |
+| [docs/plugin-dev-v171.md](docs/plugin-dev-v171.md)                             | 插件开发 | v1.7.1：安全与并发修复包（行锁 / 对象级鉴权 / 缓存与分页 / 传输安全 / ruff + CI） |
 | [docs/roadmap.md](docs/roadmap.md)                                             | 规划   | 差距矩阵、v1.5–v2.0 迭代路线、修复项与文档债务                  |
 
 ## 📌 状态
 
-**v1.7.0 已实现并部署**（企业 SSO + 消息提醒，259 项测试全绿）：SSO Ticket 登录 / 消息中心与顶栏未读 / 审批与公告站内信；上一交付 **v1.6.20**（tag）。→ 下一步：v1.7.1 认证后端插件化
+**v1.7.1 安全与并发修复包已交付并部署**（323 项测试全绿，tag `v1.7.1`）：审批 / 留痕 / 打卡行锁与事务、审批对象级鉴权、登录限流与密码校验器、传输安全开关、注册表系统检查、列表分页与缓存、`ruff` + GitHub Actions 门禁。上一交付 **v1.7.0**（企业 SSO + 消息提醒，259 项测试）。→ 下一步：v1.7.2 认证后端插件化

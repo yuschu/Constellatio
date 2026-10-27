@@ -22,6 +22,7 @@
 | 事件总线 | Django signals | 随框架 | 插件间通信，互不 import |
 | WSGI | Gunicorn | 默认 | 可换 uvicorn（ASGI） |
 | 代理/部署 | WhiteNoise + Docker Compose | 默认 | `docker compose up -d` 一键部署（MySQL8 + Gunicorn） |
+| 质量门禁 | `ruff` + GitHub Actions | `.github/workflows/ci.yml` | `ruff check` → `manage.py check` → 全量测试；依赖精确版本锁定（v1.7.1） |
 
 ## 二、全栈插件化架构
 
@@ -136,6 +137,8 @@ docker-compose.yml
   2. 数据库 MySQL → SQLite 一行切换重启即跑
   3. 新增会议室插件（写 models+views+meta）→ 注册一行 → 系统自动出现该模块
   4. 篡改一条上链记录 → 链完整性校验立即报警（区块链留痕防篡改）
+- **响应式设计**：范围筛选（今日 / 本周 / 本月）与管理员 / 员工视图分流，图表停用自动降级表格。
+- **工程化亮点（v1.7.1）**：依赖精确版本 + `ruff` 基线 + `manage.py check`（含插件注册表系统检查）+ 323 项测试，CI 一把过；关键写入（审批 / 留痕 / 打卡）全部行锁 + 事务，审批与附件按对象级鉴权收敛。
 - **呼应竞品**：飞书客户端 33 模块 / 泛微"可拆可合" / 若依按需启用——本项目实现最彻底
 
 ## 九、开发排期（9 周）
