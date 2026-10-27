@@ -36,6 +36,8 @@ PERMISSION_LEVELS = {
     'user_disable_approve': LEVEL_MANAGER,
     'approval_approve': LEVEL_MANAGER,
     'attendance_report_view': LEVEL_MANAGER,
+    # v1.7.2：考勤规则设置（影响全员迟到/早退口径，属系统管理级，默认只授系统管理员）
+    'attendance_rule_manage': LEVEL_SYSTEM,
     'notice_manage': LEVEL_MANAGER,
     'structure_view': LEVEL_MANAGER,
     'blockchain_view': LEVEL_MANAGER,

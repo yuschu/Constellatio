@@ -55,6 +55,8 @@ SYSTEM_ADMIN_PERMS = {
     'user_manage', 'workspace_manage', 'structure_manage', 'structure_view',
     'blockchain_view', 'blockchain_verify', 'attendance_report_view',
     'notice_manage', 'approval_view', 'approval_approve',
+    # v1.7.2：考勤规则设置（影响全员迟到/早退口径）
+    'attendance_rule_manage',
 }
 
 # 角色 → 权限码集合（应用模板时幂等补齐，只增不减）

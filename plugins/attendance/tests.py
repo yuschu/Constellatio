@@ -1,12 +1,13 @@
-"""attendance 单元测试：一天一卡 / 签到签退 / 迟到统计。"""
+"""attendance 单元测试：一天一卡 / 签到签退 / 迟到统计 / 考勤规则（v1.7.2）。"""
 
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase, override_settings
+from django.test import TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
-from .models import Attendance
+from .forms import AttendanceRuleForm
+from .models import Attendance, AttendanceRule
 
 User = get_user_model()
 
@@ -324,3 +325,307 @@ def _month_days_for(first):
     last_day = calendar.monthrange(first.year, first.month)[1]
     return [first + timedelta(days=offset) for offset in range(last_day)]
 
+
+
+# ---------------------------------------------------------------------------
+# v1.7.2：考勤规则（AttendanceRule）——状态判定来源可配置
+# ---------------------------------------------------------------------------
+
+class AttendanceRuleStatusTests(TestCase):
+    """状态判定改读 AttendanceRule：默认口径不变，改规则后按新口径判定。"""
+
+    def setUp(self):
+        self.user = User.objects.create_user('rulestaff', password='pw')
+        self.day = timezone.localdate()
+
+    def _save_rule(self, **fields):
+        rule = AttendanceRule.get_solo()
+        for key, value in fields.items():
+            setattr(rule, key, value)
+        rule.save()
+        return rule
+
+    def _status(self, offset, check_in=None, check_out=None, is_makeup=False):
+        day = self.day - timedelta(days=offset)
+        record = Attendance.objects.create(
+            user=self.user, date=day, is_makeup=is_makeup)
+        if check_in:
+            record.check_in = timezone.make_aware(datetime.combine(day, check_in))
+        if check_out:
+            record.check_out = timezone.make_aware(datetime.combine(day, check_out))
+        record.save()
+        record.refresh_from_db()
+        return record.status
+
+    def test_default_rule_values(self):
+        rule = AttendanceRule.get_solo()
+        self.assertEqual(rule.pk, 1)
+        self.assertEqual(rule.work_start, time(9, 0))
+        self.assertEqual(rule.work_end, time(18, 0))
+        self.assertEqual(rule.late_grace_minutes, 0)
+        self.assertEqual(rule.early_grace_minutes, 0)
+        self.assertEqual(rule.workdays, '1,2,3,4,5')
+        self.assertEqual(rule.makeup_window_days, 7)
+
+    def test_default_status_unchanged(self):
+        """默认 09:00/18:00 下，既有迟到 / 早退 / 正常 / 缺卡口径完全不变。"""
+        self.assertEqual(self._status(0, time(8, 50), time(18, 10)),
+                         Attendance.Status.NORMAL)
+        self.assertEqual(self._status(1, time(9, 0), time(18, 0)),
+                         Attendance.Status.NORMAL)
+        self.assertEqual(self._status(2, time(9, 30), time(18, 10)),
+                         Attendance.Status.LATE)
+        self.assertEqual(self._status(3, time(8, 50), time(17, 0)),
+                         Attendance.Status.EARLY)
+        self.assertEqual(self._status(4, time(9, 0), None),
+                         Attendance.Status.MISSING)
+        self.assertEqual(self._status(5, None, None), Attendance.Status.MISSING)
+        self.assertEqual(self._status(6, time(9, 30), time(17, 0), is_makeup=True),
+                         Attendance.Status.MAKEUP)
+
+    def test_work_start_change_makes_0930_normal(self):
+        """上班时间改为 10:00 后，09:30 打卡为正常（旧口径会是迟到）。"""
+        self._save_rule(work_start=time(10, 0))
+        self.assertEqual(self._status(0, time(9, 30), time(18, 10)),
+                         Attendance.Status.NORMAL)
+        self.assertEqual(self._status(1, time(10, 30), time(18, 10)),
+                         Attendance.Status.LATE)
+
+    def test_late_grace_minutes(self):
+        """迟到宽限 15 分钟：09:10 正常，09:20 仍迟到。"""
+        self._save_rule(late_grace_minutes=15)
+        self.assertEqual(self._status(0, time(9, 10), time(18, 10)),
+                         Attendance.Status.NORMAL)
+        self.assertEqual(self._status(1, time(9, 20), time(18, 10)),
+                         Attendance.Status.LATE)
+
+    def test_early_grace_minutes(self):
+        """早退宽限 15 分钟：17:50 正常，17:40 仍早退。"""
+        self._save_rule(early_grace_minutes=15)
+        self.assertEqual(self._status(0, time(8, 50), time(17, 50)),
+                         Attendance.Status.NORMAL)
+        self.assertEqual(self._status(1, time(8, 50), time(17, 40)),
+                         Attendance.Status.EARLY)
+
+    def test_thresholds(self):
+        rule = self._save_rule(
+            late_grace_minutes=10, early_grace_minutes=20)
+        self.assertEqual(rule.late_threshold(), time(9, 10))
+        self.assertEqual(rule.early_threshold(), time(17, 40))
+
+
+class AttendanceRuleWorkdayTests(TestCase):
+    """workdays 解析与 is_workday。"""
+
+    def test_workday_set_default(self):
+        rule = AttendanceRule.get_solo()
+        self.assertEqual(rule.workday_set, {1, 2, 3, 4, 5})
+
+    def test_workday_set_parses_and_ignores_noise(self):
+        rule = AttendanceRule(workdays='7, 1,6')
+        self.assertEqual(rule.workday_set, {1, 6, 7})
+
+    def test_is_workday(self):
+        rule = AttendanceRule.get_solo()
+        self.assertTrue(rule.is_workday(date(2024, 1, 1)))    # 周一
+        self.assertFalse(rule.is_workday(date(2024, 1, 7)))   # 周日
+
+
+class AttendanceRulePermissionTests(TestCase):
+    """规则页权限：无权限 GET 302 / POST 被拒；有权限可保存落库。"""
+
+    @classmethod
+    def setUpTestData(cls):
+        from django.contrib.auth.models import Permission
+
+        from plugins.user.models import Role
+
+        cls.day = timezone.localdate()
+        cls.staff = User.objects.create_user('rulestaff2', password='pw')
+        cls.manager = User.objects.create_user('rulemanager', password='pw')
+        role = Role.objects.create(name='考勤规则管理员')
+        role.permissions.add(
+            Permission.objects.get(codename='attendance_rule_manage'))
+        cls.manager.roles.add(role)
+
+    def _payload(self, **overrides):
+        data = {
+            'work_start': '09:00',
+            'work_end': '18:00',
+            'late_grace_minutes': '0',
+            'early_grace_minutes': '0',
+            'workdays': '1,2,3,4,5',
+            'makeup_window_days': '7',
+        }
+        data.update(overrides)
+        return data
+
+    def test_staff_get_redirected(self):
+        self.client.force_login(self.staff)
+        response = self.client.get('/plugins/attendance/rules/')
+        self.assertEqual(response.status_code, 302)
+
+    def test_staff_post_rejected(self):
+        self.client.force_login(self.staff)
+        response = self.client.post(
+            '/plugins/attendance/rules/', self._payload(work_start='10:00'))
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(AttendanceRule.objects.filter(pk=1).exists())
+
+    def test_manager_get_renders_form(self):
+        self.client.force_login(self.manager)
+        response = self.client.get('/plugins/attendance/rules/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '考勤规则')
+
+    def test_manager_post_saves(self):
+        self.client.force_login(self.manager)
+        response = self.client.post('/plugins/attendance/rules/', self._payload(
+            work_start='10:00', work_end='19:00', late_grace_minutes='15',
+            early_grace_minutes='10', workdays='1,2,3,4,5,6',
+            makeup_window_days='30'))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/plugins/attendance/rules/', response['Location'])
+        rule = AttendanceRule.objects.get(pk=1)
+        self.assertEqual(rule.work_start, time(10, 0))
+        self.assertEqual(rule.work_end, time(19, 0))
+        self.assertEqual(rule.late_grace_minutes, 15)
+        self.assertEqual(rule.early_grace_minutes, 10)
+        self.assertEqual(rule.workdays, '1,2,3,4,5,6')
+        self.assertEqual(rule.makeup_window_days, 30)
+        self.assertEqual(rule.updated_by, self.manager)
+
+    def test_manager_invalid_post_keeps_old_rule(self):
+        self.client.force_login(self.manager)
+        response = self.client.post(
+            '/plugins/attendance/rules/', self._payload(work_start='19:00'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(AttendanceRule.get_solo().work_start, time(9, 0))
+
+
+class AttendanceRuleFormTests(TestCase):
+    """表单校验：上下班先后 / 宽限范围 / 工作日取值 / 补卡回溯范围。"""
+
+    def _data(self, **overrides):
+        data = {
+            'work_start': '09:00',
+            'work_end': '18:00',
+            'late_grace_minutes': '0',
+            'early_grace_minutes': '0',
+            'workdays': '1,2,3,4,5',
+            'makeup_window_days': '7',
+        }
+        data.update(overrides)
+        return data
+
+    def test_valid_sorts_and_dedupes_workdays(self):
+        form = AttendanceRuleForm(data=self._data(workdays='5,1,1,3'))
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data['workdays'], '1,3,5')
+
+    def test_work_start_not_before_work_end(self):
+        form = AttendanceRuleForm(data=self._data(work_start='18:00', work_end='09:00'))
+        self.assertFalse(form.is_valid())
+        self.assertIn('work_end', form.errors)
+
+    def test_grace_out_of_range(self):
+        self.assertFalse(AttendanceRuleForm(
+            data=self._data(late_grace_minutes='121')).is_valid())
+        self.assertFalse(AttendanceRuleForm(
+            data=self._data(early_grace_minutes='121')).is_valid())
+
+    def test_workdays_out_of_range(self):
+        form = AttendanceRuleForm(data=self._data(workdays='1,2,8'))
+        self.assertFalse(form.is_valid())
+        self.assertIn('workdays', form.errors)
+
+    def test_workdays_non_numeric(self):
+        form = AttendanceRuleForm(data=self._data(workdays='mon'))
+        self.assertFalse(form.is_valid())
+        self.assertIn('workdays', form.errors)
+
+    def test_makeup_window_out_of_range(self):
+        self.assertFalse(AttendanceRuleForm(
+            data=self._data(makeup_window_days='0')).is_valid())
+        self.assertFalse(AttendanceRuleForm(
+            data=self._data(makeup_window_days='91')).is_valid())
+
+
+class AttendanceRuleCacheTests(TransactionTestCase):
+    """规则进程内缓存：save() 后立即失效，下一次 get_solo 读到新值。
+
+    用 TransactionTestCase（非 atomic）才能真正走到 TTL 缓存分支：
+    TestCase 内的 atomic 事务会绕过缓存（与插件开关缓存同一策略）。
+    """
+
+    def setUp(self):
+        AttendanceRule.invalidate_cache()
+        self.addCleanup(AttendanceRule.invalidate_cache)
+
+    def test_save_invalidates_solo_cache(self):
+        rule = AttendanceRule.get_solo()
+        self.assertEqual(rule.work_start, time(9, 0))
+        # 缓存命中：TTL 内返回同一实例（不再查库）
+        self.assertIs(AttendanceRule.get_solo(), rule)
+
+        rule.work_start = time(10, 0)
+        rule.save()
+
+        self.assertEqual(AttendanceRule.get_solo().work_start, time(10, 0))
+
+    def test_invalid_post_does_not_pollute_cache(self):
+        """非法 POST 不能让 get_solo() 缓存的规则对象被表单原地写脏。"""
+        from django.contrib.auth.models import Permission
+
+        from plugins.user.models import Role
+
+        manager = User.objects.create_user('cachemgr', password='pw')
+        role = Role.objects.create(name='缓存口径管理')
+        role.permissions.add(
+            Permission.objects.get(codename='attendance_rule_manage'))
+        manager.roles.add(role)
+
+        warm = AttendanceRule.get_solo()
+        self.client.force_login(manager)
+        response = self.client.post('/plugins/attendance/rules/', {
+            'work_start': '19:00',
+            'work_end': '18:00',
+            'late_grace_minutes': '0',
+            'early_grace_minutes': '0',
+            'workdays': '1,2,3,4,5',
+            'makeup_window_days': '7',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertIs(AttendanceRule.get_solo(), warm)
+        self.assertEqual(AttendanceRule.get_solo().work_start, time(9, 0))
+
+
+class AttendanceRuleEntryTests(TestCase):
+    """入口与看板展示：规则按钮按权限渲染，今日状态卡展示当前口径。"""
+
+    @classmethod
+    def setUpTestData(cls):
+        from django.contrib.auth.models import Permission
+
+        from plugins.user.models import Role
+
+        cls.staff = User.objects.create_user('entrystaff', password='pw')
+        cls.manager = User.objects.create_user('entrymanager', password='pw')
+        role = Role.objects.create(name='口径管理')
+        role.permissions.add(
+            Permission.objects.get(codename='attendance_rule_manage'))
+        cls.manager.roles.add(role)
+
+    def test_dashboard_shows_rule_summary(self):
+        self.client.force_login(self.staff)
+        response = self.client.get('/plugins/attendance/')
+        self.assertContains(response, '上班 09:00 · 下班 18:00')
+
+    def test_dashboard_rule_button_requires_perm(self):
+        self.client.force_login(self.staff)
+        response = self.client.get('/plugins/attendance/')
+        self.assertNotContains(response, 'rules/')
+
+        self.client.force_login(self.manager)
+        response = self.client.get('/plugins/attendance/')
+        self.assertContains(response, '/plugins/attendance/rules/')

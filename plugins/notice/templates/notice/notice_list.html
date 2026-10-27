@@ -1,7 +1,39 @@
 {% extends "base.html" %}
 {% load i18n %}
-{% block title %}{% trans "公告中心" %} · Constellatio{% endblock %}
+{% block title %}{% if readers_view %}{% trans "已读人员" %}{% else %}{% trans "公告中心" %}{% endif %} · Constellatio{% endblock %}
 {% block content %}
+{% if readers_view %}
+
+<div class="d-flex align-items-center gap-3 flex-wrap mb-4">
+  <a href="{% url 'notice:notice_list' %}" class="r-offset-hover">← {% trans "返回列表" %}</a>
+  <h2 class="mb-0">{% trans "已读人员" %}</h2>
+</div>
+<div class="r-card">
+  <p class="text-muted mb-3">{{ readers_view.title }}</p>
+  <table class="r-table">
+    <thead>
+      <tr>
+        <th scope="col">{% trans "姓名" %}</th>
+        <th scope="col">{% trans "账号" %}</th>
+        <th scope="col">{% trans "已读时间" %}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in readers %}
+      <tr>
+        <td>{{ r.user.last_name|default:r.user.username }}</td>
+        <td>{{ r.user.username }}</td>
+        <td>{{ r.read_at|date:"Y-m-d H:i" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="3" class="text-muted">{% trans "暂无已读人员" %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% else %}
+
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
   <h2 class="mb-0">{% trans "公告中心" %}</h2>
   {% if perms.notice.notice_manage %}
@@ -9,111 +41,29 @@
   {% endif %}
 </div>
 
-<div class="row g-4">
-  <div class="col-12 col-lg-4">
-    <div class="r-card h-100">
-      <h3 class="r-h3 mb-3">{% trans "公告信息" %}</h3>
-      {% if selected %}
-      <div class="d-flex flex-column gap-2">
-        <div>
-          <div class="text-muted" style="font-size:.75rem;">{% trans "标题" %}</div>
-          <div>{{ selected.title }}</div>
-        </div>
-        <div>
-          <div class="text-muted" style="font-size:.75rem;">{% trans "发布人" %}</div>
-          <div>{{ selected.publisher.last_name|default:selected.publisher.username }}</div>
-        </div>
-        <div>
-          <div class="text-muted" style="font-size:.75rem;">{% trans "已读人数" %}</div>
-          <div>{% blocktranslate with count=selected.read_count %}{{ count }} 人{% endblocktranslate %}</div>
-        </div>
-        <div>
-          <div class="text-muted" style="font-size:.75rem;">{% trans "公告状态" %}</div>
-          <div><span class="r-badge r-badge--green">{% trans "已读" %}</span></div>
-        </div>
-        <div>
-          <div class="text-muted" style="font-size:.75rem;">{% trans "发布时间" %}</div>
-          <div>{{ selected.created_at|date:"Y-m-d H:i" }}</div>
-        </div>
-      </div>
-      <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
-        <button class="r-btn r-btn--ghost" type="button" data-bs-toggle="modal" data-bs-target="#readers-modal">{% trans "已读" %}</button>
-      </div>
-      <div class="mt-3">
-        <label class="form-label" for="notice_switch">{% trans "切换公告" %}</label>
-        <select class="r-input" id="notice_switch">
-          {% for a in announcements %}
-          <option value="{{ a.id }}"{% if selected.id == a.id %} selected{% endif %}>{% if a.is_top %}{% trans "置顶" %} · {% endif %}{{ a.title }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      {% else %}
-      <p class="text-muted mb-0">{% trans "暂无公告" %}</p>
-      {% endif %}
+{% for a in announcements %}
+<article class="r-card mb-4" id="notice-{{ a.id }}">
+  <h2 class="mb-3">
+    {% if a.is_top %}<span class="r-badge r-badge--green">{% trans "置顶" %}</span> {% endif %}{{ a.title }}
+  </h2>
+  <div style="white-space:pre-wrap; line-height:1.9;">{{ a.content }}</div>
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-4">
+    <div class="text-muted" style="font-size:.8rem;">
+      {% blocktranslate with publisher=a.publisher.last_name|default:a.publisher.username %}发布人：{{ publisher }}{% endblocktranslate %}
+      · {{ a.created_at|date:"Y-m-d H:i" }}
     </div>
-  </div>
-
-  <div class="col-12 col-lg-8">
-    {% if selected %}
-    <div class="r-card h-100 d-flex flex-column">
-      <h2 class="mb-2">{{ selected.title }}</h2>
-      <div class="text-muted mb-3" style="font-size:.8rem;">
-        {% blocktranslate with publisher=selected.publisher.last_name|default:selected.publisher.username %}发布人：{{ publisher }}{% endblocktranslate %}
-        · {{ selected.created_at|date:"Y-m-d H:i" }}
-        · {% blocktranslate with count=selected.read_count %}{{ count }} 人已读{% endblocktranslate %}
-        · {% if selected.is_top %}{% trans "置顶" %}{% else %}{% trans "普通" %}{% endif %}
-      </div>
-      <div style="white-space:pre-wrap; line-height:1.9; padding:1rem 1.25rem; border-radius:var(--r-radius); background:var(--r-paper-2);">{{ selected.content }}</div>
-      <div class="mt-auto pt-3">
-        <a href="{% url 'notice:notice_list' %}" class="r-offset-hover">← {% trans "返回列表" %}</a>
-      </div>
-    </div>
-    {% else %}
-    <div class="r-card h-100">
-      <p class="text-muted mb-0">{% trans "暂无公告" %}</p>
-    </div>
+    {% if perms.notice.notice_manage %}
+    <a href="{% url 'notice:notice_readers' a.id %}" class="r-offset-hover text-muted" style="font-size:.8rem;">
+      {% blocktranslate with count=a.read_count %}已读 {{ count }} 人{% endblocktranslate %}
+    </a>
     {% endif %}
   </div>
+</article>
+{% empty %}
+<div class="r-card">
+  <p class="text-muted mb-0">{% trans "暂无公告" %}</p>
 </div>
+{% endfor %}
 
-{% if selected %}
-<div class="modal fade" id="readers-modal" tabindex="-1" aria-labelledby="readers-modal-title" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="readers-modal-title">{% trans "已读人员" %}</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans "关闭" %}"></button>
-      </div>
-      <div class="modal-body">
-        <table class="r-table">
-          <thead>
-            <tr><th scope="col">{% trans "姓名" %}</th><th scope="col">{% trans "账号" %}</th><th scope="col">{% trans "已读时间" %}</th></tr>
-          </thead>
-          <tbody>
-            {% for r in readers %}
-            <tr>
-              <td>{{ r.user.last_name|default:r.user.username }}</td>
-              <td>{{ r.user.username }}</td>
-              <td>{{ r.read_at|date:"Y-m-d H:i" }}</td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="3" class="text-muted">{% trans "暂无已读人员" %}</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</div>
 {% endif %}
-
-<script>
-  (function () {
-    var select = document.getElementById('notice_switch');
-    if (!select) { return; }
-    select.addEventListener('change', function () {
-      window.location.href = '{% url "notice:notice_list" %}?notice=' + encodeURIComponent(select.value);
-    });
-  })();
-</script>
 {% endblock %}

@@ -15,8 +15,13 @@ class AttendanceConfig(AppConfig):
             menus=[
                 {'label': _('考勤'), 'icon': '▣', 'url': '/plugins/attendance/', 'perm': 'attendance_view'},
                 {'label': _('签到详情'), 'icon': '☷', 'url': '/plugins/attendance/records/', 'perm': 'attendance_report_view'},
+                # v1.7.2：考勤规则设置（影响全员迟到 / 早退口径）
+                {'label': _('考勤规则'), 'icon': '⚙', 'url': '/plugins/attendance/rules/', 'perm': 'attendance_rule_manage'},
             ],
-            permissions=['attendance_view', 'attendance_check', 'attendance_report_view'],
+            permissions=[
+                'attendance_view', 'attendance_check', 'attendance_report_view',
+                'attendance_rule_manage',
+            ],
             urls='plugins.attendance.urls',
             signals=['attendance_checked'],
             templates='attendance',

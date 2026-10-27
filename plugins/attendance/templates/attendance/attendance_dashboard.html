@@ -4,7 +4,12 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
   <h2 class="mb-0">{% trans "考勤" %}</h2>
-  <span class="r-badge">{{ today|date:"Y-m-d" }}</span>
+  <div class="d-flex align-items-center gap-2">
+    {% if perms.attendance.attendance_rule_manage %}
+    <a href="{% url 'attendance:attendance_rules' %}" class="r-btn r-btn--ghost">⚙ {% trans "考勤规则" %}</a>
+    {% endif %}
+    <span class="r-badge">{{ today|date:"Y-m-d" }}</span>
+  </div>
 </div>
 <div class="row g-4">
   <div class="col-12 col-lg-5">
@@ -23,6 +28,9 @@
       {% else %}
         <span class="r-badge r-badge--orange">{% trans "未打卡" %}</span>
       {% endif %}
+      <div class="text-muted mt-2" style="font-size:.8rem;">
+        {% blocktranslate with start=rule_start end=rule_end workdays=rule.workdays %}考勤口径：上班 {{ start }} · 下班 {{ end }} · 工作日 {{ workdays }}{% endblocktranslate %}
+      </div>
       <form method="post" action="{% url 'attendance:attendance_check' %}" class="d-flex flex-wrap align-items-end gap-2 mt-2">
         {% csrf_token %}
         <div style="flex:1 1 10rem; min-width:8rem;">
@@ -43,7 +51,7 @@
       <h3 class="fs-5 mb-2">{% blocktranslate with month=today|date:"Y-m" %}本月统计（{{ month }}）{% endblocktranslate %}</h3>
       <table class="r-table">
         <tr><th>{% trans "出勤天数" %}</th><td>{% blocktranslate with count=month_days %}{{ count }} 天{% endblocktranslate %}</td></tr>
-        <tr><th>{% trans "迟到次数" %}</th><td>{% blocktranslate with count=month_late %}{{ count }} 次（09:00 前为正常）{% endblocktranslate %}</td></tr>
+        <tr><th>{% trans "迟到次数" %}</th><td>{% blocktranslate with count=month_late late=rule_late %}{{ count }} 次（{{ late }} 前签到为正常）{% endblocktranslate %}</td></tr>
       </table>
     </div>
   </div>

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "考勤规则" %} · Constellatio{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-3 flex-wrap mb-4">
+  <a href="{% url 'attendance:attendance_dashboard' %}" class="r-offset-hover">← {% trans "返回考勤" %}</a>
+  <h2 class="mb-0">{% trans "考勤规则" %}</h2>
+</div>
+
+{% if saved %}
+<div class="mb-3"><span class="r-badge r-badge--green">{% trans "考勤规则已保存" %}</span></div>
+{% endif %}
+
+<div class="r-card position-relative" style="max-width:680px;">
+  <span class="r-register-mark"></span>
+  <p class="text-muted mb-3" style="font-size:.85rem;">
+    {% trans "规则决定全员的迟到 / 早退判定门槛与可补卡范围，保存后立即生效。" %}
+  </p>
+  <p class="text-muted mb-4" style="font-size:.8rem;">
+    {% blocktranslate with late=rule_late early=rule_early %}当前生效：晚于 {{ late }} 签到记为迟到；早于 {{ early }} 签退记为早退。{% endblocktranslate %}
+  </p>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% for error in form.non_field_errors %}
+    <div class="text-danger mb-3" style="font-size:.8rem;">{{ error }}</div>
+    {% endfor %}
+
+    <div class="row g-3">
+      <div class="col-12 col-sm-6">
+        <label class="form-label" for="{{ form.work_start.id_for_label }}" style="font-size:.75rem; text-transform:uppercase;">{% trans "上班时间" %}</label>
+        {{ form.work_start }}
+        <div class="text-muted mt-1" style="font-size:.75rem;">{% trans "迟到 / 早退判定阈值以此时间为基准，再加上宽限分钟数。" %}</div>
+        {% for error in form.work_start.errors %}<div class="text-danger" style="font-size:.8rem;">{{ error }}</div>{% endfor %}
+      </div>
+      <div class="col-12 col-sm-6">
+        <label class="form-label" for="{{ form.work_end.id_for_label }}" style="font-size:.75rem; text-transform:uppercase;">{% trans "下班时间" %}</label>
+        {{ form.work_end }}
+        {% for error in form.work_end.errors %}<div class="text-danger" style="font-size:.8rem;">{{ error }}</div>{% endfor %}
+      </div>
+      <div class="col-12 col-sm-6">
+        <label class="form-label" for="{{ form.late_grace_minutes.id_for_label }}" style="font-size:.75rem; text-transform:uppercase;">{% trans "迟到宽限（分钟）" %}</label>
+        {{ form.late_grace_minutes }}
+        <div class="text-muted mt-1" style="font-size:.75rem;">{% trans "上班时间后 N 分钟内签到不算迟到，0–120。" %}</div>
+        {% for error in form.late_grace_minutes.errors %}<div class="text-danger" style="font-size:.8rem;">{{ error }}</div>{% endfor %}
+      </div>
+      <div class="col-12 col-sm-6">
+        <label class="form-label" for="{{ form.early_grace_minutes.id_for_label }}" style="font-size:.75rem; text-transform:uppercase;">{% trans "早退宽限（分钟）" %}</label>
+        {{ form.early_grace_minutes }}
+        <div class="text-muted mt-1" style="font-size:.75rem;">{% trans "下班时间前 N 分钟内签退不算早退，0–120。" %}</div>
+        {% for error in form.early_grace_minutes.errors %}<div class="text-danger" style="font-size:.8rem;">{{ error }}</div>{% endfor %}
+      </div>
+      <div class="col-12">
+        <label class="form-label" for="{{ form.workdays.id_for_label }}" style="font-size:.75rem; text-transform:uppercase;">{% trans "工作日" %}</label>
+        {{ form.workdays }}
+        <div class="text-muted mt-1" style="font-size:.75rem;">{% trans "ISO 周几，逗号分隔：1=周一 … 7=周日，例如 1,2,3,4,5。" %}</div>
+        {% for error in form.workdays.errors %}<div class="text-danger" style="font-size:.8rem;">{{ error }}</div>{% endfor %}
+      </div>
+      <div class="col-12 col-sm-6">
+        <label class="form-label" for="{{ form.makeup_window_days.id_for_label }}" style="font-size:.75rem; text-transform:uppercase;">{% trans "补卡回溯天数" %}</label>
+        {{ form.makeup_window_days }}
+        <div class="text-muted mt-1" style="font-size:.75rem;">{% trans "允许补卡的最长回溯天数，1–90。" %}</div>
+        {% for error in form.makeup_window_days.errors %}<div class="text-danger" style="font-size:.8rem;">{{ error }}</div>{% endfor %}
+      </div>
+    </div>
+
+    <button class="r-btn mt-4" type="submit">{% trans "保存" %}</button>
+  </form>
+</div>
+{% endblock %}

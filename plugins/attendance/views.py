@@ -11,6 +11,7 @@ from django.db import transaction
 from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 from django.utils.translation import gettext as _
@@ -19,10 +20,8 @@ from plugin_host.charts import get_active_chart
 from plugin_host.permissions import require_perm
 from plugin_host.signals import attendance_checked
 
-from .models import Attendance
-
-# 迟到口径：签到时间晚于当日 09:00（与模型 WORK_START 一致）
-LATE_TIME = dtime(9, 0)
+from .forms import AttendanceRuleForm
+from .models import Attendance, AttendanceRule
 
 # 月度统计的月份参数格式（?month=YYYY-MM）
 MONTH_FORMAT = '%Y-%m'
@@ -58,6 +57,7 @@ def attendance_dashboard(request):
         {'label': item['label'], 'count': sum(item['data'])}
         for item in month_stats['series']
     ]
+    rule = AttendanceRule.get_solo()
 
     return render(request, 'attendance/attendance_dashboard.html', {
         'record': record,
@@ -68,6 +68,12 @@ def attendance_dashboard(request):
         'sign_types': Attendance.SignType.choices,
         'attendance_chart': attendance_chart,
         'status_totals': status_totals,
+        # v1.7.2：今日状态卡展示当前考勤口径（迟到 / 早退判定阈值）
+        'rule': rule,
+        'rule_start': rule.work_start.strftime('%H:%M'),
+        'rule_end': rule.work_end.strftime('%H:%M'),
+        'rule_late': rule.late_threshold().strftime('%H:%M'),
+        'rule_early': rule.early_threshold().strftime('%H:%M'),
     })
 
 
@@ -109,6 +115,36 @@ def attendance_check(request):
         attendance_checked.send(
             sender=record.__class__, user_id=request.user.id, date=str(record.date))
     return redirect('attendance:attendance_dashboard')
+
+
+@require_perm('attendance_rule_manage')
+def attendance_rules(request):
+    """考勤规则设置（单例）：上下班时间 / 迟到早退宽限 / 工作日 / 补卡回溯。
+
+    保存成功走 PRG（redirect 回本页并带 ``?saved=1``），页面内展示成功标识，
+    与项目现有「表单页 + 内联提示」的风格一致（未引入 messages 渲染）。
+    """
+    rule = AttendanceRule.get_solo()
+    if request.method == 'POST':
+        # 用独立实例绑定表单：ModelForm 会把校验后的字段原地写回 instance，
+        # 直接传 get_solo() 的缓存对象会让非法输入污染进程内缓存。
+        form = AttendanceRuleForm(
+            request.POST, instance=AttendanceRule.objects.get(pk=rule.pk))
+        if form.is_valid():
+            rule = form.save(commit=False)
+            rule.updated_by = request.user
+            rule.save()
+            return redirect(f'{reverse("attendance:attendance_rules")}?saved=1')
+    else:
+        form = AttendanceRuleForm(instance=rule)
+
+    return render(request, 'attendance/attendance_rules.html', {
+        'form': form,
+        'rule': rule,
+        'saved': request.GET.get('saved') == '1',
+        'rule_late': rule.late_threshold().strftime('%H:%M'),
+        'rule_early': rule.early_threshold().strftime('%H:%M'),
+    })
 
 
 def _departments():

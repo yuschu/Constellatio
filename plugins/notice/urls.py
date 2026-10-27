@@ -10,4 +10,5 @@ urlpatterns = [
     path('', views.notice_list, name='notice_list'),
     path('new/', views.notice_create, name='notice_create'),
     path('<int:pk>/', views.notice_detail, name='notice_detail'),
+    path('<int:pk>/readers/', views.notice_readers, name='notice_readers'),
 ]
