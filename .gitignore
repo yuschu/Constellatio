@@ -34,3 +34,10 @@ Prompt/
 
 # ---- 本地会话记录（不推送）----
 session/
+
+# ---- 本地数据库备份 / 导出（含账号哈希，不推送）----
+db.sqlite3.bak.*
+db-docker-backup-*.sql
+
+# ---- 本地对话导出 ----
+dsh-chat-export.json
