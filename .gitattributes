@@ -3,3 +3,5 @@ entrypoint.sh text eol=lf
 docker-compose.yml text eol=lf
 Dockerfile text eol=lf
 *.sh text eol=lf
+# v1.7.7 收尾：.py 统一 LF（容器内执行 + 避免 autocrlf 造成的“内容没变 diff 全红”）
+*.py text eol=lf
