@@ -66,22 +66,27 @@ class SharedCacheAddSemanticsTests(TestCase):
         self.assertEqual(self.cache.get(self.key), 'new')
 
 
-class SharedCacheLoginCounterTests(TestCase):
-    """登录失败计数确实落在共享表里，而不是进程内 dict。"""
+class SharedLoginCounterTests(TestCase):
+    """登录失败计数落在共享存储里，而不是进程内 dict。
+
+    v1.7.7（P2）起计数从 `constellatio_cache` 迁到独立表 `auth_login_failure_counter`
+    （行锁 + 单行更新，避免 get+set 丢更新）——本用例随之改为断言新表。
+    """
 
     def setUp(self):
         caches['default'].clear()
+        from plugins.auth.models import LoginFailureCounter
 
-    def test_login_failures_land_in_shared_cache_table(self):
+        LoginFailureCounter.objects.all().delete()
+
+    def test_login_failures_land_in_shared_counter_table(self):
+        from plugins.auth.models import LoginFailureCounter
+
         for _ in range(3):
             response = self.client.post(
                 LOGIN_URL, {'username': 'cache_probe_nobody', 'password': 'wrong'})
             self.assertEqual(response.status_code, 200)
 
-        with connections['default'].cursor() as cursor:
-            cursor.execute(
-                f'SELECT COUNT(*) FROM {CACHE_TABLE} WHERE cache_key LIKE %s',
-                ['%auth:login-fail:%'],
-            )
-            rows = cursor.fetchone()[0]
+        rows = LoginFailureCounter.objects.count()
         self.assertGreaterEqual(rows, 1)
+        self.assertEqual(list(LoginFailureCounter.objects.values_list('count', flat=True)), [3])

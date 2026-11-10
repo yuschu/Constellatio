@@ -165,6 +165,18 @@ AUTH_USER_MODEL = 'user.User'          # user 插件提供（首次 migrate 前�
 LOGIN_URL = '/plugins/auth/login/'
 LOGOUT_REDIRECT_URL = '/plugins/auth/login/'
 
+# ---------------------------------------------------------------------------
+# 认证后端 Provider（v1.7.7）
+# ---------------------------------------------------------------------------
+# AUTHENTICATION_BACKENDS 是有序链：authenticate() 逐个尝试，第一个返回用户的生效。
+# 加一行 = 多一种登录方式（dotted path）；ModelBackend 永远排最后，保证默认后端仍可用。
+# 空列表也合法（只剩 ModelBackend）——否则新环境第一次 migrate 会死在校验里。
+# 契约校验在 plugin_host.auth_backends.registry.validate_auth_backends（apps.ready 调用）。
+OA_AUTH_BACKENDS = [
+    'plugin_host.auth_backends.username_or_email.UsernameOrEmailBackend',
+]
+AUTHENTICATION_BACKENDS = [*OA_AUTH_BACKENDS, 'django.contrib.auth.backends.ModelBackend']
+
 # 业务插件启停：enabled=False 即停用（路由/菜单/导航自动收敛）
 OA_PLUGINS = [
     {'app': 'plugins.auth', 'enabled': True},

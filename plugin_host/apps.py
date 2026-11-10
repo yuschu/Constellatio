@@ -31,3 +31,9 @@ class PluginHostConfig(AppConfig):
         # 注册表完整性校验改为 Django 系统检查（discover.check_registry）：
         # 此处只导入模块完成注册，不直接调用——ready() 时业务插件尚未全部注册。
         from . import discover  # noqa: F401
+
+        # v1.7.7：认证后端 Provider 契约校验。校验本身是纯函数（可被测试直接调用），
+        # ready() 只负责在启动时跑一次——配置不合格直接 ImproperlyConfigured，不静默降级。
+        from .auth_backends.registry import validate_auth_backends
+
+        validate_auth_backends(getattr(settings, 'OA_AUTH_BACKENDS', []))
