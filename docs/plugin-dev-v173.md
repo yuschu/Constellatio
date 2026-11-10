@@ -216,6 +216,12 @@ venv\Scripts\python.exe manage.py test --noinput -> Ran 357 tests ... OK
 
 > 测试入口说明：本机受限令牌下 `tempfile.mkdtemp()` 建的 0o700 目录不可写，`plugins/approval/tests_v155.py` 的 3 处附件用例会因环境报 `PermissionError`（8 个 error，与本次改动无关）。用 `venv/run_tests_shim.py`（只把 mkdtemp 换成 0o777）跑同一套 357 项：**OK**。测试代码零改动、未新增 skip、未放宽断言。
 
+### 6. 提交与 tag 范围披露
+
+- tag `v1.7.3` → `5342093`（本迭代末提交），工作区与 tag 一致（`git diff v1.7.3` 为空）。
+- `git log v1.7.2..v1.7.3` 区间内另含开工前既有提交 `0767f43`（论文演示数据集脚本），**非本迭代产物**；不移动 tag（force push 收益不抵风险）。
+- 部署产物与本 tag 内容一致：重建镜像后 `settings.py` / `test_runner.py` / `tests_cache.py` / `entrypoint.sh` / `sso/ticket.py` / `README.md` / 本文件 md5 逐一比对相同。
+
 
 ## 九、不做 / 已知边界
 
@@ -225,7 +231,10 @@ venv\Scripts\python.exe manage.py test --noinput -> Ran 357 tests ... OK
 
 ## 十、待办观察（本版不改，交负责人决定）
 
-1. **限流计数非原子**：`_record_failure()` 是 `get` + `set`，跨 worker 并发时可能少计（不是失效，是精度）。真正原子需要 DB 行锁或 `cache.incr`（`DatabaseCache.incr` 亦非原子），超出本版"修共享存储"范围。
+1. **限流计数非原子（P2，已排 v1.7.4 第一项）**：`_record_failure()` 是 `get` + `set`，跨 worker 并发会丢更新。实测 3 轮（每轮 6 路并发、全部计错、无一被拦）：最终计数 **2 / 4 / 4**；按串行口径计数应在 **5** 处封顶并拦掉第 6 次，因此单轮突发可多试 2~4 次，慢速爆破不受影响。
+   真正原子需要 DB 行锁（`DatabaseCache` 未覆盖 `incr`，继承的 `BaseCache.incr` 是 get + set，且 `set` 不传 timeout 会把窗口重置为默认 TTL，两点都不能解决问题；本项目默认 TTL 为 900s，等于每次自增都把窗口推后 900s，变成滑动窗口）。
+   修法（v1.7.4）：`plugins/auth/models.py` 新增独立计数表 `LoginFailureCounter(key UNIQUE, count, window_started_at)`，写走 `transaction.atomic()` + `select_for_update()` + `F('count') + 1`，窗口过期重置 `count=1`，读按 `window_started_at` 判过期，成功登录删行；顺带消除"缓存被 cull 挤掉＝计数凭空消失"的隐患。
+   **不能在 `constellatio_cache.value` 上直接 `UPDATE ... value = value + 1`**：该列存的是 `base64(pickle(...))`，SQL 层加 1 会毁数据。
 2. **`auth` 锁定检查的失败方向**：`cache.get(...) or 0` 在缺表/DB 故障时抛异常（500），不会把已锁定用户放行；若将来要"缓存挂了就不限制"，需显式设计而不是吞异常。
 3. **`blockchain` 校验快照语义变化**：60s 快照从"每进程各一份"变成"全站一份"，`force=True` 手动校验的效果现在对全部 worker 生效（属改善，但行为确实变了）。
 4. **缓存表增长**：`DatabaseCache` 只在超 `MAX_ENTRIES` 或过期时清理；`expires` 有索引，`MAX_ENTRIES=10000` 下 500 人规模无压力，规模再上一个量级需重新估算。

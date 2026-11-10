@@ -41,3 +41,6 @@ db-docker-backup-*.sql
 
 # ---- 本地对话导出 ----
 dsh-chat-export.json
+
+# ---- 本地临时目录（自检证据脚本的运行残留，不入库）----
+.tmp-test/
