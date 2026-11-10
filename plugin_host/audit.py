@@ -21,6 +21,9 @@ logger = logging.getLogger('plugin_host')
 
 def fill_audit_operator(sender, instance, **kwargs):
     """`pre_save` receiver：按上面的规则填操作人。"""
+    if kwargs.get('raw'):
+        # loaddata 等 fixture 导入：raw=True 时不要改数据（规范做法，且此时也没有上下文）
+        return
     if not isinstance(instance, AuditModel):
         return
     user = get_current_user()

@@ -104,6 +104,57 @@ class AuditFillTests(TestCase):
         self.assertIsNone(announcement.created_by_id)
         self.assertIsNone(announcement.updated_by_id)
 
+    def test_partial_save_update_fields_persists_updated_by(self):
+        """`save(update_fields=[...])` 必须把 updated_by 落库（v1.7.8 收尾的 P1 回归）。
+
+        生产代码 20 处更新全部走部分更新；`pre_save` 只改内存、改不了 UPDATE 列清单，
+        所以在 `AuditModel.save()` 里统一把 updated_by / updated_at 并入 update_fields。
+        这里用 `Department` 复现 `user/views.py` 的 `save(update_fields=['is_active', …])` 路径。
+        """
+        from plugins.user.models import Department
+
+        dept = run_in_request(self.alice, lambda: Department.objects.create(name='审计部分更新'))
+        self.assertEqual(Department.objects.get(pk=dept.pk).updated_by_id, self.alice.pk)
+
+        def partial_update():
+            dept.is_active = False
+            dept.save(update_fields=['is_active'])
+            return dept
+
+        run_in_request(self.bob, partial_update)
+        # 关键：查 DB，不看内存（内存值不代表已落库）
+        fresh = Department.objects.get(pk=dept.pk)
+        self.assertEqual(fresh.updated_by_id, self.bob.pk)
+        self.assertEqual(fresh.created_by_id, self.alice.pk)
+
+    def test_partial_save_also_touches_updated_at(self):
+        """部分更新同样要刷新 updated_at —— 生产里有 5 处调用连 updated_at 都漏了。"""
+        from plugins.user.models import Department
+
+        dept = run_in_request(self.alice, lambda: Department.objects.create(name='审计时间戳'))
+        before = Department.objects.get(pk=dept.pk).updated_at
+
+        def partial_update():
+            dept.is_active = False
+            dept.save(update_fields=['is_active'])
+
+        run_in_request(self.bob, partial_update)
+        after = Department.objects.get(pk=dept.pk).updated_at
+        self.assertGreater(after, before)
+
+    def test_current_user_middleware_after_authentication(self):
+        """位置护栏：CurrentUserMiddleware 必须在 AuthenticationMiddleware 之后。
+
+        否则 `request.user` 还不存在 → 审计字段全 NULL，而且不报错、测试也不会红。
+        """
+        from django.conf import settings
+
+        middleware = list(settings.MIDDLEWARE)
+        self.assertIn('plugin_host.middleware.CurrentUserMiddleware', middleware)
+        auth_index = middleware.index('django.contrib.auth.middleware.AuthenticationMiddleware')
+        current_index = middleware.index('plugin_host.middleware.CurrentUserMiddleware')
+        self.assertLess(auth_index, current_index)
+
     def test_structure_excluded_from_audit(self):
         """structure 明确不纳入：没有 created_at/created_by 列，只有 applied_at/applied_by。"""
         field_names = {field.name for field in StructureRecord._meta.get_fields()}

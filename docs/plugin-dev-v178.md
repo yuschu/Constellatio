@@ -109,6 +109,44 @@ def __call__(self, request):
 | 上下文为空（`manage.py shell` / 后台线程 / 信号内写入） | 新建时 `created_by = None`，**不报错**；更新时不动原值 |
 | 显式传了 `created_by` | 尊重调用方，不覆盖 |
 
+### 2.4.1 两条反直觉（踩过才写进来的）
+
+1. **显式设置 `updated_by` 会被覆盖**：更新分支只要有请求上下文就强制写当前用户，
+   与 `created_by` 的「显式传值不覆盖」方向**相反**。这是有意的——`updated_by` 记的是
+   「谁动的这一行」，不是「谁被认为该出现在这一列」。
+2. **`update_fields` 不用写 `updated_by` / `updated_at`**：基类 `AuditModel.save()` 会自动并入。
+
+### 2.4.2 P1 修复：`update_fields` 会静默丢掉 `updated_by`（v1.7.8 收尾）
+
+`Model.save(update_fields=[...])` 只写清单里的列。`pre_save` receiver 改的是 `instance`，
+但 Django 传给 receiver 的 `update_fields` 是**值**不是引用 —— receiver 无法把列塞进 SQL 清单。
+实测（Department，`save(update_fields=['is_active'])`）：
+
+```
+建行后 DB.updated_by = 38 (alice)
+bob 部分更新后：内存.updated_by = 39 (bob) / DB.updated_by = 38   ← 失效
+```
+
+生产代码里 **20 处**更新全部走部分更新（approval 6 + approval 其它 5 + user 8 + attendance 2 + 其它 5），
+**一处不漏地全中**；其中 5 处连 `updated_at` 都没带。410 项测试没抓到，是因为用例用的是裸 `save()`（全字段），
+与生产调用路径不是同一条。
+
+修法只有一处（改调用点会继续漏、写文档约束也会继续漏）：
+
+```python
+# plugin_host/models.py AuditModel.save()
+update_fields = kwargs.get('update_fields')
+if update_fields is not None:
+    kwargs['update_fields'] = list({*update_fields, 'updated_by', 'updated_at'})
+super().save(*args, **kwargs)
+```
+
+配套用例 3 条：部分更新后 `refresh_from_db()` → `updated_by` 是当前用户、`updated_at` 变；
+外加中间件位置护栏（`CurrentUserMiddleware` 必须在 `AuthenticationMiddleware` 之后，否则
+`request.user` 不存在 → 审计字段全 NULL 且不报错）。
+
+另外 `pre_save` 里补了 `if kwargs.get('raw'): return`（`loaddata` 等 fixture 导入不改数据）。
+
 ### 2.5 与既有字段：三处必须说清
 
 1. **`operator` 保留，不与 `created_by` 合并**：`operator` 是「被留痕操作的业务主体」，`created_by` 是「写入这条审计行的请求用户」，信号写入时两者可能不同（例如公告发布信号里写留痕，触发者是发布人，但写入主体是订阅方）。字段名一律不动。
@@ -322,9 +360,19 @@ rebuild 该表并校验全部指向它的 FK 约束，代价与前两批的叶�
 > 第 5 条实现期修正过一版语义：`updated_by` 原来回落到 `created_by`，会让「A 代 B 建记录」显示成 B 改的。
 > 改成「有请求上下文就用当前用户，无上下文才回落」。
 
+### 9.3.1 P1 修复后补测（2026-11-10）
+
+| 用例 | 断言 |
+|---|---|
+| `test_partial_save_update_fields_persists_updated_by` | `save(update_fields=['is_active'])` 后**查库**：`updated_by` 是当前用户、`created_by` 不变 |
+| `test_partial_save_also_touches_updated_at` | 同路径 `updated_at` 变新（生产里有 5 处连它都漏了） |
+| `test_current_user_middleware_after_authentication` | `settings.MIDDLEWARE` 索引比较，固定位置依赖 |
+
+测试数 410 → **413**。
+
 ### 9.4 门禁
 
-`check` 无问题 / `ruff` All checks passed / `makemigrations --check` 无待生成 / **Ran 410 tests OK**（403 + 7）。
+`check` 无问题 / `ruff` All checks passed / `makemigrations --check` 无待生成 / **Ran 413 tests OK**（403 + 10）。
 
 ## 七、待办观察
 

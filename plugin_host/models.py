@@ -27,3 +27,17 @@ class AuditModel(models.Model):
 
     class Meta:
         abstract = True
+
+    def save(self, *args, **kwargs):
+        """部分更新也必须带上审计列（v1.7.8 收尾）。
+
+        `Model.save(update_fields=[...])` 只写清单里的列；`pre_save` receiver 改的是
+        `instance`，但 Django 传给 receiver 的 `update_fields` 是**值**不是引用，
+        receiver 无法把列塞进 SQL 清单 —— 结果是 `updated_by` 只改在内存、DB 不写。
+        实测生产代码有 20 处 `save(update_fields=...)` 全部踩这个坑，所以在基类统一并入，
+        而不是让每个调用点各记一次（将来新增调用点还会漏）。
+        """
+        update_fields = kwargs.get('update_fields')
+        if update_fields is not None:
+            kwargs['update_fields'] = list({*update_fields, 'updated_by', 'updated_at'})
+        super().save(*args, **kwargs)
