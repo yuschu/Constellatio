@@ -14,7 +14,23 @@
 4. **FK 唯一例外**：业务插件允许外键引用 `settings.AUTH_USER_MODEL`（框架级配置引用，非插件间 import）
 5. **引擎可插拔**：字段只使用 Django ORM 通用类型，不写 MySQL 私有类型；`utf8mb4`/`InnoDB` 等参数放 settings 的 `OPTIONS`，切换 MySQL↔sqlite↔postgres 只需改 `DATABASES`
 6. **停用不删数据**：停用插件仅隐藏路由/导航，表与数据保留，可随时恢复启用
-7. **审计字段统一**：所有业务表带 `created_at` / `updated_at`
+7. **审计字段统一（v1.7.8 起）**：业务表统一继承 `plugin_host.models.AuditModel`，带
+   `created_at` / `updated_at` / `created_by` / `updated_by`。
+   - `created_by` / `updated_by`：FK → `AUTH_USER_MODEL`，`null=True`、`ON DELETE SET NULL`、`related_name='+'`
+     （不给用户模型加反向管理器）。**语义区分**：`created_by` 是「写入这条记录的请求用户」（verbose「写入用户」），
+     与既有的 `operator`（被留痕操作的业务主体）不同，二者并存不合并。
+   - 自动填充：`plugin_host.audit.fill_audit_operator`（`pre_save`）统一写；无请求上下文（`manage.py` /
+     后台线程 / 信号内写入）时为 NULL，不报错；显式传值不覆盖。
+   - `bulk_create` / `QuerySet.update()` 不触发 `pre_save`，这两类路径**不填审计人**（见 v178 §三 写入路径表）。
+   - **历史行 NULL**：v1.7.8 之前写入的行 `created_by` / `updated_by` 为 NULL；新增的时间列同样为 NULL
+     （迁移里显式清理，避免被 Django 注入的迁移执行时间污染）。
+     `ApprovalSigner` / `AnnouncementRead` / `AttendanceRule` 三个模型的历史 `created_at` 为 NULL ——
+     **将来若给它们加时间筛选或排序**，`created_at__gte` 会过滤掉历史行、`ORDER BY created_at DESC` 会把
+     历史行排到最后；要么回填真实时间（不允许，属伪造审计），要么接受「历史行不参与时间筛选」。
+   - **`structure.StructureRecord` 例外**：沿用 `applied_at` / `applied_by` 命名（历史原因 + `PROTECT` 语义），
+     **不**继承 `AuditModel`，也**不**做 `created_at` 之类的 property 别名（别名会让「未实现」看起来像「已实现」）。
+   - **迁移注意**：新增列/放宽 NULL 会 rebuild 表。`user_user` 被所有审计 FK 引用，`MODIFY user_user ... NULL`
+     会一并校验全部外键约束，**生产库请在低峰期执行**；执行期间引用用户表的写入会等待。
 
 ## 二、插件-表映射
 

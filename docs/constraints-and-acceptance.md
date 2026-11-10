@@ -78,6 +78,20 @@
 - [ ] 测试报告（功能测试 + 部分单元测试）
 - [ ] 部署文档 + 演示脚本
 
+## 五点五、迁移与 DDL 硬约束（v1.7.8 起）
+
+1. **禁止对 `migrations/` 使用任何编号 glob**（`0002*`、`00*_*.py` 等）。迁移文件名由 Django 按内容生成、
+   不可预测；按编号猜会命中历史迁移，把 `RunSQL` 一类语句写进早已应用的旧迁移 —— 在**新装库**上执行一条
+   永远不该执行的 DML，且**在已有库上不会暴露**，属于最难查的一类事故。
+   正确做法：从 `makemigrations` 输出里复制完整文件名，或取 `git status` 该目录下新增的 `??` 项。
+2. **迁移 SQL 合格判据**：`sqlmigrate <app> <migration>` 里每一条非空 SQL 都必须能被解释，且落在
+   「新增列 / 新增索引 / **放宽** NULL」三类之内。
+3. **硬红线**：出现 `MODIFY ... NOT NULL`（收窄可空性）立刻停止 —— 历史 NULL 行会在下次写入时失败。
+4. 新增 `auto_now` / `auto_now_add` 列时注意：`SchemaEditor._effective_default()` 会给这类列注入
+   `timezone.now()`（`django/db/backends/base/schema.py:474`，`null=True` 时同样命中），历史行会被刷成
+   迁移执行时间。若历史行必须保持 NULL，迁移末尾要显式 `RunSQL ... SET <col> = NULL`。
+5. **报告里的迁移操作计数**（AddField / AlterField / RunSQL 条数）不得手数，用正则统计后粘贴。
+
 ## 六、开发规范
 
 - **Python**：PEP 8，代码注释中文，函数/类有 docstring

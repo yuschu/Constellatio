@@ -185,6 +185,45 @@ elif getattr(field, "auto_now", False) or getattr(field, "auto_now_add", False):
 > **第三批碰到核心表 `user_user`**：`MODIFY user_user ... NULL` 在 MySQL 8 上会 rebuild 这张表。
 > 测试库空表无影响；生产库执行前先确认行数并挑低峰期——这条写进 `database-design.md` 的迁移注意事项。
 
+### 2.7.1 第一/二批实测计数（正则统计，不手数）
+
+```
+approval/0008   AddField=9 AlterField=3 RunSQL=3
+attendance/0006 AddField=4 AlterField=3 RunSQL=1
+notice/0002     AddField=6 AlterField=2 RunSQL=2
+```
+
+> 上一轮报告里我手数成了 7 / 3 / 6 —— **9 和 4 才是对的**。从此类清单一律用：
+> `AddField=len(re.findall(r'migrations\.AddField', src))` 这类统计命令，不靠肉眼。
+
+**"定义对齐则零迁移"的正例**：`attendance.AttendanceRule.updated_by` 的本地声明与基类完全一致
+（`related_name='+'`、`null=True`、`SET_NULL`、`verbose_name='最后修改人'`），所以 `attendance/0006`
+**没有为它生成 AlterField** —— 比 `(no-op)` 更干净。`(no-op)` 只出现在定义确有差异的地方
+（`workspace.PluginSwitch.updated_by`：无 `related_name`、verbose_name 是「最后操作人」）。
+
+### 2.7.2 第三批（user）的额外代价
+
+`user_user` 被**所有** `created_by` / `updated_by` 外键引用。`MODIFY user_user ... NULL` 在 MySQL 上会
+rebuild 该表并校验全部指向它的 FK 约束，代价与前两批的叶子表（5 / 250 / 693 行）不是一个量级。
+
+- 执行前先记录行数（容器实测 **32 行**，写入报告）；
+- `User.created_by/updated_by` 是**自引用外键**（User → User），`related_name='+'` 必须保留，
+  否则会和 `auth` 的关系名撞；
+- **生产注意事项**：低峰期执行；执行期间引用用户表的写入会等待表重建完成。
+
+### 2.7.3 历史 NULL 的回归风险（已核验，当前零影响）
+
+- 模板直接输出：11 处全部带 `|date`，NULL 渲染空串；
+- `created_at.xxx` 属性/方法访问：0 处；
+- `created_at__` 过滤与 `order_by('created_at')`：只出现在 `BlockchainRecord` / `Approval` / `Announcement`
+  —— 都走 `AlterField`、历史值保留；
+- 走 `AddField`（历史 NULL）的三个模型 `ApprovalSigner` / `AnnouncementRead` / `AttendanceRule`：
+  **当前没有任何按时间过滤或排序的查询**（`grep` 为空）。
+
+> 给后来人的警告（写进 `database-design.md`）：这三个模型的历史 `created_at` 为 NULL。将来若给它们加时间筛选
+> 或排序，`created_at__gte` 会直接过滤掉历史行、`ORDER BY created_at DESC` 会把历史行排到最后。
+> 要么回填真实时间（不允许），要么接受"历史行不参与时间筛选"。
+
 ## 三、写入路径 → 是否留审计（本版的关键边界表）
 
 `pre_save` 只在 `Model.save()`（及 `create()` / `update_or_create` 的保存分支）触发；以下路径**不会**填审计人，本版不改造它们：

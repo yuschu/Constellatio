@@ -47,3 +47,17 @@ dsh-chat-export.json
 
 # ---- 本地日志目录（v1.7.5，*.log 已单独忽略）----
 logs/
+
+# ---- 早期论文/演示产物（v1.7.8 整理：不随代码提交，避免 git add -A 误带）----
+dist/
+docs/thesis/
+docs/*.docx
+docs/ref-att*.txt
+docs/reference-template.*
+tools/*.ps1
+tools/build_thesis.py
+tools/check_thesis.py
+tools/draw_figures.py
+tools/extract_attachments.py
+tools/extract_template.py
+tools/fill_att2.py
