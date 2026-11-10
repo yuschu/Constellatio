@@ -56,6 +56,8 @@
 
 * 🧱 共享缓存（v1.7.3）：缓存后端换 `DatabaseCache`（复用现有 MySQL/sqlite，零新依赖），登录失败限流与 SSO Ticket 防重放靠 `cache.add` 主键冲突跨 gunicorn worker 成立；容器启动自动 `createcachetable`
 
+* 📄 列表分页统一（v1.7.6）：`plugin_host/pagination.py` 唯一入口 + `templates/includes/pagination.html` 一份公共分页块（`{% querystring %}` 保住筛选参数，翻页不丢条件）；公告中心只登记当页未读；留痕 50/页、总数可见、看板 60 秒快照
+
 * 🧾 错误页与可排障日志（v1.7.5）：`templates/400|403|404|500.html` 全部带品牌外壳与「返回工作台」；每个请求分配 8 位 `X-Request-Id` 并进日志格式；`BusinessError`→400、对象级越权→403，其余异常打全栈后交默认 500；容器只走 console 不落盘（多 worker 不轮转同一文件）
 
 * 🛡 登录守卫默认拦截（v1.7.4）：`LoginRequiredMiddleware` 让所有视图默认要求登录，匿名入口收敛为 6 个显式 `@login_not_required`（登录 / 退出 / 忘记密码 / 语言切换 / SSO 两入口）；「无守卫路由集合」与「匿名可达集合」用两条集合护栏钉死，新增视图忘加守卫会直接测试报红
@@ -203,8 +205,9 @@ Constellatio/
 | [docs/plugin-dev-v173.md](docs/plugin-dev-v173.md)                             | 插件开发 | v1.7.3：共享缓存（DatabaseCache）—— 登录限流 / SSO 防重放跨 worker 成立 |
 | [docs/plugin-dev-v174.md](docs/plugin-dev-v174.md)                             | 插件开发 | v1.7.4：登录守卫中间件化 —— 默认拦截 + 6 个显式白名单 + 两条集合护栏 |
 | [docs/plugin-dev-v175.md](docs/plugin-dev-v175.md)                             | 插件开发 | v1.7.5：错误页（400/403/404/500）+ 日志与 request_id + 异常分类 |
+| [docs/plugin-dev-v176.md](docs/plugin-dev-v176.md)                             | 插件开发 | v1.7.6：列表分页统一（公共 include + querystring）+ 公告增量已读 + 留痕翻页 |
 | [docs/roadmap.md](docs/roadmap.md)                                             | 规划   | 差距矩阵、v1.5–v2.0 迭代路线、修复项与文档债务                  |
 
 ## 📌 状态
 
-**v1.7.5 错误页 + 日志与异常分类已交付并部署**（380 项测试全绿）：四个错误页全部带品牌外壳（500 独立渲染、不依赖上下文）；`LOGGING` 容器只走 console、`X-Request-Id` 逐请求注入并进日志格式（实测 500 日志含 request_id 与完整栈）；`BusinessError`→400、对象级越权→403、其余异常记全栈后交默认 500；两个 JSON 接口错误体统一 `{code,message}`。上一交付 **v1.7.4**（登录守卫中间件化，368 项测试）。→ 下一步：v1.7.6 认证后端插件化（第一项：限流计数原子化 P2）
+**v1.7.6 列表分页统一 + 公告增量已读 + 留痕翻页已交付并部署**（387 项测试全绿）：分页收敛到一个入口与一份公共模板，翻页链接经 `{% querystring %}` 保住筛选参数（修掉裸 `?page=N` 覆盖 query string 的缺陷）；公告中心只登记当页未读（首次 1 条 bulk、二次 0 条）；留痕 50/页、总数 693 可见、第 14 页可达，看板 60 秒快照。上一交付 **v1.7.5**（错误页 + 日志与异常分类，380 项测试）。→ 下一步：v1.7.7 认证后端插件化（第一项：限流计数原子化 P2）
