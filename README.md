@@ -56,6 +56,8 @@
 
 * 🧱 共享缓存（v1.7.3）：缓存后端换 `DatabaseCache`（复用现有 MySQL/sqlite，零新依赖），登录失败限流与 SSO Ticket 防重放靠 `cache.add` 主键冲突跨 gunicorn worker 成立；容器启动自动 `createcachetable`
 
+* 🧾 审计字段统一（v1.7.8）：业务模型继承 `AuditModel`（created_at/updated_at + created_by/updated_by），`CurrentUserMiddleware` + `pre_save` 自动填「谁写入 / 谁最后修改」；无请求上下文时为 NULL、不报错；三批迁移，历史行保持 NULL（不用迁移时间伪造），structure 明确排除
+
 * 🔐 登录限流与认证后端（v1.7.7）：失败计数换独立表 `LoginFailureCounter` + `select_for_update`（只锁已存在行，避免 gap 锁死锁；计数封顶 5），6 路并发 5 轮实测计数稳定 5；认证后端 `OA_AUTH_BACKENDS` dotted-path 有序链 + `ModelBackend` 垫底 + 契约校验 + 示例 Provider（用户名/邮箱，含 is_active 检查）
 
 * 📄 列表分页统一（v1.7.6）：`plugin_host/pagination.py` 唯一入口 + `templates/includes/pagination.html` 一份公共分页块（`{% querystring %}` 保住筛选参数，翻页不丢条件）；公告中心只登记当页未读；留痕 50/页、总数可见、看板 60 秒快照
@@ -209,8 +211,9 @@ Constellatio/
 | [docs/plugin-dev-v175.md](docs/plugin-dev-v175.md)                             | 插件开发 | v1.7.5：错误页（400/403/404/500）+ 日志与 request_id + 异常分类 |
 | [docs/plugin-dev-v176.md](docs/plugin-dev-v176.md)                             | 插件开发 | v1.7.6：列表分页统一（公共 include + querystring）+ 公告增量已读 + 留痕翻页 |
 | [docs/plugin-dev-v177.md](docs/plugin-dev-v177.md)                             | 插件开发 | v1.7.7：限流计数原子化（独立表 + 行锁）+ 认证后端插件化（OA_AUTH_BACKENDS） |
+| [docs/plugin-dev-v178.md](docs/plugin-dev-v178.md)                             | 插件开发 | v1.7.8：审计字段统一（AuditModel + current_user + pre_save 自动填充，13/14 模型） |
 | [docs/roadmap.md](docs/roadmap.md)                                             | 规划   | 差距矩阵、v1.5–v2.0 迭代路线、修复项与文档债务                  |
 
 ## 📌 状态
 
-**v1.7.7 限流计数原子化（P2）+ 认证后端插件化已交付并部署**（403 项测试全绿）：登录失败计数从共享缓存换到独立表 `LoginFailureCounter`（`select_for_update` 只锁已存在行 + 计数封顶；容器 6 路并发 ×5 轮计数稳定 5、0 次 500、单 worker 对照一致）；认证后端 `OA_AUTH_BACKENDS` 有序链 + 契约校验纯函数 + 示例 Provider（用户名/邮箱登录）。上一交付 **v1.7.6**（分页统一，387 项测试）。→ 下一步：v1.7.8 审计字段统一
+**v1.7.8 审计字段统一已交付并部署**（410 项测试全绿）：13/14 个插件模型继承 `AuditModel`，新增 created_by/updated_by + 缺失时间列，`pre_save` 按当前请求用户自动填充（匿名/无上下文为 NULL）；三批迁移全部通过「新增/索引/放宽 NULL」判据、无收窄、回滚往返，历史行 NULL 不被伪造。上一交付 **v1.7.7**（限流计数 + 认证后端，403 项测试）。→ 下一步：v1.7.9 越权反馈语义统一（待定）

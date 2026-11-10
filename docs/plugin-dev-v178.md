@@ -2,8 +2,8 @@
 
 > 关联：容器（`plugin_host/models.py` / `current_user.py` / `audit.py` / `middleware.py` / `apps.py`）、插件 notify / blockchain / workspace / approval / attendance / notice / user
 > 版本：v1.7.8 · 文档日期：2026-11-10（由 v1.7.7 草案改号而来，原文未动逻辑，按 §八 的 5 条裁定修）
-> 状态：**草案 —— 等 v1.7.7 交付后再逐条过**
-> 基线：tag `v1.7.6`（387 项测试全绿）
+> 状态：**✅ 已实现**（三批迁移全部落地 + 410 项测试全绿；见 §九）
+> 基线：tag `v1.7.7`（403 项测试）
 > 覆盖：**13 / 14 个插件模型**（全部纳入 user 三模型；`structure.StructureRecord` 明确排除，理由见 §六 第 1 条）
 
 ## 一、问题复核（实测盘点）
@@ -278,6 +278,53 @@ rebuild 该表并校验全部指向它的 FK 约束，代价与前两批的叶�
 2. 不改既有字段名（`applied_at` / `operator` / `updated_by` 一律保留）；不删 `operator`；不做数据回填。
 3. 批量路径不填审计人（见 §三表），本版不改造。
 4. **历史行 `created_at` 为 NULL**（§2.6）。
+
+## 九、验收记录（2026-11-10）
+
+### 9.1 三批迁移（容器 MySQL）
+
+| 批 | 迁移 | 操作数（正则统计） | 回滚往返 |
+|---|---|---|---|
+| 一 | notify 0002 / blockchain 0002 / workspace 0002 | 各自 AddField 3 / AlterField 2 / RunSQL 1 | created_by 列 2→1→0→3 |
+| 二 | approval 0008 / attendance 0006 / notice 0002 | 9/3/3、4/3/1、6/2/2（AddField/AlterField/RunSQL） | 7→0→7 |
+| 三 | user 0006 | **6 / 6 / 0** | 3→0→3 |
+
+- `sqlmigrate` 逐条落在「新增 / 索引 / 放宽 NULL」三类内，**三批都没有 `MODIFY ... NOT NULL`**。
+- 第三批 `user_user` 执行前 32 行；`MODIFY user_user ... NULL` 会 rebuild 并校验全部引用它的 FK，已写入
+  `database-design.md` 的生产注意事项。
+- `makemigrations --check` 三批之后均无待生成变更。
+
+### 9.2 历史行（不伪造审计时间）
+
+| 表 | 行数 | 结果 |
+|---|---|---|
+| notify_notification | 250 | 新列 `updated_at` 全 NULL；created_by/updated_by 全 NULL |
+| blockchain_record | 693 | 同上 |
+| workspace_pluginswitch | 5 | 新列 `created_at` 全 NULL；**既有 `updated_by` 4 行历史值保留** |
+| approval_approval | 48 | `created_at` 保留原值（只放宽 NULL）；created_by 全 NULL |
+| approval_approvalrecord | 64 | `updated_at` 64/64 NULL |
+| attendance_attendancerule | 1 | `created_at` 1/1 NULL |
+| notice_announcementread | 100 | `created_at` / `updated_at` 各 100/100 NULL |
+| user_user / user_department / user_role | 32 / 20 / 31 | `created_at` 全部保留原值；created_by 全 NULL |
+
+### 9.3 自动填充行为（7 条用例，`plugin_host/tests_audit.py`）
+
+| # | 用例 | 结果 |
+|---|---|---|
+| 1 | HTTP 新建公告 | `created_by = updated_by = 当前用户` |
+| 2 | 换用户保存同一行 | `updated_by` 变、`created_by` 不变 |
+| 3 | 无上下文（shell 路径） | 两字段 NULL，不报错 |
+| 4 | 异常路径复位 | 抛错后 contextvar 已复位；旧用户不会串到下一次写入 |
+| 5 | 显式传 `created_by` | 不被覆盖；`updated_by` 仍记实际写入者 |
+| 6 | 匿名请求 | 映射成 None，不抛 `ValueError` |
+| 7 | structure 排除 | 无四个审计列，也无 property 别名 |
+
+> 第 5 条实现期修正过一版语义：`updated_by` 原来回落到 `created_by`，会让「A 代 B 建记录」显示成 B 改的。
+> 改成「有请求上下文就用当前用户，无上下文才回落」。
+
+### 9.4 门禁
+
+`check` 无问题 / `ruff` All checks passed / `makemigrations --check` 无待生成 / **Ran 410 tests OK**（403 + 7）。
 
 ## 七、待办观察
 
