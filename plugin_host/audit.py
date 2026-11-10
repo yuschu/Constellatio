@@ -28,7 +28,9 @@ def fill_audit_operator(sender, instance, **kwargs):
         if instance.created_by_id is None and user is not None:
             instance.created_by = user
         if instance.updated_by_id is None:
-            instance.updated_by = instance.created_by if instance.created_by_id else user
+            # updated_by 记「实际写这一行的人」：有请求上下文就用当前用户（显式传了
+            # created_by=别人时也一样），没有上下文才回落到 created_by。
+            instance.updated_by = user if user is not None else instance.created_by
         return
     if user is not None:
         instance.updated_by = user

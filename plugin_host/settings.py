@@ -69,6 +69,9 @@ MIDDLEWARE = [
     # 并带回 next），不再依赖逐个视图挂装饰器；匿名入口必须显式标注 @login_not_required。
     # 位置要求：必须在 AuthenticationMiddleware 之后（process_view 需要 request.user）。
     'django.contrib.auth.middleware.LoginRequiredMiddleware',
+    # v1.7.8：当前用户进 contextvar（审计字段 pre_save 自动填充用）；
+    # 必须在 AuthenticationMiddleware 之后（request.user 可用），finally 复位防串号。
+    'plugin_host.middleware.CurrentUserMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]

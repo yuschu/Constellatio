@@ -37,3 +37,8 @@ class PluginHostConfig(AppConfig):
         from .auth_backends.registry import validate_auth_backends
 
         validate_auth_backends(getattr(settings, 'OA_AUTH_BACKENDS', []))
+
+        # v1.7.8：审计字段自动填充（pre_save 统一写 created_by / updated_by）
+        from .audit import connect_audit_signals
+
+        connect_audit_signals()

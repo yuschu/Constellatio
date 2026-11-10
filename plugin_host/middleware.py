@@ -22,6 +22,7 @@ from django.middleware.locale import LocaleMiddleware
 from django.shortcuts import render
 from django.utils import translation
 
+from plugin_host.current_user import reset_current_user, set_current_user
 from plugin_host.exceptions import BusinessError, ObjectPermissionDenied
 from plugin_host.registry import get_enabled_plugins
 from plugin_host.request_id import reset_request_id, set_request_id
@@ -120,6 +121,29 @@ class ExceptionGuardMiddleware:
             # 守卫自身失败：只记日志，绝不外抛，让 Django 走默认 500
             logger.exception('ExceptionGuardMiddleware 自身失败，已降级为默认处理')
             return None
+
+
+class CurrentUserMiddleware:
+    """v1.7.8：把当前请求用户放进 contextvar，供审计字段（pre_save）自动填充。
+
+    两个必须写死的点：
+    1. **匿名映射成 None**：`AnonymousUser` 赋给 FK 会在保存时抛
+       `ValueError: Cannot assign "AnonymousUser": "X.created_by" must be a "User" instance`；
+    2. **finally reset**：异常 / 重定向 / 500 路径也复位，杜绝线程复用时用户串号。
+
+    位置：`LoginRequiredMiddleware` 之后（此时 `request.user` 已可用）。
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        user = getattr(request, 'user', None)
+        token = set_current_user(user if user is not None and user.is_authenticated else None)
+        try:
+            return self.get_response(request)
+        finally:
+            reset_current_user(token)
 
 
 class ThemeMiddleware:

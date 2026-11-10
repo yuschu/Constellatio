@@ -3,10 +3,12 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
+from plugin_host.models import AuditModel
+
 from .perms import BASELINE_PERMS, bare_codename
 
 
-class Department(models.Model):
+class Department(AuditModel):
     """部门表 user_department（支持软删：is_active=False 即停用，硬删走会签审批）。"""
 
     name = models.CharField('部门名称', max_length=100, unique=True)
@@ -14,8 +16,6 @@ class Department(models.Model):
         'self', null=True, blank=True, on_delete=models.SET_NULL,
         related_name='children', verbose_name='上级部门')
     is_active = models.BooleanField('是否启用', default=True)   # 软删标记
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = '部门'
@@ -24,13 +24,11 @@ class Department(models.Model):
         return self.name
 
 
-class Role(models.Model):
+class Role(AuditModel):
     """角色表 user_role。"""
 
     name = models.CharField('角色名', max_length=100, unique=True)
     permissions = models.ManyToManyField('auth.Permission', blank=True, verbose_name='权限')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = '角色'
@@ -50,7 +48,7 @@ class Role(models.Model):
         return LEVEL_LABELS[self.level]
 
 
-class User(AbstractUser):
+class User(AuditModel, AbstractUser):
     """用户表 user_user（AUTH_USER_MODEL）。last_name 存中文姓名。
 
     状态机：is_active（可登录）+ permission_frozen（权限冻结，即时短路 has_perm）。
@@ -67,8 +65,6 @@ class User(AbstractUser):
         related_name='direct_reports', verbose_name='直属上级')
     roles = models.ManyToManyField(Role, blank=True, related_name='users', verbose_name='角色')
     permission_frozen = models.BooleanField('权限冻结', default=False)   # 冻结权限：登录但无操作权限
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = '用户'
