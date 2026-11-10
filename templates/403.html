@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "权限不足" %} · Constellatio{% endblock %}
+{% block content %}
+<div class="r-card text-center py-5">
+  <p class="r-small r-muted mb-2">403</p>
+  <h2 class="mb-3">{% trans "权限不足" %}</h2>
+  <p class="r-muted mb-4">{% trans "你没有访问这个页面的权限。" %}</p>
+  <a href="{% url 'index' %}" class="r-btn">{% trans "返回工作台" %}</a>
+</div>
+{% endblock %}

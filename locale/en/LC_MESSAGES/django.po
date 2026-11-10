@@ -1626,3 +1626,36 @@ msgstr "Please select at least one workday"
 
 msgid "补卡回溯天数须在 1–90 天之间"
 msgstr "Makeup look-back days must be between 1 and 90"
+
+msgid "页面不存在"
+msgstr "Page not found"
+
+msgid "没有找到这个页面"
+msgstr "This page could not be found"
+
+msgid "链接可能已失效，或页面已被移动。"
+msgstr "The link may be broken, or the page may have moved."
+
+msgid "返回工作台"
+msgstr "Back to workspace"
+
+msgid "权限不足"
+msgstr "Permission denied"
+
+msgid "你没有访问这个页面的权限。"
+msgstr "You don't have permission to view this page."
+
+msgid "请求有误"
+msgstr "Bad request"
+
+msgid "请求无法处理，请返回重试。"
+msgstr "The request could not be processed. Please go back and try again."
+
+msgid "服务器错误"
+msgstr "Server error"
+
+msgid "服务器出了点问题，请稍后再试。"
+msgstr "Something went wrong on the server. Please try again later."
+
+msgid "如需协助，请联系管理员。"
+msgstr "For assistance, please contact your administrator."

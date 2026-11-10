@@ -73,12 +73,15 @@ ROOT_URLCONF = 'plugin_host.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],   # v1.7.5：容器级模板（错误页 400/403/404/500）
         'APP_DIRS': False,      # v1.5.8：改为显式 loaders，支持按请求切换主题模板
         'OPTIONS': {
             'loaders': [
                 # 主题模板（当前请求主题优先，未命中回退插件 app 模板）
                 'plugin_host.theming.ThemeLoader',
+                # v1.7.5：容器根 templates/（错误页）。ThemeLoader 只查主题目录，
+                # 显式 loaders 下 DIRS 只有靠 filesystem.Loader 才生效，顺序放在主题之后。
+                'django.template.loaders.filesystem.Loader',
                 'django.template.loaders.app_directories.Loader',
             ],
             'context_processors': [
