@@ -5,6 +5,8 @@ Prompt
 db.sqlite3
 staticfiles
 *.log
+**/*.log
+logs/
 __pycache__
 *.pyc
 .env

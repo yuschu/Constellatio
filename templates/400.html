@@ -5,7 +5,12 @@
 <div class="r-card text-center py-5">
   <p class="r-small r-muted mb-2">400</p>
   <h2 class="mb-3">{% trans "请求有误" %}</h2>
+  {# BusinessError 的 message 原样展示；必须走默认自动转义，禁止 |safe（可能含用户输入） #}
+  {% if message %}
+  <p class="r-muted mb-4">{{ message }}</p>
+  {% else %}
   <p class="r-muted mb-4">{% trans "请求无法处理，请返回重试。" %}</p>
+  {% endif %}
   <a href="{% url 'index' %}" class="r-btn">{% trans "返回工作台" %}</a>
 </div>
 {% endblock %}

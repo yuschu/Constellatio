@@ -50,6 +50,11 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # v1.7.5：每个请求一个 8 位 request_id —— 放最外层之一，保证 500 响应也带 X-Request-Id
+    'plugin_host.middleware.RequestIdMiddleware',
+    # v1.7.5：异常分类（业务 400 / 越权 403 / 其它交默认 500）。必须在 RequestId 之内，
+    # 这样兜底日志里的 request_id 一定已经存在。
+    'plugin_host.middleware.ExceptionGuardMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',   # 容器内静态托管（无需 nginx）
     'django.contrib.sessions.middleware.SessionMiddleware',
     # 语言默认值（容器级，v1.5.7）：language 插件停用后仍沿用最后设置的语言
@@ -233,6 +238,69 @@ MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# ---------------------------------------------------------------------------
+# 日志（v1.7.5）
+# ---------------------------------------------------------------------------
+# 落点按进程模型分开（不同意容器也写文件）：
+#   runserver / 单元测试（单进程）→ console + RotatingFileHandler（DJANGO_LOG_TO_FILE=1）
+#   gunicorn 多 worker            → 只 console（docker 日志驱动收集）
+# 原因：多进程各持一个句柄写同一个文件再 rotate，会出现「写进已改名的旧文件」「rotate 瞬间丢日志」
+# 「两进程指向不同 inode」。日志轮转交给 docker / 宿主 logrotate 负责。
+LOG_DIR = BASE_DIR / 'logs'
+LOG_TO_FILE = os.environ.get('DJANGO_LOG_TO_FILE', '0') == '1'
+
+_LOG_HANDLERS = ['console']
+# 注意：logging.config.dictConfig 会把 handlers 里**定义过的每一个**都实例化，
+# 哪怕没有 logger 引用它。所以文件 handler 必须按需拼接进字典，不能「定义但不使用」——
+# 否则容器里即使 LOG_TO_FILE=0 也会打开 logs/constellatio.log。
+_LOG_HANDLER_CONFIG = {
+    'console': {
+        'class': 'logging.StreamHandler',
+        'formatter': 'verbose',
+        'filters': ['request_id'],
+    },
+}
+if LOG_TO_FILE:
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    _LOG_HANDLERS.append('file')
+    _LOG_HANDLER_CONFIG['file'] = {
+        'class': 'logging.handlers.RotatingFileHandler',
+        'filename': str(LOG_DIR / 'constellatio.log'),
+        'maxBytes': 5 * 1024 * 1024,
+        'backupCount': 5,
+        'encoding': 'utf-8',
+        'formatter': 'verbose',
+        'filters': ['request_id'],
+    }
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    # request_id 只能由 filter 注入：直写 formatter 会让没有 request_id 的日志
+    # （启动期 / manage.py）抛 KeyError，而 logging 默认吞 handler 错误 → 日志静默丢失。
+    'filters': {
+        'request_id': {'()': 'plugin_host.request_id.RequestIdFilter'},
+    },
+    'formatters': {
+        'verbose': {
+            'format': '%(asctime)s %(levelname)s %(name)s [%(request_id)s] %(message)s',
+        },
+    },
+    'handlers': _LOG_HANDLER_CONFIG,
+    'loggers': {
+        'django': {'handlers': _LOG_HANDLERS, 'level': 'INFO', 'propagate': False},
+        # 404 记 WARNING、500 记 ERROR（含 exc_info 全栈），排障主要看这条
+        'django.request': {'handlers': _LOG_HANDLERS, 'level': 'WARNING', 'propagate': False},
+        # 业务 / 容器日志保持 propagate=True：既进下面的 console/file handler，也继续向
+        # root 传播——否则 `assertLogs()`（默认挂 root）在测试里收不到记录，
+        # 依赖「handler 异常被记录」的既有用例会误报。root 不配 handler，所以不会重复输出。
+        'plugins': {'handlers': _LOG_HANDLERS, 'level': 'INFO', 'propagate': True},
+        'plugin_host': {'handlers': _LOG_HANDLERS, 'level': 'INFO', 'propagate': True},
+    },
+    # root 不配 handler（与 Django 默认行为一致）：未单独配置的库日志走 logging.lastResort
+    'root': {'handlers': [], 'level': 'WARNING'},
+}
 
 # ---------------------------------------------------------------------------
 # 传输安全（v1.7.1 / P1-13）

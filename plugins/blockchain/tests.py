@@ -142,7 +142,11 @@ class BlockchainStatsTests(TestCase):
             with self.subTest(days=raw):
                 response = self._get(days=raw)
                 self.assertEqual(response.status_code, 400)
-                self.assertEqual(response.json()['error'], 'invalid_days')
+                payload = response.json()
+                # v1.7.5：JSON 错误体由 {error, message} 统一为 {code, message}
+                self.assertEqual(payload['code'], 'invalid_days')
+                self.assertIn('message', payload)
+                self.assertNotIn('error', payload)   # 防止「兼容」回退成两套形状
 
     def test_payload_uses_active_chart(self):
         data = self._get(days='7').json()

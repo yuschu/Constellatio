@@ -241,7 +241,11 @@ class AttendanceStatsTests(TestCase):
     def test_invalid_month_returns_400(self):
         response = self._get(month='2026-13')
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'invalid_month')
+        payload = response.json()
+        # v1.7.5：JSON 错误体由 {error, message} 统一为 {code, message}
+        self.assertEqual(payload['code'], 'invalid_month')
+        self.assertIn('message', payload)
+        self.assertNotIn('error', payload)      # 防止以后有人「兼容」回退成两套形状
 
     def test_payload_uses_active_chart(self):
         data = self._get(month=self.first.strftime('%Y-%m')).json()

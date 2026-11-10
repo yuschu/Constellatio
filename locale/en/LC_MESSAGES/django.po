@@ -1659,3 +1659,6 @@ msgstr "Something went wrong on the server. Please try again later."
 
 msgid "如需协助，请联系管理员。"
 msgstr "For assistance, please contact your administrator."
+
+msgid "如需协助，请把响应头里的 X-Request-Id 报给管理员。"
+msgstr "If you need help, quote the X-Request-Id response header to your administrator."

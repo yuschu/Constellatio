@@ -376,7 +376,8 @@ def attendance_stats(request):
             month_first = _parse_month(month_param)
         except ValueError:
             return JsonResponse({
-                'error': 'invalid_month',
+                # v1.7.5：JSON 错误体统一为 {code, message}（前端无消费方，直接切换）
+                'code': 'invalid_month',
                 'message': _('月份格式应为 YYYY-MM'),
             }, status=400)
     else:

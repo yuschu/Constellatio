@@ -141,7 +141,8 @@ def blockchain_stats(request):
         days = _parse_days(request.GET.get('days'))
     except ValueError:
         return JsonResponse({
-            'error': 'invalid_days',
+            # v1.7.5：JSON 错误体统一为 {code, message}
+            'code': 'invalid_days',
             'message': _('时间窗口应为 1–90 天'),
         }, status=400)
 
