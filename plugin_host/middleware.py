@@ -108,8 +108,13 @@ class ExceptionGuardMiddleware:
                                code, request.method, request.get_full_path())
                 return self._error_response(request, 403, code, '无权访问该对象')
 
-            # 未预期异常：打全栈（含 request_id），返回 None 交默认 500 处理器渲染 templates/500.html
-            logger.exception('未处理异常 %s %s', request.method, request.get_full_path())
+            # 未预期异常：只记分类结果（不带栈）。完整栈由 Django 自己在
+            # `BaseHandler.get_response()` 里用 django.request ERROR 记一次
+            # （`log_response` 对 5xx 必带 exc_info）——这里再带 exc_info 会让同一次 500
+            # 出现两条完整栈。
+            logger.error('未处理异常 %s: %s (%s %s)',
+                         type(exception).__name__, exception,
+                         request.method, request.get_full_path())
             return None
         except Exception:
             # 守卫自身失败：只记日志，绝不外抛，让 Django 走默认 500

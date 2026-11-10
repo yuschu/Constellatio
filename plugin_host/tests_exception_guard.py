@@ -56,18 +56,26 @@ class ExceptionGuardTests(TestCase):
         self.assertEqual(payload['message'], '库存不足，请调整数量后重试')
         self.assertNotIn('error', payload)
 
-    def test_unhandled_error_logs_stack_and_returns_500(self):
-        """未处理异常 → 500 且页面无栈；同时 logger.exception 记录了 exc_info。"""
+    def test_unhandled_error_logs_once_with_single_stack(self):
+        """未处理异常 → 500 且页面无栈；分类日志不带栈，完整栈只由 django.request 记一次。"""
         with _broken_urls():
-            with self.assertLogs('plugin_host', level='ERROR') as captured:
-                response = self.client.get('/boom/')
+            with self.assertLogs('plugin_host', level='ERROR') as guard_logs:
+                with self.assertLogs('django.request', level='ERROR') as request_logs:
+                    response = self.client.get('/boom/')
         self.assertEqual(response.status_code, 500)
         body = response.content.decode()
         self.assertIn('Constellatio', body)
         self.assertNotIn('Traceback', body)
         self.assertNotIn('boom for test', body)
-        records = [record for record in captured.records if record.exc_info]
-        self.assertTrue(records, '未处理异常必须带 exc_info 记录全栈')
+
+        # 分类日志：有 type+message，但没有 exc_info
+        self.assertEqual(len(guard_logs.records), 1)
+        self.assertIn('RuntimeError', guard_logs.records[0].getMessage())
+        self.assertIsNone(guard_logs.records[0].exc_info)
+
+        # 栈由 django.request 记且只记一次（同一次 500 不能有两条完整栈）
+        with_stack = [record for record in request_logs.records if record.exc_info]
+        self.assertEqual(len(with_stack), 1)
 
     def test_request_id_header_on_success_and_error(self):
         """200 与 500 都带 X-Request-Id，长度 8，且两次不同。"""
