@@ -176,7 +176,7 @@ venv\Scripts\python.exe manage.py test --noinput -> Ran 368 tests ... OK      �
   `return redirect('index')`，且 `login.html` 表单没有 `next` 隐藏域（实测表单只有 csrf/username/password）。
 - 结论：首次验收时验收 3 **只能算「带回成立、回跳对账号密码通道不成立」**。这是 v1.7.0 起的既有行为，
   本版没有引入；随后按「本版把暴露面放大（42 条 URL 全部开始带 next）+ 系统内 SSO 通道已能回跳造成不一致」
-  判定为收尾范围，用 `fix(auth)` 提交修复，详见下面第 6 小节。
+  判定为收尾范围，用 `fix(auth)` 提交修复，详见下面第 3.1 小节。
 
 ### 3.1 收尾修复：登录后回跳原页（`fix(auth)`）
 
@@ -193,12 +193,35 @@ venv\Scripts\python.exe manage.py test --noinput -> Ran 368 tests ... OK      �
 | `next=https://evil.example.com/steal` | `302 → /`，`Location` 不含外站域名 |
 | `next=//evil.example.com/steal` | `302 → /`（协议相对绕过被拒） |
 
-> **两个坑，写在这里免得后人重踩**：
+> **三个坑，写在这里免得后人重踩**：
 > 1. 只改视图不改 `render` 上下文时，`{{ next }}` 渲染为空串、隐藏域形同虚设——已写进代码注释，
->    并靠 `test_login_round_trip_returns_to_original_page` 的 `assertContains(page, 'name="next"')` 兜住。
+>    并靠 `test_login_round_trip_returns_to_original_page` 的精确断言兜住（见坑 3）。
 > 2. 登录页上有**两个** `name="next"`：语言切换表单带的是当前页 `request.get_full_path`（切完语言留在登录页），
 >    登录表单带的才是回跳目标。冒烟脚本按 `name="next"` 取第一个会读到语言表单那个，得出错误结论——
->    验证时必须按所属 `<form action>` 取。
+>    验证时必须按所属 `<form action>` 取。两处都是「回跳前先过 `url_has_allowed_host_and_scheme`」，
+>    `language_switch` 连 `Referer` 也走了同一校验，所以**不是开放重定向面**，只是断言层面会误判。
+> 3. **断言表单字段必须带 value 或按所属 `action` 定位**：`assertContains(html, 'name="next"')` 会因两处同时命中而误通过。
+>    该用例已改为：先断言 `name="next"` 出现 2 次（把「页面上确实有两个」这个事实钉住），
+>    再断言 `name="next" value="/plugins/approval/?x=1&amp;y=2"` 恰好出现 1 次（`&` 被模板转义）。
+
+### 3.2 冒烟补充：登录页切语言后再登录（两层 next 嵌套）
+
+这是本版**新出现的链路**：登录页现在带 `next`，而语言表单的 `next` 是 `request.get_full_path`，本身又含 `next=…`。
+容器实测（3 worker，真实 HTTP）：
+
+```
+步骤 1  匿名 GET /plugins/attendance/?x=1&y=2
+        -> 302 /plugins/auth/login/?next=/plugins/attendance/%3Fx%3D1%26y%3D2
+步骤 2  打开该登录页 -> 200，登录表单 next = /plugins/attendance/?x=1&y=2
+步骤 3  POST /plugins/language/switch/（lang=en，next=登录页 full path）
+        -> 302 /plugins/auth/login/?next=/plugins/attendance/%3Fx%3D1%26y%3D2
+        -> Set-Cookie 含 django_language=en
+步骤 4  回到登录页 -> 200，登录表单 next 仍 = /plugins/attendance/?x=1&y=2（查询串没被吃掉）
+步骤 5  POST /plugins/auth/login/（带 next）-> 302 /plugins/attendance/?x=1&y=2
+        同一会话 GET 该 URL -> 200
+```
+
+结论：两层 `next` 嵌套不丢参数（每层都是解码后重新校验再回跳），切语言后再登录仍能回到原页。
 
 ### 4. 护栏反向验证（证明测试 6 真能兜住「少一个白名单」）
 
