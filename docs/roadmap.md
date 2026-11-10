@@ -2,7 +2,7 @@
 
 > 依据：`tech-stack-and-architecture.md` / `constraints-and-acceptance.md` / `development-guide.md` 的**全栈插件化**目标
 > 负责人校正（2026-10-22）：**不降级**、**补充实现**、**列入修复项**；工作约定只需「文档先行、每改必推 GitHub、每版打 tag」
-> 状态：draft-56（2026-11-10）—— **v1.4–v1.6.20 已交付**（tag **v1.6.20**），**v1.7.0 企业 SSO + 消息提醒**（259 项测试），**v1.7.1 安全与并发修复包**（323 项测试），**v1.7.2 公告极简化 + 考勤规则**（352 项测试），**v1.7.3 共享缓存**（357 项测试），**v1.7.4 登录守卫中间件化**（368 项测试），**v1.7.5 错误页 + 日志与异常分类**（380 项测试），**v1.7.6 列表分页统一 + 公告增量已读 + 留痕翻页已交付**（387 项测试全绿）；下一版：v1.7.7 认证后端插件化（第一项：限流计数原子化 P2）
+> 状态：draft-57（2026-11-10）—— **v1.4–v1.6.20 已交付**（tag **v1.6.20**），**v1.7.0 企业 SSO + 消息提醒**（259 项测试），**v1.7.1 安全与并发修复包**（323 项测试），**v1.7.2 公告极简化 + 考勤规则**（352 项测试），**v1.7.3 共享缓存**（357 项测试），**v1.7.4 登录守卫中间件化**（368 项测试），**v1.7.5 错误页 + 日志与异常分类**（380 项测试），**v1.7.6 列表分页统一 + 公告增量已读 + 留痕翻页**（387 项测试），**v1.7.7 限流计数原子化（P2）+ 认证后端插件化已交付**（403 项测试全绿）；下一版：v1.7.8 审计字段统一
 
 ## 一、总原则
 
@@ -18,7 +18,8 @@
 | 数据库后端 | MySQL / sqlite / postgres 一行切换 | MySQL / sqlite 通过环境变量切换 | postgres 未验证 | 已具备；v1.10 补验证 |
 | 主题 UI | 新建 `themes/<name>` + 改 `OA_THEME` 即换 | Corporate Clean 默认 / Risograph 备选；`OA_THEME` 生效 | 已补齐主题清单、切换、第二主题 | ✅ v1.5 完成 |
 | 图表引擎 | 统一 `ChartRenderer`，ECharts 默认 | `plugin_host/charts.py` + `charts/echarts` Provider；`OA_CHARTS` 选择 / 停用降级；v1.6.1 起为 Provider 插件，可运行时启停 | 已补齐清单发现、契约、运行时选择与开关 | ✅ v1.6 / v1.6.1 完成 |
-| 认证后端 | `AUTHENTICATION_BACKENDS` 可插拔 | 仅 Django 默认 ModelBackend | 无 Provider、无示例后端 | **v1.7.7**（v1.7.3 起连续被安全/可用性项插队，见版本表上方说明） |
+| 认证后端 | `AUTHENTICATION_BACKENDS` 可插拔 | ✅ v1.7.7：`OA_AUTH_BACKENDS` dotted-path 有序链 + `ModelBackend` 垫底 + 契约校验纯函数 + 示例 Provider（用户名/邮箱，含 is_active 检查） | 无 | ✅ v1.7.7 完成 |
+| 登录限流计数 | 计数跨 worker 精确 | v1.7.3 起走共享缓存 `get+set`，6 路并发实测计数只有 2/4/4 | 已换独立计数表 `LoginFailureCounter` + `select_for_update`（只锁已存在行）+ 计数封顶 5 | ✅ v1.7.7 完成（容器 5 轮并发均为 5） |
 | 运行日志 / 错误页 | 生产可排障、错误页带品牌 | 无 `LOGGING`、无 `templates/400|403|404|500.html`；500 只有默认 traceback 片段 | 已补 `LOGGING`（console，容器不落盘）+ `RequestIdMiddleware`（`X-Request-Id` + 日志 filter）+ 四个错误页 + `ExceptionGuardMiddleware`（业务 400 / 越权 403 / 其它 500） | ✅ v1.7.5 完成 |
 | 登录守卫 | 菜单与 URL 同源 `require_perm`；匿名可达面可控 | v1.7.3 及以前靠逐视图 `@login_required`/`require_perm`，无守卫的视图默认可匿名访问 | 已换 `LoginRequiredMiddleware` 默认拦截 + 6 个 `@login_not_required` 白名单，两条集合护栏钉住匿名可达面 | ✅ v1.7.4 完成 |
 | 缓存后端 | 文档未承诺（v1.7.3 补齐） | v1.7.2 及以前是 Django 默认 LocMemCache：每 worker 一份，登录限流 / SSO 防重放多 worker 下失效 | 已换 `DatabaseCache`（`constellatio_cache`，跨进程共享，零新依赖） | ✅ v1.7.3 完成 |
@@ -88,8 +89,9 @@
 | **v1.7.4** | 登录守卫中间件化（默认拦截 + 显式白名单） | `MIDDLEWARE` 插入 `LoginRequiredMiddleware`（AuthenticationMiddleware 之后）；auth 三视图 + sso 两视图 + language 切换共 6 个 `@login_not_required`；两条集合护栏钉住匿名可达面；admin 行为断言（`docs/plugin-dev-v174.md`） | ✅ 已交付：368 项测试 + 3 worker 容器验收（含收尾的登录回跳） |
 | **v1.7.5** | 错误页 + 日志与异常分类 | 四个错误页（400/403/404/500，404/403/400 extends 外壳、500 独立渲染）+ `DIRS`/filesystem loader；`LOGGING`（console，容器不落盘；`DJANGO_LOG_TO_FILE` 默认 0）+ `RequestIdMiddleware`（`X-Request-Id` + filter）；`BusinessError`(400) / `ObjectPermissionDenied`(403) / `ExceptionGuardMiddleware`；两个 JSON 接口错误体统一 `{code,message}`（`docs/plugin-dev-v175.md`） | ✅ 已交付：380 项测试 + 容器 404/500/JSON 冒烟 |
 | **v1.7.6** | 列表分页统一 + 公告增量已读 + 留痕翻页 | 新增 `plugin_host/pagination.py`（唯一分页入口）+ `templates/includes/pagination.html`（两套主题共用，`{% querystring %}` 保住筛选参数）；approval/attendance 去掉内联 `Paginator`；user 部门/用户、notice 列表接分页；notice 只登记当页未读；留痕 50/页 + 总数 + 看板 60 秒快照（`docs/plugin-dev-v176.md`） | ✅ 已交付：387 项测试 + 容器手工验收（693 条 → 14 页，末页 43 行） |
-| **v1.7.7** | 认证后端插件化（第一项：限流计数原子化 P2） | **首项**：`plugins/auth` 新增独立计数表 `LoginFailureCounter`（`transaction.atomic` + `select_for_update` + `F('count')+1`）替代缓存 get+set，补 4 条用例（并发自增 / 窗口过期重置 / 成功登录清零 / 超阈值拦截）；随后 `AUTHENTICATION_BACKENDS` Provider + 一个无外部依赖的示例后端（如用户名/邮箱） | 切换后端可登录；默认后端仍可用；限流计数跨 worker 精确。**迁移前置事实（已核实）**：`plugins/auth/migrations/` 当前只有空 `__init__.py`、`models.py` 只有占位注释，所以首个迁移是 `0001_initial.py` 且只应含计数表一张——生成后要开文件确认表数、容器 `migrate` 实测建表、后续 `makemigrations --check` 无待生成变更 |
-| **v1.7.8（待定）** | 越权反馈语义统一（302 / 403 / 404 三选一） | 现状：43 处装饰器 + 42 条 URL 越权统一 302 回工作台；`BusinessError` / `ObjectPermissionDenied` 只有测试夹具在用。三种语义取舍需产品决策，决定后**一次性**迁移，并同批接入 `BusinessError` 的真实抛点（如审批重复提交 / 补卡超窗口），避免两次改响应形状与用例 | 全站越权反馈只剩一种口径；不出现「有时 302、有时 403」 |
+| **v1.7.7** | 限流计数原子化（P2）+ 认证后端插件化 | **首项 P2**：`plugins/auth` 新增 `LoginFailureCounter`（独立表 + `select_for_update`，只对已存在行加锁避免 gap 锁死锁，计数封顶 5）；随后 `OA_AUTH_BACKENDS` dotted-path 有序链 + `ModelBackend` 垫底 + `validate_auth_backends()` 纯函数契约校验 + 示例 Provider（用户名/邮箱，过 `user_can_authenticate`）（`docs/plugin-dev-v177.md`） | ✅ 已交付：403 项测试 + 容器 MySQL 6 路并发 ×5 轮（计数稳定 5、0 次 500）+ 单 worker 对照 + email 登录冒烟 |
+| **v1.7.8** | 审计字段统一（AuditModel） | 抽象 `AuditModel`（created_at/updated_at/created_by/updated_by）+ `current_user` contextvar + 中间件（匿名映射 None）+ `pre_save` 统一填充；三批迁移（notify/blockchain/workspace → approval/attendance/notice → user）；structure 明确排除（`docs/plugin-dev-v178.md`） | 覆盖 13/14 模型；HTTP 新建/编辑填写正确；无上下文不报错；`sqlmigrate` 空 SQL |
+| **v1.7.9（待定）** | 越权反馈语义统一（302 / 403 / 404 三选一） | 现状：42 条 URL 越权统一 302 回工作台；`BusinessError` / `ObjectPermissionDenied` 只有测试夹具在用。三种语义取舍需产品决策，决定后**一次性**迁移，并同批接入 `BusinessError` 真实抛点 | 全站越权反馈只剩一种口径 |
 | **v1.8** | 模板引擎插件化 | Django / Jinja2 Provider；先做多引擎共存或单插件切换 | 待确认深度（见第六节） |
 | **v1.9** | 插件契约补全 | `models` / `dependencies` / `admin`；依赖顺序与环校验；启用一致性校验 | 缺失依赖启动即报错；停用被依赖插件被拦截 |
 | **v1.10** | 剩余修复包 + 文档债务 | P0-A 部署默认值（密钥/口令/DEBUG/HOSTS）、容器非 root 与健康检查、`entrypoint` 注入、`has_perm` 三处口径、模板内联 JS 与 inline style、静态停用边界、全文档同步 | 新增测试全绿；文档与代码无已知冲突 |
@@ -97,7 +99,7 @@
 | **v2.0** | 最终文档 | 需求规格说明书、测试报告、部署文档、演示脚本（按参考附件） | 负责人验收 |
 
 > **版本号在交付时分配，执行顺序以本表顺序为准**（2026-11-10 起）。
-> **排期让位（合并说明）**：v1.7.4 起 **连续三项安全/可用性修复插队**——v1.7.4 登录守卫中间件化（先定「哪些视图匿名」再换认证实现，反过来要改两遍）、v1.7.5 错误页与日志（可观测性前置）、v1.7.6 列表分页与公告写入（A5 是会丢筛选参数的真实缺陷）。「认证后端插件化 + P2 计数原子化」因此顺延到 **v1.7.7**（P2 仍第一项），越权反馈语义统一顺延 **v1.7.8（待定）**。
+> **排期让位（合并说明，随 v1.7.7 交付闭环）**：v1.7.4 起 **连续三项安全/可用性修复插队**——v1.7.4 登录守卫中间件化（先定「哪些视图匿名」再换认证实现，反过来要改两遍）、v1.7.5 错误页与日志（可观测性前置）、v1.7.6 列表分页与公告写入（A5 是会丢筛选参数的真实缺陷）。「认证后端插件化 + P2 计数原子化」因此顺延到 **v1.7.7**（P2 仍第一项），越权反馈语义统一顺延 **v1.7.8（待定）**。
 > 顺序可调整：若希望先补基础设施、把 language 后置，v1.5–v1.8 可整体前移；language 文档已就绪，随时可插入。
 
 ## 四、修复项（原 v1.10 候选）
@@ -113,7 +115,7 @@
 7. ◻ **限流计数原子化（P2，v1.7.5 第一项）**：v1.7.3 交付前自检实测——6 路并发错密码全部计错、最终计数 2/4/4（串行口径应在 5 处封顶并拦第 6 次），根因是 `_record_failure()` 的 get+set 丢更新；`DatabaseCache` 未覆盖 `incr`，继承的 `BaseCache.incr` 同样是 get+set 且 `set` 不传 timeout（窗口被重置为默认 TTL）。方案：auth 插件独立计数表 + `select_for_update` + `F('count')+1`。**注意**：不能在 `constellatio_cache.value` 上做 SQL 自增（存的是 `base64(pickle)`）。
 8. ✅ **运行日志缺失（v1.7.5 已修）**：`LOGGING` + `RequestIdMiddleware`（`X-Request-Id`）+ 四个错误页 + `ExceptionGuardMiddleware`。容器只走 console（`DJANGO_LOG_TO_FILE` 默认 0，多 worker 不轮转同一文件）；实测 500 场景日志含 request_id 与完整栈。
 9. ✅ **账号密码登录不消费 `next`（v1.7.4 收尾已修）**：装 `LoginRequiredMiddleware` 后 42 条 URL 全部开始带 `next`，把原来的「偶发」放成「默认路径」，且 SSO 通道已能回跳、同一登录页两种结果，故在 v1.7.4 收尾用 `fix(auth)` 修复：`_next_target()` + `_redirect_after_login()`（`url_has_allowed_host_and_scheme` 校验，外站与 `//host` 均拒）+ 两套主题 `login.html` 补隐藏域 + `render` 上下文补 `next`；补 3 条用例（回跳带查询串 / 外站拒 / 协议相对拒），测试 365 → 368。不动 v1.7.4 tag。
-10. ◻ **越权反馈语义统一（302 / 403 / 404 三选一，v1.7.8 待定）**：局部迁移会造出第二种反馈（同一用户被拒，有时回工作台、有时 403），v1.7.4 刚修掉同类不一致，不能重犯。三种语义的泄漏面与适用场景：302 不泄漏对象存在 / 403 泄漏「存在但无权」便于找审批人 / 404 完全不泄漏适合对外接口。决定后一次性迁移 43 处装饰器口径，并把 `BusinessError` 真实抛点（审批重复提交、补卡超窗口等）一起接上。
+10. ◻ **越权反馈语义统一（302 / 403 / 404 三选一，v1.7.9 待定）**：局部迁移会造出第二种反馈（同一用户被拒，有时回工作台、有时 403），v1.7.4 刚修掉同类不一致，不能重犯。三种语义的泄漏面与适用场景：302 不泄漏对象存在 / 403 泄漏「存在但无权」便于找审批人 / 404 完全不泄漏适合对外接口。决定后一次性迁移 43 处装饰器口径，并把 `BusinessError` 真实抛点（审批重复提交、补卡超窗口等）一起接上。
 
 ## 五、文档债务（需在对应版本同步）
 
