@@ -60,6 +60,10 @@ MIDDLEWARE = [
     'plugin_host.middleware.PluginRouteGuardMiddleware',  # 插件运行时启停：停用即 404
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # v1.7.4：默认拦截 + 显式白名单。匿名请求在 process_view 阶段被拦下（跳 LOGIN_URL
+    # 并带回 next），不再依赖逐个视图挂装饰器；匿名入口必须显式标注 @login_not_required。
+    # 位置要求：必须在 AuthenticationMiddleware 之后（process_view 需要 request.user）。
+    'django.contrib.auth.middleware.LoginRequiredMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]

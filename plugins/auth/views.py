@@ -7,6 +7,7 @@ v1.7.1（P1-14）：登录失败计数限流——同一「用户名 + 来源 IP
 import hashlib
 
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_not_required
 from django.core.cache import cache
 from django.shortcuts import redirect, render
 from django.utils.translation import gettext as _
@@ -43,6 +44,7 @@ def _record_failure(request, username):
     return failures
 
 
+@login_not_required        # v1.7.4：匿名入口（否则 LoginRequiredMiddleware 造成无限重定向）
 def login_view(request):
     if request.user.is_authenticated:
         return redirect('index')
@@ -67,11 +69,13 @@ def login_view(request):
     return render(request, 'login.html', {'error': error, 'username': username})
 
 
+@login_not_required        # v1.7.4：未登录点「退出」不该被跳去登录页
 def logout_view(request):
     logout(request)
     return redirect('index')
 
 
+@login_not_required        # v1.7.4：登录页「忘记密码」入口，匿名可达
 def password_reset_notice(request):
     """密码重置占位页：v1.5 只提供入口，不发送邮件、不伪造重置。"""
     return render(request, 'auth/password_reset_notice.html')

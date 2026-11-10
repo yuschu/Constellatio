@@ -2,6 +2,14 @@
 
 v1.5.7：语言中间件归属容器——language 插件停用后仍沿用最后设置的语言。
 v1.5.8：主题运行时切换——按 Cookie 选择主题，模板由 ThemeLoader 按请求解析。
+v1.7.4：登录守卫改由框架中间件承担，职责划分如下（三层不要混）：
+  1. `django.contrib.auth.middleware.LoginRequiredMiddleware`（框架，settings.MIDDLEWARE
+     第 9 位）只管「登没登录」：匿名请求在 `process_view` 阶段就被拦下，跳 `LOGIN_URL`
+     并带回 `next`；唯一放行方式是视图上显式标注 `@login_not_required`。
+  2. `plugin_host.permissions.require_perm`（插件视图装饰器）只管「有没有权限码」：
+     在登录之后判定，缺权限码 302 回工作台。不在中间件里做权限判定。
+  3. 本文件的三个中间件只管语言默认值 / 主题选择 / 插件启停路由（404），
+     都不做身份或权限判定。
 """
 
 from django.conf import settings

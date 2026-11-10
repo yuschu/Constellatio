@@ -3,6 +3,7 @@
 from django.apps import apps as dj_apps
 from django.conf import settings
 from django.contrib.auth import get_user_model, login
+from django.contrib.auth.decorators import login_not_required
 from django.shortcuts import redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _
@@ -61,6 +62,7 @@ def _resolve_user(payload):
     return user, True
 
 
+@login_not_required        # v1.7.4：SSO 表单页匿名可达（GET 展示 / POST 提交 Ticket 回本 URL）
 @ensure_csrf_cookie
 def sso_login_view(request):
     """GET/POST /plugins/sso/login/?ticket=...：企业门户跳转入口 + 手工 Ticket 表单。"""
@@ -95,6 +97,7 @@ def sso_login_view(request):
     })
 
 
+@login_not_required        # v1.7.4：登录页「企业 SSO 登录」按钮的入口，匿名可达
 def sso_entry(request):
     """登录页按钮入口：无 Ticket 时展示企业 SSO 说明。"""
     if request.user.is_authenticated:

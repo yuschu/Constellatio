@@ -1,11 +1,14 @@
 """language 插件视图：语言切换（持久 Cookie，插件停用后仍沿用最后设置的语言）。"""
 
 from django.conf import settings
+from django.contrib.auth.decorators import login_not_required
 from django.shortcuts import redirect
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 
+# 白名单放在装饰器链最外层：语义明确，不依赖 wraps 的 __dict__ 复制行为
+@login_not_required
 @require_POST
 def language_switch(request):
     """POST lang=zh-hans|en；写持久 Cookie 后回到 next / Referer / 工作台。
