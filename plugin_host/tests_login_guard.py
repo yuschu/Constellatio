@@ -116,8 +116,14 @@ class LoginGuardBehaviorTests(TestCase):
         location = urlsplit(response.headers['Location'])
         self.assertEqual(parse_qs(location.query).get('next'), [target])
 
-        page = self.client.get(location.path)
-        self.assertContains(page, 'name="next"')      # 隐藏域真的渲染出来了
+        page = self.client.get(location.path + '?' + location.query)
+        html = page.content.decode()
+        # 断言表单字段必须带 value 或按所属 action 定位：登录页上有两个 name="next"
+        # （语言切换表单带 request.get_full_path，登录表单带回跳目标），
+        # 只断言 'name="next"' 会两处同时命中而误通过。
+        self.assertEqual(html.count('name="next"'), 2)
+        expected = 'name="next" value="%s"' % target.replace('&', '&amp;')
+        self.assertEqual(html.count(expected), 1)
 
         response = self.client.post(
             LOGIN_URL, {'username': 'guard_admin', 'password': 'GuardAdmin@2026', 'next': target})
