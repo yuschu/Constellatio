@@ -56,6 +56,8 @@
 
 * 🧱 共享缓存（v1.7.3）：缓存后端换 `DatabaseCache`（复用现有 MySQL/sqlite，零新依赖），登录失败限流与 SSO Ticket 防重放靠 `cache.add` 主键冲突跨 gunicorn worker 成立；容器启动自动 `createcachetable`
 
+* 🛡 登录守卫默认拦截（v1.7.4）：`LoginRequiredMiddleware` 让所有视图默认要求登录，匿名入口收敛为 6 个显式 `@login_not_required`（登录 / 退出 / 忘记密码 / 语言切换 / SSO 两入口）；「无守卫路由集合」与「匿名可达集合」用两条集合护栏钉死，新增视图忘加守卫会直接测试报红
+
 * 🐳 Docker 一键部署：`docker compose up -d`（MySQL8 + Gunicorn + WhiteNoise，跨平台）
 
 ## 🛠 技术栈
@@ -197,8 +199,9 @@ Constellatio/
 | [docs/plugin-dev-v171.md](docs/plugin-dev-v171.md)                             | 插件开发 | v1.7.1：安全与并发修复包（行锁 / 对象级鉴权 / 缓存与分页 / 传输安全 / ruff + CI） |
 | [docs/plugin-dev-v172.md](docs/plugin-dev-v172.md)                             | 插件开发 | v1.7.2：公告极简化（单列流 / 自动已读）+ 考勤规则（上下班 / 宽限 / 工作日 / 补卡回溯） |
 | [docs/plugin-dev-v173.md](docs/plugin-dev-v173.md)                             | 插件开发 | v1.7.3：共享缓存（DatabaseCache）—— 登录限流 / SSO 防重放跨 worker 成立 |
+| [docs/plugin-dev-v174.md](docs/plugin-dev-v174.md)                             | 插件开发 | v1.7.4：登录守卫中间件化 —— 默认拦截 + 6 个显式白名单 + 两条集合护栏 |
 | [docs/roadmap.md](docs/roadmap.md)                                             | 规划   | 差距矩阵、v1.5–v2.0 迭代路线、修复项与文档债务                  |
 
 ## 📌 状态
 
-**v1.7.3 共享缓存已交付并部署**（357 项测试全绿）：`CACHES` 换 `DatabaseCache`（`constellatio_cache`，零新依赖），登录失败限流与 SSO Ticket 防重放靠 `cache.add` 主键冲突在 3 worker 下成立（验收：连错 6 次被拦、同一 Ticket 第二次即拒），容器启动自动建表。上一交付 **v1.7.2**（公告极简化 + 考勤规则，352 项测试）。→ 下一步：v1.7.4 认证后端插件化
+**v1.7.4 登录守卫中间件化已交付并部署**（365 项测试全绿）：`LoginRequiredMiddleware` 让视图默认要求登录，匿名入口收敛为 6 个显式 `@login_not_required`；`theme/switch/` 保持受保护；两条集合护栏（静态「无守卫路由」+ 运行时「匿名可达」）钉死匿名面，摘掉任一白名单会同时打红行为测试与集合断言。上一交付 **v1.7.3**（共享缓存，357 项测试）。→ 下一步：v1.7.5 认证后端插件化（第一项：限流计数原子化 P2）
