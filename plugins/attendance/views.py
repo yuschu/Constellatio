@@ -6,7 +6,6 @@ from datetime import time as dtime
 
 from django.apps import apps as dj_apps
 from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count, Q
 from django.http import JsonResponse
@@ -17,6 +16,7 @@ from django.utils.dateparse import parse_date, parse_datetime
 from django.utils.translation import gettext as _
 
 from plugin_host.charts import get_active_chart
+from plugin_host.pagination import paginate
 from plugin_host.permissions import require_perm
 from plugin_host.signals import attendance_checked
 
@@ -304,7 +304,7 @@ def attendance_records(request):
     stats_department_id = int(department_id) if department_id.isdigit() else None
     month_stats, chart_rows = _month_stats(month_first, stats_department_id)
 
-    page_obj = Paginator(records, 25).get_page(request.GET.get('page'))
+    page_obj = paginate(request, records)
 
     return render(request, 'attendance/attendance_records.html', {
         'start_value': start.strftime('%Y-%m-%dT%H:%M'),

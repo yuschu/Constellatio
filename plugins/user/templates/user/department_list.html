@@ -23,7 +23,7 @@
             </tr>
           </thead>
           <tbody>
-            {% for d in departments %}
+            {% for d in page_obj %}
             <tr>
               <td>{{ d.id }}</td>
               <td>{{ d.name }}</td>
@@ -69,6 +69,7 @@
             {% endfor %}
           </tbody>
         </table>
+        {% include 'includes/pagination.html' %}
       </div>
     </div>
   </div>

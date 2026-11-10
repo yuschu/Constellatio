@@ -5,13 +5,13 @@ from datetime import timedelta
 from django.apps import apps as dj_apps
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
 from django.db import transaction
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from plugin_host.pagination import DEFAULT_PAGE_SIZE, paginate
 from plugin_host.permissions import require_perm
 
 from . import forms
@@ -21,8 +21,8 @@ from .services import approve, reject, sign_approve, sign_reject, submit
 
 User = get_user_model()
 
-# v1.7.1（P1-20）：列表统一分页 25 条/页
-LIST_PAGE_SIZE = 25
+# v1.7.1（P1-20）：列表统一分页；v1.7.6 改为引用容器常量，避免各插件各写一个数字
+LIST_PAGE_SIZE = DEFAULT_PAGE_SIZE
 
 
 def _may_view(user, approval):
@@ -117,8 +117,10 @@ def approval_list(request):
         Approval.objects
         .filter(applicant=request.user, applicant_hidden=False)
         .select_related('applicant', 'approver')
+        # v1.7.6：分页前定死顺序，补唯一键 tiebreaker，避免同一秒创建的记录翻页重复/漏行
+        .order_by('-created_at', '-id')
     )
-    page_obj = Paginator(approvals, LIST_PAGE_SIZE).get_page(request.GET.get('page'))
+    page_obj = paginate(request, approvals, LIST_PAGE_SIZE)
     return render(request, 'approval/approval_list.html', {
         'approvals': page_obj,
         'page_obj': page_obj,
@@ -141,7 +143,7 @@ def approval_pending(request):
         signers__signer=request.user, signers__signed=False,
     ).select_related('applicant', 'approver')
     merged = list(approvals) + [a for a in counter if a not in approvals]
-    page_obj = Paginator(merged, LIST_PAGE_SIZE).get_page(request.GET.get('page'))
+    page_obj = paginate(request, merged, LIST_PAGE_SIZE)
     return render(request, 'approval/approval_pending.html', {
         'approvals': page_obj,
         'page_obj': page_obj,
@@ -153,8 +155,8 @@ def approval_pending(request):
 def approval_cc(request):
     """抄送我的（v1.5.17：仅管理岗可见，L3 隐藏）。"""
     approvals = request.user.cc_approvals.select_related(
-        'applicant', 'approver').order_by('-created_at')
-    page_obj = Paginator(approvals, LIST_PAGE_SIZE).get_page(request.GET.get('page'))
+        'applicant', 'approver').order_by('-created_at', '-id')
+    page_obj = paginate(request, approvals, LIST_PAGE_SIZE)
     return render(request, 'approval/approval_cc.html', {
         'approvals': page_obj,
         'page_obj': page_obj,

@@ -13,6 +13,7 @@ from django.contrib.auth.models import Permission
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
 
+from plugin_host.pagination import paginate
 from plugin_host.permissions import require_perm
 from plugin_host.signals import (
     dept_delete_requested,
@@ -112,9 +113,10 @@ def department_list(request):
         form = DepartmentForm()
         dept_id = None
 
-    departments = Department.objects.all().order_by('id')
+    # v1.7.6：部门列表分页（排序在分页之前定死）
+    departments = paginate(request, Department.objects.all().order_by('id'))
     return render(request, 'user/department_list.html', {
-        'departments': departments, 'form': form, 'dept_id': dept_id,
+        'page_obj': departments, 'form': form, 'dept_id': dept_id,
         'edit_dept': Department.objects.filter(pk=dept_id).first() if dept_id else None,
     })
 
@@ -124,8 +126,10 @@ def department_list(request):
 # ---------------------------------------------------------------------------
 @require_perm('user_manage')
 def user_list(request):
-    users = User.objects.select_related('department').prefetch_related('roles').order_by('id')
-    return render(request, 'user/user_list.html', {'users': users})
+    # v1.7.6：用户列表分页（排序在分页之前定死）
+    users = paginate(
+        request, User.objects.select_related('department').prefetch_related('roles').order_by('id'))
+    return render(request, 'user/user_list.html', {'page_obj': users})
 
 
 @require_perm('user_manage')

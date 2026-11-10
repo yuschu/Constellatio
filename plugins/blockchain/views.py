@@ -11,6 +11,7 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 
 from plugin_host.charts import get_active_chart
+from plugin_host.pagination import paginate
 from plugin_host.permissions import require_perm
 from plugin_host.registry import PLUGIN_REGISTRY
 
@@ -113,17 +114,41 @@ def _window_stats(days):
     return stats, table
 
 
+BLOCKCHAIN_PAGE_SIZE = 50
+
+
+def _stats_snapshot(days=DEFAULT_STATS_DAYS):
+    """看板 60 秒快照（v1.7.6）：翻页不再重复聚合，也不会出现「直接访问第 2 页看板空」。
+
+    与 `_verify_snapshot` 同一套路：键含天数与当天日期，跨天自动换键。
+    每次请求多 1 次 cache.get（DatabaseCache 一次 SELECT），省掉 2 次聚合查询。
+    """
+    key = f'blockchain:stats:{days}:{timezone.localdate()}'
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+    result = _window_stats(days)
+    cache.set(key, result, 60)
+    return result
+
+
 @require_perm('blockchain_view')
 def blockchain_list(request):
-    """留痕链列表（倒序） + 校验结果 + 近 30 天统计看板。"""
-    records = BlockchainRecord.objects.select_related('operator')[:100]
+    """留痕链列表（倒序，50/页） + 校验结果 + 近 30 天统计看板。
+
+    v1.7.6：原来硬切 [:100]，第 100 条以前的记录 UI 上不可达；改为分页并保留总数，
+    看板走 60 秒快照（每页都渲染，不会出现「直接打开第 2 页看板是空的」）。
+    """
+    records = BlockchainRecord.objects.select_related('operator').order_by('-id')
+    page_obj = paginate(request, records, BLOCKCHAIN_PAGE_SIZE)
     ok, broken_id = _verify_snapshot()
-    _stats, table = _window_stats(DEFAULT_STATS_DAYS)
+    _stats, table = _stats_snapshot(DEFAULT_STATS_DAYS)
     return render(request, 'blockchain/blockchain_list.html', {
-        'records': records,
+        'records': page_obj,
+        'page_obj': page_obj,
         'verify_ok': ok,
         'broken_id': broken_id,
-        'total': BlockchainRecord.objects.count(),
+        'total': page_obj.paginator.count,
         'chart': get_active_chart(),
         'chart_days': DEFAULT_STATS_DAYS,
         'chart_labels': table['labels'],
