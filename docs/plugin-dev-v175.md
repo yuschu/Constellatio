@@ -65,17 +65,25 @@
 
 ## 三、第二步：实现记录（已落地）
 
-### 3.1 `LOGGING`（settings）
+### 3.1 `LOGGING`（settings，已落地）
 
 ```python
-LOG_DIR = BASE_DIR / 'logs'          # 本地；*.log 已被 .gitignore 覆盖
-LOG_TO_FILE = os.environ.get('DJANGO_LOG_TO_FILE', '1') == '1'
+LOG_DIR = BASE_DIR / 'logs'          # 本地；*.log / logs/ 已被 .gitignore、.dockerignore 覆盖
+LOG_TO_FILE = os.environ.get('DJANGO_LOG_TO_FILE', '0') == '1'   # 默认 0：容器只走 console
 ```
 - `formatters.verbose`：`%(asctime)s %(levelname)s %(name)s [%(request_id)s] %(message)s`
-- `filters.request_id`：读 contextvar，缺省 `-`（非请求上下文：shell / 启动期）
-- `handlers`：`console`（StreamHandler，容器主通道）+ `file`（`RotatingFileHandler`，`logs/constellatio.log`，5MB × 5）
-- `loggers`：`django`(INFO)、`plugins`(INFO)、`plugin_host`(INFO)→ 两个 handler；`django.request`(WARNING) 保留；root WARNING → console
-- 待确认：容器里是否默认也写文件（`DJANGO_LOG_TO_FILE=0` 可关）。倾向默认开，容器内 `/app/logs` 可写，日志卷不进 git。
+- `filters.request_id`：**优先级 `record.request.request_id` > contextvar > `-`**（见 3.2 的时序坑）
+- `handlers`：`console`（StreamHandler）常开；`file`（`RotatingFileHandler`，`logs/constellatio.log`，5MB × 5）
+  **仅在 `LOG_TO_FILE=1` 时拼进字典**——`dictConfig` 会把 `handlers` 里定义过的每一个都实例化，即便没有 logger 引用它，
+  写死字典会让容器在 `LOG_TO_FILE=0` 时照样建日志文件（实测踩过）
+- `loggers`：`django`(INFO)、`django.request`(WARNING)、`plugins`(INFO)、`plugin_host`(INFO)；
+  **`plugins` / `plugin_host` 保持 `propagate=True`**，root **不配 handler**
+- **推论（Django 默认行为，不是本版选择）**：`root {'level': 'WARNING'}` 意味着第三方库的 INFO 被丢弃；
+  `logging.lastResort` 只在「整条链上一个 handler 都没找到」时才出手，兜的是**完全未配置**的 WARNING 及以上。
+  本项目里 `plugins` / `plugin_host` 自己有 handler，`callHandlers` 的 `found` 已 > 0，不会再触发 `lastResort`，
+  所以既不会重复输出，`assertLogs()`（默认挂 root）也仍能收到记录。
+- 轮转策略：容器 3 worker **不写文件**（多进程各自 rotate 同一文件会丢日志/写进已改名的旧文件），轮转交给
+  docker 日志驱动或宿主 `logrotate`；本地 runserver 单进程才开文件。
 
 ### 3.2 `request_id`
 
@@ -118,6 +126,10 @@ def process_exception(self, request, exception):
   request_id 一定已存在；响应头由外层 RequestId 最后补上。反过来（Guard 在外）兜底日志会记成 `-`，排障对不上号。
 - 边界：`process_exception` 只接得住「视图执行期间」的异常。`RequestIdMiddleware` 自身 `__call__` 前段、
   以及 `SecurityMiddleware` 的异常它接不到，那些落到 Django 最后的 `response_for_exception`（不额外加中间件）。
+- **栈只记一次**：未预期异常走 `logger.error('未处理异常 %s: %s ...')`（**不带 exc_info**），完整栈由
+  `django.request` 的 ERROR 记一次（`log_response` 对 5xx 必带 `exc_info`）。原先 guard 里用 `logger.exception`
+  会让同一次 500 打两条完整栈——已改并有用例钉住（`test_unhandled_error_logs_once_with_single_stack`）。
+  400/403 的两条 warning 保留：记的是**业务原因**，`django.request` 只记状态码，信息不重复。
 
 ### 3.5 JSON 接口错误体统一
 
@@ -174,15 +186,22 @@ def process_exception(self, request, exception):
   `400 {"code": "invalid_days", "message": "时间窗口应为 1–90 天"}`，`keys=['code','message']`、`含 error=False`、带 `X-Request-Id`。
 - 400 / 403 的**生产触发点**：目前只有测试夹具里的视图会抛 `BusinessError` / `ObjectPermissionDenied`
   （见 §六 第 4 条），所以这两条走的是用例验证而不是容器 HTTP 冒烟。
+- **一次 500 只有一条完整栈**（收尾修正后实测）：日志流里 `plugin_host` 记
+  `ERROR 未处理异常 RuntimeError: boom for test (GET /boom/)`（无栈），`django.request` 记
+  `ERROR Internal Server Error: /boom/` + 唯一一条 `Traceback`；两条都带同一 `request_id`。
 
 ## 六、待办观察（不在本版修）
 
 1. `404.html` 等三页 `extends base.html`，会跑上下文处理器（含 `notifications` 查库）。**DB 不可用时 404 页本身可能渲染失败退化为 500**；500 页是独立的，不受影响。若认为这条不可接受，可改成三页也不依赖上下文（代价是没有侧栏外壳）。
 2. 第一步交付的 500 页文案暂为「如需协助，请联系管理员」，因为 `X-Request-Id` 响应头要到第二步才存在——第二步实现后回填。
 3. v1.7.5 原排的「认证后端插件化 + P2 计数原子化」顺延 v1.7.6，roadmap 改号时按既有先例写明让位原因。
-4. **400/403 目前没有生产触发方**：`BusinessError` / `ObjectPermissionDenied` 只有测试夹具在用，业务代码还没接入。
-   `templates/403.html` 从本版起有了真实代码路径（`ExceptionGuardMiddleware`），但仍无业务抛点——后续把对象级越权
-   （审批详情、附件下载等）从「302 回工作台」迁过来时要一起补。
+4. **越权反馈语义统一（302 / 403 / 404 三选一）——单独立项，排在 v1.7.6 之后**：
+   今天 43 处装饰器 + 42 条 URL 的越权反馈统一是「302 回工作台」，`BusinessError` / `ObjectPermissionDenied`
+   只有测试夹具在抛。**不做局部迁移**：只把审批详情/附件下载迁到 403 会造出「同一个用户被拒，有时回工作台、
+   有时看到 403 页」的第二种反馈——正是 v1.7.4 刚花 7 处代码修掉的那类不一致。
+   三种语义的取舍是需要产品决策的，决定后再一次性迁移：302（不泄漏对象是否存在）/ 403（泄漏「对象存在但无权」，
+   便于用户知道找谁要权限）/ 404（完全不泄漏，适合对外接口）。`BusinessError` 的真实抛点（如「审批重复提交」
+   「补卡超窗口」）与它同批做，避免两次改响应形状和用例。
 5. **测试输出会带日志**：console handler 在跑测试时同样生效，404/500 用例会往 stderr 打 WARNING/ERROR。
    如需安静，可在测试配置里把 `django.request` 降级——但会降低「日志链路本身被测到」的可见性，本版不动。
 6. **`logs/` 与 `*.log` 已进 `.gitignore` / `.dockerignore`**：本地 `DJANGO_LOG_TO_FILE=1` 产生的日志不会被打进镜像
