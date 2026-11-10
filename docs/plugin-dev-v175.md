@@ -2,8 +2,8 @@
 
 > 关联：容器（settings / middleware / templates / exceptions）、attendance 与 blockchain 的 JSON 接口
 > 版本：v1.7.5 · 文档日期：2026-11-10
-> 状态：**第一步（错误页模板）已实现；第二步（日志与异常分类）方案待确认**
-> 基线：tag `v1.7.4`（368 项测试全绿）；第一步交付后 **372 项**
+> 状态：**✅ 已实现**（两步都落地：错误页模板 + 日志/request_id/异常分类，380 项测试全绿）
+> 基线：tag `v1.7.4`（368 项）；第一步 372 项；第二步完成 **380 项**（+8）
 > 编号说明：v1.7.5 原排「认证后端插件化 + 限流计数原子化 P2」，本版改为本项 → 两项顺延 **v1.7.6**（P2 仍第一项），改号原因随后同步到 roadmap。
 
 ## 一、问题
@@ -63,7 +63,7 @@
 - 容器（`DJANGO_DEBUG=0`，实测容器内 `settings.DEBUG = False`）：`GET /no-such-page/` → **404，含品牌 / 404 / 返回工作台，不含 Django 默认页特征**。
 - 500 页在本地 handler 直测渲染通过；**容器级 500 冒烟依赖第二步**（需要一个会抛异常的视图），届时一起补。
 
-## 三、第二步方案（待确认后再实现）
+## 三、第二步：实现记录（已落地）
 
 ### 3.1 `LOGGING`（settings）
 
@@ -102,40 +102,52 @@ class ObjectPermissionDenied(PermissionDenied):   # 对象级越权 → 403
 def process_exception(self, request, exception):
     try:
         if isinstance(exception, BusinessError):
-            logger.warning('业务校验失败 code=%s %s', exception.code, exception)   # 含 request_id
-            return _error_response(request, 400, exception.code, str(exception))
+            logger.warning('业务校验失败 code=%s msg=%s', exception.code, exception)
+            return self._error_response(request, 400, exception.code, exception.message)
         if isinstance(exception, (ObjectPermissionDenied, PermissionDenied)):
-            logger.warning('越权 code=%s %s', code, exception)
-            return _error_response(request, 403, code, msg)
-        logger.exception('未处理异常 %s %s', request.method, request.get_full_path())  # 完整栈
+            logger.warning('拒绝访问 code=%s %s %s', code, request.method, request.get_full_path())
+            return self._error_response(request, 403, code, '无权访问该对象')
+        logger.exception('未处理异常 %s %s', request.method, request.get_full_path())
         return None      # 交回 Django → 默认 500 处理器 → templates/500.html
     except Exception:
-        logger.exception('ExceptionGuardMiddleware 自身失败（已降级为默认处理）')
+        logger.exception('ExceptionGuardMiddleware 自身失败，已降级为默认处理')
         return None
 ```
 - 自身用 `try` 包住，任何失败只记日志、`return None`，绝不外抛（避免错误处理器再炸一次）。
-- 位置：`LoginRequiredMiddleware` 之后、`MessageMiddleware` 之前即可（`process_exception` 逆序执行，不需要特别靠外）。
+- **位置写死为 `Security → RequestId → ExceptionGuard → …`**：Guard 在 RequestId 之内，兜底日志里的
+  request_id 一定已存在；响应头由外层 RequestId 最后补上。反过来（Guard 在外）兜底日志会记成 `-`，排障对不上号。
+- 边界：`process_exception` 只接得住「视图执行期间」的异常。`RequestIdMiddleware` 自身 `__call__` 前段、
+  以及 `SecurityMiddleware` 的异常它接不到，那些落到 Django 最后的 `response_for_exception`（不额外加中间件）。
 
 ### 3.5 JSON 接口错误体统一
 
 - 判定：`request.path` 以 `/stats/` 结尾，或 `Accept` 含 `application/json` → `JsonResponse({'code': ..., 'message': ...}, status=...)`；否则渲染 `400.html`/`403.html` 并把 message 传进模板（`400.html` 增一个可选 `message` 显示块）。
-- **契约变更**：`attendance_stats` 与 `blockchain_stats` 现在的错误体是 `{'error': 'invalid_month' | 'invalid_days'}`，要改成 `{'code': ..., 'message': ...}`。已确认**前端没有消费 `error` 字段**（`grep` 模板/JS 为空），但**有 3 处既有测试断言**要随契约更新：
+- **契约变更（已落地）**：`attendance_stats` 与 `blockchain_stats` 原错误体 `{'error': 'invalid_month' | 'invalid_days'}` 已改成
+  `{'code': ..., 'message': ...}`。前端没有消费 `error` 字段（`grep` 模板/JS 为空），但有 3 处既有断言随契约更新，
+  并各加一条反向断言 `assertNotIn('error', payload)` 防止将来「兼容」回退成两套形状：
   - `plugins/attendance/tests.py:244` → `response.json()['error'] == 'invalid_month'`
   - `plugins/blockchain/tests.py:140-145` → `['error'] == 'invalid_days'`（两处 subTest）
   这是**契约变更导致的断言改写**，不是「为了让测试变绿改断言」，会在提交信息里单独注明。若你希望零改动，可改为「保留 `error` 字段 + 新增 `code`/`message`」的兼容方案（两套形状并存，不推荐）。
 
-### 3.6 第二步测试计划（预计 +6，372 → 378）
+### 3.6 第二步测试（实际 +8，372 → 380）
+
+`plugin_host/tests_exception_guard.py`，三个开关全部写死：`Client(raise_request_exception=False)`、
+`override_settings(DEBUG=False)`、夹具 URLconf。
 
 | # | 用例 | 断言 |
 |---|---|---|
-| 5 | `test_business_error_returns_400_with_message` | 触发 `BusinessError('库存不足')` → 400，页面/JSON 里 message 原样出现 |
-| 6 | `test_object_permission_denied_returns_403` | 触发 `ObjectPermissionDenied` → 403 |
-| 7 | `test_unhandled_error_logs_stack_and_returns_500` | `assertLogs('plugin_host', 'ERROR')` + 500 页无栈；日志含 `Traceback` 与 `request_id` |
-| 8 | `test_request_id_header_on_success_and_error` | 200 与 500 响应都带 `X-Request-Id`，且长度 8 |
-| 9 | `test_stats_endpoint_error_body_shape` | `/plugins/blockchain/stats/?days=0` → 400，JSON 只有 `code`/`message` |
-| 10 | `test_guard_failure_does_not_escape` | monkeypatch 让 guard 内部抛异常 → 仍返回 500、只记日志、不外抛 |
+| 9 | `test_business_error_returns_400_with_message` | 400 页面来自 `templates/400.html`：品牌在、`400` 在、message 原样在、无栈 |
+| 10 | `test_object_permission_denied_returns_403` | 403 页面来自 `templates/403.html`：品牌在、`权限不足` 在、**不回显 exception 文本** |
+| 11 | `test_stats_path_gets_json_error_body` | 路径以 `/stats` 结尾时错误体 `{code,message}`，`assertNotIn('error', payload)` |
+| 12 | `test_unhandled_error_logs_stack_and_returns_500` | 500 页含品牌、无 `Traceback`、无异常原文；`assertLogs('plugin_host','ERROR')` 里存在带 `exc_info` 的记录 |
+| 13 | `test_request_id_header_on_success_and_error` | 200 与 500 都带 8 位 `X-Request-Id`，两次不同 |
+| 14 | `test_guard_failure_does_not_escape` | monkeypatch `_error_response` 抛异常 → 仍返回 500 页面，不外抛 |
+| 15 | `test_prefers_request_attribute` | filter 取 `record.request.request_id`（4xx/5xx 日志发生在中间件返回之后） |
+| 16 | `test_falls_back_to_contextvar_then_dash` | 无 request 时取 contextvar，请求外为 `-`，reset 后不串号 |
 
-需要新增测试夹具 `plugin_host/tests_urls_error.py`（只有会抛异常的视图，用 `override_settings(ROOT_URLCONF=...)` 挂载），避免为了测试往生产 URLconf 塞视图。
+夹具 `plugin_host/tests_urls_error.py` 用 `override_settings(ROOT_URLCONF=...)` 挂载，不往生产 URLconf 塞视图。
+**夹具必须把真实 URLconf `include` 进来**：错误页模板里有 `{% url 'index' %}` / `{% url 'theme_switch' %}` /
+`{% url 'language:language_switch' %}`，夹具若不提供这些名字，404 页渲染会抛 `NoReverseMatch` 变成 500，把用例带偏（实测踩过）。
 
 ## 四、不做 / 边界
 
@@ -144,8 +156,34 @@ def process_exception(self, request, exception):
 - 不做 Sentry/APM 等外部上报（无新依赖）。
 - **`template.render()` 的字符串不得来自用户输入**——404 页里 `request_path` 目前只用于服务端拼 HTML，模板中未回显异常内容；后续若要显示「你访问的路径」，必须用 `{{ request_path }}`（Django 会转义），不能 `|safe`。
 
-## 五、待办观察（不在本版修）
+## 五、第二步验收记录（2026-11-10）
+
+### 5.1 回报点（LOGGING + RequestIdMiddleware 落地后）
+
+| 检查项 | 实测 |
+|---|---|
+| 容器内 handler 配置 | `LOG_TO_FILE=False`、`handlers=['console']`、`/app/logs` 不存在 |
+| 真实 HTTP 404 | 响应头 `X-Request-Id: a05d86ed`；`docker logs` 里 `WARNING django.request [a05d86ed] Not Found: /no-such-page/` |
+| 真实 500（把 `constellatio_cache` 临时改名，模拟 MySQL 故障 → 登录限流读缓存失败） | 响应头 `39ef4047`；日志 `ERROR django.request [39ef4047] Internal Server Error: /plugins/auth/login/` + **完整 Traceback（到 mysql/base.py）**；500 页含品牌、不含栈；`/app/logs` 仍不存在 |
+| 恢复缓存表后同一 POST | 200「用户名或密码错误」 |
+
+### 5.2 全量验收
+
+- 门禁：`check` 无问题 / `ruff` All checks passed / **Ran 380 tests OK**（368 → 372 → 380）。
+- 容器（`DJANGO_DEBUG=0`，3 worker）：登录后 `GET /plugins/blockchain/stats/?days=0` →
+  `400 {"code": "invalid_days", "message": "时间窗口应为 1–90 天"}`，`keys=['code','message']`、`含 error=False`、带 `X-Request-Id`。
+- 400 / 403 的**生产触发点**：目前只有测试夹具里的视图会抛 `BusinessError` / `ObjectPermissionDenied`
+  （见 §六 第 4 条），所以这两条走的是用例验证而不是容器 HTTP 冒烟。
+
+## 六、待办观察（不在本版修）
 
 1. `404.html` 等三页 `extends base.html`，会跑上下文处理器（含 `notifications` 查库）。**DB 不可用时 404 页本身可能渲染失败退化为 500**；500 页是独立的，不受影响。若认为这条不可接受，可改成三页也不依赖上下文（代价是没有侧栏外壳）。
 2. 第一步交付的 500 页文案暂为「如需协助，请联系管理员」，因为 `X-Request-Id` 响应头要到第二步才存在——第二步实现后回填。
 3. v1.7.5 原排的「认证后端插件化 + P2 计数原子化」顺延 v1.7.6，roadmap 改号时按既有先例写明让位原因。
+4. **400/403 目前没有生产触发方**：`BusinessError` / `ObjectPermissionDenied` 只有测试夹具在用，业务代码还没接入。
+   `templates/403.html` 从本版起有了真实代码路径（`ExceptionGuardMiddleware`），但仍无业务抛点——后续把对象级越权
+   （审批详情、附件下载等）从「302 回工作台」迁过来时要一起补。
+5. **测试输出会带日志**：console handler 在跑测试时同样生效，404/500 用例会往 stderr 打 WARNING/ERROR。
+   如需安静，可在测试配置里把 `django.request` 降级——但会降低「日志链路本身被测到」的可见性，本版不动。
+6. **`logs/` 与 `*.log` 已进 `.gitignore` / `.dockerignore`**：本地 `DJANGO_LOG_TO_FILE=1` 产生的日志不会被打进镜像
+   （实测镜像里 `/app/logs` 不存在；`.dockerignore` 补了 `**/*.log` 与 `logs/`，原先只有 `*.log` 漏了子目录）。
