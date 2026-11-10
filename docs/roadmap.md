@@ -2,7 +2,7 @@
 
 > 依据：`tech-stack-and-architecture.md` / `constraints-and-acceptance.md` / `development-guide.md` 的**全栈插件化**目标
 > 负责人校正（2026-10-22）：**不降级**、**补充实现**、**列入修复项**；工作约定只需「文档先行、每改必推 GitHub、每版打 tag」
-> 状态：draft-54（2026-11-10）—— **v1.4–v1.6.20 已交付**（tag **v1.6.20**），**v1.7.0 企业 SSO + 消息提醒**（259 项测试），**v1.7.1 安全与并发修复包**（323 项测试），**v1.7.2 公告极简化 + 考勤规则**（352 项测试），**v1.7.3 共享缓存**（357 项测试），**v1.7.4 登录守卫中间件化已交付**（365 项测试全绿）；下一版：v1.7.5 认证后端插件化（第一项：限流计数原子化 P2）
+> 状态：draft-54（2026-11-10）—— **v1.4–v1.6.20 已交付**（tag **v1.6.20**），**v1.7.0 企业 SSO + 消息提醒**（259 项测试），**v1.7.1 安全与并发修复包**（323 项测试），**v1.7.2 公告极简化 + 考勤规则**（352 项测试），**v1.7.3 共享缓存**（357 项测试），**v1.7.4 登录守卫中间件化已交付**（368 项测试全绿）；下一版：v1.7.5 认证后端插件化（第一项：限流计数原子化 P2）
 
 ## 一、总原则
 
@@ -84,7 +84,7 @@
 | **v1.7.1** | 安全与并发修复包（原 v1.10 候选提前） | P0-B 并发（审批行锁 / 留痕链锁 / 打卡丢更新）、P0-C 授权（对象级鉴权 / 审批人收口 / 编辑页不得改状态 / 开关仅 POST）、P1 十四项（传输安全、登录限流、注册表系统检查、开关缓存、菜单 N+1、信号隔离、分页、校验快照、工程化门禁）（`docs/plugin-dev-v171.md`） | ✅ 已交付：323 项测试 + ruff/CI + Docker 重建与 9 页冒烟 |
 | **v1.7.2** | 公告极简化 + 考勤规则 | notice：单列公告流（标题 + 正文同屏）、进入即已读、已读统计下沉为管理岗页、旧详情链接锚点兼容；attendance：`AttendanceRule` 单例（上下班 / 宽限 / 工作日 / 补卡回溯）、`/plugins/attendance/rules/` 设置页、`attendance_rule_manage` 权限、看板口径展示（`docs/plugin-dev-v172.md`） | ✅ 已交付：352 项测试 + Docker 重建与页面冒烟 |
 | **v1.7.3** | 共享缓存（跨 worker） | `CACHES` 换 `DatabaseCache`（`constellatio_cache`，`TIMEOUT=900`、`MAX_ENTRIES=10000`）；`entrypoint.sh` 在 migrate 后 `createcachetable`；README 本地步骤；`TEST_RUNNER` 为测试库建表（`docs/plugin-dev-v173.md`） | ✅ 已交付：357 项测试 + 3 worker 容器验收 + 生产 MySQL 唯一键实测 |
-| **v1.7.4** | 登录守卫中间件化（默认拦截 + 显式白名单） | `MIDDLEWARE` 插入 `LoginRequiredMiddleware`（AuthenticationMiddleware 之后）；auth 三视图 + sso 两视图 + language 切换共 6 个 `@login_not_required`；两条集合护栏钉住匿名可达面；admin 行为断言（`docs/plugin-dev-v174.md`） | ✅ 已交付：365 项测试 + 3 worker 容器验收 |
+| **v1.7.4** | 登录守卫中间件化（默认拦截 + 显式白名单） | `MIDDLEWARE` 插入 `LoginRequiredMiddleware`（AuthenticationMiddleware 之后）；auth 三视图 + sso 两视图 + language 切换共 6 个 `@login_not_required`；两条集合护栏钉住匿名可达面；admin 行为断言（`docs/plugin-dev-v174.md`） | ✅ 已交付：368 项测试 + 3 worker 容器验收（含收尾的登录回跳） |
 | **v1.7.5** | 认证后端插件化（第一项：限流计数原子化 P2） | **首项**：`plugins/auth` 新增独立计数表 `LoginFailureCounter`（`transaction.atomic` + `select_for_update` + `F('count')+1`）替代缓存 get+set，补 4 条用例（并发自增 / 窗口过期重置 / 成功登录清零 / 超阈值拦截）；随后 `AUTHENTICATION_BACKENDS` Provider + 一个无外部依赖的示例后端（如用户名/邮箱） | 切换后端可登录；默认后端仍可用；限流计数跨 worker 精确 |
 | **v1.8** | 模板引擎插件化 | Django / Jinja2 Provider；先做多引擎共存或单插件切换 | 待确认深度（见第六节） |
 | **v1.9** | 插件契约补全 | `models` / `dependencies` / `admin`；依赖顺序与环校验；启用一致性校验 | 缺失依赖启动即报错；停用被依赖插件被拦截 |
@@ -107,7 +107,7 @@
 6. ✅ **测试盲区**（v1.7.1）：注册表校验、开关缓存、登录限流、对象级鉴权、链写入、打卡并发均已补测；`plugin_host/tests_registry.py` 用「逐条 has_perm」参考实现验证菜单权限集合等价。
 7. ◻ **限流计数原子化（P2，v1.7.5 第一项）**：v1.7.3 交付前自检实测——6 路并发错密码全部计错、最终计数 2/4/4（串行口径应在 5 处封顶并拦第 6 次），根因是 `_record_failure()` 的 get+set 丢更新；`DatabaseCache` 未覆盖 `incr`，继承的 `BaseCache.incr` 同样是 get+set 且 `set` 不传 timeout（窗口被重置为默认 TTL）。方案：auth 插件独立计数表 + `select_for_update` + `F('count')+1`。**注意**：不能在 `constellatio_cache.value` 上做 SQL 自增（存的是 `base64(pickle)`）。
 8. ◻ **运行日志缺失（v1.10 日志项）**：本项目至今没有 `LOGGING` 配置，MySQL 重启导致登录页 500 时，容器日志只有 Django 默认 traceback，没有 request_id 与请求上下文，运维排查无抓手；不在 v1.7.3 顺手加。
-9. ◻ **账号密码登录不消费 `next`（v1.7.4 验收暴露，建议 P2）**：`plugins/auth/views.py` 成功分支 `return redirect('index')`，`login.html` 也无 `next` 隐藏域，导致 `LoginRequiredMiddleware` 带回的 `next` 被丢弃（SSO 通道已能回跳）。最小修法：`login_view` 取 `POST/GET next` + `url_has_allowed_host_and_scheme` 校验后跳转，模板补隐藏域，补「回跳」与「外站 next 被拒」两条用例。
+9. ✅ **账号密码登录不消费 `next`（v1.7.4 收尾已修）**：装 `LoginRequiredMiddleware` 后 42 条 URL 全部开始带 `next`，把原来的「偶发」放成「默认路径」，且 SSO 通道已能回跳、同一登录页两种结果，故在 v1.7.4 收尾用 `fix(auth)` 修复：`_next_target()` + `_redirect_after_login()`（`url_has_allowed_host_and_scheme` 校验，外站与 `//host` 均拒）+ 两套主题 `login.html` 补隐藏域 + `render` 上下文补 `next`；补 3 条用例（回跳带查询串 / 外站拒 / 协议相对拒），测试 365 → 368。不动 v1.7.4 tag。
 
 ## 五、文档债务（需在对应版本同步）
 
