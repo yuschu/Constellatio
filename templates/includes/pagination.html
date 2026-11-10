@@ -1,0 +1,20 @@
+{% load i18n %}
+{# v1.7.6 公共分页块：两套主题共用（r-* 是项目自定义 class，不依赖 Bootstrap .pagination）。 #}
+{# 链接一律用 {% querystring %} 生成：它会带上现有 query 参数再改 page， #}
+{# 所以 status / type / start / end / department / q 等筛选条件翻页后不会丢。 #}
+{% if page_obj.paginator.num_pages > 1 %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3" style="font-size:.8rem;">
+  <span class="text-muted">
+    {% blocktranslate with page=page_obj.number total_pages=page_obj.paginator.num_pages count=page_obj.paginator.count %}第 {{ page }} / {{ total_pages }} 页 · 共 {{ count }} 条{% endblocktranslate %}
+  </span>
+  <span class="d-flex gap-2">
+    {% if page_obj.has_previous %}
+    {# 上一页是第 1 页时删掉 page 参数，避免 URL 里留下无意义的 ?page=1 #}
+    <a class="r-offset-hover" href="{% if page_obj.previous_page_number == 1 %}{% querystring page=None %}{% else %}{% querystring page=page_obj.previous_page_number %}{% endif %}">← {% trans "上一页" %}</a>
+    {% endif %}
+    {% if page_obj.has_next %}
+    <a class="r-offset-hover" href="{% querystring page=page_obj.next_page_number %}">{% trans "下一页" %} →</a>
+    {% endif %}
+  </span>
+</div>
+{% endif %}
