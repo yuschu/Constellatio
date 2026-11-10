@@ -11,6 +11,8 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
+from plugin_host.models import AuditModel
+
 # 旧口径（v1.7.1 及之前硬编码的上下班时间）：现仅作为 AttendanceRule 的字段默认值，
 # 状态判定一律读 AttendanceRule.get_solo()，不得再直接用这两个常量。
 WORK_START = dtime(9, 0)
@@ -30,7 +32,7 @@ def _shift(clock, minutes):
     return moment.time()
 
 
-class AttendanceRule(models.Model):
+class AttendanceRule(AuditModel):
     """考勤规则（单例，pk 固定 1）：上下班时间 / 宽限 / 工作日 / 补卡回溯。
 
     字段默认值完全复现 v1.7.1 及之前的硬编码口径（09:00 上班、18:00 下班、
@@ -50,7 +52,6 @@ class AttendanceRule(models.Model):
     updated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, verbose_name='最后修改人', null=True, blank=True,
         on_delete=models.SET_NULL, related_name='+')
-    updated_at = models.DateTimeField('更新时间', auto_now=True)
 
     class Meta:
         verbose_name = '考勤规则'
@@ -126,7 +127,7 @@ class AttendanceRule(models.Model):
         return f'{self.work_start:%H:%M}-{self.work_end:%H:%M}'
 
 
-class Attendance(models.Model):
+class Attendance(AuditModel):
     """考勤记录表 attendance_attendance。"""
 
     class SignType(models.TextChoices):
@@ -151,8 +152,6 @@ class Attendance(models.Model):
     is_makeup = models.BooleanField('是否补卡', default=False)
     status = models.CharField(
         '签到状态', max_length=20, choices=Status.choices, default=Status.MISSING)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = '考勤记录'

@@ -3,8 +3,10 @@
 from django.conf import settings
 from django.db import models
 
+from plugin_host.models import AuditModel
 
-class Approval(models.Model):
+
+class Approval(AuditModel):
     """审批单表 approval_approval。"""
 
     class Type(models.TextChoices):
@@ -54,8 +56,6 @@ class Approval(models.Model):
     replaced_by = models.OneToOneField(
         'self', null=True, blank=True, on_delete=models.SET_NULL,
         related_name='replaces_rejected', verbose_name='替换为')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = '审批单'
@@ -74,7 +74,7 @@ class Approval(models.Model):
         return f'[{self.get_approval_type_display()}] {self.title}'
 
 
-class ApprovalSigner(models.Model):
+class ApprovalSigner(AuditModel):
     """会签人表 approval_approvalsigner（会签单：全部 signer 通过才通过）。"""
 
     approval = models.ForeignKey(
@@ -93,7 +93,7 @@ class ApprovalSigner(models.Model):
         return f'{self.approval_id} {self.signer_id} {"✓" if self.signed else "—"}'
 
 
-class ApprovalRecord(models.Model):
+class ApprovalRecord(AuditModel):
     """流转记录表 approval_approvalrecord（全程留痕）。"""
 
     approval = models.ForeignKey(
@@ -102,7 +102,6 @@ class ApprovalRecord(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, verbose_name='操作人')
     action = models.CharField('动作', max_length=20)  # submit / approve / reject
     comment = models.TextField('意见', blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name = '流转记录'

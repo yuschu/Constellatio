@@ -3,8 +3,10 @@
 from django.conf import settings
 from django.db import models
 
+from plugin_host.models import AuditModel
 
-class Announcement(models.Model):
+
+class Announcement(AuditModel):
     """公告表 notice_announcement。"""
 
     title = models.CharField('标题', max_length=200)
@@ -13,8 +15,6 @@ class Announcement(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
         related_name='announcements', verbose_name='发布人')
     is_top = models.BooleanField('置顶', default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = '公告'
@@ -29,7 +29,7 @@ class Announcement(models.Model):
         return self.title
 
 
-class AnnouncementRead(models.Model):
+class AnnouncementRead(AuditModel):
     """公告已读表 notice_announcementread（一人一篇只记一次）。"""
 
     announcement = models.ForeignKey(
