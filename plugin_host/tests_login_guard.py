@@ -108,6 +108,28 @@ class LoginGuardBehaviorTests(TestCase):
         # 非法 Ticket 仍应停在表单页报错，而不是被中间件踢走
         self.assertEqual(self.client.get('/plugins/sso/login/?ticket=bad.ticket').status_code, 200)
 
+    def test_login_round_trip_returns_to_original_page(self):
+        """被拦 → 登录页带 next（含查询串）→ 登录后回原页；已登录打开登录页也回 next。"""
+        target = '/plugins/approval/?x=1&y=2'
+        response = self.client.get(target)
+        self.assertEqual(response.status_code, 302)
+        location = urlsplit(response.headers['Location'])
+        self.assertEqual(parse_qs(location.query).get('next'), [target])
+
+        page = self.client.get(location.path)
+        self.assertContains(page, 'name="next"')      # 隐藏域真的渲染出来了
+
+        response = self.client.post(
+            LOGIN_URL, {'username': 'guard_admin', 'password': 'GuardAdmin@2026', 'next': target})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers['Location'], target)
+        self.assertEqual(self.client.get(target).status_code, 200)
+
+        # 已登录状态打开登录页 + next：也应回 next，而不是被扔回首页
+        response = self.client.get(LOGIN_URL, {'next': target})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers['Location'], target)
+
     def test_authenticated_same_page_ok(self):
         """已登录有权限 → 200；已登录无权限 → 302 回工作台（权限语义未被中间件改写）。"""
         self.client.force_login(self.admin)

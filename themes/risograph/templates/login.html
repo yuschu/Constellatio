@@ -47,6 +47,8 @@
 
         <form method="post" action="/plugins/auth/login/">
           {% csrf_token %}
+          {# v1.7.4 收尾：登录后回跳原页（中间件带回的 next） #}
+          <input type="hidden" name="next" value="{{ next }}">
           <div class="mb-3">
             <label class="form-label" style="font-size:.75rem; text-transform:uppercase; letter-spacing:.06em;">{% trans "用户名" %}</label>
             <input class="r-input" type="text" name="username" autocomplete="username" value="{{ username }}" placeholder="{% trans '输入用户名' %}" required autofocus>

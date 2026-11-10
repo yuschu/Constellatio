@@ -10,6 +10,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_not_required
 from django.core.cache import cache
 from django.shortcuts import redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _
 
 # 失败阈值与窗口（秒）：5 次 / 15 分钟
@@ -44,10 +45,29 @@ def _record_failure(request, username):
     return failures
 
 
+def _next_target(request):
+    """v1.7.4 收尾：取登录后要回跳的地址（POST 优先，其次 GET）。
+
+    只返回同站地址；外站与协议相对 URL（`//evil.com`）一律丢弃返回空串。
+    校验口径与 Django `LoginView` 的 `SuccessURLAllowedHostsMixin` 一致。
+    """
+    target = request.POST.get('next') or request.GET.get('next') or ''
+    if target and url_has_allowed_host_and_scheme(
+            target, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        return target
+    return ''
+
+
+def _redirect_after_login(request):
+    """登录成功（或已登录用户访问登录页）后：有合法 next 就回原页，否则回工作台。"""
+    target = _next_target(request)
+    return redirect(target) if target else redirect('index')
+
+
 @login_not_required        # v1.7.4：匿名入口（否则 LoginRequiredMiddleware 造成无限重定向）
 def login_view(request):
     if request.user.is_authenticated:
-        return redirect('index')
+        return _redirect_after_login(request)
 
     error = None
     username = ''
@@ -61,12 +81,17 @@ def login_view(request):
             if user is not None:
                 cache.delete(_fail_cache_key(request, username))
                 login(request, user)
-                return redirect('index')
+                return _redirect_after_login(request)
             _record_failure(request, username)
             error = _('用户名或密码错误')
 
-    # 失败时回填用户名；密码出于安全不回填
-    return render(request, 'login.html', {'error': error, 'username': username})
+    # 失败时回填用户名；密码出于安全不回填。
+    # next 必须传进上下文，否则模板里的隐藏域渲染成空串、回跳形同虚设（v1.7.4 收尾）。
+    return render(request, 'login.html', {
+        'error': error,
+        'username': username,
+        'next': _next_target(request),
+    })
 
 
 @login_not_required        # v1.7.4：未登录点「退出」不该被跳去登录页
