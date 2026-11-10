@@ -74,7 +74,10 @@ def verify(ticket: str, now=None) -> dict:
     if payload.get('iat') and payload['iat'] > current + 60:
         raise TicketError('Ticket 时间非法')
 
-    # 防重放：TTL 内同一 Ticket 只允许使用一次（进程内缓存；多 worker 需共享缓存）
+    # 防重放：TTL 内同一 Ticket 只允许使用一次。
+    # v1.7.3 起缓存在共享的 DatabaseCache 上：add() 靠 cache_key 主键冲突判定，
+    # 「只有第一个写入者成功」，多 gunicorn worker 下同样成立；
+    # 返回 False 一律按「已使用」拒绝（fail-closed，不区分冲突与底层故障）。
     cache_key = 'sso:ticket:' + hashlib.sha256(ticket.encode('utf-8')).hexdigest()
     if not cache.add(cache_key, True, timeout=max(expires - current, 1)):
         raise TicketError('Ticket 已使用')

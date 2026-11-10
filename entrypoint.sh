@@ -8,6 +8,11 @@ python tools/compile_mo.py
 echo "[entrypoint] migrate"
 python manage.py migrate --noinput
 
+# v1.7.3：缓存走数据库（DatabaseCache），migrate 不会建缓存表 —— gunicorn 起之前必须建好，
+# 否则登录限流 / SSO 防重放的首个请求即 OperationalError。命令幂等。
+echo "[entrypoint] createcachetable"
+python manage.py createcachetable
+
 echo "[entrypoint] collectstatic"
 python manage.py collectstatic --noinput
 

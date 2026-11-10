@@ -119,6 +119,34 @@ else:
     }
 
 # ---------------------------------------------------------------------------
+# 缓存（v1.7.3：跨进程共享）
+# ---------------------------------------------------------------------------
+# 默认缓存必须是「所有 worker 共享」的存储，否则下面两处判定在多 worker 下不成立：
+#   auth 登录失败限流（plugins/auth/views.py）——进程内计数会被 worker 分摊，5 次变 15 次
+#   sso Ticket 防重放（plugins/sso/ticket.py）——进程内标记，同一 Ticket 可被不同 worker 各用一次
+# DatabaseCache 的 add() 靠 cache_key 主键冲突实现「只有第一个写入者成功」，多进程语义成立，
+# 无需引入 Redis。建表：容器由 entrypoint.sh 做，本地开发见 README，测试库见 TEST_RUNNER。
+#
+# OPTIONS['MAX_ENTRIES'] 必须远离默认的 300：DatabaseCache 超限时会 _cull（先删过期行，
+# 仍超则按 cache_key 排序再删 1/CULL_FREQUENCY），**未过期的防重放标记也会被删掉**，
+# 等于把重放窗口重新打开。500 人规模：限流键 ≤ 人数 + 5 分钟内 Ticket 标记数，万级留足余量。
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'constellatio_cache',
+        'TIMEOUT': 900,                      # 与 LOGIN_FAIL_WINDOW 同口径（调用点各自显式传 timeout）
+        'OPTIONS': {
+            'MAX_ENTRIES': 10000,
+            'CULL_FREQUENCY': 3,
+        },
+    },
+}
+
+# 测试库不会自动建缓存表（缺表时任何 cache 调用直接 OperationalError，实测）；
+# 用自定义 runner 在 setup_databases 之后补 createcachetable，避免改测试绕过共享后端。
+TEST_RUNNER = 'plugin_host.test_runner.CacheTableTestRunner'
+
+# ---------------------------------------------------------------------------
 # 认证与插件化配置
 # ---------------------------------------------------------------------------
 AUTH_USER_MODEL = 'user.User'          # user 插件提供（首次 migrate 前必须定）
