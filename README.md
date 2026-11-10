@@ -54,6 +54,8 @@
 
 * 🧪 工程化门禁（v1.7.1）：依赖精确版本 + `ruff` 静态检查 + GitHub Actions（`ruff check` / `manage.py check` / 全量测试），323 项测试全绿
 
+* 🧱 共享缓存（v1.7.3）：缓存后端换 `DatabaseCache`（复用现有 MySQL/sqlite，零新依赖），登录失败限流与 SSO Ticket 防重放靠 `cache.add` 主键冲突跨 gunicorn worker 成立；容器启动自动 `createcachetable`
+
 * 🐳 Docker 一键部署：`docker compose up -d`（MySQL8 + Gunicorn + WhiteNoise，跨平台）
 
 ## 🛠 技术栈
@@ -84,6 +86,7 @@ venv\Scripts\activate          # Windows
 # source venv/bin/activate     # macOS / Linux
 pip install -r requirements.txt
 python manage.py migrate
+python manage.py createcachetable   # v1.7.3：缓存表，缺表登录会 500（登录限流 / SSO 防重放走共享缓存）
 python manage.py createsuperuser
 python manage.py runserver
 ```
@@ -193,8 +196,9 @@ Constellatio/
 | [docs/plugin-dev-notify.md](docs/plugin-dev-notify.md)                         | 插件开发 | v1.7.0：消息提醒（站内信 / 审批 / 公告 / 未读 / 停用降级） |
 | [docs/plugin-dev-v171.md](docs/plugin-dev-v171.md)                             | 插件开发 | v1.7.1：安全与并发修复包（行锁 / 对象级鉴权 / 缓存与分页 / 传输安全 / ruff + CI） |
 | [docs/plugin-dev-v172.md](docs/plugin-dev-v172.md)                             | 插件开发 | v1.7.2：公告极简化（单列流 / 自动已读）+ 考勤规则（上下班 / 宽限 / 工作日 / 补卡回溯） |
+| [docs/plugin-dev-v173.md](docs/plugin-dev-v173.md)                             | 插件开发 | v1.7.3：共享缓存（DatabaseCache）—— 登录限流 / SSO 防重放跨 worker 成立 |
 | [docs/roadmap.md](docs/roadmap.md)                                             | 规划   | 差距矩阵、v1.5–v2.0 迭代路线、修复项与文档债务                  |
 
 ## 📌 状态
 
-**v1.7.2 公告极简化 + 考勤规则已交付并部署**（352 项测试全绿）：公告中心改为单列公告流（标题与正文同屏、进入即已读、已读明细下沉管理岗页）；考勤新增可配置规则（上下班时间 / 迟到早退宽限 / 工作日 / 补卡回溯，`/plugins/attendance/rules/`）。上一交付 **v1.7.1**（安全与并发修复包，323 项测试）。→ 下一步：v1.7.3 认证后端插件化
+**v1.7.3 共享缓存已交付并部署**（357 项测试全绿）：`CACHES` 换 `DatabaseCache`（`constellatio_cache`，零新依赖），登录失败限流与 SSO Ticket 防重放靠 `cache.add` 主键冲突在 3 worker 下成立（验收：连错 6 次被拦、同一 Ticket 第二次即拒），容器启动自动建表。上一交付 **v1.7.2**（公告极简化 + 考勤规则，352 项测试）。→ 下一步：v1.7.4 认证后端插件化
