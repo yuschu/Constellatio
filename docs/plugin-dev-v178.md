@@ -116,6 +116,44 @@ def __call__(self, request):
    **合格判据（不是「没有 AlterField」）**：`sqlmigrate <app> <迁移号>` **输出为空**，且 `migrate` 前后 `SHOW CREATE TABLE` 完全一致。不为了消掉 `AlterField` 去扭曲模型定义。
 3. 视图里 `rule.updated_by = request.user` / `defaults={'updated_by': …}` 这类手动赋值**保留不动**：与 pre_save 的「显式传入不覆盖」规则一致，不会打架。
 
+### 2.5.1 迁移 SQL 的合格判据（v1.7.8 起，替代「AlterField 必须是空 SQL」）
+
+`sqlmigrate` 的合格标准**不是输出为空**，而是：**每一条非空 SQL 都能被解释，且落在下面三类之内**。
+
+| 允许 | 说明 |
+|---|---|
+| `ADD COLUMN` / `ADD CONSTRAINT` / `ADD KEY` | 新增审计列与索引 |
+| `MODIFY ... NULL`（**放宽**可空性） | 新增列必须允许 NULL（历史行诚实为 NULL）；已有非空时间列统一到 `null=True` 时会产生这条 |
+| `-- (no-op)` | `related_name` / `verbose_name` 等纯 ORM 属性变更，不产生 DDL |
+
+> **硬红线：一旦 `sqlmigrate` 里出现 `MODIFY ... NOT NULL`（收窄），立刻停下。**
+> 那会让历史 NULL 行在下次写入时失败；本版只允许"放宽"，不允许"收窄"。
+
+### 2.5.2 为什么基类的时间列必须 `null=True`（实测数字）
+
+Django 的 **schema editor** 会给 `auto_now` / `auto_now_add` 列注入一次性默认值
+（`django/db/backends/base/schema.py:474`：
+
+```python
+elif getattr(field, "auto_now", False) or getattr(field, "auto_now_add", False):
+    if internal_type == "DateTimeField":
+        default = timezone.now()
+```
+
+这个分支**在 `null=True` 时同样命中**，与字段自身的 `has_default()` / `get_default()` 无关
+（所以只测字段属性会得出"不会填默认值"的错误结论）。后果是 `ADD COLUMN ... DEFAULT '<迁移执行时间>' NULL`，
+**历史行会被盖上伪造的审计时间**。
+
+本版实测（notify_notification，250 行）：
+
+| 做法 | 结果 |
+|---|---|
+| 迁移里**去掉**清理步骤直接 AddField | 250 行 `updated_at` 全部 = `2026-11-10 14:19:17.417150`（迁移执行时间），NULL 数 **0** |
+| 迁移末尾加 `RunSQL UPDATE ... SET updated_at = NULL` | NULL 数 **250 / 250** |
+
+所以三个 `0002` 迁移末尾的 `RunSQL` 是**必要步骤，不是防御性清理**；它只作用于本迁移**新增**的时间列，
+不触碰已有真实值（`workspace.updated_by` 的 4 行历史值原样保留）。
+
 ### 2.6 迁移：两批，全部 nullable，无数据迁移
 
 | 批次 | 应用 | 内容 |
@@ -127,6 +165,25 @@ def __call__(self, request):
 
 - **历史行 `created_at` 为 NULL**：`auto_now_add=True, null=True` 只对新行生效。5 个模型（ApprovalSigner、AnnouncementRead、AttendanceRule、PluginSwitch、user 之外无）迁移后既有数据 `created_at` 永远是 NULL（容器里就有 94 条 `AnnouncementRead`）。**不用 `RunPython` 回填迁移执行时间**——那是伪造审计时间。文档与验收都写明「v1.7.8 之前的历史行无创建时间」。
 - 可回滚：`migrate <app> <上一个迁移>` 会 `RemoveField` 掉新增列（`AlterField` 回滚为空操作），逐应用实测往返。
+
+### 2.7 各批预期 DDL（提前列清单，避免下一轮再"抓出偏差"）
+
+| 批 | 模型 | 已有非空时间列 | 预期 |
+|---|---|---|---|
+| 一（已做） | `notify.Notification` | created_at | 1 `MODIFY NULL` + 3 AddField + 1 清理 |
+| 一（已做） | `blockchain.BlockchainRecord` | created_at | 1 `MODIFY NULL` + 3 AddField + 1 清理 |
+| 一（已做） | `workspace.PluginSwitch` | updated_at + updated_by | 1 `MODIFY NULL`（updated_at）+ 1 `(no-op)`（updated_by）+ 2 AddField + 1 清理 |
+| 二 | `approval.Approval` | created_at + updated_at | 2 `MODIFY NULL` + 2 AddField |
+| 二 | `approval.ApprovalRecord` | created_at | 1 `MODIFY NULL` + 3 AddField + 1 清理（updated_at 新列） |
+| 二 | `approval.ApprovalSigner` | 无（只有 signed_at） | 4 AddField + 2 清理（created_at / updated_at 都是新列） |
+| 二 | `attendance.Attendance` | created_at + updated_at | 2 `MODIFY NULL` + 2 AddField |
+| 二 | `attendance.AttendanceRule` | updated_at + updated_by | 1 `MODIFY NULL` + 1 `(no-op)` + 2 AddField + 1 清理（created_at 新列） |
+| 二 | `notice.Announcement` | created_at + updated_at | 2 `MODIFY NULL` + 2 AddField |
+| 二 | `notice.AnnouncementRead` | 无（只有 read_at） | 4 AddField + 2 清理 |
+| 三 | `user.Department` / `Role` / `User` | 三者都有 created_at + updated_at | 各 2 `MODIFY NULL` + 2 AddField |
+
+> **第三批碰到核心表 `user_user`**：`MODIFY user_user ... NULL` 在 MySQL 8 上会 rebuild 这张表。
+> 测试库空表无影响；生产库执行前先确认行数并挑低峰期——这条写进 `database-design.md` 的迁移注意事项。
 
 ## 三、写入路径 → 是否留审计（本版的关键边界表）
 
@@ -184,6 +241,12 @@ def __call__(self, request):
 4. **历史行 `created_at` 为 NULL**（§2.6）。
 
 ## 七、待办观察
+
+0. **（交接自 v1.7.7，P3）计数行竞态**：`_bump_counter` 里 `exists()` 为真之后、`transaction.atomic()` 内
+   `select_for_update().get(key=key)` 之前，若同一 key 的行被「成功登录的 `delete()`」删掉，`get()` 会抛
+   `DoesNotExist` → 500。触发条件是「同一用户同一 IP 同时有一次错密码和一次对密码」，攻击者构造不出来，
+   只有多标签页同时操作才可能撞上。修法一行：`except LoginFailureCounter.DoesNotExist: return 1`。
+   本版（v1.7.8）不修，记在这里。
 
 1. 批量写入（`bulk_create` / `update()`）的审计填充：需要服务层显式传参，或改逐条 `save()`（有性能代价）。
 2. 历史行 `created_by IS NULL` 的展示口径（管理页显示「历史数据」而不是空白）。

@@ -1,9 +1,10 @@
 """workspace 插件模型：插件运行时开关（DB 优先覆盖 settings.OA_PLUGINS）。"""
 
-from django.conf import settings
 from django.db import models
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
+
+from plugin_host.models import AuditModel
 
 
 def _invalidate_switch_cache():
@@ -12,15 +13,11 @@ def _invalidate_switch_cache():
     invalidate_plugin_switch_cache()
 
 
-class PluginSwitch(models.Model):
+class PluginSwitch(AuditModel):
     """插件运行时开关表 workspace_pluginswitch。"""
 
     app_key = models.CharField('插件标识', max_length=100, unique=True)
     enabled = models.BooleanField('是否启用', default=True)
-    updated_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, null=True, blank=True,
-        on_delete=models.SET_NULL, verbose_name='最后操作人')
-    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = '插件开关'

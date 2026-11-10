@@ -10,6 +10,8 @@ from django.conf import settings
 from django.db import IntegrityError, models, transaction
 from django.utils.translation import gettext_lazy as _
 
+from plugin_host.models import AuditModel
+
 ACTION_LABELS = {
     'approval_finished': _('审批结束'),
     'notice_published': _('公告发布'),
@@ -27,7 +29,7 @@ ACTION_LABELS = {
 }
 
 
-class BlockchainRecord(models.Model):
+class BlockchainRecord(AuditModel):
     """操作留痕链表 blockchain_record（显式 db_table，对齐数据库设计）。"""
 
     plugin = models.CharField('来源插件', max_length=50)
@@ -40,7 +42,6 @@ class BlockchainRecord(models.Model):
     payload_hash = models.CharField('内容哈希', max_length=64)
     prev_hash = models.CharField('前链哈希', max_length=64, default='0' * 64)
     record_hash = models.CharField('本条哈希', max_length=64, unique=True)
-    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'blockchain_record'

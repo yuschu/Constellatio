@@ -3,8 +3,10 @@
 from django.conf import settings
 from django.db import models
 
+from plugin_host.models import AuditModel
 
-class Notification(models.Model):
+
+class Notification(AuditModel):
     """站内消息表 notify_notification。"""
 
     class Category(models.TextChoices):
@@ -22,7 +24,6 @@ class Notification(models.Model):
     link = models.CharField('跳转链接', max_length=300, blank=True)
     is_read = models.BooleanField('已读', default=False)
     read_at = models.DateTimeField('已读时间', null=True, blank=True)
-    created_at = models.DateTimeField('创建时间', auto_now_add=True)
 
     class Meta:
         verbose_name = '站内消息'
