@@ -13,8 +13,11 @@ from urllib.parse import parse_qs, urlsplit
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.middleware import LoginRequiredMiddleware
 from django.test import TestCase
 from django.urls import URLPattern, get_resolver
+
+from plugin_host.middleware import JsonAwareLoginRequiredMiddleware
 
 User = get_user_model()
 
@@ -169,6 +172,12 @@ class LoginGuardSetTests(TestCase):
             location = response.headers.get('Location') or ''
             if response.status_code == 302 and LOGIN_URL in location:
                 blocked.add(route)
+            elif response.status_code == 401:
+                # v1.7.11：匿名 + 要 JSON 的接口改为 401 JSON（不再 302），同样算「被拦」
+                self.assertEqual(
+                    response.json().get('code'), 'authentication_required',
+                    f'{route} 的 401 不是登录守卫给的：{response.content[:120]}')
+                blocked.add(route)
             else:
                 allowed.add(route)
 
@@ -184,13 +193,17 @@ class LoginGuardConfigTests(TestCase):
     """配置与第三方（admin）不被误伤。"""
 
     def test_middleware_config_position(self):
+        """v1.7.11：守卫换成内置中间件的子类（匿名 + JSON → 401），位置要求不变。"""
         middleware = list(settings.MIDDLEWARE)
-        self.assertIn('django.contrib.auth.middleware.LoginRequiredMiddleware', middleware)
+        guard = 'plugin_host.middleware.JsonAwareLoginRequiredMiddleware'
+        self.assertIn(guard, middleware)
+        self.assertNotIn('django.contrib.auth.middleware.LoginRequiredMiddleware', middleware)
+        self.assertTrue(issubclass(JsonAwareLoginRequiredMiddleware, LoginRequiredMiddleware))
         self.assertLess(
             middleware.index('django.contrib.auth.middleware.AuthenticationMiddleware'),
-            middleware.index('django.contrib.auth.middleware.LoginRequiredMiddleware'))
+            middleware.index(guard))
         self.assertLess(
-            middleware.index('django.contrib.auth.middleware.LoginRequiredMiddleware'),
+            middleware.index(guard),
             middleware.index('django.contrib.messages.middleware.MessageMiddleware'))
         self.assertTrue(LOGIN_URL)
 

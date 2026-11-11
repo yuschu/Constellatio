@@ -16,6 +16,7 @@ from django.utils.dateparse import parse_date, parse_datetime
 from django.utils.translation import gettext as _
 
 from plugin_host.charts import get_active_chart
+from plugin_host.exceptions import ObjectPermissionDenied
 from plugin_host.pagination import paginate
 from plugin_host.permissions import require_perm
 from plugin_host.signals import attendance_checked
@@ -86,7 +87,8 @@ def attendance_check(request):
     写入的 check_in，重复打卡也只落在同一行（unique_together 保证）。
     """
     if not request.user.has_perm('attendance_check'):
-        return redirect('index')
+        # v1.7.11：手写的 has_perm 也要与 require_perm 同口径（原 302 回工作台）
+        raise ObjectPermissionDenied('无权访问该功能')
     if request.method == 'POST':
         today = timezone.localdate()
         now = _now()

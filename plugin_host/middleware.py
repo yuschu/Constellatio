@@ -16,6 +16,7 @@ import logging
 import uuid
 
 from django.conf import settings
+from django.contrib.auth.middleware import LoginRequiredMiddleware
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseNotFound, JsonResponse
 from django.middleware.locale import LocaleMiddleware
@@ -64,6 +65,36 @@ class RequestIdMiddleware:
             reset_request_id(token)
 
 
+def wants_json(request):
+    """唯一的「这个请求要不要 JSON 错误体」判据（v1.7.11 收敛到一处）。
+
+    两条命中任一即可：路径以 `/stats` 结尾（前端图表接口的约定）或客户端带
+    `Accept: application/json`。`ExceptionGuardMiddleware` 与新加的
+    `JsonAwareLoginRequiredMiddleware` 都只调用这里，不各写一份。
+    """
+    accept = request.headers.get('Accept', '')
+    return request.path.rstrip('/').endswith('/stats') or 'application/json' in accept
+
+
+class JsonAwareLoginRequiredMiddleware(LoginRequiredMiddleware):
+    """v1.7.11：匿名 + 要 JSON → 401 JSON；其余保持内置行为（302 到登录页 + next）。
+
+    背景：`fetch` 跟随 302 会拿到登录页 HTML，在 `response.json()` 处炸掉，用户只看到
+    「图表不可用」。所以只对「要 JSON 的请求」把反馈换成可解析的 401，HTML 语义完全不动
+    （v1.7.4 定下的 42 条 URL 默认路径口径不变）。
+    """
+
+    def process_view(self, request, view_func, view_args, view_kwargs):
+        response = super().process_view(request, view_func, view_args, view_kwargs)
+        if response is None:
+            return None
+        if response.status_code == 302 and wants_json(request):
+            return JsonResponse(
+                {'code': 'authentication_required', 'message': '登录状态已失效，请重新登录'},
+                status=401)
+        return response
+
+
 class ExceptionGuardMiddleware:
     """v1.7.5：把容器级业务异常翻译成响应，并保证兜底日志带 request_id。
 
@@ -85,8 +116,7 @@ class ExceptionGuardMiddleware:
 
     @staticmethod
     def _wants_json(request):
-        accept = request.headers.get('Accept', '')
-        return request.path.rstrip('/').endswith('/stats') or 'application/json' in accept
+        return wants_json(request)          # 判据只有一份（v1.7.11）
 
     def _error_response(self, request, status, code, message):
         if self._wants_json(request):

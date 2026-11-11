@@ -68,7 +68,8 @@ MIDDLEWARE = [
     # v1.7.4：默认拦截 + 显式白名单。匿名请求在 process_view 阶段被拦下（跳 LOGIN_URL
     # 并带回 next），不再依赖逐个视图挂装饰器；匿名入口必须显式标注 @login_not_required。
     # 位置要求：必须在 AuthenticationMiddleware 之后（process_view 需要 request.user）。
-    'django.contrib.auth.middleware.LoginRequiredMiddleware',
+    # v1.7.11：内置登录守卫的子类——匿名 + 要 JSON 时回 401 JSON（HTML 仍 302 + next）
+    'plugin_host.middleware.JsonAwareLoginRequiredMiddleware',
     # v1.7.8：当前用户进 contextvar（审计字段 pre_save 自动填充用）；
     # 必须在 AuthenticationMiddleware 之后（request.user 可用），finally 复位防串号。
     'plugin_host.middleware.CurrentUserMiddleware',
