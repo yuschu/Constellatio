@@ -63,6 +63,15 @@ function handleStatsFailure(response) {
 > 将来若文案里出现单引号（如 `doesn't`），`'{% trans "..." %}'` 会被截断，届时改成
 > `{% trans "..." as t %}{{ t|escapejs }}`；当前两句没有引号，不提前折腾。
 
+**empirical 证据**（`venv/v1712_evidence_include_load.py`，四种组合实测）：
+
+```
+direct  inc_bad.js (无 load)  → TemplateSyntaxError: Invalid block tag on line 1: 'trans'
+include inc_bad.js (父有 load) → TemplateSyntaxError（父模板的 load 不继承）
+direct  inc_good.js (自带 load) → OK
+include inc_good.js (自带 load) → OK
+```
+
 ### 2.2 两个模板的 `showEmpty` 支持文案参数
 
 现在 `showEmpty()` 固定用 `fallback.dataset.empty`；改成 `showEmpty(text)`：
