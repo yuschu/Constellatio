@@ -1,16 +1,8 @@
 """workspace 插件模型：插件运行时开关（DB 优先覆盖 settings.OA_PLUGINS）。"""
 
 from django.db import models
-from django.db.models.signals import post_delete
-from django.dispatch import receiver
 
 from plugin_host.models import AuditModel
-
-
-def _invalidate_switch_cache():
-    """局部 import 防止 plugin_host/workspace 循环依赖。"""
-    from plugin_host.registry import invalidate_plugin_switch_cache
-    invalidate_plugin_switch_cache()
 
 
 class PluginSwitch(AuditModel):
@@ -26,23 +18,3 @@ class PluginSwitch(AuditModel):
 
     def __str__(self):
         return f'{self.app_key}: {"on" if self.enabled else "off"}'
-
-    def save(self, *args, **kwargs):
-        """保存即失效进程内开关缓存（直接 ORM 造数据也立即生效）。"""
-        super().save(*args, **kwargs)
-        _invalidate_switch_cache()
-
-    def delete(self, *args, **kwargs):
-        result = super().delete(*args, **kwargs)
-        _invalidate_switch_cache()
-        return result
-
-
-@receiver(post_delete, sender=PluginSwitch,
-          dispatch_uid='workspace.plugin_switch.invalidate_cache')
-def _on_switch_deleted(sender, **kwargs):
-    """QuerySet.delete() 不调用模型 delete()，用 post_delete 兜底失效。
-
-    save() 走模型覆写即可；本信号只兜批量删除，不作为唯一失效手段。
-    """
-    _invalidate_switch_cache()

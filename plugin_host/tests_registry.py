@@ -11,7 +11,6 @@ from unittest import mock
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser, Permission
 from django.core.checks import Error
-from django.db import connection
 from django.db.utils import OperationalError
 from django.test import SimpleTestCase, TestCase
 
@@ -22,7 +21,6 @@ from plugin_host.registry import (
     get_enabled_plugins,
     get_menus,
     get_plugin_switches,
-    invalidate_plugin_switch_cache,
     plugin_counts,
     plugin_enabled,
 )
@@ -136,7 +134,7 @@ class PluginCountTests(TestCase):
     """plugin_enabled / plugin_counts 统一口径：静态 → DB → 默认启用。"""
 
     def setUp(self):
-        invalidate_plugin_switch_cache()
+        pass
 
     def test_defaults_enabled(self):
         self.assertTrue(plugin_enabled('charts'))
@@ -166,7 +164,7 @@ class PluginSwitchCacheTests(TestCase):
     """直接 ORM 造 / 删 PluginSwitch 必须立即生效，不能只靠信号。"""
 
     def setUp(self):
-        invalidate_plugin_switch_cache()
+        pass
 
     def test_create_takes_effect_immediately(self):
         from plugins.workspace.models import PluginSwitch
@@ -187,18 +185,28 @@ class PluginSwitchCacheTests(TestCase):
         PluginSwitch.objects.filter(app_key='notice').delete()
         self.assertTrue(plugin_enabled('notice'))
 
-    def test_ttl_cache_reuses_snapshot_until_invalidated(self):
+    def test_switch_change_visible_without_invalidation_hook(self):
+        """v1.7.13：删掉进程内缓存后，任何写入路径（含绕过 save 的 update）都立刻可见。
+
+        用 `QuerySet.update()` 是关键：它不触发 `save()`、不发信号，
+        因此「读到新值」只能来自「每次都读表」，而不是某个失效钩子。
+        """
         from plugins.workspace.models import PluginSwitch
         PluginSwitch.objects.create(app_key='notice', enabled=False)
-        with mock.patch.object(connection, 'in_atomic_block', False):
-            self.assertFalse(get_plugin_switches()['notice'])
-            with self.assertNumQueries(0):
-                get_plugin_switches()
-            # QuerySet.update 不经过 save()/信号：缓存期内仍是旧快照
-            PluginSwitch.objects.filter(app_key='notice').update(enabled=True)
-            self.assertFalse(get_plugin_switches()['notice'])
-            invalidate_plugin_switch_cache()
-            self.assertTrue(get_plugin_switches()['notice'])
+        self.assertFalse(get_plugin_switches()['notice'])
+
+        PluginSwitch.objects.filter(app_key='notice').update(enabled=True)
+        self.assertTrue(get_plugin_switches()['notice'])          # 立即生效
+
+        PluginSwitch.objects.filter(app_key='notice').update(enabled=False)
+        self.assertFalse(get_plugin_switches()['notice'])         # 反向同样立即
+
+    def test_no_process_local_cache_remains(self):
+        """防回退：缓存三兄弟与失效函数都不该再存在（它们正是 v1.7.13 删掉的东西）。"""
+        from plugin_host import registry
+        for attr in ('_switch_cache', 'PLUGIN_SWITCH_CACHE_TTL',
+                     'PLUGIN_SWITCH_ERROR_TTL', 'invalidate_plugin_switch_cache'):
+            self.assertFalse(hasattr(registry, attr), f'{attr} 不该再存在')
 
     def test_switch_table_error_degrades_to_static(self):
         with mock.patch(

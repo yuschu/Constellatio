@@ -8,7 +8,6 @@
 """
 
 import logging
-import time
 
 from django.conf import settings
 from django.db.utils import OperationalError, ProgrammingError
@@ -16,14 +15,6 @@ from django.db.utils import OperationalError, ProgrammingError
 logger = logging.getLogger(__name__)
 
 PLUGIN_REGISTRY = {}  # name -> PluginMeta
-
-# 插件开关进程内缓存：默认 30 秒；写操作（PluginSwitch.save/delete）即时失效。
-PLUGIN_SWITCH_CACHE_TTL = 30
-# 开关表不可读（未迁移 / workspace 停用）时的短暂降级缓存，避免每次请求都打 DB。
-PLUGIN_SWITCH_ERROR_TTL = 5
-
-_switch_cache = {'expires': 0.0, 'switches': None}
-
 
 class PluginMeta:
     """插件契约：每个插件必须提供的字段。"""
@@ -48,42 +39,26 @@ def register(meta: PluginMeta):
 
 
 def get_plugin_switches():
-    """插件 DB 开关快照 {app_key: enabled}，进程内 TTL 缓存。
+    """插件 DB 开关快照 {app_key: enabled}，**每次调用都读表**。
 
-    只读快照，调用方不得修改；写路径通过 invalidate_plugin_switch_cache() 失效。
-    表未迁移 / workspace 停用 / 查询失败时返回空快照（调用方回退静态配置）。
+    v1.7.13 删掉了 v1.7.3 引入的进程内 TTL 缓存：`PluginSwitch.save()` 只能清掉
+    「处理写操作的那个进程」的缓存，其它 worker 会继续用旧快照 —— 3 worker 下停用插件
+    后最多 30 秒内仍可访问（`PluginRouteGuardMiddleware` 正是用它决定是否拦路由）。
 
-    事务内（TestCase / ATOMIC_REQUESTS）直接读 DB：事务回滚后进程缓存无法感知，
-    沿用缓存会让测试之间互相污染；事务外才启用 TTL 缓存。
+    表很小（插件数 × 环境，个位数到十几行），每个请求 1~2 次简单 SELECT 可忽略。
+    信号方案在多进程下只清本进程，会把缺陷伪装成已修复；版本号方案需要共享存储，
+    每请求两次查询，比直接读表更贵 —— 两种都试过了，结论是直接删。
+
+    表不可读（首次 migrate 之前 / 表被删 / workspace 库整体不可用）时返回空快照，
+    调用方回退静态 OA_PLUGINS。这种状态下每请求一条 warning 是**应该被看见**的；
+    要降噪应在启动期检查报错，而不是再造一个进程内状态把延迟藏回来。
     """
-    from django.db import connection
-
-    use_cache = not connection.in_atomic_block
-    if use_cache:
-        cached = _switch_cache['switches']
-        if cached is not None and time.monotonic() < _switch_cache['expires']:
-            return cached
-
     try:
         from plugins.workspace.models import PluginSwitch
-        switches = dict(PluginSwitch.objects.values_list('app_key', 'enabled'))
+        return dict(PluginSwitch.objects.values_list('app_key', 'enabled'))
     except (ImportError, LookupError, OperationalError, ProgrammingError):
         logger.warning('插件开关表不可用，回退静态 OA_PLUGINS 配置', exc_info=True)
-        if use_cache:
-            _switch_cache['switches'] = {}
-            _switch_cache['expires'] = time.monotonic() + PLUGIN_SWITCH_ERROR_TTL
         return {}
-
-    if use_cache:
-        _switch_cache['switches'] = switches
-        _switch_cache['expires'] = time.monotonic() + PLUGIN_SWITCH_CACHE_TTL
-    return switches
-
-
-def invalidate_plugin_switch_cache():
-    """清空开关缓存：PluginSwitch 保存 / 删除后调用（测试也可显式调用）。"""
-    _switch_cache['switches'] = None
-    _switch_cache['expires'] = 0.0
 
 
 def _static_plugin_enabled(key):
