@@ -9,6 +9,7 @@ import tempfile
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.http import FileResponse
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
@@ -229,7 +230,9 @@ class DynamicApprovalTests(TestCase):
             self.client.force_login(outsider)
             blocked = self.client.get(
                 reverse('approval:approval_attachment', args=[approval.pk]))
-            self.assertEqual(blocked.status_code, 302)
+            self.assertEqual(blocked.status_code, 403)        # v1.7.10：302 → 403
+            self.assertNotIsInstance(blocked, FileResponse)
+            self.assertContains(blocked, '403', status_code=403)
 
     def test_seal_rejects_unsupported_extension(self):
         """v1.5.14：用章附件仅允许常见文档 / 图片扩展名。"""
@@ -445,8 +448,12 @@ class DynamicApprovalTests(TestCase):
         other = User.objects.create_user('other_app', password='pw')
         grant(other, 'approval_view', name='他人查看')
         self.client.force_login(other)
-        self.assertEqual(self.client.post(
-            reverse('approval:approval_hide', args=[pending.pk])).status_code, 404)
+        # v1.7.10：非申请人的隐藏改为 403（原来与「不存在」共用 404）
+        blocked = self.client.post(reverse('approval:approval_hide', args=[pending.pk]))
+        self.assertEqual(blocked.status_code, 403)
+        self.assertContains(blocked, '403', status_code=403)
+        pending.refresh_from_db()
+        self.assertFalse(pending.applicant_hidden)
         self.assertEqual(self.client.get(
             reverse('approval:approval_create'), {'reapply': pending.pk}).status_code, 302)
 

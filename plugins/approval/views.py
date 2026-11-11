@@ -11,6 +11,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from plugin_host.exceptions import ObjectPermissionDenied
 from plugin_host.pagination import DEFAULT_PAGE_SIZE, paginate
 from plugin_host.permissions import require_perm
 
@@ -275,7 +276,11 @@ def approval_create(request):
 @require_POST
 def approval_hide(request, approval_id):
     """删除申请记录（v1.5.16）：仅对申请人隐藏，不删除审批留痕。"""
-    approval = get_object_or_404(Approval, pk=approval_id, applicant=request.user)
+    # v1.7.10：拆开「不存在」与「不是我的」——查不到仍 404，不是本人改 403，
+    # 不再把两种情况并成一个 404（否则系统里又出现第三种越权反馈）。
+    approval = get_object_or_404(Approval, pk=approval_id)
+    if approval.applicant_id != request.user.pk:
+        raise ObjectPermissionDenied('该审批单不属于你')
     if approval.status == Approval.Status.REJECTED:
         approval.applicant_hidden = True
         approval.save(update_fields=['applicant_hidden', 'updated_at'])
@@ -287,11 +292,12 @@ def approval_detail(request, approval_id):
     """审批详情 + 通过/驳回（普通） + 会签通过/驳回（会签单）。"""
     approval = get_object_or_404(Approval, pk=approval_id)
     if not _may_view(request.user, approval):
-        return redirect('index')
+        # v1.7.10：对象级越权 → 403（原来 302 回工作台）；message 只进 JSON/日志
+        raise ObjectPermissionDenied('该审批单不属于你')
 
     if request.method == 'POST':
         if not _can_act(request.user, approval):
-            return redirect('index')
+            raise ObjectPermissionDenied('你无权审批该单据')
         action = request.POST.get('action')
         comment = request.POST.get('comment', '')
         try:
@@ -305,9 +311,13 @@ def approval_detail(request, approval_id):
                     approve(approval, request.user, comment)
                 elif action == 'reject':
                     reject(approval, request.user, comment)
-        except (ValueError, PermissionError):
-            # 非法流转 / 非本人审批：静默回到详情（状态未变，前端二次确认已提示）
+        except ValueError:
+            # 状态已变（如刚被别人批过）等流转竞态：静默回到详情，前端二次确认已提示
             pass
+        except PermissionError as exc:
+            # services 的「不是审批人」理论上已被上面的 _can_act 拦住，但不可达分支也绝不能
+            # 静默吞掉：并发/会签逻辑一旦演进到可达，必须看得见（禁止 try/except 吞异常）。
+            raise ObjectPermissionDenied('你无权审批该单据') from exc
         return redirect('approval:approval_detail', approval_id=approval.id)
 
     form_rows = []
@@ -340,7 +350,7 @@ def approval_attachment(request, approval_id):
     """
     approval = get_object_or_404(Approval, pk=approval_id)
     if not _may_view(request.user, approval):
-        return redirect('index')
+        raise ObjectPermissionDenied('该审批单不属于你')   # v1.7.10：302 → 403
     if not approval.attachment:
         return redirect('approval:approval_detail', approval_id=approval.id)
     return FileResponse(

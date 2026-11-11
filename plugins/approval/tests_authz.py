@@ -5,6 +5,7 @@ from datetime import timedelta
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.core.cache import cache
+from django.http import FileResponse
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -47,12 +48,13 @@ class ApprovalObjectPermissionTests(TestCase):
         return Approval.objects.create(**fields)
 
     def test_stranger_cannot_view_detail(self):
+        """v1.7.10：对象级越权 → 403（原来 302 回工作台）。"""
         approval = self._approval()
         self.client.force_login(self.stranger)
         resp = self.client.get(
             reverse('approval:approval_detail', args=[approval.pk]))
-        self.assertEqual(resp.status_code, 302)
-        self.assertEqual(resp['Location'], '/')
+        self.assertEqual(resp.status_code, 403)
+        self.assertContains(resp, '403', status_code=403)
 
     def test_involved_users_can_view_detail(self):
         approval = self._approval()
@@ -73,12 +75,14 @@ class ApprovalObjectPermissionTests(TestCase):
         self.assertEqual(resp.status_code, 200)
 
     def test_stranger_cannot_download_attachment(self):
+        """v1.7.10：附件同样 403，且不能是 FileResponse（不能流出任何字节）。"""
         approval = self._approval()
         self.client.force_login(self.stranger)
         resp = self.client.get(
             reverse('approval:approval_attachment', args=[approval.pk]))
-        self.assertEqual(resp.status_code, 302)
-        self.assertEqual(resp['Location'], '/')
+        self.assertEqual(resp.status_code, 403)
+        self.assertNotIsInstance(resp, FileResponse)
+        self.assertContains(resp, '403', status_code=403)
 
     def test_involved_user_without_file_goes_to_detail(self):
         approval = self._approval()
