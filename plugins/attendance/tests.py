@@ -122,17 +122,34 @@ class AttendanceRecordFilterTests(TestCase):
     def setUp(self):
         self.client.force_login(self.manager)
 
+    def _full_day(self):
+        """显式传整天范围。
+
+        签到详情的默认范围右界是「现在」，而本类把记录时间固定在当天 08:50 / 09:30。
+        不传 start/end 时，上午 09:30 之前跑，「迟到者」会落在范围之外：
+        `test_filter_status` 直接红；`test_filter_sign_type` 更糟——`assertNotContains(迟到者)`
+        变成**空断言**（它本来就不在结果里），绿得毫无意义。
+        显式给整天范围后，这些用例只测 status / sign_type / makeup，与运行时刻无关。
+        """
+        start = datetime.combine(self.day, time(0, 0)).strftime('%Y-%m-%dT%H:%M')
+        end = datetime.combine(self.day, time(23, 59)).strftime('%Y-%m-%dT%H:%M')
+        return {'start': start, 'end': end}
+
     def test_filter_status(self):
-        response = self.client.get('/plugins/attendance/records/', {'status': 'late'})
+        response = self.client.get(
+            '/plugins/attendance/records/', {**self._full_day(), 'status': 'late'})
         self.assertContains(response, '<td>迟到者</td>')
         self.assertNotContains(response, '<td>早退者</td>')
-        response = self.client.get('/plugins/attendance/records/', {'status': 'early'})
+        response = self.client.get(
+            '/plugins/attendance/records/', {**self._full_day(), 'status': 'early'})
         self.assertContains(response, '<td>早退者</td>')
         self.assertNotContains(response, '<td>迟到者</td>')
 
     def test_filter_sign_type(self):
-        response = self.client.get('/plugins/attendance/records/', {'sign_type': 'external'})
+        response = self.client.get(
+            '/plugins/attendance/records/', {**self._full_day(), 'sign_type': 'external'})
         self.assertContains(response, '<td>早退者</td>')
+        # 显式整天范围后「迟到者」确实在查询结果内，这条 NotContains 才有意义
         self.assertNotContains(response, '<td>迟到者</td>')
 
     def test_filter_time_range(self):
@@ -155,7 +172,8 @@ class AttendanceRecordFilterTests(TestCase):
         self.assertTrue(self.early_record.is_makeup)
         self.assertEqual(self.early_record.status, Attendance.Status.MAKEUP)
         self.assertEqual(self.early_record.sign_type, Attendance.SignType.INTERNAL)
-        response = self.client.get('/plugins/attendance/records/', {'status': 'makeup'})
+        response = self.client.get(
+            '/plugins/attendance/records/', {**self._full_day(), 'status': 'makeup'})
         self.assertContains(response, '早退者')
 
     def test_makeup_requires_report_perm(self):
