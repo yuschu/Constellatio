@@ -56,6 +56,8 @@
 
 * 🧱 共享缓存（v1.7.3）：缓存后端换 `DatabaseCache`（复用现有 MySQL/sqlite，零新依赖），登录失败限流与 SSO Ticket 防重放靠 `cache.add` 主键冲突跨 gunicorn worker 成立；容器启动自动 `createcachetable`
 
+* 🧭 前端三态反馈（v1.7.12）：两处图表 `fetch` 不再把 401/403/500 一律显示成「图表不可用」——401 跳登录并带 `next`（页面 URL，不是接口地址）、403 显示「无权查看该数据」、其它显示「数据暂时不可用」
+
 * 🔑 匿名 JSON 401（v1.7.11）：`LoginRequiredMiddleware` 换成子类，匿名 + `Accept: application/json`（或 `/stats` 路径）返回 **401** `{code,message}` 而不是 302 登录页，前端 fetch 不再拿到 HTML 炸掉；HTML 仍 302 带 next；`attendance_check` 手写 `has_perm` 由 302 改为 403
 
 * 🔒 对象级越权统一（v1.7.10）：审批详情 GET/POST、附件下载、`approval_hide` 的「不是你的单子」由 302/404 统一为 **403**；`services` 的 `PermissionError` 不再被静默吞掉；配套断言额外验证「附件无字节流出」「未写库」
@@ -221,8 +223,9 @@ Constellatio/
 | [docs/plugin-dev-v179.md](docs/plugin-dev-v179.md)                             | 插件开发 | v1.7.9：越权反馈语义统一（已登录无权限 → 403；JSON `{code,message}`） |
 | [docs/plugin-dev-v1710.md](docs/plugin-dev-v1710.md)                           | 插件开发 | v1.7.10：对象级越权统一（审批详情/附件/隐藏 → 403） |
 | [docs/plugin-dev-v1711.md](docs/plugin-dev-v1711.md)                           | 插件开发 | v1.7.11：匿名 JSON 401 + JSON 判据收敛 + 残留 302 收口 |
+| [docs/plugin-dev-v1712.md](docs/plugin-dev-v1712.md)                           | 插件开发 | v1.7.12：前端接过 401/403（图表请求的三态反馈） |
 | [docs/roadmap.md](docs/roadmap.md)                                             | 规划   | 差距矩阵、v1.5–v2.0 迭代路线、修复项与文档债务                  |
 
 ## 📌 状态
 
-**v1.7.11 匿名 JSON 401 + 残留 302 收口已交付并部署**（433 项测试）：匿名 + 要 JSON 的请求返回 401 JSON（HTML 仍 302 带 next），JSON 判据收敛到 `wants_json()` 一处；`attendance_check` 的 302 改为 403。上一交付 **v1.7.10**（对象级 403，427 项测试）。→ 下一步见 roadmap 第七节
+**v1.7.12 前端接过 401/403 已交付并部署**（439 项测试）：两处图表请求按状态码分流——401 跳登录带 next、403 显示「无权查看该数据」、其它「数据暂时不可用」；抽成共享 include，断言锁的是调用点不是函数名。上一交付 **v1.7.11**（匿名 JSON 401，434 项测试）。→ 下一步：v1.7.13 插件开关缓存失效
