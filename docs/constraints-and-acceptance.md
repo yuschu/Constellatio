@@ -92,6 +92,18 @@
 > 本项目仓库级已固化为 `http.sslBackend = openssl`（代理环境）。回退用 `git config http.sslBackend schannel`。
 > 教训：把每次失败都标成「凭据阻断」比故障本身更容易误导排查——先看报错原文再下结论。
 
+## 五点六、前端错误处理的硬约束（v1.7.12 起）
+
+1. **401 跳转的 `next` 只能是页面 URL**：`location.pathname + location.search`。
+   禁止拼接接口地址（`el.dataset.statsUrl`、`/plugins/…/stats/` 之类）——那会让用户登录后被扔到一坨 JSON 上。
+   这个错误在「想保留筛选条件」时极易犯，因为 statsUrl 里正好也有 `?days=`。
+2. **被 `{% include %}` 的模板必须自带 `{% load … %}`**：include 独立编译，父模板的 `{% load %}` 不继承；
+   缺 `{% load i18n %}` 只会在运行时 `TemplateSyntaxError`，两个页面直接 500。
+3. **哨兵值要写进注释**：用 `null` 表示「已被错误处理函数消费」时，必须注明「该接口永远返回对象」，
+   否则将来某个接口合法返回 `null` 会被静默跳过、界面空白且无提示。
+4. **错误处理函数不得抛异常**：`showEmpty` 一类兜底渲染若抛错，会落进 `.catch` 被统一覆盖成「不可用」，
+   正好抹掉 401/403 的区分。
+
 ## 五点五、迁移与 DDL 硬约束（v1.7.8 起）
 
 1. **禁止对 `migrations/` 使用任何编号 glob**（`0002*`、`00*_*.py` 等）。迁移文件名由 Django 按内容生成、
