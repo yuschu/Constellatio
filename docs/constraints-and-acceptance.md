@@ -78,6 +78,20 @@
 - [ ] 测试报告（功能测试 + 部分单元测试）
 - [ ] 部署文档 + 演示脚本
 
+## 五点四、git push 失败必须分类诊断（v1.7.9 收尾）
+
+同一个「push 失败」出现过三种完全不同的病因，**不要默认是凭据**：
+
+| 症状 | 病因 | 处置 |
+|---|---|---|
+| `could not read Username` / `failed to execute prompt script` | 凭据（helper 失效或 `GIT_TERMINAL_PROMPT=0`） | 修 credential helper / 交互推送 |
+| `HTTP 408` + `send-pack: unexpected disconnect` | 大 pack / 网络超时 | `http.version=HTTP/1.1` + 加大 `http.postBuffer` |
+| `schannel: failed to receive handshake, SSL/TLS connection failed` | **TLS 后端与代理不兼容**（Windows schannel 走代理握手失败） | `git config http.sslBackend openssl` |
+| `TcpTestSucceeded=False` | 网络真不通 | 查网络/代理，别改 git |
+
+> 本项目仓库级已固化为 `http.sslBackend = openssl`（代理环境）。回退用 `git config http.sslBackend schannel`。
+> 教训：把每次失败都标成「凭据阻断」比故障本身更容易误导排查——先看报错原文再下结论。
+
 ## 五点五、迁移与 DDL 硬约束（v1.7.8 起）
 
 1. **禁止对 `migrations/` 使用任何编号 glob**（`0002*`、`00*_*.py` 等）。迁移文件名由 Django 按内容生成、

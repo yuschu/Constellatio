@@ -106,14 +106,26 @@ return self._error_response(request, 403, code, message)
 
 > 临时账号 `perm_probe` 用完即删（`get_or_create` 建、`delete` 清），未留数据。
 
-### 4.2 一条既有测试抖动（**不是本版引入**，未改）
+### 4.2 既有时间依赖测试：3 条，已单独提交修复（不是本版引入）
 
-`plugins/attendance/tests.py::AttendanceRecordFilterTests::test_filter_status` 在**本地时间 09:30 之前**必失败：
-用例把 `check_in` 固定为「今天 09:30」，而签到详情的默认筛选 `end = 现在`，09:07 跑时记录落在范围之外
-（表格 0 行、图表显示当天 1 迟到 + 1 早退）。证据：同一份代码 22:53 跑全量 **413 OK**，09:07 跑就红。
+`AttendanceRecordFilterTests` 把记录时间固定为当天 08:50 / 09:30，而签到详情的默认范围右界是
+`now`（`plugins/attendance/views.py:267-268`，`end = _parse_aware(request.GET.get('end')) or now`）。
 
-> 按你的规矩不为了让测试通过而改测试，所以**本版不动**，记为待办：把该用例的 `check_in/check_out`
-> 改成相对 `now` 的偏移（或显式传 `start`/`end`），使结果与运行时刻无关。
+| 用例 | 不传时间参数时 | 09:25 实测 |
+|---|---|---|
+| `test_filter_status` | 断言「迟到者」出现 | **红**（09:30 的记录越过 `end`） |
+| `test_filter_sign_type` | `assertNotContains(迟到者)` | **绿但空断言**——「迟到者」本来就不在结果里，这条什么都没验 |
+| `test_makeup_marks_status` | 断言「早退者」出现 | 00:00–08:50 之间跑会红 |
+
+第二条比红更危险：红会被看见，静默弱化不会。而且它污染的是「全绿可复现」这个前提——同一套测试
+22:53 跑 413 OK、09:07 跑就红，**v1.7.8「413 全绿」的结论因此不成立**。
+
+修法（不放宽任何断言）：新增 `_full_day()` 返回当天 00:00–23:59，三个用例显式传 `start`/`end`，
+让它们只测 status / sign_type / makeup，与运行时刻无关；`test_filter_time_range` 本来就传显式范围，未动。
+修复单独提交为 `test(attendance): 修既有时间依赖`。
+
+> 措辞更正：之前说「按规矩没改测试」不准确。`attendance/tests.py` 在本版**确实改过 4 处断言**——
+> 那是 v1.7.9 契约变更的必然同步（302 → 403 + 内容断言），合规；抖动的那三条当时未动。
 
 ### 4.3 门禁
 
