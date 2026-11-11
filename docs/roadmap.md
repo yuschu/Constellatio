@@ -2,7 +2,7 @@
 
 > 依据：`tech-stack-and-architecture.md` / `constraints-and-acceptance.md` / `development-guide.md` 的**全栈插件化**目标
 > 负责人校正（2026-10-22）：**不降级**、**补充实现**、**列入修复项**；工作约定只需「文档先行、每改必推 GitHub、每版打 tag」
-> 状态：draft-58（2026-11-10）—— **v1.4–v1.6.20 已交付**（tag **v1.6.20**），**v1.7.0 企业 SSO + 消息提醒**（259 项测试），**v1.7.1 安全与并发修复包**（323 项测试），**v1.7.2 公告极简化 + 考勤规则**（352 项测试），**v1.7.3 共享缓存**（357 项测试），**v1.7.4 登录守卫中间件化**（368 项测试），**v1.7.5 错误页 + 日志与异常分类**（380 项测试），**v1.7.6 列表分页统一 + 公告增量已读 + 留痕翻页**（387 项测试），**v1.7.7 限流计数原子化（P2）+ 认证后端插件化**（403 项测试），**v1.7.8 审计字段统一已交付**（410 项测试全绿）；下一版：v1.7.9 越权反馈语义统一（待定）
+> 状态：draft-59（2026-11-11）—— **v1.4–v1.6.20 已交付**（tag **v1.6.20**），**v1.7.0 企业 SSO + 消息提醒**（259 项测试），**v1.7.1 安全与并发修复包**（323 项测试），**v1.7.2 公告极简化 + 考勤规则**（352 项测试），**v1.7.3 共享缓存**（357 项测试），**v1.7.4 登录守卫中间件化**（368 项测试），**v1.7.5 错误页 + 日志与异常分类**（380 项测试），**v1.7.6 列表分页统一 + 公告增量已读 + 留痕翻页**（387 项测试），**v1.7.7 限流计数原子化（P2）+ 认证后端插件化**（403 项测试），**v1.7.8 审计字段统一**（413 项测试），**v1.7.9 越权反馈语义统一（选 403）已交付**（420 项测试）；下一版：按第七节排期
 
 ## 一、总原则
 
@@ -21,6 +21,7 @@
 | 认证后端 | `AUTHENTICATION_BACKENDS` 可插拔 | ✅ v1.7.7：`OA_AUTH_BACKENDS` dotted-path 有序链 + `ModelBackend` 垫底 + 契约校验纯函数 + 示例 Provider（用户名/邮箱，含 is_active 检查） | 无 | ✅ v1.7.7 完成 |
 | 登录限流计数 | 计数跨 worker 精确 | v1.7.3 起走共享缓存 `get+set`，6 路并发实测计数只有 2/4/4 | 已换独立计数表 `LoginFailureCounter` + `select_for_update`（只锁已存在行）+ 计数封顶 5 | ✅ v1.7.7 完成（容器 5 轮并发均为 5） |
 | 审计字段 | 业务表统一带操作人 | v1.7.7 及以前只有 9 个 created_at / 8 个 updated_at，操作人靠 4 处手写 | 已统一为 `AuditModel`（13/14 模型；structure 明确排除），pre_save 自动填；历史行诚实为 NULL | ✅ v1.7.8 完成 |
+| 越权反馈 | 已登录无权限的反馈统一 | v1.7.8 及以前 42 条 URL 统一 302 回工作台 | 已统一为 403（HTML 品牌页 / JSON `{code,message}`），未登录仍 302 | ✅ v1.7.9 完成 |
 | 运行日志 / 错误页 | 生产可排障、错误页带品牌 | 无 `LOGGING`、无 `templates/400|403|404|500.html`；500 只有默认 traceback 片段 | 已补 `LOGGING`（console，容器不落盘）+ `RequestIdMiddleware`（`X-Request-Id` + 日志 filter）+ 四个错误页 + `ExceptionGuardMiddleware`（业务 400 / 越权 403 / 其它 500） | ✅ v1.7.5 完成 |
 | 登录守卫 | 菜单与 URL 同源 `require_perm`；匿名可达面可控 | v1.7.3 及以前靠逐视图 `@login_required`/`require_perm`，无守卫的视图默认可匿名访问 | 已换 `LoginRequiredMiddleware` 默认拦截 + 6 个 `@login_not_required` 白名单，两条集合护栏钉住匿名可达面 | ✅ v1.7.4 完成 |
 | 缓存后端 | 文档未承诺（v1.7.3 补齐） | v1.7.2 及以前是 Django 默认 LocMemCache：每 worker 一份，登录限流 / SSO 防重放多 worker 下失效 | 已换 `DatabaseCache`（`constellatio_cache`，跨进程共享，零新依赖） | ✅ v1.7.3 完成 |
@@ -92,7 +93,7 @@
 | **v1.7.6** | 列表分页统一 + 公告增量已读 + 留痕翻页 | 新增 `plugin_host/pagination.py`（唯一分页入口）+ `templates/includes/pagination.html`（两套主题共用，`{% querystring %}` 保住筛选参数）；approval/attendance 去掉内联 `Paginator`；user 部门/用户、notice 列表接分页；notice 只登记当页未读；留痕 50/页 + 总数 + 看板 60 秒快照（`docs/plugin-dev-v176.md`） | ✅ 已交付：387 项测试 + 容器手工验收（693 条 → 14 页，末页 43 行） |
 | **v1.7.7** | 限流计数原子化（P2）+ 认证后端插件化 | **首项 P2**：`plugins/auth` 新增 `LoginFailureCounter`（独立表 + `select_for_update`，只对已存在行加锁避免 gap 锁死锁，计数封顶 5）；随后 `OA_AUTH_BACKENDS` dotted-path 有序链 + `ModelBackend` 垫底 + `validate_auth_backends()` 纯函数契约校验 + 示例 Provider（用户名/邮箱，过 `user_can_authenticate`）（`docs/plugin-dev-v177.md`） | ✅ 已交付：403 项测试 + 容器 MySQL 6 路并发 ×5 轮（计数稳定 5、0 次 500）+ 单 worker 对照 + email 登录冒烟 |
 | **v1.7.8** | 审计字段统一（AuditModel） | 抽象 `AuditModel`（created_at/updated_at 均 null=True + created_by/updated_by）+ `current_user` contextvar + `CurrentUserMiddleware`（匿名→None，finally 复位）+ `pre_save` 统一填充；三批迁移（notify/blockchain/workspace → approval/attendance/notice → user），迁移末尾 RunSQL 清除被框架注入的时间默认值；structure 明确排除（`docs/plugin-dev-v178.md`） | ✅ 已交付：410 项测试 + 三批迁移回滚往返 + 容器 HTTP created_by 核验 + 13/14 模型覆盖 |
-| **v1.7.9（待定）** | 越权反馈语义统一（302 / 403 / 404 三选一） | 现状：42 条 URL 越权统一 302 回工作台；`BusinessError` / `ObjectPermissionDenied` 只有测试夹具在用。三种语义取舍需产品决策，决定后**一次性**迁移，并同批接入 `BusinessError` 真实抛点 | 全站越权反馈只剩一种口径 |
+| **v1.7.9** | 越权反馈语义统一（选 403） | `require_perm` 一处改动：已登录无权限码由 `redirect('index')` 改为 `raise ObjectPermissionDenied`（31 个视图 / 42 条 URL 同时生效）；未登录仍 302 到登录页带 next；JSON 接口复用 `_wants_json`；同时修 `_error_response` 丢弃 `exception.message` 与日志只打 code 的问题（`docs/plugin-dev-v179.md`） | ✅ 已交付：420 项测试 + 403 品牌页/`{code,message}`/`next` 三种口径用例 + 禁止项 8 条全部遵守 |
 | **v1.8** | 模板引擎插件化 | Django / Jinja2 Provider；先做多引擎共存或单插件切换 | 待确认深度（见第六节） |
 | **v1.9** | 插件契约补全 | `models` / `dependencies` / `admin`；依赖顺序与环校验；启用一致性校验 | 缺失依赖启动即报错；停用被依赖插件被拦截 |
 | **v1.10** | 剩余修复包 + 文档债务 | P0-A 部署默认值（密钥/口令/DEBUG/HOSTS）、容器非 root 与健康检查、`entrypoint` 注入、`has_perm` 三处口径、模板内联 JS 与 inline style、静态停用边界、全文档同步 | 新增测试全绿；文档与代码无已知冲突 |
