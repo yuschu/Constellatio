@@ -239,7 +239,7 @@
     el.hidden = true;
   }
 
-  function showEmpty() {
+  function showEmpty(text) {
     var body = fallback.querySelector('tbody');
     if (body) {
       body.innerHTML = '';
@@ -247,7 +247,7 @@
       var cell = document.createElement('td');
       cell.colSpan = 7;
       cell.className = 'text-muted';
-      cell.textContent = fallback.dataset.empty || '';
+      cell.textContent = text || fallback.dataset.empty || '';
       row.appendChild(cell);
       body.appendChild(row);
     }
@@ -255,6 +255,8 @@
     if (foot) { foot.hidden = true; }
     showFallback();
   }
+
+  {% include "includes/stats_fetch_fail.js" %}
 
   function load() {
     var params = new URLSearchParams();
@@ -265,9 +267,14 @@
       credentials: 'same-origin',
       headers: { 'Accept': 'application/json' }
     }).then(function (response) {
-      if (!response.ok) { throw new Error('stats ' + response.status); }
+      // 拿到 response 才谈得上区分状态码；网络层失败（fetch reject）由下面的 .catch 兜
+      if (!response.ok) { handleStatsFailure(response); return null; }
       return response.json();
     }).then(function (data) {
+      // 哨兵：null 表示「已经被 handleStatsFailure 处理过」。
+      // stats 接口永远返回对象（没有 null 响应），所以 null 可以安全用作哨兵；
+      // 将来若真出现「合法返回 null」的接口，它会被静默跳过、图表空着且无提示。
+      if (!data) { return; }
       if (!data.totals || !data.totals.records) {
         showEmpty();
         return;
