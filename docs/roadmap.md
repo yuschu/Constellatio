@@ -2,7 +2,7 @@
 
 > 依据：`tech-stack-and-architecture.md` / `constraints-and-acceptance.md` / `development-guide.md` 的**全栈插件化**目标
 > 负责人校正（2026-10-22）：**不降级**、**补充实现**、**列入修复项**；工作约定只需「文档先行、每改必推 GitHub、每版打 tag」
-> 状态：draft-59（2026-11-11）—— **v1.4–v1.6.20 已交付**（tag **v1.6.20**），**v1.7.0 企业 SSO + 消息提醒**（259 项测试），**v1.7.1 安全与并发修复包**（323 项测试），**v1.7.2 公告极简化 + 考勤规则**（352 项测试），**v1.7.3 共享缓存**（357 项测试），**v1.7.4 登录守卫中间件化**（368 项测试），**v1.7.5 错误页 + 日志与异常分类**（380 项测试），**v1.7.6 列表分页统一 + 公告增量已读 + 留痕翻页**（387 项测试），**v1.7.7 限流计数原子化（P2）+ 认证后端插件化**（403 项测试），**v1.7.8 审计字段统一**（413 项测试），**v1.7.9 越权反馈语义统一（选 403）已交付**（420 项测试）；下一版：按第七节排期
+> 状态：draft-60（2026-11-11）—— **v1.4–v1.6.20 已交付**（tag **v1.6.20**），**v1.7.0 企业 SSO + 消息提醒**（259 项测试），**v1.7.1 安全与并发修复包**（323 项测试），**v1.7.2 公告极简化 + 考勤规则**（352 项测试），**v1.7.3 共享缓存**（357 项测试），**v1.7.4 登录守卫中间件化**（368 项测试），**v1.7.5 错误页 + 日志与异常分类**（380 项测试），**v1.7.6 列表分页统一 + 公告增量已读 + 留痕翻页**（387 项测试），**v1.7.7 限流计数原子化（P2）+ 认证后端插件化**（403 项测试），**v1.7.8 审计字段统一**（413 项测试），**v1.7.9 越权反馈语义统一（选 403）**（420 项测试），**v1.7.10 对象级越权统一已交付**（427 项测试）；下一版：按第七节排期
 
 ## 一、总原则
 
@@ -94,6 +94,7 @@
 | **v1.7.7** | 限流计数原子化（P2）+ 认证后端插件化 | **首项 P2**：`plugins/auth` 新增 `LoginFailureCounter`（独立表 + `select_for_update`，只对已存在行加锁避免 gap 锁死锁，计数封顶 5）；随后 `OA_AUTH_BACKENDS` dotted-path 有序链 + `ModelBackend` 垫底 + `validate_auth_backends()` 纯函数契约校验 + 示例 Provider（用户名/邮箱，过 `user_can_authenticate`）（`docs/plugin-dev-v177.md`） | ✅ 已交付：403 项测试 + 容器 MySQL 6 路并发 ×5 轮（计数稳定 5、0 次 500）+ 单 worker 对照 + email 登录冒烟 |
 | **v1.7.8** | 审计字段统一（AuditModel） | 抽象 `AuditModel`（created_at/updated_at 均 null=True + created_by/updated_by）+ `current_user` contextvar + `CurrentUserMiddleware`（匿名→None，finally 复位）+ `pre_save` 统一填充；三批迁移（notify/blockchain/workspace → approval/attendance/notice → user），迁移末尾 RunSQL 清除被框架注入的时间默认值；structure 明确排除（`docs/plugin-dev-v178.md`） | ✅ 已交付：410 项测试 + 三批迁移回滚往返 + 容器 HTTP created_by 核验 + 13/14 模型覆盖 |
 | **v1.7.9** | 越权反馈语义统一（选 403） | `require_perm` 一处改动：已登录无权限码由 `redirect('index')` 改为 `raise ObjectPermissionDenied`（31 个视图 / 42 条 URL 同时生效）；未登录仍 302 到登录页带 next；JSON 接口复用 `_wants_json`；同时修 `_error_response` 丢弃 `exception.message` 与日志只打 code 的问题（`docs/plugin-dev-v179.md`） | ✅ 已交付：420 项测试 + 403 品牌页/`{code,message}`/`next` 三种口径用例 + 禁止项 8 条全部遵守 |
+| **v1.7.10** | 对象级越权语义统一 | 审批详情 GET/POST、附件下载、`approval_hide` 的对象级越权由 302/404 统一为 **403**；`services` 抛的 `PermissionError` 不再被静默吞掉；文案「该审批单不属于你」/「你无权审批该单据」只进 JSON 与日志（`docs/plugin-dev-v1710.md`） | ✅ 已交付：427 项测试 + 附件无字节流出断言 + 容器冒烟 |
 | **v1.8** | 模板引擎插件化 | Django / Jinja2 Provider；先做多引擎共存或单插件切换 | 待确认深度（见第六节） |
 | **v1.9** | 插件契约补全 | `models` / `dependencies` / `admin`；依赖顺序与环校验；启用一致性校验 | 缺失依赖启动即报错；停用被依赖插件被拦截 |
 | **v1.10** | 剩余修复包 + 文档债务 | P0-A 部署默认值（密钥/口令/DEBUG/HOSTS）、容器非 root 与健康检查、`entrypoint` 注入、`has_perm` 三处口径、模板内联 JS 与 inline style、静态停用边界、全文档同步 | 新增测试全绿；文档与代码无已知冲突 |
