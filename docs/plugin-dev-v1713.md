@@ -2,8 +2,8 @@
 
 > 关联：`plugin_host/registry.py`（`_switch_cache` / `PLUGIN_SWITCH_CACHE_TTL` / `PLUGIN_SWITCH_ERROR_TTL` / `invalidate_plugin_switch_cache`）、`plugins/workspace/models.py`（save/delete 失效钩子）
 > 版本：v1.7.13 · 文档日期：2026-11-11
-> 状态：**草案 —— 待审**
-> 基线：tag `v1.7.12`（439 项测试全绿）
+> 状态：**✅ 已实现**（440 项测试 + 两 worker 实测与对照实验；见 §六）
+> 基线：tag `v1.7.12`（439 项测试）
 > 目标：停用/启用插件在**任何 worker 上立即生效**，没有 30 秒窗口
 
 ## 一、现状（v1.7.3 引入）
@@ -60,6 +60,8 @@ def get_plugin_switches():
 | `PLUGIN_SWITCH_CACHE_TTL` | 缓存没了，配置是死配置 |
 | `PLUGIN_SWITCH_ERROR_TTL` | 同上；它是「表不可读时 5 秒内不再打 DB」的降级缓存 |
 | `invalidate_plugin_switch_cache()` | 没有进程内状态可失效；调用方一并清理 |
+| `use_cache = not connection.in_atomic_block` 分支 | 它是缓存逻辑的总开关；缓存没了它只剩一个无用变量，`connection` 的 import 也随之删掉 |
+| `tests_registry.py` 的 `mock.patch.object(connection, 'in_atomic_block', False)` | 那个 patch 存在的唯一目的就是让缓存路径生效 |
 | `workspace.PluginSwitch.save()` 里的失效调用 | 同上（`delete()` 与 `post_delete` receiver 同样处理） |
 
 > **降级行为的代价**：表不可读（首次 `migrate` 之前 / workspace 被停用）时，每个请求会打一次失败的
@@ -95,13 +97,13 @@ A 清掉自己的缓存；**worker B/C 收不到这个信号**，缓存照旧。
 | `plugin_host/tests_registry.py` | `test_ttl_cache_reuses_snapshot_until_invalidated` → 改为「每次调用都读表」用例；`invalidate_plugin_switch_cache` 的 import/setUp 调用清理；错误降级用例保留并改断言 |
 | `plugins/workspace/tests*.py`（如有引用） | 同步 |
 
-## 五、测试计划（439 → 441）
+## 五、测试计划（439 → 440）
 
 | # | 用例 | 断言 |
 |---|---|---|
-| 1 | `test_switch_reads_db_every_call`（替换原 TTL 缓存用例） | 第一次读到 `enabled=True`；**绕过 save 钩子**直接 `PluginSwitch.objects.filter(...).update(enabled=False)`；再调用 `get_plugin_switches()` → 立刻看到 False。用 `.update()` 是关键：它不触发 `save()`，能证明「读到新值」不是因为失效钩子。 |
+| 1 | `test_switch_change_visible_without_invalidation_hook`（替换原 TTL 用例） | 第一次读到 `enabled=True`；**绕过 save 钩子**直接 `PluginSwitch.objects.filter(...).update(enabled=False)`；再调用 `get_plugin_switches()` → 立刻看到 False。用 `.update()` 是关键：它不触发 `save()`，能证明「读到新值」不是因为失效钩子。 |
 | 2 | `test_switch_table_error_degrades_to_static`（保留，改断言） | 表不可读时返回 `{}` 且回退静态配置；不再断言缓存行为 |
-| 3 | `test_no_switch_cache_attributes` | `hasattr(registry, '_switch_cache')` / `PLUGIN_SWITCH_CACHE_TTL` / `invalidate_plugin_switch_cache` 均为 False（防回退） |
+| 1（新增，替换 TTL 用例） | `test_switch_change_visible_without_invalidation_hook` | `hasattr(registry, '_switch_cache')` / `PLUGIN_SWITCH_CACHE_TTL` / `invalidate_plugin_switch_cache` 均为 False（防回退） |
 
 ## 六、验收（**必须两 worker**）
 
@@ -109,12 +111,36 @@ A 清掉自己的缓存；**worker B/C 收不到这个信号**，缓存照旧。
 2. 记录 worker 进程 pid：`docker exec constellatio-web-1 ps -o pid,cmd -C gunicorn`；
 3. 打开**临时** access log（容器内 env 覆盖，不改仓库）让每条请求带 pid：
    `--access-logfile - --access-logformat '%(p)s %(m)s %(U)s'`；
-4. **worker A 上停用插件**（`python manage.py plugin_switch disable <key>`），随后立刻连打 6 次目标路由；
+4. **在容器内**停用插件（必须用容器那套配置改库，宿主机 `python manage.py` 可能连的是另一个库，那样这一步就落空了）：
+
+   ```bash
+   docker exec constellatio-web-1 python manage.py plugin_switch off notice
+   ```
+
+   随后立刻连打 6 次目标路由；
 5. 通过 access log 确认这 6 次**确实落在至少两个不同 pid** 上；
 6. **判据**：所有请求都 403/404（按停用语义），**不存在**任何一次「停用前行为」；
 7. 对照：在删缓存之前的代码上重复一次，必须能看到至少一次旧行为（证明这个验收真能抓到缺陷）。
 
 > 单 worker 测不出这类缺陷（v1.7.7 的教训）；只测一次请求也可能恰好落在 A 上。
+
+### 六.1 实测记录（2026-11-11 11:50 +08:00）
+
+探针容器：`constellatio-web:latest`（新代码）3 worker、`--access-logformat '%(p)s %(s)s %(U)s'`，端口 8010；
+停用动作在部署容器内执行（`plugin_switch off notice`），改的是同一个 MySQL 库。
+
+| 版本 | 停用前 | 停用后立刻 6 次 | 命中 worker |
+|---|---|---|---|
+| **新代码（删缓存）** | `/plugins/notice/` 200 | **6 次全部 404「插件已停用」** | pid `<8>`、`<9>`（≥2 个） |
+| **旧代码（v1.7.12，缓存仍在）** | 200 | **6 次全部 200（旧快照放行）** | pid `<8>`、`<9>`、`<10>` |
+
+> 这就是那条判据的意义——**如果验收对「有缺陷的代码」也通过，它就什么也没验**。
+> 旧代码在完全相同的操作序列下 6/6 放行，新代码 6/6 拦截，差异只能来自「删掉进程内缓存」。
+>
+> 口径说明：本实验的停用动作来自**另一个进程**（部署容器的 `manage.py`），所以旧代码里 3 个 worker
+> 的缓存全都没被清；生产中从 Web UI 停用时，处理写操作的那个 worker 会清自己的缓存、其余仍保留旧快照，
+> 表现为「部分 worker 放行」。两种形态都是同一个缺陷，本实验取更彻底的一种。
+> 实验后已恢复 `notice` 为启用，探针容器与对照镜像均已删除。
 
 ## 七、不做 / 已知边界
 

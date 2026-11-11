@@ -56,6 +56,8 @@
 
 * 🧱 共享缓存（v1.7.3）：缓存后端换 `DatabaseCache`（复用现有 MySQL/sqlite，零新依赖），登录失败限流与 SSO Ticket 防重放靠 `cache.add` 主键冲突跨 gunicorn worker 成立；容器启动自动 `createcachetable`
 
+* ⚡ 插件开关即时生效（v1.7.13）：删掉 `registry._switch_cache` 进程内 TTL 缓存，停用/启用插件在**所有 worker** 上立刻生效（原先多 worker 下最多 30 秒内仍可访问）；同时清除 `PLUGIN_SWITCH_CACHE_TTL` / `PLUGIN_SWITCH_ERROR_TTL` 与失效钩子
+
 * 🧭 前端三态反馈（v1.7.12）：两处图表 `fetch` 不再把 401/403/500 一律显示成「图表不可用」——401 跳登录并带 `next`（页面 URL，不是接口地址）、403 显示「无权查看该数据」、其它显示「数据暂时不可用」
 
 * 🔑 匿名 JSON 401（v1.7.11）：`LoginRequiredMiddleware` 换成子类，匿名 + `Accept: application/json`（或 `/stats` 路径）返回 **401** `{code,message}` 而不是 302 登录页，前端 fetch 不再拿到 HTML 炸掉；HTML 仍 302 带 next；`attendance_check` 手写 `has_perm` 由 302 改为 403
@@ -224,8 +226,9 @@ Constellatio/
 | [docs/plugin-dev-v1710.md](docs/plugin-dev-v1710.md)                           | 插件开发 | v1.7.10：对象级越权统一（审批详情/附件/隐藏 → 403） |
 | [docs/plugin-dev-v1711.md](docs/plugin-dev-v1711.md)                           | 插件开发 | v1.7.11：匿名 JSON 401 + JSON 判据收敛 + 残留 302 收口 |
 | [docs/plugin-dev-v1712.md](docs/plugin-dev-v1712.md)                           | 插件开发 | v1.7.12：前端接过 401/403（图表请求的三态反馈） |
+| [docs/plugin-dev-v1713.md](docs/plugin-dev-v1713.md)                           | 插件开发 | v1.7.13：插件开关多 worker 立即可见（删进程内缓存） |
 | [docs/roadmap.md](docs/roadmap.md)                                             | 规划   | 差距矩阵、v1.5–v2.0 迭代路线、修复项与文档债务                  |
 
 ## 📌 状态
 
-**v1.7.12 前端接过 401/403 已交付并部署**（439 项测试）：两处图表请求按状态码分流——401 跳登录带 next、403 显示「无权查看该数据」、其它「数据暂时不可用」；抽成共享 include，断言锁的是调用点不是函数名。上一交付 **v1.7.11**（匿名 JSON 401，434 项测试）。→ 下一步：v1.7.13 插件开关缓存失效
+**v1.7.13 插件开关多 worker 立即可见已交付并部署**（440 项测试）：删掉进程内开关缓存，停用/启用立即在全 worker 生效；3 worker 实测新代码 6/6 拦截、旧代码 6/6 放行（对照实验）。上一交付 **v1.7.12**（前端三态反馈，439 项测试）。→ 下一步见 roadmap 第七节
