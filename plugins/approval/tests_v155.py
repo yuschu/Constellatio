@@ -280,8 +280,9 @@ class DynamicApprovalTests(TestCase):
 
     def test_l3_pending_list_hidden_manager_visible(self):
         """v1.5.15：L3（仅 approval_view）看不到待我审批；管理岗可见。"""
-        self.assertEqual(
-            self.client.get(reverse('approval:approval_pending')).status_code, 302)
+        response = self.client.get(reverse('approval:approval_pending'))
+        self.assertEqual(response.status_code, 403)      # v1.7.9：无权 → 403
+        self.assertContains(response, '403', status_code=403)
         self.assertNotContains(self.client.get('/'), '/plugins/approval/pending/')
 
         manager = User.objects.create_user('pending_mgr', password='pw')
@@ -468,7 +469,9 @@ class DynamicApprovalTests(TestCase):
     def test_cc_hidden_for_l3_visible_for_manager(self):
         """v1.5.17：抄送我的仅管理岗可见。"""
         self.client.force_login(self.applicant)
-        self.assertEqual(self.client.get(reverse('approval:approval_cc')).status_code, 302)
+        response = self.client.get(reverse('approval:approval_cc'))
+        self.assertEqual(response.status_code, 403)      # v1.7.9：无权 → 403
+        self.assertContains(response, '403', status_code=403)
         manager = User.objects.create_user('cc_mgr', password='pw')
         grant(manager, 'approval_view', 'approval_approve', name='抄送管理岗')
         self.client.force_login(manager)

@@ -137,15 +137,15 @@ class LoginGuardBehaviorTests(TestCase):
         self.assertEqual(response.headers['Location'], target)
 
     def test_authenticated_same_page_ok(self):
-        """已登录有权限 → 200；已登录无权限 → 302 回工作台（权限语义未被中间件改写）。"""
+        """已登录有权限 → 200；已登录无权限 → 403（v1.7.9 起；未登录仍是 302 到登录页）。"""
         self.client.force_login(self.admin)
         self.assertEqual(self.client.get('/plugins/approval/').status_code, 200)
 
         self.client.logout()
         self.client.force_login(self.plain)
         response = self.client.get('/plugins/approval/')
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.headers['Location'], '/')
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, '403', status_code=403)
 
 
 class LoginGuardSetTests(TestCase):

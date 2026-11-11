@@ -87,7 +87,7 @@ class NoticeTest(TestCase):
             AnnouncementRead.objects.filter(user=self.reader).count(), first)
 
     def test_normal_user_cannot_see_readers_link(self):
-        """普通员工看不到「已读 N 人」入口，直接访问 readers 被 302 回首页。
+        """普通员工看不到「已读 N 人」入口，直接访问 readers 被 403（v1.7.9）。
 
         旧用例断言的是「?notice= 内联详情可访问」；该交互已删除，
         改为验证普通员工在公告流页面无已读人员入口且越权访问被拦截。
@@ -101,7 +101,9 @@ class NoticeTest(TestCase):
         self.assertNotContains(response, '已读 1 人')
 
         readers_url = reverse('notice:notice_readers', args=[a.id])
-        self.assertRedirects(self.client.get(readers_url), reverse('index'))
+        response = self.client.get(readers_url)
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, '403', status_code=403)
 
     def test_manager_can_view_readers_page(self):
         """notice_manage 用户可见入口，readers 页 200 并列出已读用户。"""
@@ -167,12 +169,13 @@ class NoticeTest(TestCase):
         self.assertEqual(announcement.publisher, self.publisher)
 
     def test_create_requires_manage_perm(self):
-        """无 notice_manage 的普通员工不能发布公告，POST 被 302 回首页。"""
+        """无 notice_manage 的普通员工不能发布公告，POST 被 403（v1.7.9）。"""
         self.client.force_login(self.reader)
 
         response = self.client.post(reverse('notice:notice_create'), {
             'title': '越权公告', 'content': '越权正文',
         })
 
-        self.assertRedirects(response, reverse('index'))
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, '403', status_code=403)
         self.assertFalse(Announcement.objects.filter(title='越权公告').exists())

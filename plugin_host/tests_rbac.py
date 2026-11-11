@@ -90,10 +90,12 @@ class AttendanceRecordsTests(TestCase):
             user=cls.staff, date=today,
             check_in=timezone.make_aware(datetime.combine(today, time(9, 30))))
 
-    def test_staff_redirected(self):
+    def test_staff_gets_403(self):
+        """v1.7.9：已登录但无权限码 → 403（原来是 302 回工作台）。"""
         self.client.force_login(self.staff)
         response = self.client.get('/plugins/attendance/records/')
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, '403', status_code=403)   # 来自 403.html，不是 CSRF/路由错误
 
     def test_manager_sees_all_records(self):
         self.client.force_login(self.manager)
@@ -128,7 +130,7 @@ class AttendanceRecordsTests(TestCase):
 
 
 class PluginViewGuardTests(TestCase):
-    """无权限插件视图统一 302 回工作台；有权限 200。"""
+    """v1.7.9：无权限插件视图统一 403（原 302 回工作台）；有权限 200。"""
 
     @classmethod
     def setUpTestData(cls):
@@ -139,7 +141,9 @@ class PluginViewGuardTests(TestCase):
 
     def test_structure_overview_guard(self):
         self.client.force_login(self.staff)
-        self.assertEqual(self.client.get('/plugins/structure/').status_code, 302)
+        response = self.client.get('/plugins/structure/')
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, '403', status_code=403)
         self.client.force_login(self.manager)
         self.assertEqual(self.client.get('/plugins/structure/').status_code, 200)
         self.assertContains(self.client.get('/plugins/structure/'), '查看模板')
@@ -148,17 +152,22 @@ class PluginViewGuardTests(TestCase):
         self.client.force_login(self.staff)
         for url in ('/plugins/approval/', '/plugins/approval/pending/',
                     '/plugins/approval/new/'):
-            self.assertEqual(self.client.get(url).status_code, 302, url)
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 403, url)
+            self.assertContains(response, '403', status_code=403)
         self.client.force_login(self.manager)
         self.assertEqual(self.client.get('/plugins/approval/').status_code, 200)
 
     def test_blockchain_guard(self):
         self.client.force_login(self.staff)
-        self.assertEqual(self.client.get('/plugins/blockchain/').status_code, 302)
+        response = self.client.get('/plugins/blockchain/')
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, '403', status_code=403)
         self.client.force_login(self.manager)
         self.assertEqual(self.client.get('/plugins/blockchain/').status_code, 200)
 
     def test_apply_structure_requires_manage(self):
         self.client.force_login(self.manager)      # 仅 structure_view
-        self.assertEqual(
-            self.client.post('/plugins/structure/apply/').status_code, 302)
+        response = self.client.post('/plugins/structure/apply/')
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, '403', status_code=403)

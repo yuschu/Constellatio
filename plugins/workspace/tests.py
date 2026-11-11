@@ -124,7 +124,8 @@ class PluginSwitchTests(TestCase):
         noperm = User.objects.create_user('noperm', '', 'nopermpass')
         self.client.force_login(noperm)
         resp = self.client.get(reverse('workspace:switch_list'))
-        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp.status_code, 403)              # v1.7.9：无权 → 403
+        self.assertContains(resp, '403', status_code=403)
 
     def test_switch_list_localized_plugin_titles(self):
         """插件名称随语言切换：中文显示中文名，英文显示英文名。"""

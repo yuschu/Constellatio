@@ -163,7 +163,8 @@ class AttendanceRecordFilterTests(TestCase):
         self.client.force_login(staff)
         response = self.client.post('/plugins/attendance/makeup/', {
             'user': self.late_user.pk, 'date': self.day.isoformat()})
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 403)          # v1.7.9：无权 → 403
+        self.assertContains(response, '403', status_code=403)
         self.late_record.refresh_from_db()
         self.assertFalse(self.late_record.is_makeup)
 
@@ -206,9 +207,13 @@ class AttendanceStatsTests(TestCase):
         return self.client.get('/plugins/attendance/stats/', params)
 
     def test_requires_report_perm(self):
+        """v1.7.9：无权 → 403；路径以 /stats 结尾 → 走 JSON 错误体（含我们抛的 message）。"""
         self.client.force_login(self.staff)
         response = self._get()
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 403)
+        payload = response.json()
+        self.assertEqual(payload['code'], 'permission_denied')
+        self.assertEqual(payload['message'], '无权访问该功能')
 
     def test_defaults_to_current_month(self):
         response = self._get()
@@ -436,7 +441,7 @@ class AttendanceRuleWorkdayTests(TestCase):
 
 
 class AttendanceRulePermissionTests(TestCase):
-    """规则页权限：无权限 GET 302 / POST 被拒；有权限可保存落库。"""
+    """规则页权限：无权限 GET/POST 均 403；有权限可保存落库。"""
 
     @classmethod
     def setUpTestData(cls):
@@ -464,16 +469,18 @@ class AttendanceRulePermissionTests(TestCase):
         data.update(overrides)
         return data
 
-    def test_staff_get_redirected(self):
+    def test_staff_get_is_403(self):
         self.client.force_login(self.staff)
         response = self.client.get('/plugins/attendance/rules/')
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 403)          # v1.7.9：无权 → 403
+        self.assertContains(response, '403', status_code=403)
 
     def test_staff_post_rejected(self):
         self.client.force_login(self.staff)
         response = self.client.post(
             '/plugins/attendance/rules/', self._payload(work_start='10:00'))
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 403)          # v1.7.9：无权 → 403
+        self.assertContains(response, '403', status_code=403)
         self.assertFalse(AttendanceRule.objects.filter(pk=1).exists())
 
     def test_manager_get_renders_form(self):

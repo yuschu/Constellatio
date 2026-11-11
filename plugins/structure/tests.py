@@ -84,10 +84,12 @@ class StructureApplyTests(TestCase):
         self.assertTrue(role.permissions.filter(codename='approval_view').exists())
 
     def test_overview_requires_structure_view(self):
-        """总览准入：无 structure_view 302；有则 200。"""
+        """总览准入：无 structure_view → 403（v1.7.9）；有则 200。"""
         noperm = User.objects.create_user('noperm2', '', 'pw')
         self.client.force_login(noperm)
-        self.assertEqual(self.client.get(reverse('structure:overview')).status_code, 302)
+        response = self.client.get(reverse('structure:overview'))
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, '403', status_code=403)
         _role = Role.objects.create(name='架构查看')
         _role.permissions.add(Permission.objects.get(codename='structure_view'))
         noperm.roles.add(_role)
@@ -144,7 +146,8 @@ class StructureApplyTests(TestCase):
         noperm = User.objects.create_user('noperm', '', 'nopermpass')
         self.client.force_login(noperm)
         resp = self.client.post(reverse('structure:apply'))
-        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp.status_code, 403)              # v1.7.9：无权 → 403
+        self.assertContains(resp, '403', status_code=403)
 
     def test_apply_emits_signal(self):
         """应用后发 structure_applied 信号并落 StructureRecord。"""
@@ -239,7 +242,9 @@ class StructureApplyTests(TestCase):
     def test_template_page_requires_structure_view(self):
         noperm = User.objects.create_user('tpl_noperm', password='pw')
         self.client.force_login(noperm)
-        self.assertEqual(self.client.get(reverse('structure:template')).status_code, 302)
+        response = self.client.get(reverse('structure:template'))
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, '403', status_code=403)
 
 
 class UserHierarchyTests(TestCase):
@@ -363,8 +368,9 @@ class StructureOverviewTreeTests(TestCase):
     def test_tree_requires_structure_view(self):
         noperm = User.objects.create_user('tree_noperm', password='pw')
         self.client.force_login(noperm)
-        self.assertEqual(
-            self.client.get(reverse('structure:overview')).status_code, 302)
+        response = self.client.get(reverse('structure:overview'))
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, '403', status_code=403)
 
 
 
@@ -387,7 +393,8 @@ class StructureUserDetailTests(TestCase):
         noperm = User.objects.create_user('detail_noperm', password='pw')
         self.client.force_login(noperm)
         resp = self.client.get(reverse('structure:user_detail', args=[self.target.pk]))
-        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp.status_code, 403)              # v1.7.9：无权 → 403
+        self.assertContains(resp, '403', status_code=403)
 
     def test_detail_shows_profile(self):
         self.client.force_login(self.viewer)

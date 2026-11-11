@@ -5,7 +5,27 @@
 <div class="r-card text-center py-5">
   <p class="r-small r-muted mb-2">403</p>
   <h2 class="mb-3">{% trans "权限不足" %}</h2>
+  {# 固定文案：绝不从异常取 message、绝不用 |safe（v1.7.5 定的边界，v1.7.9 不改） #}
   <p class="r-muted mb-4">{% trans "你没有访问这个页面的权限。" %}</p>
-  <a href="{% url 'index' %}" class="r-btn">{% trans "返回工作台" %}</a>
+  <div class="d-flex gap-2 justify-content-center">
+    <a href="{% url 'index' %}" class="r-btn">{% trans "返回工作台" %}</a>
+    <button type="button" class="r-btn r-btn-ghost" data-history-back data-fallback="{% url 'index' %}">{% trans "返回上一页" %}</button>
+  </div>
 </div>
+{% endblock %}
+{% block extra_js %}
+<script>
+  // 事件绑定走 data- 属性（项目规约禁止内联 onclick）；history.back 无法用声明式 HTML 表达，
+  // 所以这里是一小段内联脚本。若将来统一外链静态资源，把它挪到 errors.js 即可。
+  document.addEventListener('click', function (event) {
+    var trigger = event.target.closest('[data-history-back]');
+    if (!trigger) return;
+    event.preventDefault();
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      window.location.assign(trigger.dataset.fallback || '/');
+    }
+  });
+</script>
 {% endblock %}

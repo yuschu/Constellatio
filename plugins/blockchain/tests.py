@@ -21,10 +21,11 @@ class BlockchainTest(TestCase):
         role.permissions.add(Permission.objects.get(codename='blockchain_view'))
 
     def test_list_requires_perm(self):
-        """无 blockchain_view 的普通用户被重定向工作台。"""
+        """无 blockchain_view 的普通用户 → 403（v1.7.9 起，原来 302 回工作台）。"""
         self.client.force_login(User.objects.create_user('staff', password='pw'))
         response = self.client.get('/plugins/blockchain/')
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, '403', status_code=403)
 
     def test_append_links_chain(self):
         r1 = BlockchainRecord.append(
@@ -117,8 +118,13 @@ class BlockchainStatsTests(TestCase):
         return self.client.get('/plugins/blockchain/stats/', params)
 
     def test_requires_blockchain_view(self):
+        """v1.7.9：无权 → 403；`/stats/` 路径走 JSON 错误体。"""
         self.client.force_login(User.objects.create_user('plain', password='pw'))
-        self.assertEqual(self._get().status_code, 302)
+        response = self._get()
+        self.assertEqual(response.status_code, 403)
+        payload = response.json()
+        self.assertEqual(payload['code'], 'permission_denied')
+        self.assertEqual(payload['message'], '无权访问该功能')
 
     def test_default_window_aggregates_by_plugin(self):
         data = self._get().json()

@@ -105,9 +105,12 @@ class ExceptionGuardMiddleware:
 
             if isinstance(exception, (ObjectPermissionDenied, PermissionDenied)):
                 code = getattr(exception, 'code', 'permission_denied')
-                logger.warning('拒绝访问 code=%s %s %s',
-                               code, request.method, request.get_full_path())
-                return self._error_response(request, 403, code, '无权访问该对象')
+                # 取异常自己的 message：我们抛的 ObjectPermissionDenied 带「无权访问该功能」，
+                # 框架抛的 PermissionDenied 没有 message 属性 → 回落到通用文案。
+                message = getattr(exception, 'message', None) or '无权访问该对象'
+                logger.warning('拒绝访问 code=%s msg=%s %s %s',
+                               code, message, request.method, request.get_full_path())
+                return self._error_response(request, 403, code, message)
 
             # 未预期异常：只记分类结果（不带栈）。完整栈由 Django 自己在
             # `BaseHandler.get_response()` 里用 django.request ERROR 记一次
