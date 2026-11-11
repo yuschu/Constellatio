@@ -56,6 +56,8 @@
 
 * 🧱 共享缓存（v1.7.3）：缓存后端换 `DatabaseCache`（复用现有 MySQL/sqlite，零新依赖），登录失败限流与 SSO Ticket 防重放靠 `cache.add` 主键冲突跨 gunicorn worker 成立；容器启动自动 `createcachetable`
 
+* 🔑 匿名 JSON 401（v1.7.11）：`LoginRequiredMiddleware` 换成子类，匿名 + `Accept: application/json`（或 `/stats` 路径）返回 **401** `{code,message}` 而不是 302 登录页，前端 fetch 不再拿到 HTML 炸掉；HTML 仍 302 带 next；`attendance_check` 手写 `has_perm` 由 302 改为 403
+
 * 🔒 对象级越权统一（v1.7.10）：审批详情 GET/POST、附件下载、`approval_hide` 的「不是你的单子」由 302/404 统一为 **403**；`services` 的 `PermissionError` 不再被静默吞掉；配套断言额外验证「附件无字节流出」「未写库」
 
 * 🚫 越权反馈统一（v1.7.9）：`require_perm` 一处改动，31 个视图 / 42 条 URL 的「已登录无权限」由 302 回工作台改为 **403 品牌页**；JSON 接口（`/stats` 或 `Accept: application/json`）返回 `{code,message}`，并修掉中间件丢弃 `exception.message`、日志只打 code 的问题；未登录仍是 302 带 next
@@ -218,8 +220,9 @@ Constellatio/
 | [docs/plugin-dev-v178.md](docs/plugin-dev-v178.md)                             | 插件开发 | v1.7.8：审计字段统一（AuditModel + current_user + pre_save 自动填充，13/14 模型） |
 | [docs/plugin-dev-v179.md](docs/plugin-dev-v179.md)                             | 插件开发 | v1.7.9：越权反馈语义统一（已登录无权限 → 403；JSON `{code,message}`） |
 | [docs/plugin-dev-v1710.md](docs/plugin-dev-v1710.md)                           | 插件开发 | v1.7.10：对象级越权统一（审批详情/附件/隐藏 → 403） |
+| [docs/plugin-dev-v1711.md](docs/plugin-dev-v1711.md)                           | 插件开发 | v1.7.11：匿名 JSON 401 + JSON 判据收敛 + 残留 302 收口 |
 | [docs/roadmap.md](docs/roadmap.md)                                             | 规划   | 差距矩阵、v1.5–v2.0 迭代路线、修复项与文档债务                  |
 
 ## 📌 状态
 
-**v1.7.10 对象级越权语义统一已交付并部署**（427 项测试）：审批详情 GET/POST、附件下载、`approval_hide` 的对象级越权统一为 403（不存在仍 404），`services` 的 `PermissionError` 转 403 不再静默；上一交付 **v1.7.9**（功能级 403，420 项测试）。→ 下一步见 roadmap 第七节
+**v1.7.11 匿名 JSON 401 + 残留 302 收口已交付并部署**（433 项测试）：匿名 + 要 JSON 的请求返回 401 JSON（HTML 仍 302 带 next），JSON 判据收敛到 `wants_json()` 一处；`attendance_check` 的 302 改为 403。上一交付 **v1.7.10**（对象级 403，427 项测试）。→ 下一步见 roadmap 第七节
