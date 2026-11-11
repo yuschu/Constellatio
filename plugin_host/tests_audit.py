@@ -142,6 +142,26 @@ class AuditFillTests(TestCase):
         after = Department.objects.get(pk=dept.pk).updated_at
         self.assertGreater(after, before)
 
+    def test_empty_update_fields_is_still_noop(self):
+        """`save(update_fields=[])` 在 Django 里是「什么都不写」，基类不能把它改成写两列。
+
+        回归保护：`AuditModel.save()` 的判据必须是「update_fields 非空」而不是「不是 None」，
+        否则空列表会被并成 {updated_by, updated_at}，把 no-op 变成一次多余的 UPDATE。
+        """
+        from plugins.user.models import Department
+
+        dept = run_in_request(self.alice, lambda: Department.objects.create(name='空更新字段'))
+        before = Department.objects.get(pk=dept.pk)
+
+        def empty_update():
+            dept.name = '不该被写入'
+            dept.save(update_fields=[])
+
+        run_in_request(self.bob, empty_update)
+        fresh = Department.objects.get(pk=dept.pk)
+        self.assertEqual(fresh.name, '空更新字段')        # 名字没写进去
+        self.assertEqual(fresh.updated_by_id, before.updated_by_id)   # 审计列也没被写
+
     def test_current_user_middleware_after_authentication(self):
         """位置护栏：CurrentUserMiddleware 必须在 AuthenticationMiddleware 之后。
 

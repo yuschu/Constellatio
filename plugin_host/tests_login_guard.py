@@ -173,10 +173,17 @@ class LoginGuardSetTests(TestCase):
             if response.status_code == 302 and LOGIN_URL in location:
                 blocked.add(route)
             elif response.status_code == 401:
-                # v1.7.11：匿名 + 要 JSON 的接口改为 401 JSON（不再 302），同样算「被拦」
+                # v1.7.11：匿名 + 要 JSON 的接口改为 401 JSON（不再 302），同样算「被拦」。
+                # 先判类型再 .json()：某个视图若返回 401+HTML，这里要给出可读诊断，
+                # 而不是抛 JSONDecodeError 把诊断信息一起吞掉。
+                content_type = response.headers.get('Content-Type', '')
+                self.assertIn(
+                    'application/json', content_type,
+                    f'{route} 返回 401 但不是 JSON（{content_type}）：{response.content[:120]!r}')
+                payload = response.json()
                 self.assertEqual(
-                    response.json().get('code'), 'authentication_required',
-                    f'{route} 的 401 不是登录守卫给的：{response.content[:120]}')
+                    payload.get('code'), 'authentication_required',
+                    f'{route} 的 401 不是登录守卫给的：{response.content[:120]!r}')
                 blocked.add(route)
             else:
                 allowed.add(route)

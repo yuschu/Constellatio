@@ -38,6 +38,8 @@ class AuditModel(models.Model):
         而不是让每个调用点各记一次（将来新增调用点还会漏）。
         """
         update_fields = kwargs.get('update_fields')
-        if update_fields is not None:
+        if update_fields:
+            # 注意是「非空」而不是「不是 None」：`save(update_fields=[])` 在 Django 里是
+            # 「什么都不写」，若把空列表也并成两列，会把原本的 no-op 变成一次多余的 UPDATE。
             kwargs['update_fields'] = list({*update_fields, 'updated_by', 'updated_at'})
         super().save(*args, **kwargs)
