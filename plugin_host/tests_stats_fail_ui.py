@@ -47,7 +47,6 @@ class StatsFailureUiTests(TestCase):
         # 用 regex 区分「函数定义」与「调用点」——定义处前缀是 function，不会命中这条。
         self.assertRegex(html, r'if \(!response\.ok\)\s*\{\s*handleStatsFailure\(response\)')
         self.assertNotIn("throw new Error('stats '", html)             # 旧写法已消失
-        self.assertIn('handleStatsFailure', html)
         return html
 
     def test_blockchain_page_wires_handler(self):
@@ -67,9 +66,9 @@ class StatsFailureUiTests(TestCase):
     def test_forbidden_copy_rendered(self):
         """403 分支的文案进了页面（且是通过 showEmpty('…') 的调用形式传的）。"""
         html = self._assert_wired(ATTENDANCE_URL)
-        self.assertIn('showEmpty(', html)
-        self.assertIn('无权查看该数据', html)
-        self.assertIn('数据暂时不可用', html)
+        # 一行两用：证明文案是**作为 showEmpty 的参数**传进去的（只断言文案出现，注释里也会通过）
+        self.assertIn("showEmpty('无权查看该数据'", html)
+        self.assertIn("showEmpty('数据暂时不可用'", html)
 
     def test_401_redirect_uses_page_url_not_stats_url(self):
         """401 跳转用的 next 必须来自 location.pathname，不能是 statsUrl（接口地址）。"""
