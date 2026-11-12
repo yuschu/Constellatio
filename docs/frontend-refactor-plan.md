@@ -373,6 +373,8 @@ token 映射：`interactive-bg-hover→interactive-hover`、`bg-skeleton→bg-sk
 
 **门禁**：`check` 0 issue、`ruff` 全绿、全量 **497 项 OK**（本轮无新增用例——侧栏底部结构无既有断言，模板改动靠真机实测覆盖）。
 
+**CSP 口径（本轮纠正一次假绿）**：先用「页面里读一个恒空数组」判断零违规，实际那个变量从未被赋值，读数恒为 `[]`。改成在文档创建时注入一个带标记的内联脚本做自证：该脚本确实不执行（`blocked`），说明 `script-src` 真在拦；在此前提下首页与业务页的侧栏折叠、菜单开合、设置分区切换、输入框自增高全部照常工作，即页面没有依赖任何被拦资源。浏览器日志通道（`Log.entryAdded`）在 headless 下没吐 `Refused` 条目，故未作为计数依据；静态侧仍由既有 `plugin_host/tests_csp.py` 覆盖。
+
 **已知未收敛**：`ds-rail__user / ds-rail__settings / ds-rail__actions / as-user-row / as-settings-trigger / as-foot-actions` 等旧类名的样式规则仍留在两份 CSS 里（模板已不再输出，属死规则，未删以免牵动折叠态/hover 一串派生规则）；菜单不带 `_dsh-context-menu-in/out` 进出动画（源码动画时长 token 未在已查文件中找到，标未确认）；新增 msgid（「账号菜单」「我的」「打开」「登录状态」「登出」等）同样未进 `.po`。
 
 ---
