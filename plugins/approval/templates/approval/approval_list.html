@@ -56,11 +56,4 @@
   </div>
   {% include 'includes/pagination.html' %}
 </div>
-<script nonce="{{ request.csp_nonce }}">
-  document.querySelectorAll('form[data-confirm]').forEach(function (form) {
-    form.addEventListener('submit', function (event) {
-      if (!window.confirm(form.dataset.confirm)) { event.preventDefault(); }
-    });
-  });
-</script>
 {% endblock %}

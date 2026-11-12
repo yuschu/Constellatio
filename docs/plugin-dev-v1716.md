@@ -2,7 +2,7 @@
 
 > 关联：`plugin_host/csp.py`（新）、`plugin_host/settings.py`（MIDDLEWARE）、`plugin_host/urls.py`（handler500）、`plugin_host/static/js/confirm.js`（新）、13 处内联 `<script>`、6 处 `onclick`
 > 版本：v1.7.16 · 文档日期：2026-11-12
-> 状态：**✅ 已实现**（482 项测试；自动化判据全部通过，真机项见 §7）
+> 状态：**✅ 已实现**（483 项测试；自动化判据全部通过，真机项见 §7）
 > 基线：tag `v1.7.15`（472 项测试）
 
 ## 一、下发的策略（十指令）
@@ -44,9 +44,15 @@ nonce 与内容无关，因此是唯一可行路线。
 - 硬 500：Django 默认 500 在**中间件链之外**生成，`__call__` 的响应阶段拿不到它，
   因此由 `handler500 = 'plugin_host.csp.server_error'` 补头（nonce 复用 `request.csp_nonce`）。
 
-### 2.2 13 处内联 `<script>` 加 nonce
+### 2.2 内联 `<script>` 加 nonce（最终 11 处；原始 13 处中 2 处已删除）
 
-统一写法 `<script nonce="{{ request.csp_nonce }}">`：
+统一写法 `<script nonce="{{ request.csp_nonce }}">`。**比任务清单少 2 处**：`approval_detail.html`
+与 `approval_list.html` 原本各自带一段 `window.confirm` 绑定脚本（`button[data-confirm]` /
+`form[data-confirm]`），若保留会与新增的公共 `confirm.js` **重复弹确认框**。两段已删除、逻辑并入
+`static/js/confirm.js`（支持「提交按钮 / 表单自身 / 表单内元素」三种承载位置），净效果是内联面更小、
+确认逻辑只有一份实现。有用例 `test_confirm_dialog_is_bound_once` 钉住。
+
+原清单里对应的两行（`approval_detail.html:124`、`approval_list.html:59`）改为「已删除」。
 
 | 文件 | 行 |
 |---|---|
@@ -121,7 +127,7 @@ nonce 与内容无关，因此是唯一可行路线。
 | 403（中间件链）带 CSP | ✅ |
 | 硬 500（`handler500`）带 CSP | ✅ `DEBUG=False` + `Client(raise_request_exception=False)` |
 | `/static/` 不发 CSP | ✅ 中间件单测（测试客户端不服务静态文件，故直接测跳过逻辑） |
-| 门禁 | `check` / `ruff` / 全量 **482 项 OK**（472 + 10） |
+| 门禁 | `check` / `ruff` / 全量 **483 项 OK**（472 + 11） |
 | `check --deploy` | 生产语义配置下仍 `no issues`、exit=0 |
 
 ## 六、不做（原样保留）

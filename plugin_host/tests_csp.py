@@ -129,6 +129,18 @@ class InlineScriptTests(TestCase):
         self.assertNotIn('onclick=', html)
         self.assertIn('data-confirm=', html)
 
+    def test_confirm_dialog_is_bound_once(self):
+        """确认逻辑只能有一份实现：approval 模板曾自带绑定脚本 + 页脚日志脚本，
+        若两处都在，点「通过」会弹两次确认框。这里钉住「自建绑定已并入 confirm.js」。"""
+        base = Path(settings.BASE_DIR)
+        for rel in ('plugins/approval/templates/approval/approval_detail.html',
+                    'plugins/approval/templates/approval/approval_list.html'):
+            text = (base / rel).read_text(encoding='utf-8')
+            self.assertNotIn('window.confirm', text, f'{rel} 仍有自己的确认绑定')
+        confirm_js = (base / 'plugin_host/static/js/confirm.js').read_text(encoding='utf-8')
+        self.assertIn('data-confirm', confirm_js)
+        self.assertEqual(confirm_js.count('window.confirm'), 1)
+
     def test_confirm_script_is_loaded_and_self_hosted(self):
         self.client.force_login(self.admin)
         html = self.client.get('/').content.decode()

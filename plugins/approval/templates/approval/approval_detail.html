@@ -121,11 +121,4 @@
     {% endif %}
   </div>
 </div>
-<script nonce="{{ request.csp_nonce }}">
-  document.querySelectorAll('button[data-confirm]').forEach(function (btn) {
-    btn.addEventListener('click', function (event) {
-      if (!window.confirm(btn.dataset.confirm)) { event.preventDefault(); }
-    });
-  });
-</script>
 {% endblock %}
