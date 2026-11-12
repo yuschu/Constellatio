@@ -42,7 +42,7 @@ def get_plugin_switches():
 
     每次调用都读表（v1.7.13 删掉了 v1.7.3 引入的进程内 TTL 缓存：多 worker 下
     写进程只能清自己的缓存，其它 worker 会继续用旧快照，导致「已停用的插件仍可访问」）。
-    表很小（插件数 × 环境，个位数到十几行）。实测每请求查开关表：**普通页面 4 次、首页 6 次**（`PluginRouteGuardMiddleware` 1 + `context_processors` 1 + `charts.chart_switch_enabled` 2；首页另有 `views:get_enabled_plugins` / `views:plugin_counts` / `workbench` 各 1），成本可忽略。
+    表很小（插件数 × 环境，个位数到十几行）。实测每请求查开关表：**首页 6 次；插件页 3~4 次**（有图表的页多一次：`charts.chart_switch_enabled` 经 `get_active_chart` 再查一次；首页另有 `views:get_enabled_plugins` / `views:plugin_counts` / `workbench` 各 1）。成本可忽略。
     """
     try:
         from plugins.workspace.models import PluginSwitch

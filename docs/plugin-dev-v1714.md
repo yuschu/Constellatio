@@ -2,7 +2,7 @@
 
 > 关联：`plugins/user/services.py`（新）、`plugins/attendance/services.py`（新）、`plugins/approval/services.py`（追加）
 > 版本：v1.7.14 · 文档日期：2026-11-12
-> 状态：**✅ 已实现**（466 项测试；见 §四）
+> 状态：**✅ 已实现**（467 项测试；见 §四）
 > 基线：tag `v1.7.13`（440 项测试）
 > 范围：只动 user / attendance / approval 三个插件；其余 4 个插件不碰
 
@@ -60,11 +60,27 @@ def attachment_for(user, approval): ...                       # 无权抛 Object
 
 四个视图都 ≤ 30 行，且只做「取参数 → 调 service → 响应」。
 
+### 3.1 关于「每请求查开关表」的数字（v1.7.13 的遗留校正）
+
+外部 review 用 `CaptureQueriesContext` 真发请求测了（`venv/v1714_evidence_switch_queries.py`）：
+
+| 页面 | 查 `workspace_pluginswitch` |
+|---|---|
+| 首页 `/` | **6** |
+| `/plugins/blockchain/`（有图表） | **4** |
+| `/plugins/attendance/records/`（有图表） | **4** |
+| `/plugins/structure/`（无图表） | **3** |
+| `/plugins/notice/`（无图表） | **3** |
+
+所以准确口径是**带条件的区间**：**首页 6 次；插件页 3~4 次**（有图表的多一次，因为
+`charts.chart_switch_enabled` 会经 `get_active_chart` 再查）。之前 v1.7.13 文档写的
+「普通页 4 次」偏高 1，「1~2 次 / 首页 3~4 次」偏低——**两处都是数调用点、没跑请求**。
+
 ## 四、验收记录（2026-11-12）
 
 ### 4.1 门禁
 
-`check` / `ruff` / `makemigrations --check` 通过；全量 **466 项**（440 + 26 新增/替换）。
+`check` / `ruff` / `makemigrations --check` 通过；全量 **467 项**（440 + 27）。
 
 ### 4.2 既有断言一条未改（本版范围内）
 
@@ -81,7 +97,7 @@ user / attendance / approval 三个插件的既有用例**零改动**（`git dif
 | `plugins/user/tests_services.py` | 6 | 超管直接禁用 / 普通管理员走会签 / 冻结解冻幂等 / 启用清冻结 / 非超管操作超管抛 `StatusChangeDenied` / 未知动作抛 `ValueError` |
 | `plugins/attendance/tests_services.py` | 11 | 补卡优先 / 缺卡 / 迟到 / 早退 / 正常 / **纯函数零查询**（`assertNumQueries(0)`）/ 重复打卡只一行 / 签退不清签到 / 补卡状态与类型 / 补卡幂等 / 阈值含宽限 / 模型 save 走 service 口径 |
 | `plugins/approval/tests_services.py` | 9 | 扩展名白名单 / **超限**（mock 放大 size）/ 落盘 / 非法不落盘 / 可见性矩阵 / 无权限下载抛 `ObjectPermissionDenied` / 无附件返回 None / 相关人可取句柄 |
-| 合计 | **26** | 6 + 11 + 9（440 + 26 = 466） |
+| 合计 | **27** | 6 + 12 + 9（440 + 27 = 467；attendance 多一条 operator 日志用例） |
 
 ### 4.4 实现期发现的两个测试时间依赖（已修，非放宽断言）
 
@@ -100,6 +116,30 @@ user / attendance / approval 三个插件的既有用例**零改动**（`git dif
 | 补卡 | `atomic()` 包 `get_or_create` → `select_for_update().get()` → 写 6 个字段 | 同左，搬入 `services.register_makeup` |
 | 建单附件 | 事务内 `Approval.objects.create(attachment=...)` | 事务内 create 后调 `services.store_attachment`（校验 → 赋值 → save） |
 | 审批状态机 | 未改 | 未改 |
+
+### 4.6 行为变更：未知状态操作从「静默重定向」变为 500
+
+原 `user_status` 是 if/elif 链且没有 else：`POST status=xxx` 会**静默** redirect 回列表页。
+重构后 `services.change_status` 末尾 `raise ValueError(...)`，异常穿过视图由
+`ExceptionGuardMiddleware` 处理 → **HTTP 500**。
+
+- 方向：不静默吞异常（外部 review 赞成）；
+- 影响面：正常 UI 只发 `enable` / `disable` / `freeze` / `unfreeze` 四个值，实际碰不到；
+  但这是**用户可见的行为变化**，写在这里备查（v1.7.7 的 `LOGIN_FAIL_LIMIT` 语义变化同样单列过）；
+- 若将来希望它变成 400，正确做法是把 ValueError 换成 `BusinessError`（v1.7.5 的 400 通道），
+  而不是把这个分支再改回静默。
+
+### 4.7 `register_makeup(operator, ...)` 的参数不是装饰
+
+`AuditModel` 的 `created_by/updated_by` 记录的是「这一行被哪个请求写过」，**不等于**「谁发起这次补卡」。
+所以 `operator` 用于一条留痕日志：
+
+```python
+logger.info('补卡登记 operator=%s target=%s date=%s status=%s', ...)
+```
+
+shell 调用时 `operator` 可为 None（那正是「无请求上下文」的场景，日志里记成 None 是准确的）。
+有用例 `test_register_makeup_logs_operator` 钉住它——防止将来又被当成死参数删掉或重新变成无用。
 
 ## 五、不做 / 已知边界
 
