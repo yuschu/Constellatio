@@ -379,4 +379,52 @@ token 映射：`interactive-bg-hover→interactive-hover`、`bg-skeleton→bg-sk
 
 ---
 
+## 9.7 侧栏收起：点击切换（v2.0.8）
+
+**源码真值**（`dsh-client-ui-sidebar/lib/client.js` + `dsh-client-ui-layout/lib/client.js`）
+
+- 切换算子：`toggleSidebar: (d) => { if (viewportWidth < 1024) narrowExpanded = !narrowExpanded; else sidebar = sidebar === 0 ? 280 : 0 }` —— 宽视口就是 `280 ↔ 0`，收起后的轨宽由 `collapsedWidth = drawer || darwin || windowsTitlebar ? 0 : 56` 决定，浏览器场景即 **56**。
+- 不持久化：`dsh-client-ui-layout` 整文件没有 `localStorage / sessionStorage`，`layoutInfo` 初值 `sidebar: 280`。刷新即展开。
+- 点击：`onClick: () => toggleSidebar()`，没有 debounce；`aria-label` = `collapsed ? toggle.open : toggle.collapse`；`aria-keyshortcuts` 取该快捷键的 aria；**没有 `aria-expanded`**。
+- 快捷键：`id: "sidebar.left.toggle"`，`defaults.web:windows = { code: "KeyB", modifiers: ["primary", "alt"] }` → `Ctrl+Alt+B`（desktop 口径是 `primary+B`）。
+- 收起 = slide + crossfade（源码注释原话）：宽度过渡只挂在 `[data-animating]:not([data-dragging]) .hHd-Xa_root`（`width var(--ds-transition-duration-slow) var(--ds-ease-in-out)`，即 `.3s cubic-bezier(.4,0,.2,1)`）；宽内容冻结在展开宽度、原地淡出；`COLLAPSE_SETTLE_MS = 150` 后 `settled = true`，宽内容卸载、上方控件自 `translateX(49px)` 淡入（`rail-in .15s`），底部只淡入（`rail-fade-in .15s`）。
+- 展开：`wide` 类带 `wide-in .2s`（`opacity 0 → 1`）。
+- 落位几何：根 `padding: 18px 10px 6px`；`logoRow 36 / margin-bottom 12 / padding 0`；`iconButton 36×36 / radius-md / label-primary`；`panelList gap 12 / margin-bottom 12`；`panelRow 36×36 / padding 0 / 居中`；`footArea align-items: center`；`settingsArea / footerActions` `width auto`、居中。
+- 焦点：`useLayoutEffect` 在 `collapsed` 时若焦点落在侧栏内，`focusWithoutRing([data-sidebar-toggle])`。
+- **没有 hover 回宽**：折叠态 `@media (hover:hover)` 只做一件事 —— toggle 的 `railMark`（品牌 mark）与 `panelIcon` 互换；整栏不会因指针进入而展开。
+
+**落地差异**
+
+- 折叠宽 `64 → 56`，padding 同步改 `18px 10px 6px`（§9.6 记录的 64 是上一版值，本版覆盖）。
+- 删除「指针进入即回宽」整段：上一版是按观感加的，源码没有这个行为；收起只能点 toggle 或按快捷键解除。
+- 宽度过渡收进 `[data-rail-animating]`，常驻过渡删掉。
+- 布局切换点从 `collapsed` 挪到 `settled`：`collapsed` 只负责宽度与裁切，150ms 后才落 36×36，对应源码 `settled`。
+- 移除 `aria-expanded`，补 `aria-keyshortcuts="Control+Alt+B"`。
+- 去掉 `localStorage` 记忆（源码如此）。**这条会改手感**：刷新后回到展开态；若要保留记忆需另行决定，不属于源码行为。
+
+**真机数值**（1440×900，本地 8011，浅深 × 首页/业务页各一轮）
+
+| 时刻 | 实测 |
+|---|---|
+| 展开 | 宽 `280`、padding `6px 8px`、toggle `28×28`、行宽 `264 / 261`、gap `2` |
+| 点击后 40ms | 宽 `278.4`（首页）/`280`（业务页起步帧）、`data-rail-animating=true`、transition `0.3s`、toggle 已 `36×36` |
+| 点击后 170ms | 宽 `92.4 / 147.8 / 106.2 / 124.3`（四组）、`data-rail-settled=true`、行宽 `36`、gap `12`、动画名 `as-rail-in / ds-rail-in 0.15s` |
+| 点击后 430ms | 宽 `56`、padding `18px 10px 6px`、transition 归 `0s` |
+| 指针进入侧栏 | 宽仍 `56` |
+| 焦点回位 | 焦点先放侧栏行 → 折叠后 `activeElement` = `BUTTON.as-rail-toggle / BUTTON.ds-rail__toggle` |
+| `Ctrl+Alt+B` | 宽回 `280`、toggle `28×28`、aria 回「收起侧边栏」 |
+
+**踩坑**
+
+1. 只改宽度不够：DSH 折叠态 `logoRow` 里只渲染 toggle（品牌是 `wide &&` 才出）。本项目原来把品牌行缩到 36，结果「C」标记与 toggle 并排挤在一行（业务页折叠截图直接可见），已改为折叠态整个隐藏品牌链接。
+2. `padding` 被常驻 transition 带着插值。业务页 `.ds-rail` 原本挂 `transition: width .2s, padding .2s`，折叠落位那帧 padding 还在动（实测 40ms 读到 `6.39px 8.06px`）。已改为 `transition: none`，只由 `[data-rail-animating]` 提供宽度过渡。
+
+**已知未收敛**
+
+- DSH 折叠态 toggle 平时显示 `railMark`（品牌 mark 24）、`hover` 才换 `panelIcon`；本项目按要求去掉了 logo，`railMark` 的占位元素不存在，折叠态固定显示面板/箭头图标，`hover` 互换自然失效。
+- 宽度过渡与落位共用一条时间轴（150ms 落位 / 300ms 滑完），中间约 150ms 存在「图标已落 36、列还在收」的重叠帧。DSH 用 grid track 裁切 + 内容冻结规避，本项目是 flex 列，用 `overflow: hidden` 近似 —— 观感对齐，机制不同。
+- 首页新增 `--as-dur-slow: 0.3s`（与 `--ds-dur-slow` 等值），业务页直接复用已有 `--ds-dur-slow`。
+
+---
+
 *本文不含实现代码；确认后按阶段逐个交付，每阶段单独提交与验收。*
