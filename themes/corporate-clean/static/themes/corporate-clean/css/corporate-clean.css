@@ -1806,3 +1806,315 @@ body.ds-modal-open {
     padding: 0 var(--ds-space-4) var(--ds-space-5);
   }
 }
+
+/* ==========================================================================
+   25. 插件页（v2.0.6）
+   ------------------------------------------------------------------------
+   参数全部取自 DSH 源码 dsh-client-ui-settings-plugin-inventory/lib/client.js
+   的 CSS 字面量，不是截图采样：
+     section      max-width 760、gap 14
+     heading      font-size 18 / weight 600
+     intro        13 / lh 20、label-tertiary
+     search       height 36、padding 0 34 0 36、13px、radius-md、
+                  focus 时 border-color focus-ring + 0 0 0 2px 18% color-mix
+     cards        grid repeat(2, minmax(0,1fr))、gap 10、≤520px 单列
+     card         border .5px、radius-xl
+     cardContent  min-height 52、padding 12/14、gap 2、hover interactive-bg-hover
+     cardTitle    14 / 500 / lh 20
+     description  12 / lh 18、两行 clamp、text-wrap pretty
+     identity     等宽 12/18、radius-xs、padding 1px 6px、bg-module-platform
+     brokenNote   错误底 8% color-mix、padding 8/10、12/18
+   DSH 原 token → 本项目 token：settings-card-stroke→border-l3、
+   settings-card-fill→bg-layer-1、interactive-bg-hover→interactive-hover、
+   bg-module-platform→bg-layer-2、focus-ring-color→focus-ring、
+   state-error-primary→state-error。
+   开关（.ds-plugin__switch）与状态点（.ds-plugin__dot）是本项目新增控件：
+   DSH 的插件清单只有状态点、没有启停开关，这里按 36px 控件高度对齐自绘。
+   ========================================================================== */
+
+.ds-plugins {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 760px;
+  color: var(--ds-label-primary);
+}
+
+.ds-plugins__head {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ds-plugins__heading {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 26px;
+}
+
+.ds-plugins__intro {
+  margin: 0;
+  color: var(--ds-label-tertiary);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+/* 搜索：36px 高，图标内嵌左 12px，文本左右各让 36 / 34px */
+.ds-plugins__search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.ds-plugins__search-glyph {
+  position: absolute;
+  left: 12px;
+  color: var(--ds-label-tertiary);
+  pointer-events: none;
+}
+
+.ds-plugins__search input {
+  width: 100%;
+  height: 36px;
+  padding: 0 34px 0 36px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ds-label-primary);
+  background: var(--ds-bg-layer-1);
+  border: 0.5px solid var(--ds-border-l4);
+  border-radius: var(--ds-radius-md);
+  outline: none;
+}
+
+.ds-plugins__search input::placeholder {
+  color: var(--ds-label-tertiary);
+}
+
+.ds-plugins__search input:focus-visible {
+  border-color: var(--ds-focus-ring);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ds-focus-ring) 18%, transparent);
+}
+
+.ds-plugins__cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ds-plugin {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--ds-bg-layer-1);
+  border: 0.5px solid var(--ds-border-l3);
+  border-radius: var(--ds-radius-xl);
+}
+
+.ds-plugin__body {
+  display: flex;
+  flex: auto;
+  flex-direction: column;
+  gap: 2px;
+  box-sizing: border-box;
+  min-height: 52px;
+  padding: 12px 14px;
+  transition: background var(--ds-dur-fast) var(--ds-ease);
+}
+
+@media (hover: hover) {
+  .ds-plugin__body:hover {
+    background: var(--ds-interactive-hover);
+  }
+}
+
+.ds-plugin__main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.ds-plugin__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ds-plugin__trailing {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  color: var(--ds-label-tertiary);
+}
+
+.ds-plugin__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ds-border-l4);
+}
+
+.ds-plugin__dot.is-on {
+  background: var(--ds-state-success);
+}
+
+.ds-plugin__desc {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  color: var(--ds-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+  text-wrap: pretty;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.ds-plugin__desc--warn {
+  display: block;
+  margin-top: 6px;
+  padding: 8px 10px;
+  color: var(--ds-state-error);
+  background: color-mix(in srgb, var(--ds-state-error) 8%, transparent);
+  border-radius: var(--ds-radius-lg);
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+  -webkit-line-clamp: unset;
+}
+
+.ds-plugin__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+.ds-plugin__identity {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 1px 6px;
+  color: var(--ds-label-secondary);
+  background: var(--ds-bg-layer-2);
+  border-radius: var(--ds-radius-xs);
+  font-family: var(--ds-font-mono);
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ds-plugin__stat {
+  color: var(--ds-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ds-plugin__form {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+/* 开关：轨道 36×20、圆点 16，勾选态用业务色；input 铺满轨道以保留原生点击区 */
+.ds-plugin__switch {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  width: 36px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.ds-plugin__switch input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.ds-plugin__track {
+  display: block;
+  width: 36px;
+  height: 20px;
+  background: var(--ds-border-l3);
+  border-radius: 999px;
+  transition: background var(--ds-dur-fast) var(--ds-ease);
+  pointer-events: none;
+}
+
+.ds-plugin__thumb {
+  display: block;
+  width: 16px;
+  height: 16px;
+  margin: 2px;
+  background: var(--ds-bg-base);
+  border-radius: 50%;
+  transition: transform var(--ds-dur-fast) var(--ds-ease);
+}
+
+.ds-plugin__switch input:checked + .ds-plugin__track {
+  background: var(--ds-state-business);
+}
+
+.ds-plugin__switch input:checked + .ds-plugin__track .ds-plugin__thumb {
+  transform: translateX(16px);
+}
+
+.ds-plugin__switch input:focus-visible + .ds-plugin__track {
+  outline: var(--ds-focus-width) solid var(--ds-focus-ring);
+  outline-offset: 2px;
+}
+
+.ds-plugin__fixed {
+  padding: 1px 8px;
+  color: var(--ds-label-tertiary);
+  border: 0.5px solid var(--ds-border-l3);
+  border-radius: var(--ds-radius-sm);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.ds-plugin__apply {
+  height: 28px;
+  padding: 0 10px;
+  color: var(--ds-label-primary);
+  font: inherit;
+  font-size: 12px;
+  background: 0 0;
+  border: 0.5px solid var(--ds-border-l3);
+  border-radius: var(--ds-radius-sm);
+  cursor: pointer;
+}
+
+.ds-plugins__empty {
+  margin: 0;
+  color: var(--ds-label-tertiary);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+@media (max-width: 520px) {
+  .ds-plugins__cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

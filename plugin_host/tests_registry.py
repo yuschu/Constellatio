@@ -61,7 +61,12 @@ class RegistryCheckTests(SimpleTestCase):
 
 
 def _expected_menus(user):
-    """逐菜单 has_perm 的参考实现（旧语义）。"""
+    """逐菜单 has_perm 的参考实现（旧语义 + 界面排序）。
+
+    v2.0.6 起菜单按 order 升序渲染（缺省 100 保持插件注册序），参考实现
+    必须同样应用一次同样的稳定排序——否则这里比对到的只是两侧各自的
+    遍历顺序，order 契约反而测不到。
+    """
     menus = []
     for name, meta in get_enabled_plugins():
         for menu in meta.menus:
@@ -69,6 +74,7 @@ def _expected_menus(user):
             if perm and not user.has_perm(perm):
                 continue
             menus.append({**menu, 'plugin': name})
+    menus.sort(key=lambda item: item.get('order', 100))
     return menus
 
 
@@ -107,6 +113,16 @@ class MenuPermissionTests(TestCase):
 
     def test_superuser(self):
         self._assert_equivalent(self.admin)
+
+    def test_menu_order_assistant_plugin_dashboard(self):
+        """侧栏顺序契约：助手 → 插件 → 看板（order 1 / 2 / 3）。
+
+        参考实现与被测实现共用同一排序键，等价断言测不出顺序本身，
+        这里单独锚定三条 URL 的相对位置。
+        """
+        urls = [menu['url'] for menu in get_menus(self.admin)]
+        self.assertLess(urls.index('/'), urls.index('/plugins/workspace/'))
+        self.assertLess(urls.index('/plugins/workspace/'), urls.index('/dashboard/'))
 
     def test_frozen_user(self):
         self._assert_equivalent(self.frozen)

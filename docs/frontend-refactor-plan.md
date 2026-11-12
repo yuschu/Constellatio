@@ -292,6 +292,45 @@ D1 统一的是视觉；本节搬的是**机制**，首页（assistant 自带外
 
 **未做**：设置面板目前只出「通用」一个分区（DSH 有十余组，按需再拆）；侧栏「更多」的溢出菜单仍是占位入口。
 
+### 9.5 插件页与侧栏顺序（v2.0.6）
+
+原「插件开关」（`plugins/workspace`，`/plugins/workspace/`）在首页侧栏落在「更多」抽屉里、在业务页侧栏平铺末尾。本轮把它提到「助手」之后、「看板」之前并改名「插件」，页面本体按 DSH 插件清单形态重做。
+
+**排序机制**：菜单 dict 新增 `order` 键，`plugin_host/registry.py:get_menus()` 末尾做一次稳定排序（`menus.sort(key=lambda m: m.get('order', 100))`），缺省 100 保持插件注册序 —— 插件注册顺序是启动契约，不被界面排序反绑架。助手 1 / 插件 2 / 看板 3；首页的 `PRIMARY_MENU_URLS` 扩为 `('/', '/plugins/workspace/', '/dashboard/')`（元组顺序即渲染顺序，同 URL 只取第一条）。
+
+**参数来源（`dsh-client-ui-settings-plugin-inventory/lib/client.js` 的 CSS 字面量，非截图采样）**
+
+| 元素 | 取值 |
+|---|---|
+| section | `max-width 760`、`gap 14` |
+| heading / intro | `18 / 600`；`13 / lh 20`、label-tertiary |
+| search | `height 36`、`padding 0 34 0 36`、`13px`、`radius-md`、focus 时 `border-color focus-ring` + `0 0 0 2px` 18% `color-mix` |
+| cards | `grid-template-columns: repeat(2, minmax(0,1fr))`、`gap 10`、`≤520px` 单列 |
+| card / cardContent | `border .5px` + `radius-xl`；`min-height 52`、`padding 12 / 14`、`gap 2`、hover `interactive-bg-hover` |
+| cardTitle / description | `14 / 500 / lh 20`；`12 / lh 18` 两行 clamp + `text-wrap pretty` |
+| identity chip | 等宽 `12 / 18`、`radius-xs`、`padding 1px 6px`、`bg-module-platform` |
+| brokenNote（warning） | `color-mix(state-error 8%)` 底、`padding 8 / 10`、`12 / 18` |
+
+token 映射：`settings-card-stroke→border-l3`、`settings-card-fill→bg-layer-1`、`interactive-bg-hover→interactive-hover`、`bg-module-platform→bg-layer-2`、`focus-ring-color→focus-ring`、`state-error-primary→state-error`。选择器全部 `.ds-plugins*` / `.ds-plugin*`，落在 `corporate-clean.css` 第 25 节；Risograph 靠 `@import` 跟随，未改其任何文件。
+
+**新增控件（DSH 没有的）**：DSH 插件清单只有状态点、没有启停开关，本项目自绘轨道 `36×20` + 圆点 `16`（勾选态 `--ds-state-business`），原生 `input[type=checkbox][role=switch][data-plugin-switch]` 仍是唯一真值载体，`row.protected` 的插件换成 `span[role=switch][aria-disabled]`「系统必需」。
+
+**真机实测**（1440×900，headless Chrome + CDP）
+
+| 项 | 值 |
+|---|---|
+| 首页侧栏 | `助手 / 插件 / 看板 / 更多`，active = 助手 |
+| 业务页侧栏 | `助手 / 插件 / 看板 / 工作台 / 部门 / …`（order 生效） |
+| 插件页 | 13 卡、两列 `375px 375px`、卡高 134、`bodyMinH 52`、`padding 12px 14px` |
+| 字号 | 标题 `14/500/20`、页头 `18/600/26` |
+| 搜索 | `height 36`、`padding 0 34 0 36`；输入 `charts` 后可见卡片 1 |
+| 开关 | 轨道 `36×20`、12 个 checkbox + 1 个「系统必需」、4 个 warning 块 |
+| 深色 | body `rgb(21,21,23)`、卡片 `rgb(35,35,36)` |
+
+**门禁**：`check` 0 issue、`ruff` 全绿、全量 **497 项 OK**（新增 1 条顺序锚定用例；`tests_registry._expected_menus` 参考实现同步应用同一排序键，否则等价断言只测到两侧各自的遍历顺序）。
+
+**已知未收敛**：业务页侧栏「看板」与「工作台」疑似同指 `/dashboard/`（既有重复入口，本轮未动）；新增 msgid（「搜索插件名称或标识」「已注册的插件，可运行时启停」「菜单」等）未进 `django.po` —— 环境无 gettext，`.mo` 无法重编，英文界面回落中文原文，与项目现状一致。
+
 ---
 
 *本文不含实现代码；确认后按阶段逐个交付，每阶段单独提交与验收。*

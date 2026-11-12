@@ -19,8 +19,9 @@ from plugin_host.context_processors import (
     DEFAULT_COLOR_MODE,
 )
 
-# 顶部固定入口对应的菜单 URL。其余菜单一律进「功能」抽屉。
-PRIMARY_MENU_URLS = ('/', '/dashboard/')
+# 顶部固定入口对应的菜单 URL，元组顺序即侧栏渲染顺序。
+# v2.0.6：加入插件入口（原插件开关页），排在「助手」之后、「看板」之前。
+PRIMARY_MENU_URLS = ('/', '/plugins/workspace/', '/dashboard/')
 
 
 def _model_configured():
@@ -70,12 +71,13 @@ def _split_menus(request):
     from plugin_host.context_processors import menus as menus_context
 
     all_menus = menus_context(request)['menus']
-    seen = set()
-    primary = []
+    # 同一 URL 只留第一条：首页接管后「助手」与旧「工作台」都指向 /，
+    # 两条同时出现在侧栏顶部就是两个一模一样的按钮。
+    by_url = {}
     for menu in all_menus:
-        url = menu.get('url') or '/'
-        if url in PRIMARY_MENU_URLS and url not in seen:
-            primary.append(menu)
-            seen.add(url)
+        by_url.setdefault(menu.get('url') or '/', menu)
+    # 渲染顺序以 PRIMARY_MENU_URLS 为准，菜单 order 只决定业务页侧栏；
+    # 两处同源（都来自 get_menus），不另写一套顺序。
+    primary = [by_url[url] for url in PRIMARY_MENU_URLS if url in by_url]
     more = [m for m in all_menus if (m.get('url') or '/') not in PRIMARY_MENU_URLS]
     return primary, more

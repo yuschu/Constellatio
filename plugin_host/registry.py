@@ -200,4 +200,8 @@ def get_menus(user, plugins=None):
                     and _perm_codename(perm) not in allowed:
                 continue
             menus.append({**menu, 'plugin': name})
+    # v2.0.6：侧栏顺序由菜单自带 order 决定（缺省 100，保持插件注册序）。
+    # 让「插件」能钉在「助手」之后，而不必改动 OA_PLUGINS 的加载顺序——
+    # 插件注册顺序是启动契约，不该被界面排序反过来绑架。
+    menus.sort(key=lambda m: m.get('order', 100))
     return menus

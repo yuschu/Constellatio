@@ -19,8 +19,9 @@ class AssistantConfig(AppConfig):
             menus=[
                 # v2.0.0：对话式首页 + 原看板独立入口。
                 # 两条都走 PluginMeta.menus，外壳渲染逻辑不为「看板」单开分支。
-                {'label': _('助手'), 'icon': '✦', 'url': '/', 'perm': None},
-                {'label': _('看板'), 'icon': '▦', 'url': '/dashboard/', 'perm': None},
+                # v2.0.6：order 决定侧栏顺序，助手(1) → 插件(2) → 看板(3)。
+                {'label': _('助手'), 'icon': '✦', 'url': '/', 'perm': None, 'order': 1},
+                {'label': _('看板'), 'icon': '▦', 'url': '/dashboard/', 'perm': None, 'order': 3},
             ],
             permissions=[],
             urls='plugins.assistant.urls',
