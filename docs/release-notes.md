@@ -2,6 +2,7 @@
 
 > 本文件是**发版总入口**：每一版做了什么、怎么升级、按 tag 检出时要注意什么。
 > 单版实现细节仍以 `docs/plugin-dev-vXXXX.md` 为准，本文件只做汇总与指路。
+> **命名规范**：GitHub Release 标题统一写作 `vX.Y.Z Beta`（例：`v1.7.15 Beta`）；**tag 名保持 `vX.Y.Z`**（annotated，不带 `Beta`——tag 是不可变引用，`Beta` 只是 Release 层级的展示标记）。
 
 ---
 
@@ -35,7 +36,7 @@ tag `v1.7.16`（annotated）。基线 472 → **483 项全绿**（新增 11 条 
 - `'unsafe-eval'` 不加：ECharts 的 `new Function` 只在 `JSON.parse` 不可用时触发，理论不触发；
   **真机未验证**，若报 `unsafe-eval` 先上报、不自行加指令。
 
-### 1.2 v1.7.15（2026-11-12，私有化部署收口）
+### 1.2 v1.7.15 Beta（2026-11-12，私有化部署收口）
 
 tag `v1.7.15` → commit `39baf42`（annotated）。基线 467 → **472 项全绿**，覆盖率 **96%**（8020 statements / 292 missed），CI 门槛 94。
 

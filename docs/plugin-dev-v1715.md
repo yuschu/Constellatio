@@ -1,4 +1,4 @@
-# 插件开发文档：v1.7.15 私有化部署收口（离线资源 / 安全默认值 / 登出 POST / 覆盖率门槛）
+# 插件开发文档：v1.7.15 Beta —— 私有化部署收口（离线资源 / 安全默认值 / 登出 POST / 覆盖率门槛）
 
 > 关联：`themes/*/templates/{base,login}.html`、`plugin_host/static/vendor/bootstrap/`、`plugin_host/settings.py`、`plugins/auth/{views,urls}.py`、`.github/workflows/ci.yml`、`requirements-dev.txt`
 > 版本：v1.7.15 · 文档日期：2026-11-12
