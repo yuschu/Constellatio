@@ -21,6 +21,23 @@
 3. 容器日志只走 console（`DJANGO_LOG_TO_FILE` 默认 0，多 worker 不轮转同一文件）。
 4. 插件被停用到"无 UI 可进"时，用 `python manage.py plugin_switch on <key>` 兜底。
 
+### 1.1 v1.7.15（2026-11-12，私有化部署收口）
+
+tag `v1.7.15` → commit `39baf42`（annotated）。基线 467 → **472 项全绿**，覆盖率 **96%**（8020 statements / 292 missed），CI 门槛 94。
+
+| 项 | 结果 |
+|---|---|
+| Bootstrap 离线化 | 两主题 6 处 CDN 引用清零（CSS **和** JS 都本地化）；本地副本 232 803 / 80 721 B，与 CDN 原件字节数一致；靠 `AppDirectoriesFinder` 收集，未新增 `STATICFILES_DIRS` |
+| 生产缺 `SECRET_KEY` 拒绝启动 | `DJANGO_DEBUG=0` 且无 key → `ImproperlyConfigured`；开发模式默认 `'1'` 不动 |
+| 登出改 POST | GET → 405 且会话仍有效；POST → 302 且 session 失效；两主题改成带 CSRF 的 form（此前全仓对登出零覆盖） |
+| compose 层 `SECRET_KEY` 缺省即报错 | 见下——发布前拦下的 P1 |
+
+**发布前拦下的 P1**：`docker-compose.yml` 原写 `${SECRET_KEY:-django-insecure-compose-default-change-me}`，会让上面那条硬要求在 compose 部署下**永不触发**，而那个默认值公开在仓库里——能签出任何 session。已改为 `${SECRET_KEY:?...}`，无 key 时 `docker compose config` / `up` 均 exit=1。
+
+> `check --deploy` 覆盖不到这一条（compose 的 env 不参与 Django system check），所以"零告警"在这一项上会带来假安全感。
+
+上线前仍需真机确认一项：**断网后打开登录页**看样式是否完整（`docs/plugin-dev-v1715.md` §7.1 只有等价证据，没有断网截图）。
+
 ---
 
 ## 二、按 tag 检出时请先读这一节
@@ -79,8 +96,8 @@
 | v1.7.3 | 357 | v1.7.11 | 434 |
 | v1.7.4 | 368 | v1.7.12 | 439 |
 | v1.7.5 | 380 | v1.7.13 | 440 |
-| v1.7.6 | 387 | v1.7.14 | **467** |
-| v1.7.7 | 403 | | |
+| v1.7.6 | 387 | v1.7.14 | 467 |
+| v1.7.7 | 403 | v1.7.15 | **472** |
 
 v1.7.8 交付时为 410，收尾补到 413；v1.7.14 交付时 466，收尾补到 467。数字增长来自新增用例，没有放宽任何既有断言。
 
@@ -124,12 +141,12 @@ v1.7.8 交付时为 410，收尾补到 413；v1.7.14 交付时 466，收尾补�
 
 **覆盖率门槛 94 不属于加固包**：它是工程门槛（当前 96%，门槛取当前 − 2），与安全加固是两件事，v1.7.15 一并落地只是排期合并。
 
-**两项仍未收口**：
+**剩余未收口项**：
 
 | 项 | 现状（2026-11-12 实测） | 处置 |
 |---|---|---|
 | CSP（`Content-Security-Policy`） | 响应头为 `None`。**注意**：`X-Frame-Options: DENY`、`X-Content-Type-Options: nosniff`、`Referrer-Policy: same-origin` 这三项 **Django 默认已提供**且实测存在，不属缺口 | 站内有内联脚本（`includes/stats_fetch_fail.js`、403 页 `data-history-back` 脚本、`base.html` 内联），需先盘点内联面再定 nonce 或 `'unsafe-inline'`；**单列一项**，不塞进小版本 |
-| `docker-compose.yml` 的 `SECRET_KEY` 默认值 | `${SECRET_KEY:-django-insecure-compose-default-change-me}` —— 它让 7.2 的硬要求在 compose 部署下**永不触发**，且该默认值公开在仓库里：知道仓库地址的人即可伪造 session 签名。**比"没有硬要求"更糟**（没有硬要求时用户至少可能配一个随机值） | **必须改成 `${SECRET_KEY:?...}`**：缺 `SECRET_KEY` 时 `docker compose up` 报错退出，这才是正确的失败方式，与"私有化部署收口"整体口径一致；本机联调补 `.env` 或 `export SECRET_KEY=…` 即可 |
+| `docker-compose.yml` 的 `SECRET_KEY` 默认值 | **已收口**（`39baf42`）：原写 `${SECRET_KEY:-django-insecure-compose-default-change-me}`，让 7.2 的硬要求在 compose 部署下永不触发，而默认值公开在仓库里 | 已改 `${SECRET_KEY:?...}`；实测无 key 时 `docker compose config` 报 `required variable SECRET_KEY is missing a value`（exit=1），带 key 解析通过 |
 
 验收口径：离线化后断网加载走一遍全站；登出改 POST 后 GET 必须 405；生产模式缺 key 必须拒绝启动；`check --deploy` 零告警的前提是 `DJANGO_DEBUG=0` + 真随机 50 位 key + `DJANGO_HTTPS=1` + `DJANGO_SSL_REDIRECT=1`（默认 HTTP 配置下 W004/W008/W012/W016 四条告警是设计预期，不是故障）。
 
