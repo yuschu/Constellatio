@@ -1265,3 +1265,544 @@ a:hover {
     animation: none;
   }
 }
+
+/* ============================================================
+   24. DSH 机制层：侧栏折叠 / 设置弹层
+   与首页助理外壳同一套参数（36×36 折叠图标行、42px 设置入口、
+   800×800 弹层 188px 导航列），token 换回 --ds-*
+   ============================================================ */
+
+.ds-rail {
+  transition: width var(--ds-dur) var(--ds-ease),
+    padding var(--ds-dur) var(--ds-ease);
+}
+
+/* --- 品牌行：文字 / 24px 标记 + 28px 折叠按钮 --- */
+.ds-rail__brand {
+  justify-content: space-between;
+}
+
+.ds-rail__brand-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds-rail__mark {
+  display: none;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--ds-radius-xs);
+  background: var(--ds-bg-selector);
+  color: var(--ds-label-primary);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.ds-rail__toggle {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--ds-radius-sm);
+  background: transparent;
+  color: var(--ds-label-secondary);
+  cursor: pointer;
+  outline: none;
+  corner-shape: var(--ds-corner);
+  transition: background-color var(--ds-dur-fast) linear,
+    color var(--ds-dur-fast) linear;
+}
+
+.ds-rail__toggle:hover {
+  background: var(--ds-interactive-hover);
+  color: var(--ds-label-primary);
+}
+
+.ds-rail__toggle:focus-visible {
+  box-shadow: 0 0 0 var(--ds-focus-width) var(--ds-border-l3);
+}
+
+/* --- 折叠态：rail 64 宽，图标行 36×36，分组隐藏 --- */
+html[data-rail-collapsed="true"] .ds-rail {
+  width: 64px;
+  padding: 18px var(--ds-space-2) 6px;
+}
+
+html[data-rail-collapsed="true"] .ds-rail__brand {
+  justify-content: flex-start;
+  height: 36px;
+  padding: 0;
+  margin-bottom: 12px;
+}
+
+html[data-rail-collapsed="true"] .ds-rail__brand a {
+  height: 36px;
+  justify-content: center;
+}
+
+html[data-rail-collapsed="true"] .ds-rail__brand-name {
+  display: none;
+}
+
+html[data-rail-collapsed="true"] .ds-rail__mark {
+  display: inline-flex;
+}
+
+html[data-rail-collapsed="true"] .ds-rail__nav {
+  margin: 0;
+  padding: 0;
+  gap: 12px;
+}
+
+html[data-rail-collapsed="true"] .ds-rail__row {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  justify-content: center;
+}
+
+html[data-rail-collapsed="true"] .ds-rail__section,
+html[data-rail-collapsed="true"] .ds-rail__label {
+  display: none;
+}
+
+html[data-rail-collapsed="true"] .ds-rail__foot {
+  align-items: center;
+}
+
+html[data-rail-collapsed="true"] .ds-rail__user {
+  justify-content: center;
+  padding-left: 0;
+}
+
+html[data-rail-collapsed="true"] .ds-rail__user-name,
+html[data-rail-collapsed="true"] .ds-rail__hint {
+  display: none;
+}
+
+html[data-rail-collapsed="true"] .ds-rail__toggle {
+  width: 36px;
+  height: 36px;
+}
+
+html[data-rail-collapsed="true"] .ds-rail__settings {
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  justify-content: center;
+  gap: 0;
+}
+
+html[data-rail-collapsed="true"] .ds-rail__actions {
+  justify-content: center;
+}
+
+/* --- 折叠态指针进入即回宽（DSH rail 的行为） --- */
+html[data-rail-collapsed="true"] .ds-rail:hover {
+  width: var(--ds-rail-w);
+  padding: 6px var(--ds-space-2);
+}
+
+html[data-rail-collapsed="true"] .ds-rail:hover .ds-rail__brand {
+  justify-content: space-between;
+  height: 60px;
+  padding: 8px 0 8px 8px;
+  margin-bottom: 0;
+}
+
+html[data-rail-collapsed="true"] .ds-rail:hover .ds-rail__brand a {
+  height: 24px;
+  justify-content: flex-start;
+}
+
+html[data-rail-collapsed="true"] .ds-rail:hover .ds-rail__brand-name {
+  display: inline;
+}
+
+html[data-rail-collapsed="true"] .ds-rail:hover .ds-rail__nav {
+  margin-left: -4px;
+  margin-right: calc(-1 * var(--ds-space-2));
+  padding-left: 4px;
+  gap: 2px;
+}
+
+html[data-rail-collapsed="true"] .ds-rail:hover .ds-rail__row {
+  width: auto;
+  height: auto;
+  padding: 7px var(--ds-space-3);
+  justify-content: flex-start;
+}
+
+html[data-rail-collapsed="true"] .ds-rail:hover .ds-rail__section {
+  display: block;
+}
+
+html[data-rail-collapsed="true"] .ds-rail:hover .ds-rail__label {
+  display: inline;
+}
+
+html[data-rail-collapsed="true"] .ds-rail:hover .ds-rail__user {
+  justify-content: flex-start;
+  padding-left: 2px;
+}
+
+html[data-rail-collapsed="true"] .ds-rail:hover .ds-rail__user-name {
+  display: inline;
+}
+
+html[data-rail-collapsed="true"] .ds-rail:hover .ds-rail__toggle {
+  width: 28px;
+  height: 28px;
+}
+
+html[data-rail-collapsed="true"] .ds-rail:hover .ds-rail__settings {
+  width: 100%;
+  height: 42px;
+  margin: 4px 0;
+  padding: 0 var(--ds-space-3);
+  gap: 10px;
+  justify-content: flex-start;
+}
+
+html[data-rail-collapsed="true"] .ds-rail:hover .ds-rail__actions {
+  justify-content: flex-start;
+}
+
+/* --- 设置入口（42px 行，右侧快捷键悬停显形） --- */
+.ds-rail__settings {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 42px;
+  margin: 4px 0;
+  padding: 0 var(--ds-space-3);
+  box-sizing: border-box;
+  border: 0;
+  border-radius: var(--ds-radius-md);
+  background: transparent;
+  color: var(--ds-label-primary);
+  font: inherit;
+  font-size: var(--ds-text-sub);
+  font-weight: 400;
+  line-height: var(--ds-text-sub-lh);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  outline: none;
+  corner-shape: var(--ds-corner);
+  transition: background-color var(--ds-dur) var(--ds-ease);
+}
+
+.ds-rail__settings:hover,
+.ds-rail__settings:focus-visible {
+  background: var(--ds-interactive-hover);
+}
+
+.ds-rail__hint {
+  margin-left: auto;
+  opacity: 0;
+  color: var(--ds-label-caption);
+  font-size: var(--ds-text-caption);
+  line-height: var(--ds-text-caption-lh);
+  transition: opacity var(--ds-dur-fast) linear;
+}
+
+.ds-rail__settings:hover .ds-rail__hint,
+.ds-rail__settings:focus-visible .ds-rail__hint {
+  opacity: 1;
+}
+
+/* --- 底部动作行（消息 / 我的 / 登出） --- */
+.ds-rail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 2px 0 4px;
+}
+
+.ds-rail__action-form {
+  display: inline-flex;
+  margin: 0;
+}
+
+.ds-rail__action {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 3px var(--ds-space-2);
+  border: 0;
+  border-radius: var(--ds-radius-sm);
+  background: transparent;
+  color: var(--ds-label-tertiary);
+  font: inherit;
+  font-size: var(--ds-text-caption);
+  line-height: var(--ds-text-caption-lh);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  corner-shape: var(--ds-corner);
+  transition: background-color var(--ds-dur-fast) linear,
+    color var(--ds-dur-fast) linear;
+}
+
+.ds-rail__action:hover,
+.ds-rail__action:focus-visible {
+  background: var(--ds-interactive-hover);
+  color: var(--ds-label-primary);
+  text-decoration: none;
+}
+
+/* --- 设置弹层（800×800，nav 188px） --- */
+.ds-settings {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ds-settings[hidden] {
+  display: none;
+}
+
+.ds-settings__overlay {
+  position: absolute;
+  inset: 0;
+  background: var(--ds-bg-mask);
+}
+
+.ds-settings__panel {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-areas: "title header" "nav options";
+  grid-template-columns: 188px minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  width: 800px;
+  height: min(800px, calc(100vh - 48px));
+  max-width: calc(100vw - 48px);
+  border-radius: var(--ds-radius-panel);
+  background: var(--ds-bg-layer-1);
+  box-shadow: 0 0 0 var(--ds-hairline) var(--ds-border-l2),
+    0 8px 32px #0000001a, 0 0 48px #0000000f;
+  overflow: hidden;
+  outline: none;
+  corner-shape: var(--ds-corner);
+}
+
+.ds-settings__title {
+  grid-area: title;
+  margin: 0;
+  padding: 22px 12px var(--ds-space-2) var(--ds-space-5);
+  color: var(--ds-label-primary);
+  font-size: var(--ds-text-body);
+  font-weight: 500;
+  line-height: var(--ds-text-body-lh);
+}
+
+.ds-settings__header {
+  grid-area: header;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: var(--ds-space-2);
+  height: 54px;
+  padding: 20px 14px var(--ds-space-2) 10px;
+}
+
+.ds-settings__close {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--ds-radius-sm);
+  background: transparent;
+  color: var(--ds-label-primary);
+  cursor: pointer;
+  outline: none;
+  corner-shape: var(--ds-corner);
+  transition: background-color var(--ds-dur-fast) linear;
+}
+
+.ds-settings__close:hover,
+.ds-settings__close:focus-visible {
+  background: var(--ds-interactive-hover);
+}
+
+.ds-settings__nav {
+  grid-area: nav;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: 10px var(--ds-space-3) 0;
+}
+
+.ds-settings__cells {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.ds-settings__cell {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--ds-control-h-sm);
+  padding: 9px var(--ds-space-4);
+  border: 0;
+  border-radius: var(--ds-radius-md);
+  background: transparent;
+  color: var(--ds-label-primary);
+  font: inherit;
+  font-size: var(--ds-text-sub);
+  font-weight: 400;
+  line-height: var(--ds-text-sub-lh);
+  text-align: left;
+  cursor: pointer;
+  outline: none;
+  corner-shape: var(--ds-corner);
+  transition: background-color var(--ds-dur-fast) linear;
+}
+
+.ds-settings__cell:hover,
+.ds-settings__cell.is-active {
+  background: var(--ds-interactive-hover);
+}
+
+.ds-settings__cell:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--ds-border-l3);
+}
+
+.ds-settings__options {
+  grid-area: options;
+  min-width: 0;
+  min-height: 0;
+  padding: 0 var(--ds-space-5) var(--ds-space-5);
+  overflow-y: auto;
+}
+
+.ds-settings__options:focus {
+  outline: none;
+}
+
+.ds-settings__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-5);
+  padding: var(--ds-space-4) 0;
+  border-bottom: var(--ds-hairline) solid var(--ds-border-l2);
+}
+
+.ds-settings__row-title {
+  font-size: var(--ds-text-sub);
+  line-height: var(--ds-text-sub-lh);
+}
+
+.ds-settings__row-desc {
+  margin-top: var(--ds-space-1);
+  color: var(--ds-label-secondary);
+  font-size: var(--ds-text-caption);
+  line-height: var(--ds-text-caption-lh);
+}
+
+.ds-settings__seg {
+  flex: none;
+  display: inline-flex;
+  gap: var(--ds-space-1);
+  margin: 0;
+}
+
+.ds-settings__opt {
+  display: inline-flex;
+  align-items: center;
+  height: var(--ds-control-h-sm);
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--ds-radius-sm);
+  background: transparent;
+  color: var(--ds-label-secondary);
+  font: inherit;
+  font-size: var(--ds-text-control);
+  line-height: var(--ds-text-control-lh);
+  cursor: pointer;
+  outline: none;
+  corner-shape: var(--ds-corner);
+  transition: background-color var(--ds-dur-fast) linear,
+    color var(--ds-dur-fast) linear;
+}
+
+.ds-settings__opt:hover,
+.ds-settings__opt:focus-visible {
+  background: var(--ds-interactive-hover);
+  color: var(--ds-label-primary);
+}
+
+.ds-settings__opt.is-active {
+  background: var(--ds-bg-selector);
+  color: var(--ds-label-primary);
+}
+
+.ds-settings__version {
+  margin: var(--ds-space-2) 0 0;
+  color: var(--ds-label-caption);
+  font-size: var(--ds-text-caption);
+  line-height: var(--ds-text-caption-lh);
+}
+
+body.ds-modal-open {
+  overflow: hidden;
+}
+
+@media (max-width: 767.98px) {
+  .ds-settings__panel {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    border-radius: 0;
+    grid-template-areas: "title header" "nav nav" "options options";
+  }
+
+  .ds-settings__cells {
+    flex-direction: row;
+    padding: var(--ds-space-3) var(--ds-space-4) 14px;
+    overflow: auto hidden;
+  }
+
+  .ds-settings__cell {
+    flex: 1 0 auto;
+    justify-content: center;
+    width: auto;
+    min-width: 108px;
+  }
+
+  .ds-settings__options {
+    padding: 0 var(--ds-space-4) var(--ds-space-5);
+  }
+}

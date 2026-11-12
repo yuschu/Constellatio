@@ -258,6 +258,40 @@ slot 初版清单（6 个，够用且可控）：
 - **D2**：30 个业务模板**未逐页核对组件形态**。当前只靠 token 层统一视觉（已抽查审批中心、考勤签到详情两页，归口一致），162 处几何内联 `style=` 一处未减。
 - **D4**：CSP 四项真机冒烟、深浅对比度数值计算、截图基线未做。
 
+### 9.4 交互机制移植（v2.0.5）
+
+D1 统一的是视觉；本节搬的是**机制**，首页（assistant 自带外壳）与业务页（`base.html`）共用同一份实现。
+
+**参数来源（读源码，不做像素采样）**
+
+| 机制 | 源码位置 | 取值 |
+|---|---|---|
+| 侧栏折叠 | `dsh-client-ui-sidebar` `SidebarRoot.collapsed` | rail 64px、padding `18px 10px 6px`、图标行 36×36、`gap:12`、logoRow 高 36 且 `margin-bottom:12` |
+| 设置入口 | `dsh-client-ui-settings-general` `Trigger` | 行高 42、内缩 `paintInset 3px`、label 与 glyph `gap:10`、右侧 hint 悬停 `opacity 0→1` |
+| 设置面板 | 同上 `Panel` | `800×800`（`min(800, 100vh-48)`）、`grid-template-columns: 188px`、标题 `padding 22px 12px 8px 24px`、navCell 40px、options `padding 0 24px 24px`、行 `padding 16px 0` + `.5px` 底边、`radius-panel 28` |
+| 已开始会话的输入区 | `dsh-client-ui-conversation` `ConversationRoot[data-phase=active]` | `position: sticky; bottom: 0` + 顶部 36px 渐变、`overflow-anchor: none` |
+| composer 自增高 | `dsh-client-ui-chat` `Composer` | `min-height 52`（hero）/`36`（docked）、上限 `336`、Enter 发送 / Shift+Enter 换行 |
+
+**交互行为**（`plugin_host/static/js/ds-shell.js`，外部脚本，无内联，符合 CSP）
+
+- 折叠：`html[data-rail-collapsed="true"]` 驱动；记忆写 `localStorage` 键 `dsRailCollapsed`；折叠态指针进入侧栏即回宽，移出复收。
+- 设置：`[data-ds-settings-open]` 打开 `#ds-settings`；Esc / 点遮罩（仅 `e.target === modal`）/ 关闭按钮收起；关闭后焦点回到触发控件；`Mod+Alt+,` 切换；打开时 `body.ds-modal-open` 锁滚动，焦点落到当前分区。
+- composer：`scrollHeight` 自增高、超 336 转内部滚动；`isComposing` 或 `dataset.composing` 期间回车不发送。
+- 键盘可达：自绘按钮统一 `outline: none` + `:focus-visible` 自绘指示，不依赖 UA 默认焦点框。
+
+**真机实测**（1440×900，headless Chrome + CDP）
+
+| 项 | 首页 `/` | 业务页 `/dashboard/` |
+|---|---|---|
+| 展开 rail | 280 | 280（菜单行 36 高） |
+| 折叠 rail | 64，toggle 36×36，设置入口 36 | 64，toggle 36×36，设置入口 36 |
+| hover 回宽 | 280，设置入口回 42 | 280，设置入口回 42 |
+| 设置面板 | 800×756，列 `188px 612px` | 800×756，列 `188px 612px` |
+| composer | 52 → 244，上限 336，hero 上下留白 263/263 | — |
+| Esc 关闭并还焦 | 是 | 是 |
+
+**未做**：设置面板目前只出「通用」一个分区（DSH 有十余组，按需再拆）；侧栏「更多」的溢出菜单仍是占位入口。
+
 ---
 
 *本文不含实现代码；确认后按阶段逐个交付，每阶段单独提交与验收。*

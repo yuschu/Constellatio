@@ -12,9 +12,20 @@
 
   <aside class="as-sidebar">
     <div class="as-logo-row">
-      <a href="/" class="as-brand">
+      <a href="/" class="as-brand" title="Constellatio">
+        <span class="as-brand__mark" aria-hidden="true">C</span>
         <span class="as-brand__name">Constellatio</span>
       </a>
+      <button type="button" class="as-rail-toggle" data-ds-rail-toggle
+              aria-expanded="true"
+              data-label-collapse="{% trans '收起侧边栏' %}"
+              data-label-open="{% trans '打开侧边栏' %}"
+              aria-label="{% trans '收起侧边栏' %}">
+        <svg class="as-ico" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+          <path d="M9.5 4.5L6 8l3.5 3.5" stroke="currentColor" stroke-width="1.5"
+                fill="none" stroke-linecap="round"/>
+        </svg>
+      </button>
     </div>
 
     <a href="/" class="as-new">
@@ -93,36 +104,33 @@
       <div class="as-user-row">
         <span class="as-avatar" aria-hidden="true">{{ request.user.last_name|default:request.user.username|slice:":1" }}</span>
         <span class="as-user__name">{{ request.user.last_name|default:request.user.username }}</span>
+      </div>
 
-        <details class="as-user-more">
-          <summary class="as-iconbtn" aria-label="{% trans '设置' %}">
-            <svg class="as-ico" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
-              <circle cx="8" cy="8" r="2.2" stroke="currentColor" stroke-width="1.5" fill="none"/>
-              <path d="M8 2.4v1.6M8 12v1.6M2.4 8h1.6M12 8h1.6M4.05 4.05l1.13 1.13M10.82 10.82l1.13 1.13M11.95 4.05l-1.13 1.13M5.18 10.82L4.05 11.95"
-                    stroke="currentColor" stroke-width="1.5" fill="none"/>
-            </svg>
-          </summary>
-          <div class="as-user-more__panel">
-            {% if 'language' in plugins_enabled %}
-            <form method="post" action="{% url 'language:language_switch' %}" class="as-inline">
-              {% csrf_token %}
-              <input type="hidden" name="next" value="{{ request.get_full_path }}">
-              <button type="submit" name="lang" value="zh-hans" class="as-textbtn{% if LANGUAGE_CODE == 'zh-hans' %} is-active{% endif %}">中文</button>
-              <button type="submit" name="lang" value="en" class="as-textbtn{% if LANGUAGE_CODE == 'en' %} is-active{% endif %}">EN</button>
-            </form>
-            {% endif %}
-            <div class="as-mode" role="group" aria-label="{% trans '外观' %}">
-              <a href="?mode=light" class="as-textbtn{% if color_mode == 'light' %} is-active{% endif %}">{% trans "浅色" %}</a>
-              <a href="?mode=dark" class="as-textbtn{% if color_mode == 'dark' %} is-active{% endif %}">{% trans "深色" %}</a>
-            </div>
-            {% if 'auth' in plugins_enabled %}
-            <form method="post" action="{% url 'auth:logout' %}" class="as-inline">
-              {% csrf_token %}
-              <button type="submit" class="as-textbtn">{% trans "登出" %}</button>
-            </form>
-            {% endif %}
-          </div>
-        </details>
+      <button type="button" class="as-settings-trigger" data-ds-settings-open
+              aria-haspopup="dialog" aria-controls="ds-settings">
+        <span class="as-settings-trigger__glyph" aria-hidden="true">
+          <svg class="as-ico" viewBox="0 0 16 16" width="16" height="16">
+            <circle cx="8" cy="8" r="2.2" stroke="currentColor" stroke-width="1.5" fill="none"/>
+            <path d="M8 2.4v1.6M8 12v1.6M2.4 8h1.6M12 8h1.6M4.05 4.05l1.13 1.13M10.82 10.82l1.13 1.13M11.95 4.05l-1.13 1.13M5.18 10.82L4.05 11.95"
+                  stroke="currentColor" stroke-width="1.5" fill="none"/>
+          </svg>
+        </span>
+        <span class="as-settings-trigger__label">{% trans "设置" %}</span>
+        <span class="as-settings-trigger__hint" aria-hidden="true">Ctrl+Alt+,</span>
+      </button>
+
+      <div class="as-foot-actions">
+        {% if request.user.is_authenticated %}
+          {% if 'notify' in plugins_enabled %}
+          <a href="{% url 'notify:notify_list' %}" class="as-foot-link">{% trans "消息" %}</a>
+          {% endif %}
+          {% if 'user' in plugins_enabled %}
+          <a href="{% url 'user:profile' %}" class="as-foot-link">{% trans "我的" %}</a>
+          {% endif %}
+          {% if 'auth' in plugins_enabled %}
+          <form method="post" action="{% url 'auth:logout' %}" class="as-foot-form">{% csrf_token %}<button type="submit" class="as-foot-link">{% trans "登出" %}</button></form>
+          {% endif %}
+        {% endif %}
       </div>
     </div>
   </aside>
@@ -151,9 +159,9 @@
             <span class="as-hero__badge">{% trans "助手" %}</span>
           </div>
           <div class="as-composer">
-            <div class="as-card">
+            <div class="as-card" data-ds-card>
               <label class="as-sr-only" for="as-input">{% trans "输入消息" %}</label>
-              <textarea id="as-input" class="as-input" rows="1"
+              <textarea id="as-input" class="as-input" rows="1" data-ds-input data-locked="{% if not model_configured %}1{% else %}0{% endif %}"
                         placeholder="{% trans '描述你要处理的事，/ 调用指令' %}"
                         {% if not model_configured %}disabled{% endif %}></textarea>
               <div class="as-bar">
@@ -182,7 +190,7 @@
                   <span class="as-trigger as-trigger--model" aria-hidden="true">
                     <span class="as-trigger__label">{% if model_configured %}{% trans "模型服务" %}{% else %}{% trans "未配置模型" %}{% endif %}</span>
                   </span>
-                  <button type="button" class="as-send" aria-label="{% trans '发送' %}"
+                  <button type="button" class="as-send" data-ds-send aria-label="{% trans '发送' %}"
                           {% if not model_configured %}disabled{% endif %}>
                     <svg class="as-ico" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
                       <path d="M8 13V3.6M3.8 7.8L8 3.6l4.2 4.2"
@@ -200,9 +208,9 @@
 
     {% if chat_messages %}
     <div class="as-composer as-composer--docked">
-      <div class="as-card">
+      <div class="as-card" data-ds-card>
         <label class="as-sr-only" for="as-input">{% trans "输入消息" %}</label>
-        <textarea id="as-input" class="as-input" rows="1"
+        <textarea id="as-input" class="as-input" rows="1" data-ds-input data-locked="{% if not model_configured %}1{% else %}0{% endif %}"
                   placeholder="{% trans '描述你要处理的事，/ 调用指令' %}"
                   {% if not model_configured %}disabled{% endif %}></textarea>
         <div class="as-bar">
@@ -231,7 +239,7 @@
             <span class="as-trigger as-trigger--model" aria-hidden="true">
               <span class="as-trigger__label">{% if model_configured %}{% trans "模型服务" %}{% else %}{% trans "未配置模型" %}{% endif %}</span>
             </span>
-            <button type="button" class="as-send" aria-label="{% trans '发送' %}"
+            <button type="button" class="as-send" data-ds-send aria-label="{% trans '发送' %}"
                     {% if not model_configured %}disabled{% endif %}>
               <svg class="as-ico" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
                 <path d="M8 13V3.6M3.8 7.8L8 3.6l4.2 4.2"
@@ -246,5 +254,99 @@
   </main>
 
 </div>
+
+<!-- 设置弹层：DSH settings-general 的 800×800 两栏（nav 188px），挂在 shell 之外 -->
+<div class="ds-settings" id="ds-settings" role="dialog" aria-modal="true"
+     aria-labelledby="ds-settings-title" aria-hidden="true" hidden>
+  <div class="ds-settings__overlay" aria-hidden="true"></div>
+  <div class="ds-settings__panel" tabindex="-1">
+    <h2 class="ds-settings__title" id="ds-settings-title">{% trans "设置" %}</h2>
+    <div class="ds-settings__header">
+      <button type="button" class="ds-settings__close" data-ds-settings-close
+              aria-label="{% trans '关闭' %}">
+        <svg class="as-ico" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+          <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5"
+                fill="none" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+    <nav class="ds-settings__nav" aria-label="{% trans '设置分区' %}">
+      <ul class="ds-settings__cells">
+        <li>
+          <button type="button" class="ds-settings__cell is-active" aria-current="true">
+            {% trans "通用" %}
+          </button>
+        </li>
+      </ul>
+    </nav>
+    <div class="ds-settings__options" tabindex="0">
+      {% if 'language' in plugins_enabled %}
+      <div class="ds-settings__row">
+        <div>
+          <div class="ds-settings__row-title">{% trans "语言" %}</div>
+          <div class="ds-settings__row-desc">{% trans "界面文案与菜单名称的显示语言" %}</div>
+        </div>
+        <form method="post" action="{% url 'language:language_switch' %}" class="ds-settings__seg">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <button type="submit" name="lang" value="zh-hans" class="ds-settings__opt{% if LANGUAGE_CODE == 'zh-hans' %} is-active{% endif %}">中文</button>
+          <button type="submit" name="lang" value="en" class="ds-settings__opt{% if LANGUAGE_CODE == 'en' %} is-active{% endif %}">English</button>
+        </form>
+      </div>
+      {% endif %}
+
+      <div class="ds-settings__row">
+        <div>
+          <div class="ds-settings__row-title">{% trans "外观" %}</div>
+          <div class="ds-settings__row-desc">{% trans "浅色与深色跟随同一个开关，全站生效" %}</div>
+        </div>
+        <form method="post" action="{% url 'color_mode_switch' %}" class="ds-settings__seg">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <button type="submit" name="mode" value="light" class="ds-settings__opt{% if color_mode == 'light' %} is-active{% endif %}">{% trans "浅色" %}</button>
+          <button type="submit" name="mode" value="dark" class="ds-settings__opt{% if color_mode == 'dark' %} is-active{% endif %}">{% trans "深色" %}</button>
+        </form>
+      </div>
+
+      <div class="ds-settings__row">
+        <div>
+          <div class="ds-settings__row-title">{% trans "主题" %}</div>
+          <div class="ds-settings__row-desc">{% trans "两套主题共用同一份设计语言" %}</div>
+        </div>
+        <form method="post" action="{% url 'theme_switch' %}" class="ds-settings__seg">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          {% for key, name in themes %}
+          <button type="submit" name="theme" value="{{ key }}" class="ds-settings__opt{% if key == current_theme %} is-active{% endif %}">{{ name }}</button>
+          {% endfor %}
+        </form>
+      </div>
+
+      <div class="ds-settings__row">
+        <div>
+          <div class="ds-settings__row-title">{% trans "会话记录" %}</div>
+          <div class="ds-settings__row-desc">{% trans "对话保存在本地数据库，重开会话可继续" %}</div>
+        </div>
+        <div class="ds-settings__seg">
+          <span class="ds-settings__opt is-active">{% trans "本地" %}</span>
+        </div>
+      </div>
+
+      <div class="ds-settings__row">
+        <div>
+          <div class="ds-settings__row-title">{% trans "快捷键" %}</div>
+          <div class="ds-settings__row-desc">{% trans "Enter 发送，Shift + Enter 换行，输入框随内容自增高至 336px" %}</div>
+        </div>
+        <div class="ds-settings__seg">
+          <span class="ds-settings__opt is-active">Enter</span>
+        </div>
+      </div>
+
+      <p class="ds-settings__version">Constellatio · {% trans "万物皆可插件" %}</p>
+    </div>
+  </div>
+</div>
+
+<script src="{% static 'js/ds-shell.js' %}" defer></script>
 </body>
 </html>

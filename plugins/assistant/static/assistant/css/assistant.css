@@ -869,3 +869,606 @@ textarea {
   background: transparent;
   color: var(--as-label-primary);
 }
+
+/* ============================================================
+   DSH 机制层（v2.0.5）
+   尺寸仍取源码原值：
+     折叠 rail         SidebarRoot .collapsed —— padding 18px 10px 6px、图标行 36×36、gap 12
+     设置入口          settings-general .trigger —— 42px 行、内缩 3px、hint 悬停显形
+     设置面板          settings-general .panel —— 800×800、grid 188px、navCell 40px、
+                       options padding 0 24px 24px、行 padding 16px 0 + .5px 底边
+     已开始会话的输入区  ConversationRoot[data-phase=active] —— sticky 底部 + 36px 渐变
+   ============================================================ */
+
+/* ---------- 侧栏折叠（rail） ---------- */
+.as-sidebar {
+  transition: flex-basis var(--as-dur) var(--as-ease),
+    width var(--as-dur) var(--as-ease), padding var(--as-dur) var(--as-ease);
+}
+
+html[data-rail-collapsed="true"] .as-sidebar {
+  flex: 0 0 64px;
+  width: 64px;
+  padding: 18px 10px 6px;
+}
+
+/* logoRow：折叠后靠左、高 36、margin-bottom 12 */
+html[data-rail-collapsed="true"] .as-logo-row {
+  justify-content: flex-start;
+  height: 36px;
+  margin-bottom: 12px;
+  padding: 0;
+  overflow: visible;
+}
+
+html[data-rail-collapsed="true"] .as-brand__name {
+  display: none;
+}
+
+html[data-rail-collapsed="true"] .as-brand__mark {
+  display: inline-flex;
+}
+
+/* newSession：36×36、透明底、无边框 */
+html[data-rail-collapsed="true"] .as-new {
+  align-self: flex-start;
+  width: 36px;
+  height: 36px;
+  margin: 0 0 12px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+}
+
+html[data-rail-collapsed="true"] .as-new__label {
+  max-width: 0;
+}
+
+html[data-rail-collapsed="true"] .as-panels {
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+html[data-rail-collapsed="true"] .as-panel {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  justify-content: center;
+  border-inline: 0;
+  background-clip: border-box;
+}
+
+html[data-rail-collapsed="true"] .as-panel__title {
+  display: none;
+}
+
+html[data-rail-collapsed="true"] .as-region {
+  display: none;
+}
+
+html[data-rail-collapsed="true"] .as-foot {
+  align-items: center;
+}
+
+html[data-rail-collapsed="true"] .as-user-row {
+  width: 36px;
+  margin: 8px 0 10px;
+  padding-left: 0;
+  justify-content: center;
+}
+
+html[data-rail-collapsed="true"] .as-user__name {
+  display: none;
+}
+
+html[data-rail-collapsed="true"] .as-settings-trigger {
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  gap: 0;
+  justify-content: center;
+  border-inline: 0;
+  background-clip: border-box;
+}
+
+html[data-rail-collapsed="true"] .as-settings-trigger__label,
+html[data-rail-collapsed="true"] .as-settings-trigger__hint {
+  display: none;
+}
+
+/* 悬停展开：DSH 的 rail 在指针进入时回到宽态 */
+html[data-rail-collapsed="true"] .as-sidebar:hover {
+  flex-basis: 280px;
+  width: 280px;
+  padding: 6px var(--as-sidebar-inline-padding);
+}
+
+html[data-rail-collapsed="true"] .as-sidebar:hover .as-logo-row {
+  justify-content: flex-end;
+  height: 60px;
+  margin-bottom: 0;
+  padding: 8px 0 8px 8px;
+  overflow: hidden;
+}
+
+html[data-rail-collapsed="true"] .as-sidebar:hover .as-brand__name {
+  display: inline-flex;
+}
+
+html[data-rail-collapsed="true"] .as-sidebar:hover .as-new {
+  align-self: stretch;
+  width: auto;
+  height: 38px;
+  margin: 0 calc(var(--as-sidebar-paint-inset) + 1px) 10px;
+  padding: 8px 12px;
+  border-color: var(--as-border-l3);
+  background: var(--as-elevated-fill);
+}
+
+html[data-rail-collapsed="true"] .as-sidebar:hover .as-new__label {
+  max-width: 200px;
+}
+
+html[data-rail-collapsed="true"] .as-sidebar:hover .as-panels {
+  gap: 2px;
+}
+
+html[data-rail-collapsed="true"] .as-sidebar:hover .as-panel {
+  width: auto;
+  height: auto;
+  min-height: 36px;
+  padding: 7px calc(var(--as-sidebar-row-padding) - var(--as-sidebar-paint-inset));
+  justify-content: flex-start;
+  border-inline: var(--as-sidebar-paint-inset) solid transparent;
+  background-clip: padding-box;
+}
+
+html[data-rail-collapsed="true"] .as-sidebar:hover .as-panel__title {
+  display: inline;
+}
+
+html[data-rail-collapsed="true"] .as-sidebar:hover .as-region {
+  display: flex;
+}
+
+html[data-rail-collapsed="true"] .as-sidebar:hover .as-user-row {
+  width: auto;
+  justify-content: flex-start;
+  padding-left: 2px;
+}
+
+html[data-rail-collapsed="true"] .as-sidebar:hover .as-user__name {
+  display: block;
+}
+
+html[data-rail-collapsed="true"] .as-sidebar:hover .as-settings-trigger {
+  width: 100%;
+  height: 42px;
+  padding: 0 calc(var(--as-sidebar-row-padding) - var(--as-sidebar-paint-inset));
+  gap: var(--as-sidebar-label-gap);
+  justify-content: flex-start;
+  border-inline: var(--as-sidebar-paint-inset) solid transparent;
+  background-clip: padding-box;
+}
+
+html[data-rail-collapsed="true"] .as-sidebar:hover .as-settings-trigger__label {
+  display: block;
+}
+
+/* 折叠态的品牌标记（railMark，24px） */
+.as-brand__mark {
+  display: none;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--as-radius-xs);
+  background: var(--as-selector);
+  color: var(--as-label-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* 折叠按钮：常驻 logoRow 右侧（iconButton 28×28） */
+.as-rail-toggle {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--as-radius-sm);
+  background: transparent;
+  color: var(--as-label-secondary);
+  cursor: pointer;
+  corner-shape: superellipse(1.5);
+  transition: background-color var(--as-dur-fast) linear;
+}
+
+.as-rail-toggle:hover {
+  background: var(--as-interactive-hover);
+  color: var(--as-label-primary);
+}
+
+html[data-rail-collapsed="true"] .as-rail-toggle {
+  width: 36px;
+  height: 36px;
+  margin-top: 0;
+}
+
+/* ---------- 设置入口（42px 行） ---------- */
+.as-settings-trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--as-sidebar-label-gap);
+  width: 100%;
+  height: 42px;
+  margin: 4px 0;
+  padding: 0 calc(var(--as-sidebar-row-padding) - var(--as-sidebar-paint-inset));
+  box-sizing: border-box;
+  border: none;
+  border-inline: var(--as-sidebar-paint-inset) solid transparent;
+  border-radius: var(--as-radius-md);
+  background: padding-box padding-box;
+  color: var(--as-label-primary);
+  font: inherit;
+  font-size: 14px;
+  line-height: 22px;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  corner-shape: superellipse(1.5);
+  transition: background-color var(--as-dur) var(--as-ease);
+}
+
+.as-settings-trigger:hover,
+.as-settings-trigger:focus-visible {
+  background-color: var(--as-interactive-hover);
+}
+
+.as-settings-trigger__glyph {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.as-settings-trigger__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.as-settings-trigger__hint {
+  flex: none;
+  opacity: 0;
+  color: var(--as-label-caption);
+  font-family: var(--as-font);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  transition: opacity var(--as-dur-fast) linear;
+}
+
+.as-settings-trigger:hover .as-settings-trigger__hint,
+.as-settings-trigger:focus-visible .as-settings-trigger__hint {
+  opacity: 1;
+}
+
+/* ---------- 设置弹层（800×800） ---------- */
+.ds-settings {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ds-settings[hidden] {
+  display: none;
+}
+
+.ds-settings__overlay {
+  position: absolute;
+  inset: 0;
+  background: #00000024;
+}
+
+html[data-color-mode="dark"] .ds-settings__overlay {
+  background: #00000052;
+}
+
+.ds-settings__panel {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-areas: "title header" "nav options";
+  grid-template-columns: 188px minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  width: 800px;
+  height: min(800px, calc(100vh - 48px));
+  max-width: calc(100vw - 48px);
+  border-radius: var(--as-radius-panel);
+  background: var(--as-bg-layer-1);
+  box-shadow: 0 0 0 0.5px var(--border-elevation),
+    0 8px 32px #0000001a, 0 0 48px #0000000f;
+  overflow: hidden;
+  outline: none;
+  corner-shape: superellipse(1.5);
+}
+
+.ds-settings__title {
+  grid-area: title;
+  margin: 0;
+  padding: 22px 12px 8px 24px;
+  color: var(--as-label-primary);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+}
+
+.ds-settings__header {
+  grid-area: header;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 8px;
+  height: 54px;
+  padding: 20px 14px 8px 10px;
+}
+
+.ds-settings__close {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--as-radius-sm);
+  background: transparent;
+  color: var(--as-label-primary);
+  cursor: pointer;
+  corner-shape: superellipse(1.5);
+  transition: background-color var(--as-dur-fast) linear;
+}
+
+.ds-settings__close:hover {
+  background: var(--as-interactive-hover);
+}
+
+.ds-settings__nav {
+  grid-area: nav;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: 10px 12px 0;
+}
+
+.ds-settings__cells {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.ds-settings__cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 100%;
+  height: 40px;
+  padding: 9px 16px 9px 12px;
+  border: none;
+  border-radius: var(--as-radius-md);
+  background: transparent;
+  color: var(--as-label-primary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 22px;
+  text-align: left;
+  cursor: pointer;
+  outline: none;
+  corner-shape: superellipse(1.5);
+  transition: background-color var(--as-dur-fast) linear;
+}
+
+.ds-settings__cell:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--as-border-l3);
+}
+
+.ds-settings__cell:hover,
+.ds-settings__cell.is-active {
+  background: var(--as-interactive-hover);
+}
+
+.ds-settings__options {
+  grid-area: options;
+  min-width: 0;
+  min-height: 0;
+  padding: 0 24px 24px;
+  overflow-y: auto;
+}
+
+.ds-settings__options:focus {
+  outline: none;
+}
+
+.ds-settings__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 16px 0;
+  border-bottom: 0.5px solid var(--as-border-l2);
+}
+
+.ds-settings__row-title {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.ds-settings__row-desc {
+  margin-top: 4px;
+  color: var(--as-label-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.ds-settings__seg {
+  flex: none;
+  display: inline-flex;
+  gap: 4px;
+}
+
+.ds-settings__opt {
+  height: 28px;
+  padding: 0 10px;
+  border: none;
+  border-radius: var(--as-radius-sm);
+  background: transparent;
+  color: var(--as-label-secondary);
+  font: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  cursor: pointer;
+  corner-shape: superellipse(1.5);
+  transition: background-color var(--as-dur-fast) linear,
+    color var(--as-dur-fast) linear;
+}
+
+.ds-settings__opt:hover {
+  background: var(--as-interactive-hover);
+  color: var(--as-label-primary);
+}
+
+.ds-settings__opt.is-active {
+  background: var(--as-selector);
+  color: var(--as-label-primary);
+}
+
+.ds-settings__version {
+  margin: 8px 0 0;
+  color: var(--as-label-caption);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+/* 弹层打开时锁住页面滚动 */
+body.ds-modal-open {
+  overflow: hidden;
+}
+
+/* 窄屏：铺满视口、导航横向条带（DSH <768px 口径） */
+@media (width <= 767px) {
+  .ds-settings__panel {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    border-radius: 0;
+    grid-template-areas: "title header" "nav nav" "options options";
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .ds-settings__title {
+    padding: 22px 0 0 16px;
+  }
+
+  .ds-settings__header {
+    height: auto;
+    padding: 20px 16px 0 10px;
+  }
+
+  .ds-settings__nav {
+    padding: 0;
+  }
+
+  .ds-settings__cells {
+    flex-direction: row;
+    gap: 4px;
+    padding: 12px 16px 14px;
+    overflow: auto hidden;
+    scrollbar-width: none;
+  }
+
+  .ds-settings__cell {
+    flex: 1 0 auto;
+    justify-content: center;
+    min-width: 108px;
+    padding: 0 14px;
+  }
+
+  .ds-settings__options {
+    padding: 0 16px 24px;
+  }
+}
+
+/* ---------- 已开始会话的输入区：sticky 底部 + 36px 渐变 ---------- */
+.as-composer--docked {
+  position: sticky;
+  bottom: 0;
+  z-index: 9;
+  margin-top: auto;
+  overflow-anchor: none;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--as-bg-base) 0%, transparent) 0,
+    var(--as-bg-base) 36px
+  );
+}
+
+/* ---------- footArea 的动作行（消息 / 我的 / 登出） ---------- */
+.as-foot-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 2px;
+}
+
+.as-foot-form {
+  display: inline-flex;
+  margin: 0;
+}
+
+.as-foot-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 3px 8px;
+  border: none;
+  border-radius: var(--as-radius-sm);
+  background: transparent;
+  color: var(--as-label-tertiary);
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+  cursor: pointer;
+  corner-shape: superellipse(1.5);
+  transition: background-color var(--as-dur-fast) linear,
+    color var(--as-dur-fast) linear;
+}
+
+.as-foot-link:hover {
+  background: var(--as-interactive-hover);
+  color: var(--as-label-primary);
+}
+
+html[data-rail-collapsed="true"] .as-foot-actions {
+  justify-content: center;
+}
