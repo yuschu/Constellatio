@@ -42,7 +42,7 @@ def get_plugin_switches():
 
     每次调用都读表（v1.7.13 删掉了 v1.7.3 引入的进程内 TTL 缓存：多 worker 下
     写进程只能清自己的缓存，其它 worker 会继续用旧快照，导致「已停用的插件仍可访问」）。
-    表很小（插件数 × 环境，个位数到十几行），每请求 1~2 次简单 SELECT，成本可忽略。
+    表很小（插件数 × 环境，个位数到十几行）。实测每请求查开关表：**普通页面 4 次、首页 6 次**（`PluginRouteGuardMiddleware` 1 + `context_processors` 1 + `charts.chart_switch_enabled` 2；首页另有 `views:get_enabled_plugins` / `views:plugin_counts` / `workbench` 各 1），成本可忽略。
     """
     try:
         from plugins.workspace.models import PluginSwitch
@@ -146,6 +146,8 @@ A 清掉自己的缓存；**worker B/C 收不到这个信号**，缓存照旧。
 
 - 不做「停用插件时清 DB 会话」之类的级联动作（与本缺陷无关）。
 - 不引入共享缓存层（DatabaseCache）来存开关快照：查询成本已足够低，多一层反而增加失效面。
+- **不合并同一请求内的重复查询**（middleware 结果挂到 `request` 供 context processor 复用、
+  `views:84` 与 `views:117` 合并）：本版单一主题是「删掉一个缺陷」，掺优化会让回溯变难，记入 roadmap 待办。
 - 表不可读时的降级仍然是「回退静态配置」，与现状一致。
 
 ## 八、待办（跨版本，勿丢）
