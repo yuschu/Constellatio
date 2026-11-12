@@ -1917,6 +1917,12 @@ body.ds-modal-open {
   border-radius: var(--ds-radius-xl);
 }
 
+/* hidden 属性自带 display:none，但作者声明 display:flex 优先级更高会把它压掉，
+   搜索过滤就只会改属性、不会真的藏起来——这里显式补回，别依赖 UA 样式表。 */
+.ds-plugin[hidden] {
+  display: none;
+}
+
 .ds-plugin__body {
   display: flex;
   flex: auto;
