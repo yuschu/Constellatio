@@ -22,3 +22,6 @@ for _item in settings.OA_PLUGINS:
         _app = _item['app']
         _name = _app.rsplit('.', 1)[-1]
         urlpatterns.append(path(f'plugins/{_name}/', include(f'{_app}.urls')))
+
+# v1.7.16：硬 500 在中间件链之外生成，默认处理器不带 CSP 头 —— 用自定义 handler500 补上
+handler500 = 'plugin_host.csp.server_error'

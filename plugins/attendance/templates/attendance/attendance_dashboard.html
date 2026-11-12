@@ -83,7 +83,7 @@
 {% if chart and attendance_chart %}
 <script src="{{ chart.script_url }}"></script>
 <script src="{{ chart.adapter_url }}"></script>
-<script>
+<script nonce="{{ request.csp_nonce }}">
 (function () {
   'use strict';
   var el = document.getElementById('attendance-dashboard-chart');

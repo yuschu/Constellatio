@@ -67,6 +67,9 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # v1.7.16：CSP（nonce 每请求一次）。放在最外层项目中间件之前——响应阶段自下而上，
+    # 这样 ExceptionGuardMiddleware 渲染的 400/403 也会带上 CSP 头；硬 500 由 handler500 补。
+    'plugin_host.csp.CspMiddleware',
     # v1.7.5：每个请求一个 8 位 request_id —— 放最外层之一，保证 500 响应也带 X-Request-Id
     'plugin_host.middleware.RequestIdMiddleware',
     # v1.7.5：异常分类（业务 400 / 越权 403 / 其它交默认 500）。必须在 RequestId 之内，

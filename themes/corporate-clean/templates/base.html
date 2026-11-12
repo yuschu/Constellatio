@@ -78,7 +78,8 @@
   </footer>
 
   <script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
-  <script>
+  <script src="{% static 'js/confirm.js' %}" defer></script>
+  <script nonce="{{ request.csp_nonce }}">
     (function () {
       var el = document.getElementById('page-loader');
       if (!el) return;

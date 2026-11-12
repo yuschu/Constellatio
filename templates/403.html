@@ -14,7 +14,7 @@
 </div>
 {% endblock %}
 {% block extra_js %}
-<script>
+<script nonce="{{ request.csp_nonce }}">
   // 事件绑定走 data- 属性（项目规约禁止内联 onclick）；history.back 无法用声明式 HTML 表达，
   // 所以这里是一小段内联脚本。若将来统一外链静态资源，把它挪到 errors.js 即可。
   document.addEventListener('click', function (event) {

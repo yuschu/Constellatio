@@ -51,7 +51,7 @@
     </tbody>
   </table>
 </div>
-<script>
+<script nonce="{{ request.csp_nonce }}">
   document.querySelectorAll('input[data-plugin-switch]').forEach(function (el) {
     el.addEventListener('change', function () { el.form.submit(); });
   });

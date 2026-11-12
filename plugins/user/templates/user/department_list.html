@@ -44,14 +44,14 @@
                     <input type="hidden" name="action" value="soft_delete">
                     <input type="hidden" name="dept_id" value="{{ d.id }}">
                     {% blocktranslate with name=d.name asvar confirm_soft %}软删除（停用）部门「{{ name }}」？即时生效并留痕。{% endblocktranslate %}
-                    <button class="r-btn r-btn--action" type="submit" onclick="return confirm('{{ confirm_soft|escapejs }}')">{% trans "停用" %}</button>
+                    <button class="r-btn r-btn--action" type="submit" data-confirm="{{ confirm_soft|escapejs }}">{% trans "停用" %}</button>
                   </form>
                   <form method="post" action="{% url 'user:department_list' %}" class="m-0">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="hard_delete">
                     <input type="hidden" name="dept_id" value="{{ d.id }}">
                     {% blocktranslate with name=d.name asvar confirm_hard %}物理删除部门「{{ name }}」？将发起部门删除审批单，全部审批人通过后执行。{% endblocktranslate %}
-                    <button class="r-btn r-btn--danger r-btn--action" type="submit" onclick="return confirm('{{ confirm_hard|escapejs }}')">{% trans "物理删除" %}</button>
+                    <button class="r-btn r-btn--danger r-btn--action" type="submit" data-confirm="{{ confirm_hard|escapejs }}">{% trans "物理删除" %}</button>
                   </form>
                   {% else %}
                   <form method="post" action="{% url 'user:department_list' %}" class="m-0">

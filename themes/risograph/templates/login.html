@@ -76,7 +76,7 @@
     </div>
   </div>
 
-  <script>
+  <script nonce="{{ request.csp_nonce }}">
     (function () {
       var el = document.getElementById('page-loader');
       if (!el) return;

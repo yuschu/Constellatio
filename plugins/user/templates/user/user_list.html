@@ -59,20 +59,20 @@
                 {% csrf_token %}
                 <input type="hidden" name="status" value="disable">
                 {% blocktranslate with name=u.last_name|default:u.username asvar confirm_disable %}禁用用户「{{ name }}」？超管直接禁用，普通管理员需发起会签审批。{% endblocktranslate %}
-                <button class="r-btn r-btn--danger r-btn--action" type="submit" onclick="return confirm('{{ confirm_disable|escapejs }}')">{% trans "禁用" %}</button>
+                <button class="r-btn r-btn--danger r-btn--action" type="submit" data-confirm="{{ confirm_disable|escapejs }}">{% trans "禁用" %}</button>
               </form>
               {% else %}
               <form method="post" action="{% url 'user:user_status' u.id %}" class="m-0">
                 {% csrf_token %}
                 <input type="hidden" name="status" value="freeze">
                 {% blocktranslate with name=u.last_name|default:u.username asvar confirm_freeze %}冻结「{{ name }}」的权限？即时生效。{% endblocktranslate %}
-                <button class="r-btn r-btn--action" type="submit" onclick="return confirm('{{ confirm_freeze|escapejs }}')">{% trans "冻结权限" %}</button>
+                <button class="r-btn r-btn--action" type="submit" data-confirm="{{ confirm_freeze|escapejs }}">{% trans "冻结权限" %}</button>
               </form>
               <form method="post" action="{% url 'user:user_status' u.id %}" class="m-0">
                 {% csrf_token %}
                 <input type="hidden" name="status" value="disable">
                 {% blocktranslate with name=u.last_name|default:u.username asvar confirm_disable %}禁用用户「{{ name }}」？超管直接禁用，普通管理员需发起会签审批。{% endblocktranslate %}
-                <button class="r-btn r-btn--danger r-btn--action" type="submit" onclick="return confirm('{{ confirm_disable|escapejs }}')">{% trans "禁用" %}</button>
+                <button class="r-btn r-btn--danger r-btn--action" type="submit" data-confirm="{{ confirm_disable|escapejs }}">{% trans "禁用" %}</button>
               </form>
               {% endif %}
             </div>
