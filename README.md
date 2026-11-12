@@ -236,9 +236,9 @@ Constellatio/
 | [docs/plugin-dev-v1713.md](docs/plugin-dev-v1713.md)                           | 插件开发 | v1.7.13：插件开关多 worker 立即可见（删进程内缓存） |
 | [docs/plugin-dev-v1714.md](docs/plugin-dev-v1714.md)                           | 插件开发 | v1.7.14：三处重业务逻辑下沉 services（views/services 判据） |
 | [docs/plugin-dev-v1715.md](docs/plugin-dev-v1715.md)                           | 插件开发 | v1.7.15：私有化部署收口（离线资源 / 安全默认值 / 登出 POST / 覆盖率门槛） |
-| [docs/plugin-dev-v1716.md](docs/plugin-dev-v1716.md)                           | 插件开发 | v1.7.16：CSP 加固（nonce 中间件 / 内联面清零 / `style-src` 取舍 / 真机待验清单） |
+| [docs/plugin-dev-v1716.md](docs/plugin-dev-v1716.md)                           | 插件开发 | v1.7.16：CSP 加固（nonce 中间件 / 内联面清零 / `style-src` 取舍 / 真机四项验收记录） |
 | [docs/roadmap.md](docs/roadmap.md)                                             | 规划   | 差距矩阵、v1.5–v2.0 迭代路线、修复项与文档债务                  |
 
 ## 📌 状态
 
-**v1.7.16 CSP 加固已交付并部署**（483 项测试全绿，tag `v1.7.16` → `1c9cfb7`，Release `v1.7.16 Beta` 已发布并接管 `Latest`）：全站 10 条 CSP 指令，`script-src` 只认 nonce（11 处内联脚本全带 nonce、无 `'unsafe-inline'`）、6 处 `onclick` 改 `data-confirm`、`/admin/` 不豁免、硬 500 由 `handler500` 补头。上一交付 **v1.7.15 Beta**（私有化部署收口，472 项测试、覆盖率 96%：Bootstrap 离线化、生产缺 `SECRET_KEY` 拒绝启动、登出改 POST、覆盖率门槛 94）。→ 下一步：CSP 真机四项验收（两主题图表渲染 / 控制台零 CSP 报错 / 确认框 / 401·403 回归），之后 v1.8 模板引擎单独起线
+**v1.7.16 CSP 加固已交付并部署**（483 项测试全绿，tag `v1.7.16` → `1c9cfb7`，Release `v1.7.16 Beta` 已发布并接管 `Latest`）：全站 10 条 CSP 指令，`script-src` 只认 nonce（11 处内联脚本全带 nonce、无 `'unsafe-inline'`）、6 处 `onclick` 改 `data-confirm`、`/admin/` 不豁免、硬 500 由 `handler500` 补头。上一交付 **v1.7.15 Beta**（私有化部署收口，472 项测试、覆盖率 96%：Bootstrap 离线化、生产缺 `SECRET_KEY` 拒绝启动、登出改 POST、覆盖率门槛 94）。→ ✅ **CSP 真机四项已验收通过**（2026-11-12 真实 Chrome：两主题图表渲染 / 控制台零 CSP 报错 / 确认框只弹一次且取消不发请求 / 401·403 降级回归），之后 v1.8 模板引擎单独起线

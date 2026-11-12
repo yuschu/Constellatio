@@ -2,7 +2,7 @@
 
 > 关联：`plugin_host/csp.py`（新）、`plugin_host/settings.py`（MIDDLEWARE）、`plugin_host/urls.py`（handler500）、`plugin_host/static/js/confirm.js`（新）、13 处内联 `<script>`、6 处 `onclick`
 > 版本：v1.7.16 · 文档日期：2026-11-12
-> 状态：**✅ 已实现**（483 项测试；自动化判据全部通过，真机项见 §7）
+> 状态：**✅ 已实现 + 真机验收通过**（483 项测试；自动化判据全部通过，真机四项 2026-11-12 已在真实 Chrome 执行，记录见 §7）
 > 基线：tag `v1.7.15`（472 项测试）
 
 ## 一、下发的策略（十指令）
@@ -109,7 +109,7 @@ nonce 与内容无关，因此是唯一可行路线。
 `'unsafe-eval'`。
 
 - **理论分析**：已做（见上）；
-- **真机验证**：**未验证** —— 本环境无浏览器。真机判据见 §7；
+- **真机验证**：**已通过**（2026-11-12 真实 Chrome，四项全过，含「控制台无 `unsafe-eval`」，记录见 §7）；
 - 若真机出现 `Refused to evaluate` / `unsafe-eval` 报错：**先如实上报**，不要自行加指令。
 
 ## 五、可自动化验收（实测，2026-11-12）
@@ -140,12 +140,20 @@ nonce 与内容无关，因此是唯一可行路线。
 - **不动** `SECRET_KEY` / compose / Bootstrap 离线化（v1.7.15 已收口）。
 - **不新增运行时依赖**（自写中间件，无 `django-csp`）。
 
-## 七、真机待验（评审者执行，本文档不声称已完成）
+## 七、真机验收记录（2026-11-12，维护者在真实 Chrome 执行）
 
-1. 两个主题下打开 4 个图表页（`/`、`/plugins/blockchain/`、`/plugins/attendance/records/`、`/plugins/attendance/`），图表正常渲染；
-2. 浏览器控制台零 CSP 报错（尤其无 `Refused to evaluate` / `unsafe-eval`）；
-3. 6 个 `data-confirm` 按钮：确认执行、取消不发请求；
-4. 401 / 403 降级逻辑（v1.7.12 三项）回归正常。
+环境：本地 sqlite 实例 `runserver 127.0.0.1:8011`（`DJANGO_DEBUG=1`、独立 `SECRET_KEY`），未触碰容器 MySQL 库；临时账号 `smoke_v1716`（超管，全页可达）与 `smoke_v1716b`（仅 `attendance_view`，用于权限降级），验收后已删除，用户数回到 32。
+
+| # | 判据 | 结果 | 证据 |
+|---|---|---|---|
+| 1 | 两主题图表渲染 | ✅ | corporate-clean：首页 7 个 canvas 尺寸 486×118（4 个）/486×320/486×300（2 个），`div[_echarts_instance_]` 的 `style.height` 分别为 `118px / 320px / 300px`——说明 `style-src 'unsafe-inline'` 未破坏图表定高；risograph：CSS 换为 `/static/themes/risograph/css/risograph.css`，7 个 canvas 485×118 / 320 / 300 同样正常 |
+| 2 | 控制台零 CSP 报错 | ✅ | 登录页、首页、留痕链页、考勤页 console 均 0 条；无 `Refused to evaluate` / `unsafe-eval`（ECharts 未走 `new Function` 分支） |
+| 3 | `data-confirm`：确认执行 / 取消不发请求 / 只弹一次 | ✅ | 取消：对话框消息为 `冻结「张总」的权限？即时生效。`，`handle_dialog(accept=False)` 后 URL 不变、`/plugins/user` 仅 1 条 GET、**零 POST**；确认：`accept=True` 后产生 `POST /plugins/user/users/ status ok`；两次操作各只出现一个对话框，处理后无第二个对话框挂起（双弹会阻塞后续读取，实测未出现） |
+| 4 | 401 / 403 降级（v1.7.12 回归） | ✅ | 401：会话失效后切 `#chart_days` 7→90 → `stats/?days=90` **401**，跳 `/plugins/auth/login/?next=%2Fplugins%2Fblockchain%2F`（next 是页面 URL）；403：撤 `blockchain_view` 后同一操作 → **403**，页面**不跳转**，图表区显示「无权查看该数据」（`chartH` 归 0） |
+
+**CSP 拦截能力自证（避免「0 条报错」其实是探针坏了）**：页面内插入一段无 nonce 的内联 `<script>` → `scriptRan: false`，`securitypolicyviolation` 捕获到 `{directive: "script-src-elem", blockedURI: "inline"}`，同页 console 也能读到该违规文本，故「0 条」是真零。另两条无效对照一并记录：CDP 特权上下文里的 `eval` 不受页面 CSP 约束，不能用来做正向对照；JS 用 `setAttribute('nonce')` 设置的 nonce 按 CSP3 不生效，也不能用来做放行对照。
+
+**清单修正两处**：① 原第 1 条把 `/plugins/attendance/records/` 列为图表页——实测该页无 canvas（其图表与 fetch 在 `/plugins/attendance/` 与 `/plugins/blockchain/`），故图表验收实际覆盖 `/`、`/plugins/blockchain/`、`/plugins/attendance/`；② 原第 3 条「6 个按钮」是模板级计数，用户列表页实际渲染出 48 个（24 用户 × 2）。
 
 ## 八、已知遗留
 
