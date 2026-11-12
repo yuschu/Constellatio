@@ -167,6 +167,7 @@ Constellatio/
 | 文档                                                                             | 类型   | 内容                                            |
 | ------------------------------------------------------------------------------ | ---- | --------------------------------------------- |
 | [README.md](README.md)（本文件）                                                    | 总览   | 项目入口、特性、快速开始                                  |
+| [docs/release-notes.md](docs/release-notes.md)                                 | 发版   | **发版总入口**：v1.7.x 收口基线、按 tag 检出时的指路、行为变更与升级须知 |
 | [docs/tech-stack-and-architecture.md](docs/tech-stack-and-architecture.md)     | 设计   | 技术选型、全栈插件化架构、插件契约、竞品调研                        |
 | [docs/constraints-and-acceptance.md](docs/constraints-and-acceptance.md)       | 规范   | 硬约束、功能边界、验收标准、开发规范、风险                         |
 | [docs/database-design.md](docs/database-design.md)                             | 设计   | 数据库设计（插件化：每插件独立表与迁移）                          |
@@ -234,4 +235,4 @@ Constellatio/
 
 ## 📌 状态
 
-**v1.7.14 三处重业务逻辑下沉 services 已交付并部署**（467 项测试）：`user_status` 状态机、考勤状态判定/打卡/补卡、审批附件校验/落盘/鉴权移入 services，四个视图 12~17 行；锁与事务边界原样搬家。**v1.7.x 功能线到此收口**：下一步是发版前收口（真机浏览器冒烟 + release tag），v1.8 模板引擎单独起线
+**v1.7.14 三处重业务逻辑下沉 services 已交付并部署**（467 项测试）：`user_status` 状态机、考勤状态判定/打卡/补卡、审批附件校验/落盘/鉴权移入 services，四个视图 12~17 行；锁与事务边界原样搬家。**v1.7.x 功能线到此收口**：真机浏览器冒烟已完成（401 跳登录且 next 为页面 URL、403 显示「无权查看该数据」、全程无 CSP 拦截），发版基线冻结为 tag `v1.7.14`（即 `docs/release-notes.md` 所在的提交）。**按 tag 检出前请先读 [docs/release-notes.md](docs/release-notes.md) 第二节**（`v1.7.3`/`v1.7.4` 的 tag 不含当版文档纠偏，按 main 指路）；v1.8 模板引擎单独起线
