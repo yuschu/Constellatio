@@ -2,7 +2,7 @@
 
 > 关联：`plugins/blockchain/templates/blockchain/blockchain_list.html`（`load()` 里 fetch）、`plugins/attendance/templates/attendance/attendance_records.html`（同）、新增 `templates/includes/stats_fetch_fail.js`
 > 版本：v1.7.12 · 文档日期：2026-11-11
-> 状态：**✅ 已实现**（439 项测试；见 §五 实测记录）
+> 状态：**✅ 已实现 + 真机冒烟通过**（439 项测试；§五 为 node 桩 DOM 与 2026-11-12 真实浏览器两次验收记录）
 > 基线：tag `v1.7.11`（434 项测试）
 > 目标：v1.7.9 / v1.7.10 / v1.7.11 把后端分成 302 / 401 / 403 / 404 之后，**前端第一次真正用上这些判据**
 
@@ -153,7 +153,7 @@ function showEmpty(text) {
 这些是**弱断言**（不执行 JS）：项目没有前端测试基建，而为一个 4 行分支引入 node+jsdom 不划算（review 结论）。
 真正的行为验证见 §五.1。
 
-## 五、验收记录（2026-11-11 11:20 (+08:00)）
+## 五、验收记录（node 桩 DOM：2026-11-11 11:20；真机浏览器：2026-11-12 09:41–09:45，均 +08:00）
 
 | # | 验收项 | 方式 | 结果 |
 |---|---|---|---|
@@ -173,6 +173,25 @@ review 要求「浏览器打开列表页 → 401 → 跳登录并带 next」必�
 
 剩余风险：桩 DOM 不能覆盖「浏览器对 `location.assign` 的处理」以及 CSP 等页面级行为；这两项需真机点击确认，
 已在 §七 记为待办。
+
+### 5.2 真机浏览器冒烟（2026-11-12 09:41–09:45 (+08:00)，已做）
+
+§5.1 留下的两项风险（`location.assign` 的真实跳转、CSP）已在**真实 Chrome** 中补做。环境为本地
+sqlite 实例 `runserver 127.0.0.1:8011`（**未触碰** Docker 容器的 MySQL 库），临时账号 `smoke_v1712`
+及其角色在冒烟后已删除，实例已停止。
+
+| # | 场景（全部由真实交互触发） | 观测到的结果 |
+|---|---|---|
+| 1 | 已登录进入 `/plugins/blockchain/` → **另一个标签页登出**让会话失效 → 回到原页面把「时间窗口」改成「近 90 天」（触发 `change` → 闭包内的 `load()`） | console `401 (Unauthorized)`；页面跳转 `/plugins/auth/login/?next=%2Fplugins%2Fblockchain%2F` —— **next 是页面 URL，不是 `/plugins/blockchain/stats/`** |
+| 2 | 用带 `?next=%2Fplugins%2Fblockchain%2F` 的登录页重新登录 | 直接回跳到 `/plugins/blockchain/`（v1.7.4 的 next 回跳与本版 next 传参联合成立） |
+| 3 | 页面保持已渲染状态，服务端撤掉该账号的 `blockchain_view` → 再改「时间窗口」 | console `403 (Forbidden)`；**页面不跳转**；图表降级表格首行显示「**无权查看该数据**」（不是「图表不可用」） |
+| 4 | 上述全程 console | **无任何 CSP 拦截报错**，内联脚本正常执行、图表与降级表格均按预期联动 |
+
+一条方法论更正（值得记住）：两页的脚本都包在 `(function () { ... })()` 的 IIFE 里，
+`handleStatsFailure` / `showEmpty` / `load` **都不在全局作用域**。因此在 DevTools console 里
+`typeof handleStatsFailure` 返回 `undefined`，也不能用 `handleStatsFailure({status:401})` 直接触发分支——
+必须靠**页面上的真实交互**（改 `#chart_days` 触发 `change`）进入闭包内的 `load()`。
+把「函数名在渲染后的 HTML 里出现」当作「可以在 console 里调用」，是这轮唯一一次判断失误。
 
 ## 六、不做 / 已知边界
 

@@ -99,7 +99,7 @@
 | **v1.7.12** | 前端接过 401 / 403 | 两处 stats `fetch` 的 `!response.ok` 分支原本只 `throw`，401/403/500 在前端同色；抽 `templates/includes/stats_fetch_fail.js`（`handleStatsFailure`）：401 → 跳登录并带 `next`（页面 URL，非接口地址）、403 → 「无权查看该数据」、其它 → 「数据暂时不可用」；`showEmpty(text)` 支持文案；`null` 作哨兵（`docs/plugin-dev-v1712.md`） | ✅ 已交付：439 项测试 + 渲染后 JS 的 node 桩 DOM 实测（401 的 next / 403 文案 / 500 兜底） |
 | **v1.7.13** | 插件开关多 worker 立即可见（删进程内缓存） —— ✅ 已交付：440 项测试 + 3 worker 实测（新代码 6/6 拦截，旧代码 6/6 放行），验收判据为「有缺陷的代码必须过不了」 | `registry.py` 的进程内 TTL 缓存导致多 worker 下停用插件后 ~30 秒才生效；**方案：直接删掉缓存**（信号驱动在多进程下只清本进程，会把缺陷伪装成已修复；版本号驱动需共享存储、成本与直接查表相同）；同时删 `PLUGIN_SWITCH_CACHE_TTL` / `PLUGIN_SWITCH_ERROR_TTL` / `invalidate_plugin_switch_cache` 与 workspace 的失效钩子；实测每请求查开关表 普通页 4 次 / 首页 6 次（合并见待办）（`docs/plugin-dev-v1713.md`） | 验收必须**两 worker**：worker A 停用后立刻连打请求，access log 确认落在至少两个不同 pid，且全部呈现停用语义；对照实验（删缓存前的代码）必须能复现旧行为 |
 | **v1.7.14** | 三处重业务逻辑下沉 services | `user_status` 状态机 + `attendance` 状态判定/打卡/补卡 + `approval` 附件校验/落盘/鉴权 移入 services；视图只做参数提取 → 调 service → 响应（四个视图 ≤ 30 行）；锁与事务边界原样搬家（`docs/plugin-dev-v1714.md`） | ✅ 已交付：466 项测试（新增 26 条 service 单测）+ 三插件既有断言零改动 + shell 可调用性实测 |
-| **收口（不占版本号）** | 发版前收口 | 不再开 v1.7.15：功能已收口，继续在 services/权限语义上叠功能只会扩大回归面。收口内容：① **真机浏览器冒烟**（401 跳登录 + next、CSP 未拦、两页图表正常）；② 以 `v1.7.14` 作为发版基线打 release tag；③ 剩余待办（开关查询合并、`user` 对象级扫尾、`_switch_cache` 同类进程内状态复查）转 v1.8 或按需单独修 | 冒烟清单逐项签字 + release tag 指向全绿提交 |
+| **收口（不占版本号）** | 发版前收口 | 不再开 v1.7.15：功能已收口，继续在 services/权限语义上叠功能只会扩大回归面。收口内容：① ✅ **真机浏览器冒烟**（2026-11-12 已完成：401 跳登录且 next 为页面 URL、403 显示「无权查看该数据」、全程无 CSP 报错）；② 以 `v1.7.14` 作为发版基线打 release tag；③ 剩余待办（开关查询合并、`user` 对象级扫尾、`_switch_cache` 同类进程内状态复查）转 v1.8 或按需单独修 | 冒烟清单逐项签字 + release tag 指向全绿提交 |
 | **v1.8** | 模板引擎插件化 | Django / Jinja2 Provider；先做多引擎共存或单插件切换 | 待确认深度（见第六节） |
 | **v1.9** | 插件契约补全 | `models` / `dependencies` / `admin`；依赖顺序与环校验；启用一致性校验 | 缺失依赖启动即报错；停用被依赖插件被拦截 |
 | **v1.10** | 剩余修复包 + 文档债务 | P0-A 部署默认值（密钥/口令/DEBUG/HOSTS）、容器非 root 与健康检查、`entrypoint` 注入、`has_perm` 三处口径、模板内联 JS 与 inline style、静态停用边界、全文档同步 | 新增测试全绿；文档与代码无已知冲突 |
@@ -124,7 +124,7 @@
 8. ✅ **运行日志缺失（v1.7.5 已修）**：`LOGGING` + `RequestIdMiddleware`（`X-Request-Id`）+ 四个错误页 + `ExceptionGuardMiddleware`。容器只走 console（`DJANGO_LOG_TO_FILE` 默认 0，多 worker 不轮转同一文件）；实测 500 场景日志含 request_id 与完整栈。
 9. ✅ **账号密码登录不消费 `next`（v1.7.4 收尾已修）**：装 `LoginRequiredMiddleware` 后 42 条 URL 全部开始带 `next`，把原来的「偶发」放成「默认路径」，且 SSO 通道已能回跳、同一登录页两种结果，故在 v1.7.4 收尾用 `fix(auth)` 修复：`_next_target()` + `_redirect_after_login()`（`url_has_allowed_host_and_scheme` 校验，外站与 `//host` 均拒）+ 两套主题 `login.html` 补隐藏域 + `render` 上下文补 `next`；补 3 条用例（回跳带查询串 / 外站拒 / 协议相对拒），测试 365 → 368。不动 v1.7.4 tag。
 11. ◻ **请求内开关查询合并（v1.7.13 遗留优化，不是缺陷）**：同一请求里 `PluginRouteGuardMiddleware` 与 `context_processors` 各查一次开关表，`views` 首页又各查一次（实测普通页 4 次 / 首页 6 次）。可把 middleware 的结果挂到 `request` 复用，`views:84` 与 `views:117` 合并。纯成本优化，不影响正确性。
-12. ◻ **真机浏览器冒烟（上线前必做，v1.7.12 遗留）**：v1.7.12 的 401 跳转只有 node 桩 DOM 验证，上线前需在真实浏览器打开列表页并确认「跳转到登录页 + next 正确 + CSP 未拦截」。
+12. ✅ **真机浏览器冒烟（已做 2026-11-12 09:41–09:45 (+08:00)）**：v1.7.12 的 401 跳转此前只有 node 桩 DOM 验证。真实 Chrome 实测（本地 sqlite 实例，未触碰容器库）：会话失效后改时间窗口 → console `401` → 跳 `/plugins/auth/login/?next=%2Fplugins%2Fblockchain%2F`（next 是页面 URL，不是 stats 接口）；撤权限后同样操作 → console `403` → 图表降级表格显示「无权查看该数据」且不跳转；全程无 CSP 报错。详见 `docs/plugin-dev-v1712.md` §5.2。
 11. ◻ **越权反馈语义统一（302 / 403 / 404 三选一，v1.7.9 待定）**：局部迁移会造出第二种反馈（同一用户被拒，有时回工作台、有时 403），v1.7.4 刚修掉同类不一致，不能重犯。三种语义的泄漏面与适用场景：302 不泄漏对象存在 / 403 泄漏「存在但无权」便于找审批人 / 404 完全不泄漏适合对外接口。决定后一次性迁移 43 处装饰器口径，并把 `BusinessError` 真实抛点（审批重复提交、补卡超窗口等）一起接上。
 
 ## 五、文档债务（需在对应版本同步）
