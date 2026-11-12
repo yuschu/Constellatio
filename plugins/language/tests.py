@@ -145,7 +145,7 @@ class TranslationCatalogTest(LanguageTestMixin, TestCase):
         user = get_user_model().objects.create_user('languser', password='pw')
         self.client.force_login(user)
         self.client.cookies['django_language'] = 'en'
-        response = self.client.get('/')
+        response = self.client.get('/dashboard/')
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Workspace')
         self.assertContains(response, 'Everything is a plugin')

@@ -13,6 +13,8 @@ from . import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.index, name='index'),
+    # v2.0.0：首页被插件接管后，原看板仍固定可达（home_dashboard.html 一行未改）
+    path('dashboard/', views.dashboard, name='dashboard'),
     path('theme/switch/', views.theme_switch, name='theme_switch'),   # v1.5.8 运行时主题切换
 ]
 

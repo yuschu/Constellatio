@@ -63,6 +63,8 @@ INSTALLED_APPS = [
     # v1.7.0：企业 SSO / 消息提醒
     'plugins.sso',
     'plugins.notify',
+    # v2.0.0：对话式首页（A 阶段只做界面与骨架，不接模型调用）
+    'plugins.assistant',
 ]
 
 MIDDLEWARE = [
@@ -203,6 +205,10 @@ AUTHENTICATION_BACKENDS = [*OA_AUTH_BACKENDS, 'django.contrib.auth.backends.Mode
 
 # 业务插件启停：enabled=False 即停用（路由/菜单/导航自动收敛）
 OA_PLUGINS = [
+    # v2.0.0：对话式首页放在首位——侧栏功能入口按此顺序渲染，
+    # 「助手 / 看板」排在顶部功能入口区的前两格。
+    # 停用后 index 自动回落原看板（/dashboard/ 始终可达）。
+    {'app': 'plugins.assistant', 'enabled': True},
     {'app': 'plugins.auth', 'enabled': True},
     {'app': 'plugins.user', 'enabled': True},
     {'app': 'plugins.approval', 'enabled': True},
@@ -216,6 +222,14 @@ OA_PLUGINS = [
     {'app': 'plugins.sso', 'enabled': True},
     {'app': 'plugins.notify', 'enabled': True},
 ]
+
+# ---------------------------------------------------------------------------
+# v2.0.0 对话式首页的模型服务配置（部署时填写，不在安装包里内置任何模型）
+# ---------------------------------------------------------------------------
+# 本轮只消费「是否已配置」这一个事实：两项都有值才启用输入区。
+# 真正的 OpenAI 兼容客户端在后续 A 阶段接入（见 docs/ai-assistant-plan.md）。
+ASSISTANT_LLM_BASE_URL = os.environ.get('ASSISTANT_LLM_BASE_URL', '')
+ASSISTANT_LLM_MODEL = os.environ.get('ASSISTANT_LLM_MODEL', '')
 
 # ---------------------------------------------------------------------------
 # v1.7.0 企业 SSO（签名 Ticket 网关）

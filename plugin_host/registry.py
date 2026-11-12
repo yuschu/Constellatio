@@ -20,7 +20,8 @@ class PluginMeta:
     """插件契约：每个插件必须提供的字段。"""
 
     def __init__(self, name, version, title=None, menus=None, permissions=None,
-                 urls=None, signals=None, templates=None, app=None):
+                 urls=None, signals=None, templates=None, app=None,
+                 home_provider=None):
         self.name = name
         self.version = version
         self.title = title or name          # 展示名（可 gettext_lazy）
@@ -30,6 +31,7 @@ class PluginMeta:
         self.signals = signals or []        # 订阅/发出的信号
         self.templates = templates          # 模板目录名
         self.app = app                      # Django AppConfig 实例
+        self.home_provider = home_provider  # 可调用对象：request -> HttpResponse；None = 不接管首页
 
 
 def register(meta: PluginMeta):
@@ -82,6 +84,26 @@ def plugin_enabled(key):
         return bool(switches[key])
     static = _static_plugin_enabled(key)
     return True if static is None else static
+
+
+def get_home_provider(user=None):
+    """返回第一个「已启用且声明了 home_provider」的插件实现；没有则返回 None。
+
+    多个插件同时声明时取 PLUGIN_REGISTRY 注册顺序的第一个并打 warning：
+    「谁的首页生效」必须确定，不能随插件加载顺序漂移。
+    user 预留给后续按权限过滤首页实现，本版不参与判定。
+    """
+    providers = []
+    for key, meta in PLUGIN_REGISTRY.items():
+        if meta.home_provider and plugin_enabled(key):
+            providers.append((key, meta.home_provider))
+    if not providers:
+        return None
+    if len(providers) > 1:
+        logger.warning(
+            '多个插件声明了首页接管，按注册顺序取第一个: %s',
+            ', '.join(key for key, _ in providers))
+    return providers[0][1]
 
 
 def plugin_counts():

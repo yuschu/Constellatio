@@ -103,10 +103,10 @@ class ThemeDiscoveryTest(TestCase):
                 self.assertIn('top: 0', block.group(1))
                 self.assertIn('z-index: 1030', block.group(1))
 
-    def test_home_uses_active_theme_css(self):
+    def test_dashboard_uses_active_theme_css(self):
         user = get_user_model().objects.create_user('themeuser', password='pw')
         self.client.force_login(user)
-        response = self.client.get('/')
+        response = self.client.get('/dashboard/')
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'themes/corporate-clean/css/corporate-clean.css')
         self.assertContains(response, 'r-loader')
@@ -121,7 +121,7 @@ class ThemeRuntimeSwitchTest(TestCase):
 
     def test_default_theme_and_switch_entry(self):
         self.client.force_login(self.user)
-        resp = self.client.get('/')
+        resp = self.client.get('/dashboard/')
         self.assertContains(resp, 'themes/corporate-clean/css/corporate-clean.css')
         self.assertContains(resp, 'theme/switch/')     # 功能区主题切换入口
         self.assertContains(resp, 'Risograph')          # 可选项
@@ -129,7 +129,7 @@ class ThemeRuntimeSwitchTest(TestCase):
     def test_cookie_switches_theme(self):
         self.client.force_login(self.user)
         self.client.cookies['oa_theme'] = 'risograph'
-        resp = self.client.get('/')
+        resp = self.client.get('/dashboard/')
         self.assertContains(resp, 'themes/risograph/css/risograph.css')
         self.assertNotContains(resp, 'themes/corporate-clean/css/')
 
@@ -142,7 +142,7 @@ class ThemeRuntimeSwitchTest(TestCase):
         cookie = resp.cookies['oa_theme']
         self.assertEqual(cookie.value, 'risograph')
         self.assertEqual(int(cookie['max-age']), settings.THEME_COOKIE_AGE)
-        self.assertContains(self.client.get('/'), 'themes/risograph/css/risograph.css')
+        self.assertContains(self.client.get('/dashboard/'), 'themes/risograph/css/risograph.css')
 
     def test_invalid_theme_ignored_and_cookie_fallback(self):
         self.client.force_login(self.user)
@@ -150,7 +150,7 @@ class ThemeRuntimeSwitchTest(TestCase):
         self.assertEqual(resp.status_code, 302)
         self.assertNotIn('oa_theme', resp.cookies)
         self.client.cookies['oa_theme'] = 'missing'
-        self.assertContains(self.client.get('/'), 'themes/corporate-clean/css/corporate-clean.css')
+        self.assertContains(self.client.get('/dashboard/'), 'themes/corporate-clean/css/corporate-clean.css')
 
     def test_switch_requires_post_and_blocks_external_next(self):
         self.client.force_login(self.user)

@@ -281,7 +281,7 @@ class ProfileTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '个人中心')
         self.assertContains(response, '编辑资料')
-        home = self.client.get('/')
+        home = self.client.get('/dashboard/')
         self.assertContains(home, '/plugins/user/profile/')
 
     def test_profile_permissions_page(self):

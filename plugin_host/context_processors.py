@@ -17,16 +17,24 @@ def _mark_active(menus, path):
 
     同一前缀下有更精确匹配（如 /attendance/records/ 与 /attendance/）时，
     只高亮最精确的那一项，避免同时高亮两个 Tab。
+    v2.0.0：同一个 URL 只让第一个菜单高亮——首页接管后「助手」与旧「工作台」
+    都指向 /，不能同时亮两个。
     """
     bases = [(menu.get('url') or '/').rstrip('/') or '/' for menu in menus]
     exact_hit = path.rstrip('/') in bases or path == '/'
+    claimed = set()
     for menu, base in zip(menus, bases, strict=False):
         if path == '/':
-            menu['active'] = base == '/'
+            active = base == '/'
         elif base == path.rstrip('/'):
-            menu['active'] = True
+            active = True
         else:
-            menu['active'] = (not exact_hit) and path.startswith(base + '/')
+            active = (not exact_hit) and path.startswith(base + '/')
+        if active and base in claimed:
+            active = False
+        if active:
+            claimed.add(base)
+        menu['active'] = active
     return menus
 
 

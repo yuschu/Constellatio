@@ -11,7 +11,7 @@ from django.utils.translation import gettext as _t
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
-from .registry import get_enabled_plugins, plugin_counts
+from .registry import get_enabled_plugins, get_home_provider, plugin_counts
 from .theming import THEME_COOKIE_NAME, discover_themes
 
 # 流程快捷发起：审批类型 → (代码, 图标)
@@ -74,6 +74,20 @@ def _recent_notifications(user, limit=3):
 
 @login_required
 def index(request):
+    """首页：有插件接管就渲染它的模板，否则回落原看板。
+
+    v2.0.0：首页接管第一次成为插件能力（PluginMeta.home_provider）；
+    模型未配置不影响接管——对话页自己降级输入区，绝不白屏。
+    """
+    provider = get_home_provider(request.user)
+    if provider is not None:
+        return provider(request)
+    return dashboard(request)
+
+
+@login_required
+def dashboard(request):
+    """原工作台看板（v1.5.5 起），v2.0.0 起固定在 /dashboard/ 可达。"""
     user = request.user
     can_approval = user.has_perm('approval_view')
     can_approve = user.has_perm('approval_approve')   # v1.5.15：L3 不显示「待我审批」
@@ -105,7 +119,7 @@ def index(request):
     from .charts import get_active_chart
     from .workbench import build_dashboard, parse_range
 
-    dashboard = build_dashboard(
+    dashboard_ctx = build_dashboard(
         user=user,
         is_admin=can_plugin_ops,
         enabled_names=enabled_names,
@@ -130,7 +144,7 @@ def index(request):
         'plugin_total': plugin_total,
         'enabled_count': plugin_enabled_count,
         'is_admin_view': can_plugin_ops,
-        **dashboard,
+        **dashboard_ctx,
     })
 
 

@@ -47,7 +47,7 @@ class CspHeaderTests(TestCase):
 
     def test_nonce_is_consistent_within_one_response(self):
         self.client.force_login(self.admin)
-        response = self.client.get('/')
+        response = self.client.get('/dashboard/')
         policy = response.headers[HEADER]
         header_nonce = re.search(r"'nonce-([^']+)'", policy).group(1)
         page_nonces = set(re.findall(r'<script nonce="([^"]+)"', response.content.decode()))
@@ -56,8 +56,8 @@ class CspHeaderTests(TestCase):
 
     def test_nonce_differs_between_requests(self):
         self.client.force_login(self.admin)
-        first = re.search(r"'nonce-([^']+)'", self.client.get('/').headers[HEADER]).group(1)
-        second = re.search(r"'nonce-([^']+)'", self.client.get('/').headers[HEADER]).group(1)
+        first = re.search(r"'nonce-([^']+)'", self.client.get('/dashboard/').headers[HEADER]).group(1)
+        second = re.search(r"'nonce-([^']+)'", self.client.get('/dashboard/').headers[HEADER]).group(1)
         self.assertNotEqual(first, second)
 
     def test_static_response_has_no_policy(self):
@@ -90,7 +90,7 @@ class InlineScriptTests(TestCase):
     def test_chart_pages_have_nonce_on_scripts(self):
         """4 个图表页：页面里每个内联 script 都必须带 nonce（缺一个浏览器就会拦）。"""
         self.client.force_login(self.admin)
-        for url in ('/', '/plugins/blockchain/', '/plugins/attendance/records/',
+        for url in ('/dashboard/', '/plugins/blockchain/', '/plugins/attendance/records/',
                     '/plugins/attendance/'):
             html = self.client.get(url).content.decode()
             self.assertNotIn('<script>', html, f'{url} 仍有不带 nonce 的内联 script')
@@ -143,7 +143,7 @@ class InlineScriptTests(TestCase):
 
     def test_confirm_script_is_loaded_and_self_hosted(self):
         self.client.force_login(self.admin)
-        html = self.client.get('/').content.decode()
+        html = self.client.get('/dashboard/').content.decode()
         self.assertIn('/static/js/confirm.js', html)
         self.assertNotIn('https://', html.split('<body')[0])
 

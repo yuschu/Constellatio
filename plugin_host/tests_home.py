@@ -32,7 +32,7 @@ class WorkbenchTests(TestCase):
 
     def test_employee_view_has_no_global_dashboard(self):
         self.client.force_login(self.staff)
-        response = self.client.get('/')
+        response = self.client.get('/dashboard/')
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '员工视图')
         self.assertContains(response, '核心数据看板')
@@ -44,7 +44,7 @@ class WorkbenchTests(TestCase):
 
     def test_admin_view_shows_global_dashboard(self):
         self.client.force_login(self.admin)
-        response = self.client.get('/')
+        response = self.client.get('/dashboard/')
         self.assertContains(response, '管理员视图')
         self.assertContains(response, '核心数据看板')
         self.assertContains(response, '插件运行状态')
@@ -59,19 +59,19 @@ class WorkbenchTests(TestCase):
             applicant=self.staff, approver=manager, status=Approval.Status.PENDING)
         # v1.5.15：L3 不显示待办计数
         self.client.force_login(self.staff)
-        self.assertEqual(self.client.get('/').context['pending_approvals'], 0)
-        self.assertNotContains(self.client.get('/'), '/plugins/approval/pending/')
+        self.assertEqual(self.client.get('/dashboard/').context['pending_approvals'], 0)
+        self.assertNotContains(self.client.get('/dashboard/'), '/plugins/approval/pending/')
         # 管理岗可见并计数
         self.client.force_login(manager)
-        self.assertEqual(self.client.get('/').context['pending_approvals'], 1)
+        self.assertEqual(self.client.get('/dashboard/').context['pending_approvals'], 1)
 
     def test_attendance_todo_states(self):
         self.client.force_login(self.staff)
         self.assertEqual(
-            self.client.get('/').context['attendance_today']['label'], '今日未签到')
+            self.client.get('/dashboard/').context['attendance_today']['label'], '今日未签到')
         Attendance.objects.create(user=self.staff, date=timezone.localdate())
         self.assertEqual(
-            self.client.get('/').context['attendance_today']['label'], '今日未签到')
+            self.client.get('/dashboard/').context['attendance_today']['label'], '今日未签到')
 
     def test_notices_latest_three(self):
         for i in range(5):
@@ -79,7 +79,7 @@ class WorkbenchTests(TestCase):
                 title=f'N{i}', content='x', publisher=self.admin,
                 is_top=(i == 4))
         self.client.force_login(self.staff)
-        response = self.client.get('/')
+        response = self.client.get('/dashboard/')
         notices = response.context['notices']
         self.assertEqual(len(notices), 3)
         self.assertEqual(notices[0].title, 'N4')     # 置顶优先
@@ -88,13 +88,13 @@ class WorkbenchTests(TestCase):
         manager = User.objects.create_user('mgr', '', 'pw')
         grant(manager, 'attendance_report_view')
         self.client.force_login(manager)
-        response = self.client.get('/')
+        response = self.client.get('/dashboard/')
         self.assertContains(response, '签到详情')
         self.assertContains(response, '/plugins/attendance/records/')
 
     def test_shortcut_falls_back_to_attendance_for_staff(self):
         self.client.force_login(self.staff)
-        response = self.client.get('/')
+        response = self.client.get('/dashboard/')
         self.assertContains(response, '我的考勤')
         self.assertNotContains(response, '/plugins/attendance/records/')
 
@@ -135,32 +135,32 @@ class DashboardDataTests(TestCase):
 
     def test_employee_scope_only_own_requests(self):
         self.client.force_login(self.staff)
-        response = self.client.get('/')
+        response = self.client.get('/dashboard/')
         flow = response.context['cards']['flow']
         self.assertEqual(flow['total'], 2)   # 请假 + 用章，均本人发起
         self.assertContains(response, '核心数据看板')
         self.assertNotContains(response, '插件分布')
 
         self.client.force_login(self.admin)
-        admin_flow = self.client.get('/').context['cards']['flow']
+        admin_flow = self.client.get('/dashboard/').context['cards']['flow']
         self.assertEqual(admin_flow['total'], 3)
 
     def test_range_filter_and_bucket_axis(self):
         self.client.force_login(self.staff)
-        response = self.client.get('/', {'range': 'week'})
+        response = self.client.get('/dashboard/', {'range': 'week'})
         self.assertEqual(response.context['range_key'], 'week')
         self.assertEqual(len(response.context['trend']['categories']), 7)
 
-        response = self.client.get('/', {'range': 'today'})
+        response = self.client.get('/dashboard/', {'range': 'today'})
         self.assertEqual(len(response.context['trend']['categories']), 24)
 
-        response = self.client.get('/', {'range': 'bogus'})
+        response = self.client.get('/dashboard/', {'range': 'bogus'})
         self.assertEqual(response.context['range_key'], 'month')
         self.assertEqual(len(response.context['trend']['categories']), 30)
 
     def test_dashboard_payloads_and_links(self):
         self.client.force_login(self.staff)
-        response = self.client.get('/')
+        response = self.client.get('/dashboard/')
         cards = response.context['cards']
         self.assertEqual(cards['approval']['payload']['link'],
                          '/plugins/approval/pending/')
@@ -178,7 +178,7 @@ class DashboardDataTests(TestCase):
                 applicant=self.staff, approver=self.manager,
                 status=Approval.Status.PENDING)
         self.client.force_login(self.manager)
-        response = self.client.get('/')
+        response = self.client.get('/dashboard/')
         self.assertTrue(response.context['cards']['approval']['alert'])
         self.assertContains(response, '待办较多')
 
@@ -186,14 +186,14 @@ class DashboardDataTests(TestCase):
         from plugins.workspace.models import PluginSwitch
         PluginSwitch.objects.create(app_key='notice', enabled=False)
         self.client.force_login(self.admin)
-        response = self.client.get('/')
+        response = self.client.get('/dashboard/')
         self.assertTrue(response.context['cards']['plugins']['alert'])
         self.assertContains(response, '插件未全部启用')
 
     def test_chart_disabled_degrades_to_numbers_and_tables(self):
         with override_settings(OA_CHARTS='none'):
             self.client.force_login(self.admin)
-            response = self.client.get('/')
+            response = self.client.get('/dashboard/')
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'wb-chart-trend')
         self.assertIsNone(response.context['trend']['payload'])
@@ -201,7 +201,7 @@ class DashboardDataTests(TestCase):
 
     def test_admin_pie_and_department_chart(self):
         self.client.force_login(self.admin)
-        response = self.client.get('/')
+        response = self.client.get('/dashboard/')
         pie = response.context['pie']
         self.assertEqual(pie['total'], 1)
         self.assertEqual(pie['rows'][0]['label'], '用户与组织')
@@ -221,10 +221,10 @@ class MenuActiveTests(TestCase):
         response = self.client.get('/plugins/notice/')
         self.assertContains(response, 'href="/plugins/notice/" class="r-menu-link is-active"')
 
-    def test_home_tab_highlighted(self):
+    def test_dashboard_tab_highlighted(self):
         self.client.force_login(self.staff)
-        response = self.client.get('/')
-        self.assertContains(response, 'href="/" class="r-menu-link is-active"')
+        response = self.client.get('/dashboard/')
+        self.assertContains(response, 'href="/dashboard/" class="r-menu-link is-active"')
 
     def test_detail_page_highlights_parent_menu(self):
         approval = Approval.objects.create(
