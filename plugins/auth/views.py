@@ -17,6 +17,7 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _
+from django.views.decorators.http import require_POST
 
 from .models import LoginFailureCounter
 
@@ -173,6 +174,7 @@ def login_view(request):
 
 
 @login_not_required        # v1.7.4：未登录点「退出」不该被跳去登录页
+@require_POST              # v1.7.15 / 7.3：GET 登出可被 <img src> 之类跨站触发，改 POST + CSRF
 def logout_view(request):
     logout(request)
     return redirect('index')

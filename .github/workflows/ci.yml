@@ -27,7 +27,23 @@ jobs:
       - name: Django checks
         run: python manage.py check
 
-      - name: Tests
+      - name: Deploy checks（生产语义：DEBUG=0 + 真实 SECRET_KEY + HTTPS）
         env:
           DJANGO_DEBUG: '0'
-        run: python manage.py test --noinput
+          SECRET_KEY: ci-deploy-check-key-7f3c9a1b5d8e2f4a6c0b9d7e3a5f1c8b2d4e6a0c
+          ALLOWED_HOSTS: example.com
+          DJANGO_HTTPS: '1'
+          DJANGO_SSL_REDIRECT: '1'
+          DJANGO_HSTS_SECONDS: '31536000'
+        run: python manage.py check --deploy --fail-level WARNING
+
+      # v1.7.15 / 7.4：覆盖率防回退线 = 实测值 96% - 2 = 94%
+      # （实测口径：coverage run --source=plugins,plugin_host → 7991 statements / 291 missed）
+      - name: Tests with coverage
+        env:
+          DJANGO_DEBUG: '0'
+          # 生产模式下 SECRET_KEY 必填（v1.7.15 / 7.2），CI 也要给
+          SECRET_KEY: ci-test-only-key-8a2e4f6c1b3d5a7e9f0c2b4d6a8e1f3c5b7d9a0e
+        run: |
+          coverage run --source=plugins,plugin_host manage.py test --noinput
+          coverage report --fail-under=94

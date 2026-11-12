@@ -2,3 +2,4 @@
 django==5.2.18
 whitenoise==6.12.0
 ruff==0.6.9
+coverage==7.6.10

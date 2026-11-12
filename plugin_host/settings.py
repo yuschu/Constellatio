@@ -10,13 +10,30 @@
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ---------------------------------------------------------------------------
 # 安全
 # ---------------------------------------------------------------------------
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-3#=es$81&^2!rg&ybm3u9!r8u1@n-_j%a3r46^*0*6pj33c(k5')
+# v1.7.15 / 7.2：本地开发（DJANGO_DEBUG=1，默认）允许缺省 SECRET_KEY 以便开箱即用；
+# **生产模式（DJANGO_DEBUG=0）缺 SECRET_KEY 直接拒绝启动**——硬编码默认值一旦随代码泄露，
+# 会话签名与密码重置令牌全部可伪造。
 DEBUG = os.environ.get('DJANGO_DEBUG', '1') == '1'
+
+_DEV_SECRET_KEY = 'django-insecure-3#=es$81&^2!rg&ybm3u9!r8u1@n-_j%a3r46^*0*6pj33c(k5'
+_SECRET_KEY = os.environ.get('SECRET_KEY')
+if not _SECRET_KEY:
+    if DEBUG:
+        _SECRET_KEY = _DEV_SECRET_KEY
+    else:
+        raise ImproperlyConfigured(
+            '生产模式（DJANGO_DEBUG=0）必须提供 SECRET_KEY 环境变量。'
+            '生成方式：python -c "import secrets;print(secrets.token_urlsafe(50))"；'
+            '容器部署在部署配置中注入，不要提交到仓库。')
+SECRET_KEY = _SECRET_KEY
+
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', '*').split(',') if h.strip()]
 
 # ---------------------------------------------------------------------------
