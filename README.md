@@ -56,6 +56,8 @@
 
 * 🧱 共享缓存（v1.7.3）：缓存后端换 `DatabaseCache`（复用现有 MySQL/sqlite，零新依赖），登录失败限流与 SSO Ticket 防重放靠 `cache.add` 主键冲突跨 gunicorn worker 成立；容器启动自动 `createcachetable`
 
+* 🧱 业务逻辑下沉 services（v1.7.14）：用户状态机、考勤判定/打卡/补卡、审批附件校验与鉴权移入 services，视图只做「取参数 → 调 service → 响应」；四个视图降到 12~17 行，锁与事务边界原样搬家；新增 26 条可直接 `manage.py shell` 调用的 service 单测
+
 * ⚡ 插件开关即时生效（v1.7.13）：删掉 `registry._switch_cache` 进程内 TTL 缓存，停用/启用插件在**所有 worker** 上立刻生效（原先多 worker 下最多 30 秒内仍可访问）；同时清除 `PLUGIN_SWITCH_CACHE_TTL` / `PLUGIN_SWITCH_ERROR_TTL` 与失效钩子
 
 * 🧭 前端三态反馈（v1.7.12）：两处图表 `fetch` 不再把 401/403/500 一律显示成「图表不可用」——401 跳登录并带 `next`（页面 URL，不是接口地址）、403 显示「无权查看该数据」、其它显示「数据暂时不可用」
@@ -227,8 +229,9 @@ Constellatio/
 | [docs/plugin-dev-v1711.md](docs/plugin-dev-v1711.md)                           | 插件开发 | v1.7.11：匿名 JSON 401 + JSON 判据收敛 + 残留 302 收口 |
 | [docs/plugin-dev-v1712.md](docs/plugin-dev-v1712.md)                           | 插件开发 | v1.7.12：前端接过 401/403（图表请求的三态反馈） |
 | [docs/plugin-dev-v1713.md](docs/plugin-dev-v1713.md)                           | 插件开发 | v1.7.13：插件开关多 worker 立即可见（删进程内缓存） |
+| [docs/plugin-dev-v1714.md](docs/plugin-dev-v1714.md)                           | 插件开发 | v1.7.14：三处重业务逻辑下沉 services（views/services 判据） |
 | [docs/roadmap.md](docs/roadmap.md)                                             | 规划   | 差距矩阵、v1.5–v2.0 迭代路线、修复项与文档债务                  |
 
 ## 📌 状态
 
-**v1.7.13 插件开关多 worker 立即可见已交付并部署**（440 项测试）：删掉进程内开关缓存，停用/启用立即在全 worker 生效；3 worker 实测新代码 6/6 拦截、旧代码 6/6 放行（对照实验）。上一交付 **v1.7.12**（前端三态反馈，439 项测试）。→ 下一步见 roadmap 第七节
+**v1.7.14 三处重业务逻辑下沉 services 已交付并部署**（466 项测试）：`user_status` 状态机、考勤状态判定/打卡/补卡、审批附件校验/落盘/鉴权移入 services，四个视图 ≤ 30 行；事务与 `select_for_update` 边界原样搬家。上一交付 **v1.7.13**（440 项测试）。→ 下一步见 roadmap 第七节
