@@ -30,7 +30,11 @@ services:
       DB_HOST: db
       DB_PORT: 3306
       DJANGO_DEBUG: ${DJANGO_DEBUG:-0}
-      SECRET_KEY: ${SECRET_KEY:-django-insecure-compose-default-change-me}
+      # v1.7.15：**不给默认值**。compose 层一旦有默认 key，settings 里「生产模式缺 SECRET_KEY
+      # 拒绝启动」的硬要求就永远不会触发（默认部署路径反而最不安全）。
+      # 缺省时 `docker compose config/up` 直接报错退出，是这里期望的失败方式。
+      # 生成：python -c "import secrets;print(secrets.token_urlsafe(50))"
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY 必须设置（生产模式拒绝使用默认值；生成方式见部署文档）}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-*}
       OA_THEME: ${OA_THEME:-corporate-clean}
       DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME:-admin}

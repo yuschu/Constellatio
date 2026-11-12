@@ -93,10 +93,50 @@ System check identified no issues (0 silenced).
 SECRET_KEY=
 ```
 
-**顺带观察（未改，不在 7.2 范围）**：`docker-compose.yml` 里 `SECRET_KEY` 仍有 compose 级默认值
-（`${SECRET_KEY:-django-insecure-compose-default-change-me}`），它会让「settings 层的硬性要求」在
-compose 部署下被默认值满足。要收口应改成 `${SECRET_KEY:?...}`（缺省即报错），但那会让没有部署配置的
-`docker compose up` 直接失败，影响本机联调，**留待你决定**。
+### 7.2.1 compose 层也必须缺省即报错（P1，已修）
+
+原先 `docker-compose.yml` 给 `SECRET_KEY` 一个默认值
+（`${SECRET_KEY:-django-insecure-compose-default-change-me}`），与 settings 的硬要求**叠加后效果反转**：
+
+1. settings 要求生产模式缺 key 就拒绝启动；
+2. compose 却保证 key 永远有值（且是**写在公开仓库里**的固定串）；
+3. 于是唯一实际的部署路径上这条硬要求永不触发——它只挡住了裸跑 `manage.py` 的本机调试，
+   而生产部署反而拿了一个所有读者都知道的密钥，session 与密码重置令牌可被伪造；
+4. 比「根本没有硬要求」更糟：没有要求时用户还可能自己生成随机值。
+
+`check --deploy` **覆盖不到**这一条（compose 的 env 不参与 Django system check），所以零告警在这里会
+带来假安全感。
+
+改法：
+
+```yaml
+SECRET_KEY: ${SECRET_KEY:?SECRET_KEY 必须设置（生产模式拒绝使用默认值；生成方式见部署文档）}
+```
+
+**证据 1：`docker compose config` 缺 key 时的报错原文**
+
+```
+error while interpolating services.web.environment.SECRET_KEY: required variable SECRET_KEY is
+missing a value: SECRET_KEY 必须设置（生产模式拒绝使用默认值；生成方式见部署文档）
+exit=1
+```
+
+**证据 2：`docker compose up -d` 缺 key 时直接退出（不会起半套服务）**
+
+```
+error while interpolating services.web.environment.SECRET_KEY: … (同上)
+exit=1
+```
+
+**证据 3：提供 key 后解析通过**
+
+```
+$ SECRET_KEY=<50 位随机> docker compose config
+      SECRET_KEY: AHmMk2qSrAFpVZJs28TsvO69K-0Dr8uD7sQuwe7Jf70uOKRD0D_xehJ6YIVajNOCjao
+```
+
+> 影响：本机/CI 起容器现在必须显式给 `SECRET_KEY`（`export`、行内前缀、或部署变量文件）。
+> 这是**期望的失败方式**——与「私有化部署收口」同一口径；退路成本一行命令。
 
 ## 7.3 登出改 POST
 
@@ -161,5 +201,6 @@ exit=0
 ## 六、待办
 
 1. 发版前真机冒烟（v1.7.12 遗留 + v1.7.15 / 7.1 的断网截图）：浏览器断网打开登录页确认样式完整。
-2. 部署变量示例文件的 SECRET_KEY 必填标注（受阻，见 7.2）。
-3. `docker-compose.yml` 的 SECRET_KEY 默认值是否收紧（改成缺省报错）。
+2. 部署变量示例文件的 SECRET_KEY 必填标注 —— 已由外部复核代为修改（该路径被本环境的凭据围栏
+   挡住，我读不到内容；**以仓库为准，不要重复改**）。
+3. ~~`docker-compose.yml` 的 SECRET_KEY 默认值~~ —— 已在 §7.2.1 改为缺省报错（P1 修复）。
