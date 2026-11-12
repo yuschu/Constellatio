@@ -21,9 +21,12 @@ TEXT = {'class': 'r-input'}
 DATETIME = {'type': 'datetime-local', 'class': 'r-input'}
 DATE = {'type': 'date', 'class': 'r-input'}
 
-# v1.5.14：用章附件限制（单文件 10MB；常见文档 / 图片）
-MAX_ATTACHMENT_MB = 10
-ATTACHMENT_EXTENSIONS = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'png', 'jpg', 'jpeg']
+# v1.7.14：附件限制与校验搬进 services（业务规则一处），这里只做导入别名
+from .services import (  # noqa: E402  (放在 models 导入之后以保持既有导入顺序)
+    ATTACHMENT_EXTENSIONS,
+    AttachmentError,
+    validate_attachment,
+)
 
 
 def _required(widget, label):
@@ -97,9 +100,10 @@ class SealForm(BaseApprovalForm):
 
     def clean_seal_file(self):
         upload = self.cleaned_data.get('seal_file')
-        if upload and upload.size > MAX_ATTACHMENT_MB * 1024 * 1024:
-            raise forms.ValidationError(
-                _('文件不能超过 %(mb)sMB') % {'mb': MAX_ATTACHMENT_MB})
+        try:
+            validate_attachment(upload)
+        except AttachmentError as exc:
+            raise forms.ValidationError(str(exc)) from exc
         return upload
 
 

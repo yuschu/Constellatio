@@ -21,12 +21,12 @@ from plugin_host.signals import (
     dept_updated,
     password_changed,
     user_created,
-    user_disable_requested,
     user_disabled,
     user_status_changed,
     user_updated,
 )
 
+from . import services
 from .forms import DepartmentForm, PasswordForm, ProfileForm, RoleForm, UserForm
 from .models import Department, Role, User
 from .perms import BASELINE_PERMS, LEVEL_LABELS, user_level
@@ -54,10 +54,8 @@ def _effective_permissions(user):
 
 
 def _guard_superuser(request, target):
-    """权限层级：超管 L0 最高，其他任何用户不能对超管操作。"""
-    if target.is_superuser and not request.user.is_superuser:
-        return True
-    return False
+    """权限层级：超管 L0 最高，其他任何用户不能对超管操作（判定口径在 services 里唯一）。"""
+    return not services.can_change_status(request.user, target)
 
 
 # ---------------------------------------------------------------------------
@@ -192,51 +190,15 @@ def user_edit(request, user_id):
 
 @require_perm('user_manage')
 def user_status(request, user_id):
-    """用户状态操作：启用 / 禁用 / 冻结权限 / 解冻。
+    """用户状态操作：启用 / 禁用 / 冻结权限 / 解冻（业务规则在 services.change_status）。
 
-    禁用规则：超管（admin）直接禁用；普通管理员需先冻结权限并发起会签审批，
-    全部具备 user_disable_approve 权限的管理员通过后由回调执行禁用。
+    v1.7.14：状态机整体搬到 `plugins/user/services.py`，视图只做参数提取与响应；
+    超管保护由 service 的 `can_change_status` 统一判定（越权直接调用会抛 StatusChangeDenied）。
     """
     target = get_object_or_404(User, pk=user_id)
-    if _guard_superuser(request, target):
+    if not services.can_change_status(request.user, target):
         return redirect('user:user_list')
-    action = request.POST.get('status')
-    operator_id = request.user.pk
-
-    if action == 'enable':
-        target.is_active = True
-        target.permission_frozen = False
-        target.save(update_fields=['is_active', 'permission_frozen', 'updated_at'])
-        user_status_changed.send(sender=User, user_id=target.pk, status='enabled',
-                                 operator_id=operator_id)
-    elif action == 'freeze':
-        target.permission_frozen = True
-        target.save(update_fields=['permission_frozen', 'updated_at'])
-        user_status_changed.send(sender=User, user_id=target.pk, status='frozen',
-                                 operator_id=operator_id)
-    elif action == 'unfreeze':
-        target.permission_frozen = False
-        target.save(update_fields=['permission_frozen', 'updated_at'])
-        user_status_changed.send(sender=User, user_id=target.pk, status='unfrozen',
-                                 operator_id=operator_id)
-    elif action == 'disable':
-        if request.user.is_superuser:
-            # admin 直接禁用：冻结权限 + 停用账号
-            target.permission_frozen = True
-            target.is_active = False
-            target.save(update_fields=['permission_frozen', 'is_active', 'updated_at'])
-            user_disabled.send(sender=User, user_id=target.pk, operator_id=operator_id)
-        else:
-            # 普通管理员：先冻结权限（即时生效），再发起禁用会签审批
-            target.permission_frozen = True
-            target.save(update_fields=['permission_frozen', 'updated_at'])
-            user_status_changed.send(sender=User, user_id=target.pk, status='frozen',
-                                     operator_id=operator_id)
-            user_disable_requested.send(
-                sender=User, user_id=target.pk, operator_id=operator_id,
-                title=f'用户禁用审批：{target.last_name or target.username}',
-                content=f'申请禁用用户「{target.last_name or target.username}」（ID:{target.pk}），'
-                        f'需全部审批人通过后执行。')
+    services.change_status(request.user, target, request.POST.get('status'))
     return redirect('user:user_list')
 
 

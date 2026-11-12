@@ -9,7 +9,6 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.db import models
-from django.utils import timezone
 
 from plugin_host.models import AuditModel
 
@@ -166,21 +165,11 @@ class Attendance(AuditModel):
         ]
 
     def compute_status(self):
-        """按打卡时间与当前考勤规则推导状态：补卡 > 缺卡 > 迟到 > 早退 > 正常。"""
-        if self.is_makeup:
-            return self.Status.MAKEUP
-        if not self.check_in:
-            return self.Status.MISSING
-        rule = AttendanceRule.get_solo()
-        check_in = timezone.localtime(self.check_in).time()
-        if check_in > rule.late_threshold():
-            return self.Status.LATE
-        if not self.check_out:
-            return self.Status.MISSING
-        check_out = timezone.localtime(self.check_out).time()
-        if check_out < rule.early_threshold():
-            return self.Status.EARLY
-        return self.Status.NORMAL
+        """状态判定委托 `services.judge_status`（v1.7.14：口径只留一处，见该函数 docstring）。"""
+        from . import services  # 局部 import：services 依赖本模块的模型
+
+        return services.judge_status(
+            is_makeup=self.is_makeup, check_in=self.check_in, check_out=self.check_out)
 
     def save(self, *args, **kwargs):
         self.status = self.compute_status()

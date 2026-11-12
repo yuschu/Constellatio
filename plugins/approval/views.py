@@ -15,7 +15,7 @@ from plugin_host.exceptions import ObjectPermissionDenied
 from plugin_host.pagination import DEFAULT_PAGE_SIZE, paginate
 from plugin_host.permissions import require_perm
 
-from . import forms
+from . import forms, services
 from .models import Approval, ApprovalRecord
 from .routing import candidate_approvers as resolve_candidates
 from .services import approve, reject, sign_approve, sign_reject, submit
@@ -27,18 +27,8 @@ LIST_PAGE_SIZE = DEFAULT_PAGE_SIZE
 
 
 def _may_view(user, approval):
-    """对象级可见性（v1.7.1 / P0-9）：申请人 / 审批人 / 会签人 / 抄送人 / 超管。
-
-    approval_view 是 L3 全员基线码，不再作为「可看任意单据」的兜底：
-    详情与附件下载都改为按参与关系判定，避免全员横向越权。
-    """
-    if user.is_superuser:
-        return True
-    if approval.applicant_id == user.pk or approval.approver_id == user.pk:
-        return True
-    if approval.signers.filter(signer=user).exists():
-        return True
-    return approval.cc_users.filter(pk=user.pk).exists()
+    """对象级可见性（v1.7.14：口径在 services.may_view，这里保留薄壳给既有调用点）。"""
+    return services.may_view(user, approval)
 
 
 def _can_act(user, approval):
@@ -246,8 +236,10 @@ def approval_create(request):
                     department_id=department.pk,
                     department_name=department.name,
                     form_data=form_data,
-                    amount=form.cleaned_data.get('amount') if type_key == Approval.Type.EXPENSE else None,
-                    attachment=form.cleaned_data.get('seal_file') if type_key == Approval.Type.SEAL else None)
+                    amount=form.cleaned_data.get('amount') if type_key == Approval.Type.EXPENSE else None)
+                if type_key == Approval.Type.SEAL:
+                    # v1.7.14：落盘与校验在 services（建单仍在同一事务内）
+                    services.store_attachment(approval, form.cleaned_data.get('seal_file'))
                 submit(approval, request.user,
                        f'重新申请（原单 #{locked_source.pk}）' if locked_source else '发起审批',
                        action='resubmit' if locked_source else 'submit')
@@ -343,16 +335,15 @@ def approval_detail(request, approval_id):
 
 @login_required
 def approval_attachment(request, approval_id):
-    """用章附件下载（v1.5.14）：仅单据相关人 / 超管可下载（v1.7.1 / P0-9）。
+    """用章附件下载：鉴权与取文件句柄在 `services.attachment_for`（v1.7.14）。
 
     approval_view 是 L3 全员基线码，不能作为附件可见性兜底，否则任一员工
-    改 URL 里的 id 即可下载他人用章文件。
+    改 URL 里的 id 即可下载他人用章文件（v1.7.1 / P0-9）。
     """
     approval = get_object_or_404(Approval, pk=approval_id)
-    if not _may_view(request.user, approval):
-        raise ObjectPermissionDenied('该审批单不属于你')   # v1.7.10：302 → 403
-    if not approval.attachment:
+    handle = services.attachment_for(request.user, approval)
+    if handle is None:
         return redirect('approval:approval_detail', approval_id=approval.id)
     return FileResponse(
-        approval.attachment.open('rb'), as_attachment=True,
+        handle, as_attachment=True,
         filename=approval.attachment.name.rsplit('/', 1)[-1])

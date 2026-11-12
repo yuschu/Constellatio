@@ -7,7 +7,7 @@
 """
 
 import re
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 
 from django.contrib.auth import get_user_model
 from django.db import connection
@@ -86,11 +86,14 @@ class QueryParamPreservationTests(_AdminMixin, TestCase):
             User.objects.create_user(f'page_staff{i}', password='pw') for i in (1, 2)]
         for user in staff:
             for day in range(10):
+                # 打卡时间固定为当天 09:30：判 status 的口径是「check_in 晚于迟到阈值 →
+                # LATE」，用 timezone.now() 会因为跑测试的时刻不同得到 MISSING（早上跑必红）。
+                day_date = today - timedelta(days=day)
                 Attendance.objects.create(
-                    user=user, date=today - timedelta(days=day),
-                    status=Attendance.Status.LATE,
+                    user=user, date=day_date,
                     sign_type=Attendance.SignType.INTERNAL,
-                    check_in=timezone.now() - timedelta(days=day))
+                    check_in=timezone.make_aware(
+                        datetime.combine(day_date, time(9, 30))))
 
     def test_pager_keeps_filter_params(self):
         page1 = self.client.get('/plugins/attendance/records/', {'status': 'late'})

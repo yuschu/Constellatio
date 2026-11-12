@@ -16,6 +16,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
 
+from plugin_host.exceptions import ObjectPermissionDenied
 from plugin_host.signals import (
     approval_finished,
     approval_submitted,
@@ -175,3 +176,64 @@ def sign_reject(approval, operator, comment=''):
         locked.status = Approval.Status.REJECTED
         locked.save(update_fields=['status', 'updated_at'])
     approval_finished.send(sender=Approval, approval_id=locked.pk, result='rejected')
+
+
+# ---------------------------------------------------------------------------
+# 附件（v1.7.14：从 views 搬来「落盘 + 鉴权」）
+# ---------------------------------------------------------------------------
+# 单文件 10MB；常见文档 / 图片（原属 forms.py，v1.7.14 移到 services —— 业务规则只留一处）
+MAX_ATTACHMENT_MB = 10
+ATTACHMENT_EXTENSIONS = ('pdf', 'doc', 'docx', 'xls', 'xlsx', 'png', 'jpg', 'jpeg')
+
+
+class AttachmentError(ValueError):
+    """附件不合法（超限 / 扩展名不允许）。由表单层翻译成 ValidationError。"""
+
+
+def may_view(user, approval):
+    """对象级可见性：申请人 / 审批人 / 会签人 / 抄送人 / 超管。
+
+    `approval_view` 是 L3 全员基线码，不能作为「可看任意单据」的兜底，
+    否则任一员工改 URL 里的 id 即可看他人单据（v1.7.1 / P0-9）。
+    """
+    if user.is_superuser:
+        return True
+    if approval.applicant_id == user.pk or approval.approver_id == user.pk:
+        return True
+    if approval.signers.filter(signer=user).exists():
+        return True
+    return approval.cc_users.filter(pk=user.pk).exists()
+
+
+def validate_attachment(upload):
+    """校验附件：非空、扩展名白名单、大小上限；不合法抛 AttachmentError。"""
+    if upload is None:
+        raise AttachmentError('未选择附件')
+    name = getattr(upload, 'name', '') or ''
+    extension = name.rsplit('.', 1)[-1].lower() if '.' in name else ''
+    if extension not in ATTACHMENT_EXTENSIONS:
+        raise AttachmentError(f'不支持的文件类型: {extension or "未知"}')
+    if upload.size > MAX_ATTACHMENT_MB * 1024 * 1024:
+        raise AttachmentError(f'文件不能超过 {MAX_ATTACHMENT_MB}MB')
+    return upload
+
+
+def store_attachment(approval, upload):
+    """附件落盘：校验 → 赋值 → 保存（调用方负责事务边界）。
+
+    不在本函数内开事务：建单路径已经在一个 `transaction.atomic()` 里（与建单/提交同批），
+    再包一层只会增加误解；单独调用时「校验后保存」本身也是原子的。
+    """
+    validate_attachment(upload)
+    approval.attachment = upload
+    approval.save(update_fields=['attachment', 'updated_at'])
+    return approval.attachment
+
+
+def attachment_for(user, approval):
+    """附件下载的鉴权 + 取文件句柄：无权抛 ObjectPermissionDenied，无附件返回 None。"""
+    if not may_view(user, approval):
+        raise ObjectPermissionDenied('该审批单不属于你')
+    if not approval.attachment:
+        return None
+    return approval.attachment.open('rb')
