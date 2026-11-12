@@ -45,6 +45,12 @@ dsh-chat-export.json
 # ---- 本地临时目录（自检证据脚本的运行残留，不入库）----
 .tmp-test/
 
+# ---- 覆盖率数据（v1.7.15 起 coverage 生成物，不入库）----
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
 # ---- 本地日志目录（v1.7.5，*.log 已单独忽略）----
 logs/
 

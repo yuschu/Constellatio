@@ -112,18 +112,26 @@ v1.7.8 交付时为 410，收尾补到 413；v1.7.14 交付时 466，收尾补�
 
 收口不等于"没有后续工作"，只是**不再往功能线上叠版本**。下一阶段是两条线：
 
-### 7.1 加固包（先做，独立小版本；不与功能混版）
+### 7.1 加固包（v1.7.15 已落地三项，见 `docs/plugin-dev-v1715.md`）
 
-四项共同的形状：**缺口已知、范围明确、不碰业务语义**，所以合成一版，不与新功能混。
+**已完成**（实测证据在 `docs/plugin-dev-v1715.md`）：
 
-| 项 | 现状 | 为什么算缺口 |
+| 项 | 结果 |
+|---|---|
+| Bootstrap 离线化 | 两个主题 6 处 CDN 引用清零（CSS **和** JS 都本地化——只做 CSS 会让断网时下拉/折叠全废，而"样式完整"这个验收词恰好会把该问题掩盖）；本地副本 232 803 / 80 721 字节，与 CDN 原件一致；`AppDirectoriesFinder` 自动收集，未新增 `STATICFILES_DIRS` |
+| 登出改 POST | GET → 405 且会话仍有效、POST → 302 且 session 失效；两主题改成带 CSRF 的 form。全仓此前对登出**零覆盖**，本次补 2 条 |
+| 生产缺 `SECRET_KEY` 拒绝启动 | `DJANGO_DEBUG=0` 且无 `SECRET_KEY` → `ImproperlyConfigured`（附生成命令）；开发模式默认 `'1'` 不受影响 |
+
+**覆盖率门槛 94 不属于加固包**：它是工程门槛（当前 96%，门槛取当前 − 2），与安全加固是两件事，v1.7.15 一并落地只是排期合并。
+
+**两项仍未收口**：
+
+| 项 | 现状（2026-11-12 实测） | 处置 |
 |---|---|---|
-| 安全响应头 | 未设置 | 缺 CSP / `X-Frame-Options` / `X-Content-Type-Options` / `Referrer-Policy`；登录页与错误页尤其需要 |
-| 登出改 POST | 目前是 GET | GET 登出可被第三方页面触发（`<img src="…/logout/">`），属 CSRF 面 |
-| Bootstrap 离线化 | 走 CDN `https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/…` | 内网 / 断网环境整站样式与弹窗失效；项目其余静态资源已本地化，只有它还在外网 |
-| `DEBUG` 默认值 | 由环境变量控制 | 生产默认值应收紧，避免"忘记设置就带调试信息上线"（`docs/plugin-dev-v175.md` §六已注明"加固包的事"） |
+| CSP（`Content-Security-Policy`） | 响应头为 `None`。**注意**：`X-Frame-Options: DENY`、`X-Content-Type-Options: nosniff`、`Referrer-Policy: same-origin` 这三项 **Django 默认已提供**且实测存在，不属缺口 | 站内有内联脚本（`includes/stats_fetch_fail.js`、403 页 `data-history-back` 脚本、`base.html` 内联），需先盘点内联面再定 nonce 或 `'unsafe-inline'`；**单列一项**，不塞进小版本 |
+| `docker-compose.yml` 的 `SECRET_KEY` 默认值 | `${SECRET_KEY:-django-insecure-compose-default-change-me}` —— 它让 7.2 的硬要求在 compose 部署下**永不触发**，且该默认值公开在仓库里：知道仓库地址的人即可伪造 session 签名。**比"没有硬要求"更糟**（没有硬要求时用户至少可能配一个随机值） | **必须改成 `${SECRET_KEY:?...}`**：缺 `SECRET_KEY` 时 `docker compose up` 报错退出，这才是正确的失败方式，与"私有化部署收口"整体口径一致；本机联调补 `.env` 或 `export SECRET_KEY=…` 即可 |
 
-验收口径：响应头用 `curl -I` 逐条核对；登出改 POST 后 GET 必须 405；离线化后断网加载走一遍全站；`DEBUG` 默认关闭且全量测试仍绿（不得靠放宽断言换取绿灯）。
+验收口径：离线化后断网加载走一遍全站；登出改 POST 后 GET 必须 405；生产模式缺 key 必须拒绝启动；`check --deploy` 零告警的前提是 `DJANGO_DEBUG=0` + 真随机 50 位 key + `DJANGO_HTTPS=1` + `DJANGO_SSL_REDIRECT=1`（默认 HTTP 配置下 W004/W008/W012/W016 四条告警是设计预期，不是故障）。
 
 ### 7.2 v1.8 模板引擎插件化
 
