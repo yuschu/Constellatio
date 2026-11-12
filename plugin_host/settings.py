@@ -285,6 +285,11 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'   # collectstatic 产物（容器/gunicorn 服务）
 
+# WhiteNoise 默认给未加哈希的静态文件 `max-age=60`，改完 CSS/JS 后连续刷新
+# 仍可能读到旧文件，看上去像「容器没更新」。实测阶段关掉强缓存：
+# 每次都带 ETag 回源，命中时 304，不影响正确性。
+WHITENOISE_MAX_AGE = 0
+
 # v1.5.14：审批附件（用章文件）落盘目录；下载统一走权限视图，不做公开静态目录
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
