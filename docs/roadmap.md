@@ -120,14 +120,14 @@
 2. ✅ **区块链并发**（v1.7.1）：`transaction.atomic` + 链尾 `select_for_update`，唯一键冲突重试一次；SQLite 下为 no-op，已在文档标注。
 3. ◐ **workspace 静态 disabled 显示**（v1.7.1 部分）：开关改为 POST + 缓存失效；`switch_list` 的静态回退口径待与 v1.9 的启用一致性校验一起收口。
 4. ◻ **静态路由边界**：要么启动时把 DB 启用的插件也纳入路由，要么明确「静态 disabled 的启用需重启」并写进文档（v1.10）。
-5. ◐ **代码规约债务**（v1.7.1 部分）：多步写已补 `transaction.atomic`；内联 `onclick` 与 raw `request.POST` 仍待分批清理（v1.10）。
+5. ◐ **代码规约债务**（v1.7.1 部分）：多步写已补 `transaction.atomic`；**内联 `onclick` 已于 v1.7.16 清零**（6 处 → `data-confirm` + 公共 `static/js/confirm.js`，全仓模板实测 0 处），raw `request.POST` 仍待分批清理（v1.10）。
 6. ✅ **测试盲区**（v1.7.1）：注册表校验、开关缓存、登录限流、对象级鉴权、链写入、打卡并发均已补测；`plugin_host/tests_registry.py` 用「逐条 has_perm」参考实现验证菜单权限集合等价。
 7. ◻ **限流计数原子化（P2，v1.7.5 第一项）**：v1.7.3 交付前自检实测——6 路并发错密码全部计错、最终计数 2/4/4（串行口径应在 5 处封顶并拦第 6 次），根因是 `_record_failure()` 的 get+set 丢更新；`DatabaseCache` 未覆盖 `incr`，继承的 `BaseCache.incr` 同样是 get+set 且 `set` 不传 timeout（窗口被重置为默认 TTL）。方案：auth 插件独立计数表 + `select_for_update` + `F('count')+1`。**注意**：不能在 `constellatio_cache.value` 上做 SQL 自增（存的是 `base64(pickle)`）。
 8. ✅ **运行日志缺失（v1.7.5 已修）**：`LOGGING` + `RequestIdMiddleware`（`X-Request-Id`）+ 四个错误页 + `ExceptionGuardMiddleware`。容器只走 console（`DJANGO_LOG_TO_FILE` 默认 0，多 worker 不轮转同一文件）；实测 500 场景日志含 request_id 与完整栈。
 9. ✅ **账号密码登录不消费 `next`（v1.7.4 收尾已修）**：装 `LoginRequiredMiddleware` 后 42 条 URL 全部开始带 `next`，把原来的「偶发」放成「默认路径」，且 SSO 通道已能回跳、同一登录页两种结果，故在 v1.7.4 收尾用 `fix(auth)` 修复：`_next_target()` + `_redirect_after_login()`（`url_has_allowed_host_and_scheme` 校验，外站与 `//host` 均拒）+ 两套主题 `login.html` 补隐藏域 + `render` 上下文补 `next`；补 3 条用例（回跳带查询串 / 外站拒 / 协议相对拒），测试 365 → 368。不动 v1.7.4 tag。
-11. ◻ **请求内开关查询合并（v1.7.13 遗留优化，不是缺陷）**：同一请求里 `PluginRouteGuardMiddleware` 与 `context_processors` 各查一次开关表，`views` 首页又各查一次（实测普通页 4 次 / 首页 6 次）。可把 middleware 的结果挂到 `request` 复用，`views:84` 与 `views:117` 合并。纯成本优化，不影响正确性。
-12. ✅ **真机浏览器冒烟（已做 2026-11-12 09:41–09:45 (+08:00)）**：v1.7.12 的 401 跳转此前只有 node 桩 DOM 验证。真实 Chrome 实测（本地 sqlite 实例，未触碰容器库）：会话失效后改时间窗口 → console `401` → 跳 `/plugins/auth/login/?next=%2Fplugins%2Fblockchain%2F`（next 是页面 URL，不是 stats 接口）；撤权限后同样操作 → console `403` → 图表降级表格显示「无权查看该数据」且不跳转；全程无 CSP 报错。详见 `docs/plugin-dev-v1712.md` §5.2。
-11. ◻ **越权反馈语义统一（302 / 403 / 404 三选一，v1.7.9 待定）**：局部迁移会造出第二种反馈（同一用户被拒，有时回工作台、有时 403），v1.7.4 刚修掉同类不一致，不能重犯。三种语义的泄漏面与适用场景：302 不泄漏对象存在 / 403 泄漏「存在但无权」便于找审批人 / 404 完全不泄漏适合对外接口。决定后一次性迁移 43 处装饰器口径，并把 `BusinessError` 真实抛点（审批重复提交、补卡超窗口等）一起接上。
+10. ◻ **请求内开关查询合并（v1.7.13 遗留优化，不是缺陷）**：同一请求里 `PluginRouteGuardMiddleware` 与 `context_processors` 各查一次开关表，`views` 首页又各查一次（实测普通页 4 次 / 首页 6 次）。可把 middleware 的结果挂到 `request` 复用，`views:84` 与 `views:117` 合并。纯成本优化，不影响正确性。
+11. ✅ **真机浏览器冒烟（已做 2026-11-12 09:41–09:45 (+08:00)）**：v1.7.12 的 401 跳转此前只有 node 桩 DOM 验证。真实 Chrome 实测（本地 sqlite 实例，未触碰容器库）：会话失效后改时间窗口 → console `401` → 跳 `/plugins/auth/login/?next=%2Fplugins%2Fblockchain%2F`（next 是页面 URL，不是 stats 接口）；撤权限后同样操作 → console `403` → 图表降级表格显示「无权查看该数据」且不跳转；全程无 CSP 报错。详见 `docs/plugin-dev-v1712.md` §5.2。
+12. ◻ **越权反馈语义统一（302 / 403 / 404 三选一，v1.7.9 待定）**：局部迁移会造出第二种反馈（同一用户被拒，有时回工作台、有时 403），v1.7.4 刚修掉同类不一致，不能重犯。三种语义的泄漏面与适用场景：302 不泄漏对象存在 / 403 泄漏「存在但无权」便于找审批人 / 404 完全不泄漏适合对外接口。决定后一次性迁移 43 处装饰器口径，并把 `BusinessError` 真实抛点（审批重复提交、补卡超窗口等）一起接上。
 13. ◻ **SSO 登录失败提示升级为块级（规划，未实施）**：`plugins/sso/templates/sso/sso_login.html:14` 的失败反馈是 `<div class="r-badge r-badge--orange mb-3">{{ error }}</div>`，与「权限不足」这类小徽章同款（两套主题只有 `r-badge` + `--orange`，**仓库当前没有 `r-alert`**）。视图在校验失败时会 `render` 回同一表单页、把 ticket 回显进 textarea，视觉上就像「点了没反应、回到原来那页」——2026-11-12 联调实测即被误读为「SSO 登录怎么重回原页面」，实际是签发的票被消费（`Ticket 已使用`）、贴错（`Ticket 签名校验失败`）或过期（`Ticket 已过期`）三种之一。计划：改为表单**上方**的块级提示（新增 `r-alert` 类，或复用 `r-card` + 状态图标 + `role="alert"`，两套主题各一份），并对三条文案各补一句下一步动作（如「换一枚新票」）。判据：失败时**不靠回显的票**也能一眼看出是校验失败；仍用 `{{ error }}` 文本插值，不新增内联脚本，不影响 v1.7.16 的 CSP 面。
 
 ## 五、文档债务（需在对应版本同步）
