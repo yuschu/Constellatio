@@ -21,7 +21,21 @@
 3. 容器日志只走 console（`DJANGO_LOG_TO_FILE` 默认 0，多 worker 不轮转同一文件）。
 4. 插件被停用到"无 UI 可进"时，用 `python manage.py plugin_switch on <key>` 兜底。
 
-### 1.1 v1.7.15（2026-11-12，私有化部署收口）
+### 1.1 v1.7.16（2026-11-12，CSP 加固）
+
+tag `v1.7.16`（annotated）。基线 472 → **482 项全绿**（新增 10 条 CSP 用例）。
+
+- 中间件 `plugin_host/csp.py`：每请求一个 nonce（`request.csp_nonce`），响应头下发 10 条指令；
+  位置在 `SecurityMiddleware` 之后，400/403 也带头；硬 500 由 `handler500` 补头；
+- `script-src 'self' 'nonce-…'`（**不给 `'unsafe-inline'`**）：13 处内联 `<script>` 加 nonce；
+- `style-src 'self' 'unsafe-inline'`：全站 137+ 处 `style=` 属性，收紧会让图表高度塌成 0；
+- 6 处 `onclick="return confirm('…')"` → `data-confirm` + 外部 `static/js/confirm.js`
+  （nonce 救不了内联事件，这是把 `script-src` 保住的前提）；
+- `/admin/` 不豁免（admin 模板实测内联 0 / `onclick` 0 / `style=` 0）；
+- `'unsafe-eval'` 不加：ECharts 的 `new Function` 只在 `JSON.parse` 不可用时触发，理论不触发；
+  **真机未验证**，若报 `unsafe-eval` 先上报、不自行加指令。
+
+### 1.2 v1.7.15（2026-11-12，私有化部署收口）
 
 tag `v1.7.15` → commit `39baf42`（annotated）。基线 467 → **472 项全绿**，覆盖率 **96%**（8020 statements / 292 missed），CI 门槛 94。
 
@@ -99,7 +113,8 @@ tag `v1.7.15` → commit `39baf42`（annotated）。基线 467 → **472 项全�
 | v1.7.4 | 368 | v1.7.12 | 439 |
 | v1.7.5 | 380 | v1.7.13 | 440 |
 | v1.7.6 | 387 | v1.7.14 | 467 |
-| v1.7.7 | 403 | v1.7.15 | **472** |
+| v1.7.7 | 403 | v1.7.15 | 472 |
+| | | v1.7.16 | **482** |
 
 v1.7.8 交付时为 410，收尾补到 413；v1.7.14 交付时 466，收尾补到 467。数字增长来自新增用例，没有放宽任何既有断言。
 
@@ -147,7 +162,7 @@ v1.7.8 交付时为 410，收尾补到 413；v1.7.14 交付时 466，收尾补�
 
 | 项 | 现状（2026-11-12 实测） | 处置 |
 |---|---|---|
-| CSP（`Content-Security-Policy`） | 响应头为 `None`。**注意**：`X-Frame-Options: DENY`、`X-Content-Type-Options: nosniff`、`Referrer-Policy: same-origin` 这三项 **Django 默认已提供**且实测存在，不属缺口 | 站内有内联脚本（`includes/stats_fetch_fail.js`、403 页 `data-history-back` 脚本、`base.html` 内联），需先盘点内联面再定 nonce 或 `'unsafe-inline'`；**单列一项**，不塞进小版本 |
+| CSP（`Content-Security-Policy`） | **已收口**（v1.7.16）：10 条指令、`script-src` 严格（nonce，无 `'unsafe-inline'`）、`style-src 'unsafe-inline'`（137+ 处 `style=` 属性，收紧会崩排版与图表高度）；13 处内联脚本加 nonce、6 处 `onclick` 改 `data-confirm`；`/admin/` 不豁免（实测 0/0/0） | 详见 `docs/plugin-dev-v1716.md`；真机「控制台零 CSP 报错」待评审者执行 |
 | `docker-compose.yml` 的 `SECRET_KEY` 默认值 | **已收口**（`39baf42`）：原写 `${SECRET_KEY:-django-insecure-compose-default-change-me}`，让 7.2 的硬要求在 compose 部署下永不触发，而默认值公开在仓库里 | 已改 `${SECRET_KEY:?...}`；实测无 key 时 `docker compose config` 报 `required variable SECRET_KEY is missing a value`（exit=1），带 key 解析通过 |
 
 验收口径：离线化后断网加载走一遍全站；登出改 POST 后 GET 必须 405；生产模式缺 key 必须拒绝启动；`check --deploy` 零告警的前提是 `DJANGO_DEBUG=0` + 真随机 50 位 key + `DJANGO_HTTPS=1` + `DJANGO_SSL_REDIRECT=1`（默认 HTTP 配置下 W004/W008/W012/W016 四条告警是设计预期，不是故障）。
