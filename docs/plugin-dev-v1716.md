@@ -123,7 +123,7 @@ nonce 与内容无关，因此是唯一可行路线。
 | 连续两次请求 nonce 不同 | ✅ |
 | 全仓模板 `onclick=` 为 0 | ✅（`grep` 遍历 `plugins/ plugin_host/ templates/ themes/`） |
 | 6 个按钮改成 `data-confirm` | ✅ 模板级计数 2+3+1=6，且结构模板页渲染出 `data-confirm` |
-| 4 个图表页的 `<script>` 带 nonce | ✅ 且页面内不再存在裸 `<script>` |
+| 4 个图表页的 `<script>` 带 nonce | ✅ 且「无 src 且**可执行**」的内联 `<script>` 全部带 nonce。另有 `json_script` 产出的 `<script type="application/json">`（`home_dashboard.html` 7 处、`attendance_dashboard.html` 1 处、`structure/overview.html` 1 处）**不带 nonce**——它们不执行，CSP 对非 JS MIME 的 `<script>` 放行，属 Django 官方推荐的 CSP 友好数据通道，无需处理 |
 | 403（中间件链）带 CSP | ✅ |
 | 硬 500（`handler500`）带 CSP | ✅ `DEBUG=False` + `Client(raise_request_exception=False)` |
 | `/static/` 不发 CSP | ✅ 中间件单测（测试客户端不服务静态文件，故直接测跳过逻辑） |
