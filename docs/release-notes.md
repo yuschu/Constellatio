@@ -35,6 +35,7 @@ tag `v1.7.16`（annotated）。基线 472 → **483 项全绿**（新增 11 条 
 - `/admin/` 不豁免（admin 模板实测内联 0 / `onclick` 0 / `style=` 0）；
 - `'unsafe-eval'` 不加：ECharts 的 `new Function` 只在 `JSON.parse` 不可用时触发，理论不触发；
   **真机未验证**，若报 `unsafe-eval` 先上报、不自行加指令。
+- GitHub Release 已发布：`v1.7.16 Beta`（接管 `Latest`）与 `v1.7.15 Beta`；**tag 名保持 `vX.Y.Z`**，`Beta` 只出现在 Release 标题上。
 
 ### 1.2 v1.7.15 Beta（2026-11-12，私有化部署收口）
 
@@ -163,7 +164,7 @@ v1.7.8 交付时为 410，收尾补到 413；v1.7.14 交付时 466，收尾补�
 
 | 项 | 现状（2026-11-12 实测） | 处置 |
 |---|---|---|
-| CSP（`Content-Security-Policy`） | **已收口**（v1.7.16）：10 条指令、`script-src` 严格（nonce，无 `'unsafe-inline'`）、`style-src 'unsafe-inline'`（137+ 处 `style=` 属性，收紧会崩排版与图表高度）；13 处内联脚本加 nonce、6 处 `onclick` 改 `data-confirm`；`/admin/` 不豁免（实测 0/0/0） | 详见 `docs/plugin-dev-v1716.md`；真机「控制台零 CSP 报错」待评审者执行 |
+| CSP（`Content-Security-Policy`） | **已收口**（v1.7.16）：10 条指令、`script-src` 严格（nonce，无 `'unsafe-inline'`）、`style-src 'unsafe-inline'`（137+ 处 `style=` 属性，收紧会崩排版与图表高度）；内联脚本原盘点 13 处、删掉 approval 两模板自建绑定后 **11 处全部带 nonce**；6 处 `onclick` 改 `data-confirm`；`/admin/` 不豁免（实测 0/0/0） | 详见 `docs/plugin-dev-v1716.md`；真机「控制台零 CSP 报错」待评审者执行 |
 | `docker-compose.yml` 的 `SECRET_KEY` 默认值 | **已收口**（`39baf42`）：原写 `${SECRET_KEY:-django-insecure-compose-default-change-me}`，让 7.2 的硬要求在 compose 部署下永不触发，而默认值公开在仓库里 | 已改 `${SECRET_KEY:?...}`；实测无 key 时 `docker compose config` 报 `required variable SECRET_KEY is missing a value`（exit=1），带 key 解析通过 |
 
 验收口径：离线化后断网加载走一遍全站；登出改 POST 后 GET 必须 405；生产模式缺 key 必须拒绝启动；`check --deploy` 零告警的前提是 `DJANGO_DEBUG=0` + 真随机 50 位 key + `DJANGO_HTTPS=1` + `DJANGO_SSL_REDIRECT=1`（默认 HTTP 配置下 W004/W008/W012/W016 四条告警是设计预期，不是故障）。

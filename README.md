@@ -56,7 +56,9 @@
 
 * 🧱 共享缓存（v1.7.3）：缓存后端换 `DatabaseCache`（复用现有 MySQL/sqlite，零新依赖），登录失败限流与 SSO Ticket 防重放靠 `cache.add` 主键冲突跨 gunicorn worker 成立；容器启动自动 `createcachetable`
 
-* 📦 私有化部署收口（v1.7.15）：Bootstrap 落到公共 static（断网样式完整）、生产模式缺 `SECRET_KEY` 拒绝启动、登出改 POST（GET 405）、CI 覆盖率门槛 94%
+* 📦 私有化部署收口（v1.7.15）：Bootstrap 落到公共 static（断网样式完整）、生产模式缺 `SECRET_KEY` 拒绝启动、登出改 POST（GET 405）、CI 覆盖率门槛 94
+
+* 🔒 内容安全策略 CSP（v1.7.16）：全站下发 10 条指令，`script-src 'self' 'nonce-…'` **不给** `'unsafe-inline'`（每请求一枚 128 bit nonce，11 处内联脚本全部带 nonce 且实测零缺失）、`style-src` 保留 `'unsafe-inline'`（全站 137+ 处 `style=` 属性，收紧会让图表高度塌成 0）；6 处内联 `onclick` 改 `data-confirm` + 公共 `static/js/confirm.js`（顺带修掉审批按钮弹两次确认框）；`/admin/` 不豁免、静态文件不下发；硬 500 由 `handler500` 单独补头；`json_script` 数据块按非 JS MIME 类型放行%
 
 * 🧱 业务逻辑下沉 services（v1.7.14）：用户状态机、考勤判定/打卡/补卡、审批附件校验与鉴权移入 services，视图只做「取参数 → 调 service → 响应」；四个视图降到 12~17 行，锁与事务边界原样搬家；新增 26 条可直接 `manage.py shell` 调用的 service 单测
 
@@ -234,8 +236,9 @@ Constellatio/
 | [docs/plugin-dev-v1713.md](docs/plugin-dev-v1713.md)                           | 插件开发 | v1.7.13：插件开关多 worker 立即可见（删进程内缓存） |
 | [docs/plugin-dev-v1714.md](docs/plugin-dev-v1714.md)                           | 插件开发 | v1.7.14：三处重业务逻辑下沉 services（views/services 判据） |
 | [docs/plugin-dev-v1715.md](docs/plugin-dev-v1715.md)                           | 插件开发 | v1.7.15：私有化部署收口（离线资源 / 安全默认值 / 登出 POST / 覆盖率门槛） |
+| [docs/plugin-dev-v1716.md](docs/plugin-dev-v1716.md)                           | 插件开发 | v1.7.16：CSP 加固（nonce 中间件 / 内联面清零 / `style-src` 取舍 / 真机待验清单） |
 | [docs/roadmap.md](docs/roadmap.md)                                             | 规划   | 差距矩阵、v1.5–v2.0 迭代路线、修复项与文档债务                  |
 
 ## 📌 状态
 
-**v1.7.15 私有化部署收口已交付并部署**（472 项测试，覆盖率 96%）：Bootstrap 本地化（6 处 CDN 清零、登录页 0 外网引用）、生产缺 SECRET_KEY 拒绝启动 + `check --deploy` 零告警、登出改 POST（GET 405）、CI 覆盖率门槛 94。上一交付 **v1.7.14**（467 项测试）。→ 下一步：发版前真机冒烟
+**v1.7.16 CSP 加固已交付并部署**（483 项测试全绿，tag `v1.7.16` → `1c9cfb7`，Release `v1.7.16 Beta` 已发布并接管 `Latest`）：全站 10 条 CSP 指令，`script-src` 只认 nonce（11 处内联脚本全带 nonce、无 `'unsafe-inline'`）、6 处 `onclick` 改 `data-confirm`、`/admin/` 不豁免、硬 500 由 `handler500` 补头。上一交付 **v1.7.15 Beta**（私有化部署收口，472 项测试、覆盖率 96%：Bootstrap 离线化、生产缺 `SECRET_KEY` 拒绝启动、登出改 POST、覆盖率门槛 94）。→ 下一步：CSP 真机四项验收（两主题图表渲染 / 控制台零 CSP 报错 / 确认框 / 401·403 回归），之后 v1.8 模板引擎单独起线
