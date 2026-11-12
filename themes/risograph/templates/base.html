@@ -1,5 +1,5 @@
 {% load static i18n %}{% get_current_language as LANGUAGE_CODE %}<!DOCTYPE html>
-<html lang="{{ LANGUAGE_CODE }}">
+<html lang="{{ LANGUAGE_CODE }}" data-color-mode="{{ color_mode }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="{% static 'themes/risograph/css/risograph.css' %}">
   {% block extra_css %}{% endblock %}
 </head>
-<body class="r-grain" style="background: var(--r-paper); color: var(--r-ink);">
+<body class="r-body">
 
   <div class="r-loader" id="page-loader" role="status" aria-live="polite">
     <span class="r-loader__spinner" aria-hidden="true"></span>
@@ -16,72 +16,86 @@
   </div>
   <noscript><style>.r-loader{display:none}</style></noscript>
 
-  <!-- 顶栏（印刷风导航：墨黑上下边框） -->
-  <nav class="r-nav py-2">
-    <div class="container d-flex justify-content-between align-items-center gap-3">
-      <a href="/" class="fw-bold text-uppercase d-flex align-items-center gap-2" style="letter-spacing:.08em; font-size:1.05rem;">
-        <span class="d-inline-block" style="width:14px;height:14px;border:2px solid var(--r-ink);background:var(--r-pink);"></span>
-        Constellatio
-      </a>
-      <div class="d-flex align-items-center gap-4" style="font-size:.8rem;">
+  <div class="ds-shell">
+
+    <aside class="ds-rail">
+      <div class="ds-rail__brand">
+        <a href="/" title="Constellatio">Constellatio</a>
+      </div>
+
+      <div class="ds-rail__section">{% trans "功能" %}</div>
+      <nav class="ds-rail__nav" aria-label="{% trans '功能' %}">
+        {% for menu in menus %}
+        <a href="{{ menu.url }}" class="ds-rail__row{% if menu.active %} is-active{% endif %}"{% if menu.active %} aria-current="page"{% endif %}>
+          <span class="ds-rail__glyph" aria-hidden="true">{{ menu.icon }}</span>
+          <span class="ds-rail__label">{{ menu.label }}</span>
+        </a>
+        {% empty %}
+        <div class="ds-rail__empty">{% trans "暂无可用功能" %}</div>
+        {% endfor %}
+      </nav>
+
+      <div class="ds-rail__foot">
+
+        <div class="ds-rail__user">
+          {% if request.user.is_authenticated %}
+          <span class="ds-rail__avatar" aria-hidden="true">{{ request.user.last_name|default:request.user.username|slice:":1" }}</span>
+          <span class="ds-rail__user-name">{{ request.user.last_name|default:request.user.username }}</span>
+          {% else %}
+          <span class="ds-rail__user-name">{% trans "未登录" %}</span>
+          {% endif %}
+        </div>
+
         {% if 'language' in plugins_enabled %}
-        <form method="post" action="{% url 'language:language_switch' %}" class="d-flex align-items-center gap-1 mb-0">
+        <form method="post" action="{% url 'language:language_switch' %}" class="ds-rail__seg">
           {% csrf_token %}
           <input type="hidden" name="next" value="{{ request.get_full_path }}">
           <button type="submit" name="lang" value="zh-hans" class="r-lang{% if LANGUAGE_CODE == 'zh-hans' %} is-active{% endif %}">中文</button>
           <button type="submit" name="lang" value="en" class="r-lang{% if LANGUAGE_CODE == 'en' %} is-active{% endif %}">EN</button>
         </form>
         {% endif %}
-        {% if request.user.is_authenticated %}
-          {% if 'notify' in plugins_enabled %}<a href="{% url 'notify:notify_list' %}" aria-label="{% trans "消息中心" %}">✉{% if notify_unread %}<span class="r-badge ms-1">{{ notify_unread }}</span>{% endif %}</a>{% endif %}
-          {% if 'user' in plugins_enabled %}<a href="{% url 'user:profile' %}" class="r-badge">{{ request.user.last_name|default:request.user.username }}</a>{% endif %}
-          {% if 'auth' in plugins_enabled %}<form method="post" action="{% url 'auth:logout' %}" class="d-inline mb-0">{% csrf_token %}<button type="submit" class="r-nav-link r-nav-link--button">{% trans "登出" %}</button></form>{% endif %}
-        {% elif 'auth' in plugins_enabled %}
-          <a href="/plugins/auth/login/">{% trans "登录" %}</a>
-        {% endif %}
-      </div>
-    </div>
-  </nav>
 
-  <div class="container mt-4">
-    <div class="row g-4">
+        <form method="post" action="{% url 'color_mode_switch' %}" class="ds-rail__seg">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <button type="submit" name="mode" value="light" class="r-lang{% if color_mode == 'light' %} is-active{% endif %}">{% trans "浅色" %}</button>
+          <button type="submit" name="mode" value="dark" class="r-lang{% if color_mode == 'dark' %} is-active{% endif %}">{% trans "深色" %}</button>
+        </form>
 
-      <!-- 侧栏：插件菜单（容器 get_menus 注入） -->
-      <aside class="col-md-3 col-lg-2">
-        <div class="r-card r-card--sidebar position-relative" style="box-shadow: var(--r-shadow-sm);">
-          <span class="r-register-mark"></span>
-          <div class="fw-bold text-uppercase mb-3" style="font-size:.8rem; letter-spacing:.08em;">{% trans "功能" %}</div>
-          {% for menu in menus %}
-          <div class="mb-2">
-            <a href="{{ menu.url }}" class="r-offset-hover d-block px-1 py-1{% if menu.active %} is-active{% endif %}" style="font-size:.85rem;"{% if menu.active %} aria-current="page"{% endif %}>
-              {{ menu.icon }} {{ menu.label }}
-            </a>
-          </div>
-          {% empty %}
-          <div class="text-muted" style="font-size:.8rem;">{% trans "暂无可用功能" %}</div>
+        <form method="post" action="{% url 'theme_switch' %}" class="ds-rail__seg">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          {% for key, name in themes %}
+          <button type="submit" name="theme" value="{{ key }}" class="r-lang{% if key == current_theme %} is-active{% endif %}">{{ name }}</button>
           {% endfor %}
-          <div class="fw-bold text-uppercase mt-3 mb-2" style="font-size:.8rem; letter-spacing:.08em;">{% trans "主题" %}</div>
-          <form method="post" action="{% url 'theme_switch' %}" class="d-flex flex-wrap gap-1 mb-0">
-            {% csrf_token %}
-            <input type="hidden" name="next" value="{{ request.get_full_path }}">
-            {% for key, name in themes %}
-            <button type="submit" name="theme" value="{{ key }}" class="r-lang{% if key == current_theme %} is-active{% endif %}">{{ name }}</button>
-            {% endfor %}
-          </form>
+        </form>
+
+        <div class="ds-rail__seg">
+          {% if request.user.is_authenticated %}
+            {% if 'notify' in plugins_enabled %}
+            <a href="{% url 'notify:notify_list' %}" class="r-nav-link">{% trans "消息" %}{% if notify_unread %}<span class="r-badge ms-1">{{ notify_unread }}</span>{% endif %}</a>
+            {% endif %}
+            {% if 'user' in plugins_enabled %}
+            <a href="{% url 'user:profile' %}" class="r-nav-link">{% trans "我的" %}</a>
+            {% endif %}
+            {% if 'auth' in plugins_enabled %}
+            <form method="post" action="{% url 'auth:logout' %}" class="d-inline m-0">{% csrf_token %}<button type="submit" class="r-nav-link r-nav-link--button">{% trans "登出" %}</button></form>
+            {% endif %}
+          {% elif 'auth' in plugins_enabled %}
+            <a href="/plugins/auth/login/" class="r-nav-link">{% trans "登录" %}</a>
+          {% endif %}
         </div>
-      </aside>
 
-      <!-- 内容区 -->
-      <main class="col-md-9 col-lg-10">
+      </div>
+    </aside>
+
+    <main class="ds-main">
+      <div class="ds-main__body">
         {% block content %}{% endblock %}
-      </main>
+      </div>
+    </main>
 
-    </div>
   </div>
-
-  <footer class="mt-5 py-4 text-center" style="border-top:2px solid var(--r-ink); background:var(--r-paper-2); font-size:.75rem;">
-    Constellatio · {% trans "万物皆可插件" %} · {% trans "Risograph 印刷风" %}
-  </footer>
 
   <script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
   <script src="{% static 'js/confirm.js' %}" defer></script>

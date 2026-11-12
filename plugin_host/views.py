@@ -11,6 +11,7 @@ from django.utils.translation import gettext as _t
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
+from .context_processors import COLOR_MODE_COOKIE, COLOR_MODES
 from .registry import get_enabled_plugins, get_home_provider, plugin_counts
 from .theming import THEME_COOKIE_NAME, discover_themes
 
@@ -163,5 +164,27 @@ def theme_switch(request):
     if key in discover_themes(settings.BASE_DIR):
         response.set_cookie(
             THEME_COOKIE_NAME, key,
+            max_age=settings.THEME_COOKIE_AGE, samesite='Lax')
+    return response
+
+
+@require_POST
+def color_mode_switch(request):
+    """v2.0：切换全站深浅模式（POST mode=light|dark），写 Cookie 后回到 next。
+
+    首页与业务页共用同一个 Cookie，所以在任一页面切换，另一处也跟随。
+    """
+    mode = request.POST.get('mode')
+    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or '/'
+    if not url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure()):
+        next_url = '/'
+
+    response = redirect(next_url)
+    if mode in COLOR_MODES:
+        response.set_cookie(
+            COLOR_MODE_COOKIE, mode,
             max_age=settings.THEME_COOKIE_AGE, samesite='Lax')
     return response

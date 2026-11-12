@@ -11,69 +11,131 @@
 <div class="as-shell">
 
   <aside class="as-sidebar">
-    <div class="as-sidebar__head">
+    <div class="as-logo-row">
       <a href="/" class="as-brand">
-        <span class="as-brand__mark" aria-hidden="true"></span>
-        <span>Constellatio</span>
+        <span class="as-brand__name">Constellatio</span>
       </a>
     </div>
 
-    {# 顶部功能入口：完全由 PluginMeta.menus 驱动，「看板」只是其中一条菜单 #}
-    <nav class="as-entries" aria-label="{% trans '功能入口' %}">
-      {% for menu in menus %}
-      <a href="{{ menu.url }}" class="as-entry{% if menu.active %} is-active{% endif %}"{% if menu.active %} aria-current="page"{% endif %}>
-        <span class="as-entry__icon" aria-hidden="true">{{ menu.icon }}</span>
-        <span class="as-entry__label">{{ menu.label }}</span>
+    <a href="/" class="as-new">
+      <span class="as-new__content">
+        <svg class="as-new__ico" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+          <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" fill="none"/>
+        </svg>
+        <span class="as-new__label">{% trans "新会话" %}</span>
+      </span>
+    </a>
+
+    {# 面板入口：primary_menus（助手/看板，来自 PluginMeta.menus）+ 功能抽屉 #}
+    <nav class="as-panels" aria-label="{% trans '功能入口' %}">
+      {% for menu in primary_menus %}
+      <a href="{{ menu.url }}" class="as-panel{% if menu.active %} is-active{% endif %}"{% if menu.active %} aria-current="page"{% endif %}>
+        <span class="as-panel__glyph" aria-hidden="true">
+          {% if menu.url == '/' %}
+          <svg class="as-ico" viewBox="0 0 16 16" width="16" height="16">
+            <path d="M8 2.2l1.7 4.1 4.1 1.7-4.1 1.7L8 13.8l-1.7-4.1L2.2 8l4.1-1.7z"
+                  stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
+          </svg>
+          {% else %}
+          <svg class="as-ico" viewBox="0 0 16 16" width="16" height="16">
+            <rect x="2.2" y="3" width="11.6" height="10" rx="2"
+                  stroke="currentColor" stroke-width="1.5" fill="none"/>
+            <path d="M2.2 6.6h11.6" stroke="currentColor" stroke-width="1.5" fill="none"/>
+          </svg>
+          {% endif %}
+        </span>
+        <span class="as-panel__title">{{ menu.label }}</span>
       </a>
-      {% empty %}
-      <span class="as-sidebar__hint">{% trans "暂无可用功能" %}</span>
       {% endfor %}
+
+      {% if more_menus %}
+      <details class="as-more">
+        <summary class="as-panel as-panel--summary">
+          <span class="as-panel__glyph" aria-hidden="true">
+            <svg class="as-ico" viewBox="0 0 16 16" width="16" height="16">
+              <circle cx="3.6" cy="8" r="1.25" fill="currentColor"/>
+              <circle cx="8" cy="8" r="1.25" fill="currentColor"/>
+              <circle cx="12.4" cy="8" r="1.25" fill="currentColor"/>
+            </svg>
+          </span>
+          <span class="as-panel__title">{% trans "更多" %}</span>
+        </summary>
+        <ul class="as-more__list">
+          {% for menu in more_menus %}
+          <li>
+            <a href="{{ menu.url }}"{% if menu.active %} class="is-active" aria-current="page"{% endif %}>{{ menu.label }}</a>
+          </li>
+          {% endfor %}
+        </ul>
+      </details>
+      {% endif %}
     </nav>
 
-    <section class="as-sessions" aria-labelledby="as-sessions-title">
-      <h2 class="as-sidebar__title" id="as-sessions-title">{% trans "会话" %}</h2>
-      {% if chat_messages %}
-      <ul class="as-session-list">
-        {% for message in chat_messages %}
-        <li class="as-session-item">{{ message.title|default:message.content|truncatechars:24 }}</li>
-        {% endfor %}
-      </ul>
-      {% else %}
-      <p class="as-sidebar__hint">{% trans "还没有会话。在下方描述你要处理的事，助手会从这里开始。" %}</p>
-      {% endif %}
+    <section class="as-region" aria-labelledby="as-region-title">
+      <div class="as-section-head">
+        <h2 class="as-section-label" id="as-region-title">{% trans "会话" %}</h2>
+      </div>
+
+      <div class="as-tree">
+        {% if chat_messages %}
+        <ul class="as-session-list">
+          {% for message in chat_messages %}
+          <li class="as-session-item">{{ message.title|default:message.content|truncatechars:24 }}</li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="as-tree__hint">{% trans "还没有会话" %}</p>
+        {% endif %}
+      </div>
     </section>
 
-    <div class="as-sidebar__foot">
-      <div class="as-user">
+    <div class="as-foot">
+      <div class="as-user-row">
         <span class="as-avatar" aria-hidden="true">{{ request.user.last_name|default:request.user.username|slice:":1" }}</span>
         <span class="as-user__name">{{ request.user.last_name|default:request.user.username }}</span>
-      </div>
-      <div class="as-foot-actions">
-        {% if 'language' in plugins_enabled %}
-        <form method="post" action="{% url 'language:language_switch' %}" class="as-inline">
-          {% csrf_token %}
-          <input type="hidden" name="next" value="{{ request.get_full_path }}">
-          <button type="submit" name="lang" value="zh-hans" class="as-textbtn{% if LANGUAGE_CODE == 'zh-hans' %} is-active{% endif %}">中文</button>
-          <button type="submit" name="lang" value="en" class="as-textbtn{% if LANGUAGE_CODE == 'en' %} is-active{% endif %}">EN</button>
-        </form>
-        {% endif %}
-        <div class="as-mode" role="group" aria-label="{% trans '外观' %}">
-          <a href="?mode=light" class="as-textbtn{% if color_mode == 'light' %} is-active{% endif %}">{% trans "浅色" %}</a>
-          <a href="?mode=dark" class="as-textbtn{% if color_mode == 'dark' %} is-active{% endif %}">{% trans "深色" %}</a>
-        </div>
-        {% if 'auth' in plugins_enabled %}
-        <form method="post" action="{% url 'auth:logout' %}" class="as-inline">
-          {% csrf_token %}
-          <button type="submit" class="as-textbtn">{% trans "登出" %}</button>
-        </form>
-        {% endif %}
+
+        <details class="as-user-more">
+          <summary class="as-iconbtn" aria-label="{% trans '设置' %}">
+            <svg class="as-ico" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+              <circle cx="8" cy="8" r="2.2" stroke="currentColor" stroke-width="1.5" fill="none"/>
+              <path d="M8 2.4v1.6M8 12v1.6M2.4 8h1.6M12 8h1.6M4.05 4.05l1.13 1.13M10.82 10.82l1.13 1.13M11.95 4.05l-1.13 1.13M5.18 10.82L4.05 11.95"
+                    stroke="currentColor" stroke-width="1.5" fill="none"/>
+            </svg>
+          </summary>
+          <div class="as-user-more__panel">
+            {% if 'language' in plugins_enabled %}
+            <form method="post" action="{% url 'language:language_switch' %}" class="as-inline">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button type="submit" name="lang" value="zh-hans" class="as-textbtn{% if LANGUAGE_CODE == 'zh-hans' %} is-active{% endif %}">中文</button>
+              <button type="submit" name="lang" value="en" class="as-textbtn{% if LANGUAGE_CODE == 'en' %} is-active{% endif %}">EN</button>
+            </form>
+            {% endif %}
+            <div class="as-mode" role="group" aria-label="{% trans '外观' %}">
+              <a href="?mode=light" class="as-textbtn{% if color_mode == 'light' %} is-active{% endif %}">{% trans "浅色" %}</a>
+              <a href="?mode=dark" class="as-textbtn{% if color_mode == 'dark' %} is-active{% endif %}">{% trans "深色" %}</a>
+            </div>
+            {% if 'auth' in plugins_enabled %}
+            <form method="post" action="{% url 'auth:logout' %}" class="as-inline">
+              {% csrf_token %}
+              <button type="submit" class="as-textbtn">{% trans "登出" %}</button>
+            </form>
+            {% endif %}
+          </div>
+        </details>
       </div>
     </div>
   </aside>
 
   <main class="as-main">
+    <div class="as-header">
+      {% if chat_messages %}
+      <span class="as-header__title">{% trans "会话" %}</span>
+      {% endif %}
+    </div>
+
     {% if chat_messages %}
-    <div class="as-thread" role="log" aria-live="polite">
+    <div class="as-scroll as-scroll--thread" role="log" aria-live="polite">
       {% for message in chat_messages %}
       <div class="as-row as-row--{{ message.role }}">
         <div class="as-bubble">{{ message.content }}</div>
@@ -81,27 +143,106 @@
       {% endfor %}
     </div>
     {% else %}
-    <div class="as-empty">
-      <h1 class="as-empty__title">{% trans "今天想处理什么？" %}</h1>
-      <p class="as-empty__subtitle">{% trans "描述你要处理的事，或输入 / 调用指令。模型服务配置后即可开始。" %}</p>
+    <div class="as-scroll as-scroll--hero">
+      <div class="as-seat">
+        <div class="as-stack">
+          <div class="as-hero">
+            <span class="as-hero__title">{% trans "今天想处理什么？" %}</span>
+            <span class="as-hero__badge">{% trans "助手" %}</span>
+          </div>
+          <div class="as-composer">
+            <div class="as-card">
+              <label class="as-sr-only" for="as-input">{% trans "输入消息" %}</label>
+              <textarea id="as-input" class="as-input" rows="1"
+                        placeholder="{% trans '描述你要处理的事，/ 调用指令' %}"
+                        {% if not model_configured %}disabled{% endif %}></textarea>
+              <div class="as-bar">
+                <button type="button" class="as-add" aria-label="{% trans '附加文件' %}"
+                        {% if not model_configured %}disabled{% endif %}>
+                  <svg class="as-ico" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+                    <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                  </svg>
+                </button>
+                <div class="as-modes">
+                  <span class="as-trigger as-trigger--mode" aria-hidden="true">
+                    <span class="as-trigger__icon">
+                      <svg viewBox="0 0 16 16" width="14" height="14">
+                        <path d="M4 3.5h8M3 8h10M5 12.5h6" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                      </svg>
+                    </span>
+                    <span class="as-trigger__label">{% trans "只读" %}</span>
+                    <span class="as-trigger__chevron">
+                      <svg viewBox="0 0 16 16" width="14" height="14">
+                        <path d="M4.5 6.5L8 10l3.5-3.5" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                      </svg>
+                    </span>
+                  </span>
+                </div>
+                <div class="as-trailing">
+                  <span class="as-trigger as-trigger--model" aria-hidden="true">
+                    <span class="as-trigger__label">{% if model_configured %}{% trans "模型服务" %}{% else %}{% trans "未配置模型" %}{% endif %}</span>
+                  </span>
+                  <button type="button" class="as-send" aria-label="{% trans '发送' %}"
+                          {% if not model_configured %}disabled{% endif %}>
+                    <svg class="as-ico" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                      <path d="M8 13V3.6M3.8 7.8L8 3.6l4.2 4.2"
+                            stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
     {% endif %}
 
-    <div class="as-composer">
-      {% if not model_configured %}
-      <p class="as-composer__notice" role="status">{% trans "未配置模型服务，去配置" %}</p>
-      {% endif %}
-      <div class="as-composer__box">
+    {% if chat_messages %}
+    <div class="as-composer as-composer--docked">
+      <div class="as-card">
         <label class="as-sr-only" for="as-input">{% trans "输入消息" %}</label>
         <textarea id="as-input" class="as-input" rows="1"
                   placeholder="{% trans '描述你要处理的事，/ 调用指令' %}"
                   {% if not model_configured %}disabled{% endif %}></textarea>
-        <button type="button" class="as-send" aria-label="{% trans '发送' %}"
-                {% if not model_configured %}disabled{% endif %}>
-          <span aria-hidden="true">↑</span>
-        </button>
+        <div class="as-bar">
+          <button type="button" class="as-add" aria-label="{% trans '附加文件' %}"
+                  {% if not model_configured %}disabled{% endif %}>
+            <svg class="as-ico" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+              <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" fill="none"/>
+            </svg>
+          </button>
+          <div class="as-modes">
+            <span class="as-trigger as-trigger--mode" aria-hidden="true">
+              <span class="as-trigger__icon">
+                <svg viewBox="0 0 16 16" width="14" height="14">
+                  <path d="M4 3.5h8M3 8h10M5 12.5h6" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                </svg>
+              </span>
+              <span class="as-trigger__label">{% trans "只读" %}</span>
+              <span class="as-trigger__chevron">
+                <svg viewBox="0 0 16 16" width="14" height="14">
+                  <path d="M4.5 6.5L8 10l3.5-3.5" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                </svg>
+              </span>
+            </span>
+          </div>
+          <div class="as-trailing">
+            <span class="as-trigger as-trigger--model" aria-hidden="true">
+              <span class="as-trigger__label">{% if model_configured %}{% trans "模型服务" %}{% else %}{% trans "未配置模型" %}{% endif %}</span>
+            </span>
+            <button type="button" class="as-send" aria-label="{% trans '发送' %}"
+                    {% if not model_configured %}disabled{% endif %}>
+              <svg class="as-ico" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                <path d="M8 13V3.6M3.8 7.8L8 3.6l4.2 4.2"
+                      stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
+    {% endif %}
   </main>
 
 </div>

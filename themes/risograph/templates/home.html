@@ -2,18 +2,17 @@
 {% load i18n %}
 {% block title %}{% trans "工作台" %} · Constellatio{% endblock %}
 {% block content %}
-<div class="r-card position-relative mb-4">
-  <span class="r-register-mark"></span>
+<section class="r-hero mb-4">
   <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
     <div>
       <h2 class="mb-2">{% trans "工作台" %}</h2>
-      <p class="mb-0" style="font-size:.9rem; color:rgba(26,26,26,.6);">
+      <p class="mb-0 r-hero-text">
         {% blocktranslate with name=request.user.last_name|default:request.user.username %}欢迎，{{ name }}。{% endblocktranslate %}
       </p>
     </div>
     <span class="r-badge">{% if is_admin_view %}{% trans "管理员视图" %}{% else %}{% trans "员工视图" %}{% endif %}</span>
   </div>
-</div>
+</section>
 
 {% include "home_dashboard.html" %}
 {% endblock %}

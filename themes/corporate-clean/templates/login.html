@@ -1,5 +1,5 @@
 {% load static i18n %}{% get_current_language as LANGUAGE_CODE %}<!DOCTYPE html>
-<html lang="{{ LANGUAGE_CODE }}">
+<html lang="{{ LANGUAGE_CODE }}" data-color-mode="{{ color_mode }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -31,7 +31,6 @@
 
       <div class="r-card r-card--login">
         <div class="r-brand mb-2">
-          <span class="r-brand-mark" aria-hidden="true"></span>
           Constellatio
         </div>
         <p class="r-small r-muted mb-4">{% trans "企业办公自动化" %}</p>

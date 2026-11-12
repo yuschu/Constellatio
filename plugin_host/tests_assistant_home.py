@@ -49,11 +49,11 @@ class AssistantHomePageTests(TestCase):
             response = self.client.get('/')
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'as-shell')
-        self.assertContains(response, '未配置模型服务，去配置')
+        self.assertContains(response, '未配置模型')
         self.assertContains(response, '描述你要处理的事，/ 调用指令')
         self.assertFalse(response.context['model_configured'])
-        # textarea 与发送按钮各一个 disabled
-        self.assertContains(response, 'disabled', count=2)
+        # textarea、+ 附件、发送各一个 disabled（「只读」是状态标签，不是按钮）
+        self.assertContains(response, 'disabled', count=3)
 
     @override_settings(
         ASSISTANT_LLM_BASE_URL='http://127.0.0.1:11434/v1',
@@ -93,14 +93,14 @@ class AssistantHomePageTests(TestCase):
         """「助手」与旧「工作台」都指向 /，只能亮一个。"""
         self.client.force_login(self.user)
         response = self.client.get('/')
-        self.assertEqual(response.content.decode().count('as-entry is-active'), 1)
+        self.assertEqual(response.content.decode().count('as-panel is-active'), 1)
 
     def test_color_mode_query_sets_cookie_and_attribute(self):
         self.client.force_login(self.user)
         response = self.client.get('/', {'mode': 'dark'})
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'data-color-mode="dark"')
-        self.assertEqual(response.cookies['assistant_color_mode'].value, 'dark')
+        self.assertEqual(response.cookies['oa_color_mode'].value, 'dark')
 
         # 不带参数时沿用 Cookie，深色态可保持
         response = self.client.get('/')
@@ -118,10 +118,32 @@ class AssistantHomePageTests(TestCase):
                 {'role': 'user', 'content': '你好'},
                 {'role': 'assistant', 'content': '你好，有什么可以帮你？'},
             ],
-            'menus': [],
+            'primary_menus': [],
+            'more_menus': [],
             'plugins_enabled': set(),
         }, request=request)
         self.assertIn('as-row--user', html)
         self.assertIn('as-row--assistant', html)
         self.assertIn('你好，有什么可以帮你？', html)
         self.assertNotIn('as-empty__title', html)
+
+    def test_sidebar_caps_entries_and_hides_rest_in_drawer(self):
+        """v2.0.1：顶部只留固定入口，其余插件菜单进「功能」抽屉。
+
+        DSH 的极简来自「少而准」而不是配色——把所有插件菜单平铺在侧栏，
+        信息量就是 DSH 的数倍，怎么调色都不像。
+        """
+        self.client.force_login(self.user)
+        response = self.client.get('/')
+        html = response.content.decode()
+        # 「功能」抽屉存在，且确实承载了插件业务菜单
+        self.assertIn('as-more__list', html)
+        self.assertTrue(response.context['more_menus'])
+        # 顶部固定入口只有两条：助手 / 看板（「新会话」与「功能」由模板固定，不走 menus）
+        self.assertEqual(len(response.context['primary_menus']), 2)
+
+    def test_old_workbench_menu_dropped_after_home_takeover(self):
+        """「工作台」与「助手」都指向 /，去重后不应再出现第二个首页入口。"""
+        self.client.force_login(self.user)
+        response = self.client.get('/')
+        self.assertNotContains(response, '工作台')

@@ -109,7 +109,8 @@ class LanguagePluginDisableTest(LanguageTestMixin, TestCase):
         self._disable()
         self.client.force_login(self.user)
         self.client.cookies['django_language'] = 'en'
-        resp = self.client.get('/')
+        # v2.0.0 起 / 由对话式首页接管，英文界面文案的断言落在看板页
+        resp = self.client.get('/dashboard/')
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'Workspace')                      # 仍为最后设置的语言
         self.assertNotContains(resp, '/plugins/language/switch/')    # 入口已收起
@@ -148,7 +149,8 @@ class TranslationCatalogTest(LanguageTestMixin, TestCase):
         response = self.client.get('/dashboard/')
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Workspace')
-        self.assertContains(response, 'Everything is a plugin')
+        self.assertContains(response, 'Features')        # 侧栏分组标题
+        self.assertContains(response, 'Employee view')   # hero 徽标
 
 
 class CompileMoTest(TestCase):

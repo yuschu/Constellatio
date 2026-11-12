@@ -126,6 +126,8 @@ TEMPLATES = [
                 'plugin_host.context_processors.charts',
                 # v1.7.0：站内信未读数（插件停用 / 表未迁移时为 0）
                 'plugin_host.context_processors.notifications',
+                # v2.0：全站深浅模式（首页与业务页共用同一个 Cookie）
+                'plugin_host.context_processors.color_mode',
             ],
         },
     },

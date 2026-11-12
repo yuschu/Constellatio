@@ -11,6 +11,21 @@ from .theming import discover_themes
 
 logger = logging.getLogger(__name__)
 
+# v2.0：全站深浅模式（首页与业务页共用同一个 Cookie，切换任一页面全站跟随）
+COLOR_MODE_COOKIE = 'oa_color_mode'
+COLOR_MODES = ('light', 'dark')
+DEFAULT_COLOR_MODE = 'light'
+
+
+def color_mode(request):
+    """注入当前配色模式；非法或缺失回退浅色。
+
+    外壳把 `color_mode` 写进 `<html data-color-mode>`，CSS 只按这个属性
+    切换 alias 取值，不改任何规则块。
+    """
+    stored = request.COOKIES.get(COLOR_MODE_COOKIE)
+    return {'color_mode': stored if stored in COLOR_MODES else DEFAULT_COLOR_MODE}
+
 
 def _mark_active(menus, path):
     """v1.5.5：当前路径命中菜单则标记 active（详情页按前缀归属父菜单）。

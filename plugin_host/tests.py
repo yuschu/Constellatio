@@ -64,13 +64,17 @@ class ThemeDiscoveryTest(TestCase):
         source = get_template('base.html').template.source
         self.assertIn('r-loader', source)
 
-    def test_corporate_hero_uses_white_text(self):
-        """v1.6.3：Corporate Clean 蓝色 Banner 标题 / 欢迎语为白字。"""
+    def test_hero_neutralized_for_dsh(self):
+        """v2.0：DSH 统一下首页 hero 不再用彩色底板，改为中性卡片 + token。"""
         theme = get_theme(settings.BASE_DIR, 'corporate-clean')
         css = (theme.static / 'themes/corporate-clean/css/corporate-clean.css').read_text(
             encoding='utf-8')
-        self.assertIn('.r-hero h2 { color: #ffffff;', css)
-        self.assertIn('rgba(255, 255, 255, 0.92)', css)
+        block = re.search(r'\.r-hero\s*\{(.*?)\}', css, re.S)
+        self.assertIsNotNone(block, '缺少 .r-hero 规则')
+        body = block.group(1)
+        self.assertIn('var(--ds-bg-layer-1)', body)
+        self.assertNotIn('linear-gradient', body)
+        self.assertNotIn('#ffffff', body)
 
     def test_risograph_hero_keeps_original_colors(self):
         """v1.6.3：Risograph 不改 hero 配色（其首页用纸色卡片，无 r-hero 规则）。"""
@@ -79,29 +83,41 @@ class ThemeDiscoveryTest(TestCase):
             encoding='utf-8')
         self.assertNotIn('.r-hero', css)
 
-    def test_sidebar_sticky_in_both_themes(self):
-        """v1.6.3：两套主题侧栏吸顶；Risograph 侧栏卡片带钩子类。"""
-        for key, theme in discover_themes(settings.BASE_DIR).items():
+    def test_shell_is_dsh_in_both_themes(self):
+        """v2.0：两套主题统一 DSH 外壳，Risograph 复用同一份 CSS。"""
+        for key in discover_themes(settings.BASE_DIR):
             with self.subTest(theme=key):
-                css = (theme.static / 'themes' / key / 'css' / f'{key}.css').read_text(
+                base = (settings.BASE_DIR / 'themes' / key / 'templates' / 'base.html').read_text(
                     encoding='utf-8')
-                self.assertIn('position: sticky', css)
-                self.assertIn('.r-card--sidebar', css)
-        riso_base = (settings.BASE_DIR / 'themes/risograph/templates/base.html').read_text(
-            encoding='utf-8')
-        self.assertIn('r-card--sidebar', riso_base)
+                self.assertIn('ds-shell', base)
+                self.assertIn('ds-rail', base)
+                self.assertNotIn('<footer', base)
 
-    def test_top_nav_sticky_in_both_themes(self):
-        """v1.6.4：顶部导航 .r-nav 吸顶（sticky + top:0 + z-index），两套主题一致。"""
-        for key, theme in discover_themes(settings.BASE_DIR).items():
+        css = (settings.BASE_DIR / 'themes/corporate-clean/static/themes'
+               '/corporate-clean/css/corporate-clean.css').read_text(encoding='utf-8')
+        rail = re.search(r'\.ds-rail\s*\{(.*?)\}', css, re.S)
+        self.assertIsNotNone(rail, '缺少 .ds-rail 规则')
+        self.assertIn('position: sticky', rail.group(1))
+        self.assertIn('--ds-rail-w: 280px', css)
+
+        riso = (settings.BASE_DIR / 'themes/risograph/static/themes'
+                '/risograph/css/risograph.css').read_text(encoding='utf-8')
+        self.assertIn('themes/corporate-clean/css/corporate-clean.css', riso)
+
+    def test_top_nav_replaced_by_rail(self):
+        """v2.0：顶部横向导航由 DSH 侧栏取代；.r-nav 只保留兼容规则。"""
+        for key in discover_themes(settings.BASE_DIR):
             with self.subTest(theme=key):
-                css = (theme.static / 'themes' / key / 'css' / f'{key}.css').read_text(
+                base = (settings.BASE_DIR / 'themes' / key / 'templates' / 'base.html').read_text(
                     encoding='utf-8')
-                block = re.search(r'\.r-nav\s*\{(.*?)\}', css, re.S)
-                self.assertIsNotNone(block, f'{key} 缺少 .r-nav 规则')
-                self.assertIn('position: sticky', block.group(1))
-                self.assertIn('top: 0', block.group(1))
-                self.assertIn('z-index: 1030', block.group(1))
+                self.assertNotIn('class="r-nav"', base)
+                self.assertIn('ds-rail__nav', base)
+
+        css = (settings.BASE_DIR / 'themes/corporate-clean/static/themes'
+               '/corporate-clean/css/corporate-clean.css').read_text(encoding='utf-8')
+        block = re.search(r'\.r-nav\s*\{(.*?)\}', css, re.S)
+        self.assertIsNotNone(block, '缺少 .r-nav 兼容规则')
+        self.assertIn('position: sticky', block.group(1))
 
     def test_dashboard_uses_active_theme_css(self):
         user = get_user_model().objects.create_user('themeuser', password='pw')

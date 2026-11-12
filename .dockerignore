@@ -10,3 +10,8 @@ logs/
 __pycache__
 *.pyc
 .env
+# 本地验证产物（截图、无头 Chrome profile），含活动写入文件，
+# 被 build context 扫到时会让构建不稳定（context canceled）
+.tmp-test
+# Windows 保留名残留（git 无法追踪）
+CON

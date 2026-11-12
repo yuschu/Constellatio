@@ -219,12 +219,12 @@ class MenuActiveTests(TestCase):
     def test_current_tab_highlighted(self):
         self.client.force_login(self.staff)
         response = self.client.get('/plugins/notice/')
-        self.assertContains(response, 'href="/plugins/notice/" class="r-menu-link is-active"')
+        self.assertContains(response, 'href="/plugins/notice/" class="ds-rail__row is-active"')
 
     def test_dashboard_tab_highlighted(self):
         self.client.force_login(self.staff)
         response = self.client.get('/dashboard/')
-        self.assertContains(response, 'href="/dashboard/" class="r-menu-link is-active"')
+        self.assertContains(response, 'href="/dashboard/" class="ds-rail__row is-active"')
 
     def test_detail_page_highlights_parent_menu(self):
         approval = Approval.objects.create(
@@ -232,7 +232,7 @@ class MenuActiveTests(TestCase):
             applicant=self.staff, approver=self.staff)
         self.client.force_login(self.staff)
         response = self.client.get(f'/plugins/approval/{approval.pk}/')
-        self.assertContains(response, 'href="/plugins/approval/" class="r-menu-link is-active"')
+        self.assertContains(response, 'href="/plugins/approval/" class="ds-rail__row is-active"')
 
     def test_exact_match_wins_over_parent(self):
         manager = User.objects.create_user('mgr', '', 'pw')
@@ -240,6 +240,6 @@ class MenuActiveTests(TestCase):
         self.client.force_login(manager)
         response = self.client.get('/plugins/attendance/records/')
         self.assertContains(
-            response, 'href="/plugins/attendance/records/" class="r-menu-link is-active"')
+            response, 'href="/plugins/attendance/records/" class="ds-rail__row is-active"')
         self.assertNotContains(
-            response, 'href="/plugins/attendance/" class="r-menu-link is-active"')
+            response, 'href="/plugins/attendance/" class="ds-rail__row is-active"')

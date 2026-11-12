@@ -30,6 +30,7 @@ _CONVERTER = re.compile(r'<[^>]+>')
 # 运行时集合抓「白名单被摘掉」与「不该放行的路由被放行」。
 BARE_URLS = {
     'theme/switch/',
+    'theme/mode/',
     'plugins/auth/login/',
     'plugins/auth/logout/',
     'plugins/auth/password-reset/',
@@ -38,8 +39,8 @@ BARE_URLS = {
     'plugins/sso/',
 }
 
-# 运行时口径：匿名必须放行的 6 条（theme/switch 不放行，它只属于登录后的外壳）。
-PUBLIC_URLS = BARE_URLS - {'theme/switch/'}
+# 运行时口径：匿名必须放行的 6 条（theme/switch、theme/mode 不放行，它们只属于登录后的外壳）。
+PUBLIC_URLS = BARE_URLS - {'theme/switch/', 'theme/mode/'}
 
 
 def _walk(patterns, prefix=''):

@@ -1,5 +1,5 @@
 {% load static i18n %}{% get_current_language as LANGUAGE_CODE %}<!DOCTYPE html>
-<html lang="{{ LANGUAGE_CODE }}">
+<html lang="{{ LANGUAGE_CODE }}" data-color-mode="{{ color_mode }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.min.css' %}">
   <link rel="stylesheet" href="{% static 'themes/risograph/css/risograph.css' %}">
 </head>
-<body class="r-grain" style="background: var(--r-paper); color: var(--r-ink);">
+<body class="r-body">
 
   <div class="r-loader" id="page-loader" role="status" aria-live="polite">
     <span class="r-loader__spinner" aria-hidden="true"></span>
@@ -16,7 +16,7 @@
   <noscript><style>.r-loader{display:none}</style></noscript>
 
   <div class="min-vh-100 d-flex align-items-center justify-content-center px-3">
-    <div style="max-width:420px; width:100%;">
+    <div class="r-login-wrap">
 
       <div class="d-flex justify-content-end mb-2">
         {% if 'language' in plugins_enabled %}
@@ -29,33 +29,27 @@
         {% endif %}
       </div>
 
-      <!-- 登录卡：硬边彩色阴影 + 套印规线角标 -->
-      <div class="r-card position-relative p-4">
-        <span class="r-register-mark"></span>
-
-        <div class="mb-4">
-          <div class="d-flex align-items-center gap-2 mb-2">
-            <span class="d-inline-block" style="width:18px;height:18px;border:2px solid var(--r-ink);background:var(--r-pink);"></span>
-            <h1 class="fw-bold text-uppercase mb-0" style="font-size:1.5rem; letter-spacing:.08em;">Constellatio</h1>
-          </div>
-          <p class="mb-0" style="font-size:.8rem; color:rgba(26,26,26,.6);">{% trans "企业办公自动化 · Risograph 印刷风" %}</p>
+      <div class="r-card r-card--login">
+        <div class="r-brand mb-2">
+          Constellatio
         </div>
+        <p class="r-small r-muted mb-4">{% trans "企业办公自动化" %}</p>
 
         {% if error %}
-        <div class="r-badge r-badge--orange d-inline-block mb-3">{{ error }}</div>
+        <div class="r-badge r-badge--orange mb-3">{{ error }}</div>
         {% endif %}
 
-        <form method="post" action="/plugins/auth/login/">
+        <form method="post" action="/plugins/auth/login/" novalidate>
           {% csrf_token %}
           {# v1.7.4 收尾：登录后回跳原页（中间件带回的 next） #}
           <input type="hidden" name="next" value="{{ next }}">
           <div class="mb-3">
-            <label class="form-label" style="font-size:.75rem; text-transform:uppercase; letter-spacing:.06em;">{% trans "用户名" %}</label>
-            <input class="r-input" type="text" name="username" autocomplete="username" value="{{ username }}" placeholder="{% trans '输入用户名' %}" required autofocus>
+            <label class="form-label" for="id_username">{% trans "用户名" %}</label>
+            <input class="r-input" id="id_username" type="text" name="username" value="{{ username }}" autocomplete="username" placeholder="{% trans '输入用户名' %}" required autofocus>
           </div>
           <div class="mb-4">
-            <label class="form-label" style="font-size:.75rem; text-transform:uppercase; letter-spacing:.06em;">{% trans "密码" %}</label>
-            <input class="r-input" type="password" name="password" autocomplete="current-password" placeholder="{% trans '输入密码' %}" required>
+            <label class="form-label" for="id_password">{% trans "密码" %}</label>
+            <input class="r-input" id="id_password" type="password" name="password" autocomplete="current-password" placeholder="{% trans '输入密码' %}" required>
           </div>
           <button class="r-btn w-100" type="submit">{% trans "登 录" %}</button>
         </form>
@@ -70,9 +64,7 @@
         </div>
       </div>
 
-      <p class="text-center mt-3" style="font-size:.7rem; color:rgba(26,26,26,.6);">
-        Constellatio · {% trans "万物皆可插件" %}
-      </p>
+      <p class="text-center mt-3 r-small r-muted">Constellatio · {% trans "万物皆可插件" %}</p>
     </div>
   </div>
 
