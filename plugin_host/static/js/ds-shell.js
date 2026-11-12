@@ -1,7 +1,9 @@
-/* DSH 外壳交互（v2.0.5）
+/* DSH 外壳交互（v2.0.5，侧栏收起 v2.0.8）
  *
  * 行为与参数取自 dsh 客户端源码，不是像素采样：
- *   侧栏   dsh-client-ui-sidebar/SidebarRoot     —— collapsed 36×36 图标行、gap 12、rail 宽 64
+ *   侧栏   dsh-client-ui-sidebar/SidebarRoot     —— 收起 = slide + crossfade、settled 150ms 后落 36×36 图标行、
+ *          gap 12、轨宽 56（dsh-client-ui-layout collapsedWidth）
+ *          dsh-client-ui-layout/toggleSidebar    —— 点击在 sidebar === 0 ? 280 : 0 之间切换，不持久化
  *          dsh-client-ui-settings-general/Trigger —— 设置入口 42px 行，右侧快捷键 hint 悬停显形
  *   设置   dsh-client-ui-settings-general/Panel   —— 800×800 grid（nav 188px）、Esc/遮罩/关闭收起、
  *          关闭后焦点回到触发控件、Web 快捷键 Mod+Alt+,
@@ -11,31 +13,97 @@
 (function () {
   'use strict';
 
-  var LS_RAIL = 'dsRailCollapsed';
   var TEXT_MAX = 336;
+  /* 侧栏收起时序：宽度过渡 --ds-transition-duration-slow = .3s；落位 COLLAPSE_SETTLE_MS = 150 */
+  var RAIL_ANIM_MS = 300;
+  var RAIL_SETTLE_MS = 150;
+  var RAIL_WIDE_IN_MS = 200;
 
-  // ---------- 侧栏折叠 ----------
+  // ---------- 侧栏收起（点击切换）----------
   function initRail() {
     var toggle = document.querySelector('[data-ds-rail-toggle]');
     if (!toggle) return;
     var root = document.documentElement;
+    var rail = toggle.closest('.ds-rail') || toggle.closest('.as-sidebar');
+    var animTimer = null;
+    var settleTimer = null;
+    var wideTimer = null;
 
-    function apply(collapsed) {
-      if (collapsed) root.setAttribute('data-rail-collapsed', 'true');
-      else root.removeAttribute('data-rail-collapsed');
-      toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-      var label = collapsed ? toggle.dataset.labelOpen : toggle.dataset.labelCollapse;
-      if (label) toggle.setAttribute('aria-label', label);
+    function isCollapsed() {
+      return root.getAttribute('data-rail-collapsed') === 'true';
     }
 
-    var stored = null;
-    try { stored = localStorage.getItem(LS_RAIL); } catch (e) { /* 隐私模式 */ }
-    apply(stored === '1');
+    function sync(collapsed, animate) {
+      window.clearTimeout(animTimer);
+      window.clearTimeout(settleTimer);
+      window.clearTimeout(wideTimer);
+
+      if (animate) {
+        /* 源码口径：[data-animating] 期间才开宽度过渡 */
+        root.setAttribute('data-rail-animating', 'true');
+        animTimer = window.setTimeout(function () {
+          root.removeAttribute('data-rail-animating');
+        }, RAIL_ANIM_MS);
+      }
+
+      if (collapsed) {
+        /* 宽内容原地淡出 150ms（不清空、不 reflow），列宽由父级裁切，落位后才换 36×36 布局 */
+        if (animate) root.setAttribute('data-rail-fading', 'true');
+        root.setAttribute('data-rail-collapsed', 'true');
+        root.removeAttribute('data-rail-wide-in');
+        if (animate) {
+          settleTimer = window.setTimeout(function () {
+            root.removeAttribute('data-rail-fading');
+            root.setAttribute('data-rail-settled', 'true');
+          }, RAIL_SETTLE_MS);
+        } else {
+          root.setAttribute('data-rail-settled', 'true');
+        }
+      } else {
+        root.removeAttribute('data-rail-collapsed');
+        root.removeAttribute('data-rail-settled');
+        root.removeAttribute('data-rail-fading');
+        if (animate) {
+          /* wide 进场：.hHd-Xa_wide { animation: wide-in .2s } */
+          root.setAttribute('data-rail-wide-in', 'true');
+          wideTimer = window.setTimeout(function () {
+            root.removeAttribute('data-rail-wide-in');
+          }, RAIL_WIDE_IN_MS);
+        }
+      }
+
+      var label = collapsed ? toggle.dataset.labelOpen : toggle.dataset.labelCollapse;
+      if (label) toggle.setAttribute('aria-label', label);
+
+      if (collapsed) {
+        var menu = document.querySelector('[data-ds-account-menu]');
+        var trigger = document.querySelector('[data-ds-account-trigger]');
+        if (menu && !menu.hasAttribute('hidden')) {
+          menu.setAttribute('hidden', '');
+          if (trigger) trigger.setAttribute('aria-expanded', 'false');
+        }
+        /* 焦点若在侧栏内部（如刚关掉的菜单项），回 toggle 且不画焦点环（源码 focusWithoutRing） */
+        if (rail && rail.contains(document.activeElement) && document.activeElement !== toggle) {
+          toggle.classList.add('is-focus-silent');
+          try { toggle.focus({ preventScroll: true }); } catch (e) { toggle.focus(); }
+          window.setTimeout(function () { toggle.classList.remove('is-focus-silent'); }, 250);
+        }
+      }
+    }
+
+    /* 源码默认 layoutInfo.sidebar = 280，且不写 localStorage：刷新即展开 */
+    sync(false, false);
 
     toggle.addEventListener('click', function () {
-      var next = root.getAttribute('data-rail-collapsed') !== 'true';
-      apply(next);
-      try { localStorage.setItem(LS_RAIL, next ? '1' : '0'); } catch (e) { /* 忽略 */ }
+      sync(!isCollapsed(), true);
+    });
+
+    /* 快捷键：desktop 为 primary+B，Web 口径另加 alt（源码 defaults.web:windows） */
+    document.addEventListener('keydown', function (e) {
+      if (!e.ctrlKey || !e.altKey || e.shiftKey) return;
+      if (e.code !== 'KeyB' && e.key !== 'b' && e.key !== 'B') return;
+      e.preventDefault();
+      sync(!isCollapsed(), true);
     });
   }
 

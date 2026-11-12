@@ -1272,9 +1272,10 @@ a:hover {
    800×800 弹层 188px 导航列），token 换回 --ds-*
    ============================================================ */
 
+/* 宽度过渡只在转场期给（[data-rail-animating]，见下方收起小节），常驻过渡会让
+   折叠落位那一帧也带着 padding 一起动，和 DSH「只在动画期间过渡」不一致 */
 .ds-rail {
-  transition: width var(--ds-dur) var(--ds-ease),
-    padding var(--ds-dur) var(--ds-ease);
+  transition: none;
 }
 
 /* --- 品牌行：文字 / 24px 标记 + 28px 折叠按钮 --- */
@@ -1331,39 +1332,65 @@ a:hover {
   box-shadow: 0 0 0 var(--ds-focus-width) var(--ds-border-l3);
 }
 
-/* --- 折叠态：rail 64 宽，图标行 36×36，分组隐藏 --- */
-html[data-rail-collapsed="true"] .ds-rail {
-  width: 64px;
-  padding: 18px var(--ds-space-2) 6px;
+/* --- 收起：slide + crossfade（dsh-client-ui-sidebar/SidebarRoot）
+ *   宽度过渡只在转场期打开（[data-animating]）；折叠瞬间宽内容原地淡出 150ms、列宽由侧栏裁切，
+ *   150ms 后落位（[data-rail-settled]）才切 36×36 图标轨；上方控件自 translateX(49px) 淡入、
+ *   底部只淡入（rail-in / rail-fade-in 各 0.15s）。折叠轨宽 56 = dsh-client-ui-layout collapsedWidth。
+ *   源码没有「指针进入即回宽」，收起只能由点击开关解除。
+ */
+html[data-rail-animating="true"] .ds-rail {
+  transition: width var(--ds-dur-slow) var(--ds-ease);
 }
 
-html[data-rail-collapsed="true"] .ds-rail__brand {
+html[data-rail-collapsed="true"] .ds-rail {
+  width: 56px;
+  padding: 18px 10px 6px;
+  overflow: hidden;
+}
+
+/* 落位后布局已是 36 宽，不再裁切（否则底部向上弹的菜单会被切掉） */
+html[data-rail-collapsed="true"][data-rail-settled="true"] .ds-rail {
+  overflow: visible;
+}
+
+html[data-rail-fading="true"] .ds-rail__brand-name,
+html[data-rail-fading="true"] .ds-rail__section,
+html[data-rail-fading="true"] .ds-rail__label,
+html[data-rail-fading="true"] .ds-account__label {
+  opacity: 0;
+}
+
+html[data-rail-animating="true"] .ds-rail__brand-name,
+html[data-rail-animating="true"] .ds-rail__label,
+html[data-rail-animating="true"] .ds-account__label {
+  transition: opacity var(--ds-dur-fast) var(--ds-ease);
+}
+
+/* --- 落位（settled）：图标行 36×36，分组隐藏 --- */
+html[data-rail-settled="true"] .ds-rail__brand {
   justify-content: flex-start;
   height: 36px;
   padding: 0;
   margin-bottom: 12px;
 }
 
-html[data-rail-collapsed="true"] .ds-rail__brand a {
-  height: 36px;
-  justify-content: center;
-}
-
-html[data-rail-collapsed="true"] .ds-rail__brand-name {
+/* 折叠后品牌块整个卸载：DSH 折叠态 logoRow 只留 toggle（wide && 才渲染 brand） */
+html[data-rail-settled="true"] .ds-rail__brand > a {
   display: none;
 }
 
-html[data-rail-collapsed="true"] .ds-rail__mark {
-  display: inline-flex;
+html[data-rail-settled="true"] .ds-rail__brand-name,
+html[data-rail-settled="true"] .ds-rail__mark {
+  display: none;
 }
 
-html[data-rail-collapsed="true"] .ds-rail__nav {
+html[data-rail-settled="true"] .ds-rail__nav {
   margin: 0;
   padding: 0;
   gap: 12px;
 }
 
-html[data-rail-collapsed="true"] .ds-rail__row {
+html[data-rail-settled="true"] .ds-rail__row {
   width: 36px;
   height: 36px;
   min-height: 36px;
@@ -1371,112 +1398,77 @@ html[data-rail-collapsed="true"] .ds-rail__row {
   justify-content: center;
 }
 
-html[data-rail-collapsed="true"] .ds-rail__section,
-html[data-rail-collapsed="true"] .ds-rail__label {
+html[data-rail-settled="true"] .ds-rail__section,
+html[data-rail-settled="true"] .ds-rail__label {
   display: none;
 }
 
-html[data-rail-collapsed="true"] .ds-rail__foot {
+html[data-rail-settled="true"] .ds-rail__foot {
   align-items: center;
 }
 
-html[data-rail-collapsed="true"] .ds-rail__user {
-  justify-content: center;
-  padding-left: 0;
-}
-
-html[data-rail-collapsed="true"] .ds-rail__user-name,
-html[data-rail-collapsed="true"] .ds-rail__hint {
-  display: none;
-}
-
-html[data-rail-collapsed="true"] .ds-rail__toggle {
+html[data-rail-settled="true"] .ds-rail__toggle {
   width: 36px;
   height: 36px;
 }
 
-html[data-rail-collapsed="true"] .ds-rail__settings {
-  width: 36px;
-  height: 36px;
-  margin: 0;
-  padding: 0;
-  justify-content: center;
-  gap: 0;
+/* --- 落位入场（railIn）：控件从 translateX(49px) 淡入，底部只淡入 --- */
+html[data-rail-settled="true"] .ds-rail__brand,
+html[data-rail-settled="true"] .ds-rail__row,
+html[data-rail-settled="true"] .ds-rail__nav,
+html[data-rail-settled="true"] .ds-rail__toggle {
+  animation: ds-rail-in 0.15s var(--ds-ease) backwards;
 }
 
-html[data-rail-collapsed="true"] .ds-rail__actions {
-  justify-content: center;
+html[data-rail-settled="true"] .ds-rail__foot {
+  animation: ds-rail-fade-in 0.15s var(--ds-ease) backwards;
 }
 
-/* --- 折叠态指针进入即回宽（DSH rail 的行为） --- */
-html[data-rail-collapsed="true"] .ds-rail:hover {
-  width: var(--ds-rail-w);
-  padding: 6px var(--ds-space-2);
+@keyframes ds-rail-in {
+  0% {
+    opacity: 0;
+    transform: translateX(49px);
+  }
 }
 
-html[data-rail-collapsed="true"] .ds-rail:hover .ds-rail__brand {
-  justify-content: space-between;
-  height: 60px;
-  padding: 8px 0 8px 8px;
-  margin-bottom: 0;
+@keyframes ds-rail-fade-in {
+  0% {
+    opacity: 0;
+  }
 }
 
-html[data-rail-collapsed="true"] .ds-rail:hover .ds-rail__brand a {
-  height: 24px;
-  justify-content: flex-start;
+/* --- 展开（wide）：整组 0.2s 淡入 --- */
+html[data-rail-wide-in="true"] .ds-rail__brand,
+html[data-rail-wide-in="true"] .ds-rail__nav,
+html[data-rail-wide-in="true"] .ds-rail__foot {
+  animation: ds-rail-wide-in 0.2s var(--ds-ease);
 }
 
-html[data-rail-collapsed="true"] .ds-rail:hover .ds-rail__brand-name {
-  display: inline;
+@keyframes ds-rail-wide-in {
+  0% {
+    opacity: 0;
+  }
 }
 
-html[data-rail-collapsed="true"] .ds-rail:hover .ds-rail__nav {
-  margin-left: -4px;
-  margin-right: calc(-1 * var(--ds-space-2));
-  padding-left: 4px;
-  gap: 2px;
+/* 点击收起后焦点回到 toggle，但不画焦点环（源码 focusWithoutRing） */
+.ds-rail__toggle.is-focus-silent:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
-html[data-rail-collapsed="true"] .ds-rail:hover .ds-rail__row {
-  width: auto;
-  height: auto;
-  padding: 7px var(--ds-space-3);
-  justify-content: flex-start;
-}
-
-html[data-rail-collapsed="true"] .ds-rail:hover .ds-rail__section {
-  display: block;
-}
-
-html[data-rail-collapsed="true"] .ds-rail:hover .ds-rail__label {
-  display: inline;
-}
-
-html[data-rail-collapsed="true"] .ds-rail:hover .ds-rail__user {
-  justify-content: flex-start;
-  padding-left: 2px;
-}
-
-html[data-rail-collapsed="true"] .ds-rail:hover .ds-rail__user-name {
-  display: inline;
-}
-
-html[data-rail-collapsed="true"] .ds-rail:hover .ds-rail__toggle {
-  width: 28px;
-  height: 28px;
-}
-
-html[data-rail-collapsed="true"] .ds-rail:hover .ds-rail__settings {
-  width: 100%;
-  height: 42px;
-  margin: 4px 0;
-  padding: 0 var(--ds-space-3);
-  gap: 10px;
-  justify-content: flex-start;
-}
-
-html[data-rail-collapsed="true"] .ds-rail:hover .ds-rail__actions {
-  justify-content: flex-start;
+@media (prefers-reduced-motion: reduce) {
+  html[data-rail-animating="true"] .ds-rail,
+  html[data-rail-settled="true"] .ds-rail__brand,
+  html[data-rail-settled="true"] .ds-rail__row,
+  html[data-rail-settled="true"] .ds-rail__nav,
+  html[data-rail-settled="true"] .ds-rail__toggle,
+  html[data-rail-settled="true"] .ds-rail__foot,
+  html[data-rail-wide-in="true"] .ds-rail__brand,
+  html[data-rail-wide-in="true"] .ds-rail__nav,
+  html[data-rail-wide-in="true"] .ds-rail__foot {
+    transition: none;
+    animation: none;
+  }
 }
 
 /* --- 设置入口（42px 行，右侧快捷键悬停显形） --- */
@@ -2216,8 +2208,8 @@ body.ds-modal-open {
   min-width: 0;
 }
 
-/* 折叠态：36×36 只留头像；指针进入侧栏后回宽（与其余侧栏行同一口径） */
-html[data-rail-collapsed="true"] .ds-account__trigger {
+/* 落位：账号入口 36×36 只留头像 */
+html[data-rail-settled="true"] .ds-account__trigger {
   justify-content: center;
   gap: 0;
   width: 36px;
@@ -2225,20 +2217,8 @@ html[data-rail-collapsed="true"] .ds-account__trigger {
   padding: 0;
 }
 
-html[data-rail-collapsed="true"] .ds-account__label {
+html[data-rail-settled="true"] .ds-account__label {
   display: none;
-}
-
-html[data-rail-collapsed="true"] .ds-rail:hover .ds-account__trigger {
-  justify-content: flex-start;
-  gap: 8px;
-  width: 100%;
-  height: 44px;
-  padding: 6px;
-}
-
-html[data-rail-collapsed="true"] .ds-rail:hover .ds-account__label {
-  display: block;
 }
 
 /* 菜单：向上弹（侧栏底部），表面 = 半透明填充 + 40px 模糊 + 0.5px 描边 */
@@ -2391,14 +2371,9 @@ html[data-color-mode="dark"] .ds-menu__material {
   color: var(--ds-label-tertiary);
   font-size: 13px;
 }
-/* 折叠态下账号块自身也要回宽：只给 trigger 100% 会因父块宽 36 而失效 */
-html[data-rail-collapsed="true"] .ds-account {
+/* 落位后账号块自身宽 36：只给 trigger 100% 会因父块宽 36 而失效 */
+html[data-rail-settled="true"] .ds-account {
   width: 36px;
-}
-
-html[data-rail-collapsed="true"] .ds-rail:hover .ds-account,
-html[data-rail-collapsed="true"] .as-sidebar:hover .ds-account {
-  width: 100%;
 }
 
 /* 设置面板两个分区面板共用 options 网格格位；显式兜住 [hidden]，避免样式表将来给

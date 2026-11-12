@@ -27,6 +27,7 @@
   --as-radius-panel: 28px;
   --as-dur-fast: 0.1s;
   --as-dur: 0.2s;
+  --as-dur-slow: 0.3s;
   --as-ease: cubic-bezier(0.4, 0, 0.2, 1);
 
   /* 布局常量（对应 --dsh-composer-card-max-width / side-clearance） */
@@ -880,20 +881,39 @@ textarea {
      已开始会话的输入区  ConversationRoot[data-phase=active] —— sticky 底部 + 36px 渐变
    ============================================================ */
 
-/* ---------- 侧栏折叠（rail） ---------- */
-.as-sidebar {
-  transition: flex-basis var(--as-dur) var(--as-ease),
-    width var(--as-dur) var(--as-ease), padding var(--as-dur) var(--as-ease);
+/* ---------- 侧栏收起（rail）：slide + crossfade（DSH SidebarRoot 口径） ---------- */
+html[data-rail-animating="true"] .as-sidebar {
+  transition: flex-basis var(--as-dur-slow) var(--as-ease),
+    width var(--as-dur-slow) var(--as-ease);
 }
 
 html[data-rail-collapsed="true"] .as-sidebar {
-  flex: 0 0 64px;
-  width: 64px;
+  flex: 0 0 56px;
+  width: 56px;
   padding: 18px 10px 6px;
+  overflow: hidden;
 }
 
-/* logoRow：折叠后靠左、高 36、margin-bottom 12 */
-html[data-rail-collapsed="true"] .as-logo-row {
+html[data-rail-collapsed="true"][data-rail-settled="true"] .as-sidebar {
+  overflow: visible;
+}
+
+html[data-rail-fading="true"] .as-brand__name,
+html[data-rail-fading="true"] .as-new__label,
+html[data-rail-fading="true"] .as-panel__title,
+html[data-rail-fading="true"] .ds-account__label {
+  opacity: 0;
+}
+
+html[data-rail-animating="true"] .as-brand__name,
+html[data-rail-animating="true"] .as-new__label,
+html[data-rail-animating="true"] .as-panel__title,
+html[data-rail-animating="true"] .ds-account__label {
+  transition: opacity var(--as-dur-fast) var(--as-ease);
+}
+
+/* logoRow：落位后靠左、高 36、margin-bottom 12 */
+html[data-rail-settled="true"] .as-logo-row {
   justify-content: flex-start;
   height: 36px;
   margin-bottom: 12px;
@@ -901,16 +921,18 @@ html[data-rail-collapsed="true"] .as-logo-row {
   overflow: visible;
 }
 
-html[data-rail-collapsed="true"] .as-brand__name {
+/* 折叠后品牌块整个卸载：DSH 折叠态 logoRow 只留 toggle（wide && 才渲染 brand） */
+html[data-rail-settled="true"] .as-brand {
   display: none;
 }
 
-html[data-rail-collapsed="true"] .as-brand__mark {
-  display: inline-flex;
+html[data-rail-settled="true"] .as-brand__name,
+html[data-rail-settled="true"] .as-brand__mark {
+  display: none;
 }
 
 /* newSession：36×36、透明底、无边框 */
-html[data-rail-collapsed="true"] .as-new {
+html[data-rail-settled="true"] .as-new {
   align-self: flex-start;
   width: 36px;
   height: 36px;
@@ -920,16 +942,16 @@ html[data-rail-collapsed="true"] .as-new {
   background: transparent;
 }
 
-html[data-rail-collapsed="true"] .as-new__label {
+html[data-rail-settled="true"] .as-new__label {
   max-width: 0;
 }
 
-html[data-rail-collapsed="true"] .as-panels {
+html[data-rail-settled="true"] .as-panels {
   gap: 12px;
   margin-bottom: 12px;
 }
 
-html[data-rail-collapsed="true"] .as-panel {
+html[data-rail-settled="true"] .as-panel {
   width: 36px;
   height: 36px;
   padding: 0;
@@ -938,140 +960,77 @@ html[data-rail-collapsed="true"] .as-panel {
   background-clip: border-box;
 }
 
-html[data-rail-collapsed="true"] .as-panel__title {
+html[data-rail-settled="true"] .as-panel__title {
   display: none;
 }
 
-html[data-rail-collapsed="true"] .as-region {
+html[data-rail-settled="true"] .as-region {
   display: none;
 }
 
-html[data-rail-collapsed="true"] .as-foot {
+html[data-rail-settled="true"] .as-foot {
   align-items: center;
 }
 
-html[data-rail-collapsed="true"] .as-user-row {
-  width: 36px;
-  margin: 8px 0 10px;
-  padding-left: 0;
-  justify-content: center;
+/* --- 落位入场（railIn）：控件自 translateX(49px) 淡入，底部只淡入 --- */
+html[data-rail-settled="true"] .as-logo-row,
+html[data-rail-settled="true"] .as-new,
+html[data-rail-settled="true"] .as-panel,
+html[data-rail-settled="true"] .as-rail-toggle {
+  animation: as-rail-in 0.15s var(--as-ease) backwards;
 }
 
-html[data-rail-collapsed="true"] .as-user__name {
-  display: none;
+html[data-rail-settled="true"] .as-foot {
+  animation: as-rail-fade-in 0.15s var(--as-ease) backwards;
 }
 
-html[data-rail-collapsed="true"] .as-settings-trigger {
-  width: 36px;
-  height: 36px;
-  margin: 0;
-  padding: 0;
-  gap: 0;
-  justify-content: center;
-  border-inline: 0;
-  background-clip: border-box;
+@keyframes as-rail-in {
+  0% {
+    opacity: 0;
+    transform: translateX(49px);
+  }
 }
 
-html[data-rail-collapsed="true"] .as-settings-trigger__label,
-html[data-rail-collapsed="true"] .as-settings-trigger__hint {
-  display: none;
+@keyframes as-rail-fade-in {
+  0% {
+    opacity: 0;
+  }
 }
 
-/* 悬停展开：DSH 的 rail 在指针进入时回到宽态 */
-html[data-rail-collapsed="true"] .as-sidebar:hover {
-  flex-basis: 280px;
-  width: 280px;
-  padding: 6px var(--as-sidebar-inline-padding);
+html[data-rail-wide-in="true"] .as-logo-row,
+html[data-rail-wide-in="true"] .as-new,
+html[data-rail-wide-in="true"] .as-panels,
+html[data-rail-wide-in="true"] .as-foot {
+  animation: as-rail-wide-in 0.2s var(--as-ease);
 }
 
-html[data-rail-collapsed="true"] .as-sidebar:hover .as-logo-row {
-  justify-content: flex-end;
-  height: 60px;
-  margin-bottom: 0;
-  padding: 8px 0 8px 8px;
-  overflow: hidden;
+@keyframes as-rail-wide-in {
+  0% {
+    opacity: 0;
+  }
 }
 
-html[data-rail-collapsed="true"] .as-sidebar:hover .as-brand__name {
-  display: inline-flex;
+.as-rail-toggle.is-focus-silent:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
-html[data-rail-collapsed="true"] .as-sidebar:hover .as-new {
-  align-self: stretch;
-  width: auto;
-  height: 38px;
-  margin: 0 calc(var(--as-sidebar-paint-inset) + 1px) 10px;
-  padding: 8px 12px;
-  border-color: var(--as-border-l3);
-  background: var(--as-elevated-fill);
+@media (prefers-reduced-motion: reduce) {
+  html[data-rail-animating="true"] .as-sidebar,
+  html[data-rail-settled="true"] .as-logo-row,
+  html[data-rail-settled="true"] .as-new,
+  html[data-rail-settled="true"] .as-panel,
+  html[data-rail-settled="true"] .as-rail-toggle,
+  html[data-rail-settled="true"] .as-foot,
+  html[data-rail-wide-in="true"] .as-logo-row,
+  html[data-rail-wide-in="true"] .as-new,
+  html[data-rail-wide-in="true"] .as-panels,
+  html[data-rail-wide-in="true"] .as-foot {
+    transition: none;
+    animation: none;
+  }
 }
 
-html[data-rail-collapsed="true"] .as-sidebar:hover .as-new__label {
-  max-width: 200px;
-}
-
-html[data-rail-collapsed="true"] .as-sidebar:hover .as-panels {
-  gap: 2px;
-}
-
-html[data-rail-collapsed="true"] .as-sidebar:hover .as-panel {
-  width: auto;
-  height: auto;
-  min-height: 36px;
-  padding: 7px calc(var(--as-sidebar-row-padding) - var(--as-sidebar-paint-inset));
-  justify-content: flex-start;
-  border-inline: var(--as-sidebar-paint-inset) solid transparent;
-  background-clip: padding-box;
-}
-
-html[data-rail-collapsed="true"] .as-sidebar:hover .as-panel__title {
-  display: inline;
-}
-
-html[data-rail-collapsed="true"] .as-sidebar:hover .as-region {
-  display: flex;
-}
-
-html[data-rail-collapsed="true"] .as-sidebar:hover .as-user-row {
-  width: auto;
-  justify-content: flex-start;
-  padding-left: 2px;
-}
-
-html[data-rail-collapsed="true"] .as-sidebar:hover .as-user__name {
-  display: block;
-}
-
-html[data-rail-collapsed="true"] .as-sidebar:hover .as-settings-trigger {
-  width: 100%;
-  height: 42px;
-  padding: 0 calc(var(--as-sidebar-row-padding) - var(--as-sidebar-paint-inset));
-  gap: var(--as-sidebar-label-gap);
-  justify-content: flex-start;
-  border-inline: var(--as-sidebar-paint-inset) solid transparent;
-  background-clip: padding-box;
-}
-
-html[data-rail-collapsed="true"] .as-sidebar:hover .as-settings-trigger__label {
-  display: block;
-}
-
-/* 折叠态的品牌标记（railMark，24px） */
-.as-brand__mark {
-  display: none;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: var(--as-radius-xs);
-  background: var(--as-selector);
-  color: var(--as-label-primary);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-/* 折叠按钮：常驻 logoRow 右侧（iconButton 28×28） */
 .as-rail-toggle {
   flex: none;
   display: grid;
@@ -1559,7 +1518,7 @@ html[data-rail-collapsed="true"] .as-foot-actions {
   min-width: 0;
 }
 
-html[data-rail-collapsed="true"] .ds-account__trigger {
+html[data-rail-settled="true"] .ds-account__trigger {
   justify-content: center;
   gap: 0;
   width: 36px;
@@ -1567,20 +1526,8 @@ html[data-rail-collapsed="true"] .ds-account__trigger {
   padding: 0;
 }
 
-html[data-rail-collapsed="true"] .ds-account__label {
+html[data-rail-settled="true"] .ds-account__label {
   display: none;
-}
-
-html[data-rail-collapsed="true"] .as-sidebar:hover .ds-account__trigger {
-  justify-content: flex-start;
-  gap: 8px;
-  width: 100%;
-  height: 44px;
-  padding: 6px;
-}
-
-html[data-rail-collapsed="true"] .as-sidebar:hover .ds-account__label {
-  display: block;
 }
 
 .ds-menu {
@@ -1731,14 +1678,9 @@ html[data-color-mode="dark"] .ds-menu__material {
   color: var(--as-label-tertiary);
   font-size: 13px;
 }
-/* 折叠态下账号块自身也要回宽：只给 trigger 100% 会因父块宽 36 而失效 */
-html[data-rail-collapsed="true"] .ds-account {
+/* 落位后账号块自身宽 36：只给 trigger 100% 会因父块宽 36 而失效 */
+html[data-rail-settled="true"] .ds-account {
   width: 36px;
-}
-
-html[data-rail-collapsed="true"] .ds-rail:hover .ds-account,
-html[data-rail-collapsed="true"] .as-sidebar:hover .ds-account {
-  width: 100%;
 }
 
 /* 设置面板两个分区面板共用 options 网格格位；显式兜住 [hidden]，避免样式表将来给
