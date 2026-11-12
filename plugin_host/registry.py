@@ -45,10 +45,10 @@ def get_plugin_switches():
     「处理写操作的那个进程」的缓存，其它 worker 会继续用旧快照 —— 3 worker 下停用插件
     后最多 30 秒内仍可访问（`PluginRouteGuardMiddleware` 正是用它决定是否拦路由）。
 
-    表很小（插件数 × 环境，个位数到十几行）。实测每请求查开关表：**普通页面 4 次、首页 6 次**
-    （来源：`PluginRouteGuardMiddleware` 1、`context_processors` 1、`charts.chart_switch_enabled`
-    经 `get_active_chart` 调用 2、首页另有 `views:get_enabled_plugins` / `views:plugin_counts` /
-    `workbench` 各 1）。成本可忽略；合并这几次查询见 roadmap 待办。
+    表很小（插件数 × 环境，个位数到十几行）。实测（CaptureQueriesContext 真发请求）每请求查开关表：
+    **首页 6 次；插件页 3~4 次**（有图表的页多一次——`charts.chart_switch_enabled` 经 `get_active_chart`
+    再查；首页另有 `views:get_enabled_plugins` / `views:plugin_counts` / `workbench` 各 1）。
+    成本可忽略；合并这几次查询见 roadmap 待办。
     信号方案在多进程下只清本进程，会把缺陷伪装成已修复；版本号方案需要共享存储，
     每请求至少两次查询，比直接读表更贵 —— 两种方案都**评估**过了（信号方案未实跑），结论是直接删。
 

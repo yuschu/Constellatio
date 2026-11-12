@@ -12,10 +12,14 @@
 搬家时没有放宽任何一处锁——这是 review 明确要求「不得因为搬家降级为无锁」的点。
 """
 
+import logging
+
 from django.db import transaction
 from django.utils import timezone
 
 from .models import Attendance, AttendanceRule
+
+logger = logging.getLogger(__name__)
 
 
 def judge_status(*, is_makeup, check_in, check_out, rule=None):
@@ -71,8 +75,10 @@ def check(user, *, action, sign_type=None, now=None):
 def register_makeup(operator, target, day, *, sign_type=None, check_in=None, check_out=None):
     """补卡登记（管理岗）：为指定员工指定日期写入补卡记录，返回落库后的记录。
 
-    `operator` 只用于留痕/日志语义，鉴权由调用方（视图的 `require_perm`）负责；
-    行锁范围与原实现一致，避免与员工并发打卡互相覆盖。
+    `operator` 用于**留痕日志**（谁替谁登记了补卡）——审计列（created_by/updated_by）由
+    `AuditModel` + `CurrentUserMiddleware` 自动填，但那是「这条记录被谁写过」，
+    不等于「谁发起了这次补卡」，所以这里额外记一条日志；shell 调用时 operator 可为 None。
+    鉴权由调用方（视图的 `require_perm`）负责；行锁范围与原实现一致。
     """
     with transaction.atomic():
         record, _ = Attendance.objects.get_or_create(user=target, date=day)
@@ -85,4 +91,7 @@ def register_makeup(operator, target, day, *, sign_type=None, check_in=None, che
         # status 由 model.save() 重算（is_makeup=True → 补卡），保持既有口径
         record.save(update_fields=[
             'sign_type', 'check_in', 'check_out', 'is_makeup', 'status', 'updated_at'])
+    logger.info(
+        '补卡登记 operator=%s target=%s date=%s status=%s',
+        getattr(operator, 'pk', None), target.pk, day, record.status)
     return record

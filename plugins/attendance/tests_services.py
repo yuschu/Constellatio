@@ -104,6 +104,16 @@ class CheckAndMakeupServiceTests(TestCase):
         self.assertEqual(record.status, Attendance.Status.MAKEUP)
         self.assertEqual(record.sign_type, Attendance.SignType.EXTERNAL)
 
+    def test_register_makeup_logs_operator(self):
+        """`operator` 不是死参数：补卡要留一条「谁替谁登记」的日志（审计列只记写入人）。"""
+        target = User.objects.create_user('svc_makeup_target3', password='pw')
+        with self.assertLogs('plugins.attendance.services', level='INFO') as captured:
+            services.register_makeup(self.manager, target, self.day,
+                                     check_in=_aware(self.day, time(9, 0)))
+        joined = '\n'.join(captured.output)
+        self.assertIn(f'operator={self.manager.pk}', joined)
+        self.assertIn(f'target={target.pk}', joined)
+
     def test_register_makeup_keeps_single_row_per_day(self):
         target = User.objects.create_user('svc_makeup_target2', password='pw')
         services.register_makeup(self.manager, target, self.day,
