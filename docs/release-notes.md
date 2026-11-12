@@ -28,7 +28,7 @@ tag `v1.7.16`（annotated）。基线 472 → **483 项全绿**（新增 11 条 
 
 - 中间件 `plugin_host/csp.py`：每请求一个 nonce（`request.csp_nonce`），响应头下发 10 条指令；
   位置在 `SecurityMiddleware` 之后，400/403 也带头；硬 500 由 `handler500` 补头；
-- `script-src 'self' 'nonce-…'`（**不给 `'unsafe-inline'`**）：13 处内联 `<script>` 加 nonce；
+- `script-src 'self' 'nonce-…'`（**不给 `'unsafe-inline'`**）：原始盘点 13 处内联 `<script>`，其中 approval 两模板自建的 `window.confirm` 绑定（2 处）已删除并并入公共脚本，**改造后 11 处全部带 nonce，实测零缺失**；
 - `style-src 'self' 'unsafe-inline'`：全站 137+ 处 `style=` 属性，收紧会让图表高度塌成 0；
 - 6 处 `onclick="return confirm('…')"` → `data-confirm` + 外部 `static/js/confirm.js`
   （nonce 救不了内联事件，这是把 `script-src` 保住的前提）；
