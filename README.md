@@ -56,6 +56,8 @@
 
 * 🧱 共享缓存（v1.7.3）：缓存后端换 `DatabaseCache`（复用现有 MySQL/sqlite，零新依赖），登录失败限流与 SSO Ticket 防重放靠 `cache.add` 主键冲突跨 gunicorn worker 成立；容器启动自动 `createcachetable`
 
+* 📦 私有化部署收口（v1.7.15）：Bootstrap 落到公共 static（断网样式完整）、生产模式缺 `SECRET_KEY` 拒绝启动、登出改 POST（GET 405）、CI 覆盖率门槛 94%
+
 * 🧱 业务逻辑下沉 services（v1.7.14）：用户状态机、考勤判定/打卡/补卡、审批附件校验与鉴权移入 services，视图只做「取参数 → 调 service → 响应」；四个视图降到 12~17 行，锁与事务边界原样搬家；新增 26 条可直接 `manage.py shell` 调用的 service 单测
 
 * ⚡ 插件开关即时生效（v1.7.13）：删掉 `registry._switch_cache` 进程内 TTL 缓存，停用/启用插件在**所有 worker** 上立刻生效（原先多 worker 下最多 30 秒内仍可访问）；同时清除 `PLUGIN_SWITCH_CACHE_TTL` / `PLUGIN_SWITCH_ERROR_TTL` 与失效钩子
@@ -231,8 +233,9 @@ Constellatio/
 | [docs/plugin-dev-v1712.md](docs/plugin-dev-v1712.md)                           | 插件开发 | v1.7.12：前端接过 401/403（图表请求的三态反馈） |
 | [docs/plugin-dev-v1713.md](docs/plugin-dev-v1713.md)                           | 插件开发 | v1.7.13：插件开关多 worker 立即可见（删进程内缓存） |
 | [docs/plugin-dev-v1714.md](docs/plugin-dev-v1714.md)                           | 插件开发 | v1.7.14：三处重业务逻辑下沉 services（views/services 判据） |
+| [docs/plugin-dev-v1715.md](docs/plugin-dev-v1715.md)                           | 插件开发 | v1.7.15：私有化部署收口（离线资源 / 安全默认值 / 登出 POST / 覆盖率门槛） |
 | [docs/roadmap.md](docs/roadmap.md)                                             | 规划   | 差距矩阵、v1.5–v2.0 迭代路线、修复项与文档债务                  |
 
 ## 📌 状态
 
-**v1.7.14 三处重业务逻辑下沉 services 已交付并部署**（467 项测试）：`user_status` 状态机、考勤状态判定/打卡/补卡、审批附件校验/落盘/鉴权移入 services，四个视图 12~17 行；锁与事务边界原样搬家。**v1.7.x 功能线到此收口**：真机浏览器冒烟已完成（401 跳登录且 next 为页面 URL、403 显示「无权查看该数据」、全程无 CSP 拦截），发版基线冻结为 tag `v1.7.14`（即 `docs/release-notes.md` 所在的提交）。**按 tag 检出前请先读 [docs/release-notes.md](docs/release-notes.md) 第二节**（`v1.7.3`/`v1.7.4` 的 tag 不含当版文档纠偏，按 main 指路）；v1.8 模板引擎单独起线
+**v1.7.15 私有化部署收口已交付并部署**（472 项测试，覆盖率 96%）：Bootstrap 本地化（6 处 CDN 清零、登录页 0 外网引用）、生产缺 SECRET_KEY 拒绝启动 + `check --deploy` 零告警、登出改 POST（GET 405）、CI 覆盖率门槛 94。上一交付 **v1.7.14**（467 项测试）。→ 下一步：发版前真机冒烟
