@@ -2124,3 +2124,285 @@ body.ds-modal-open {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+/* ==========================================================================
+   26. 账号入口与账号菜单（v2.0.7）
+   ------------------------------------------------------------------------
+   参数取自 dsh 源码字面量，不是截图采样：
+     AccountMenu.module.css（dsh-client-ui-settings-account）
+       trigger  height 44、padding 6、radius-md、gap 8、font-size 14、
+                hover interactive-bg-hover
+       未登录   height 32、line-height 20（[data-signed-out=true] 分支）
+       折叠态   width 36、height 36、padding 0、justify-content center
+       avatar   24×24、border-radius 50%、bg-skeleton、color label-tertiary
+       label    单行省略
+       未登录菜单 [role=menu] min-width 124、max-width 280、padding 4
+                 [role=menuitem] radius-md、gap 8、min-height 40、
+                 padding 8 10、font-size 14、line-height 22、图标 16×16
+     公共 Menu 表面（dsh-web-frontend index.css + ui-theme token）
+       surface  border-radius radius-lg（compact 走 radius-md）
+       material bg = --dsw-menu-surface-fill（浅 #fcfdfeb3 / 深 #303136a3）
+                backdrop-filter = --dsw-menu-backdrop-filter = blur(40px) saturate(150%)
+       stroke   --dsw-elevation-stroke = 0 0 0 .5px border-l3
+   token 映射：bg-skeleton → 本文件 --ds-bg-skeleton、menu-icon → label-secondary。
+   ========================================================================== */
+
+.ds-account {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.ds-account__trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 100%;
+  height: 44px;
+  padding: 6px;
+  color: var(--ds-label-primary);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: var(--ds-radius-md);
+  cursor: pointer;
+  user-select: none;
+}
+
+@media (hover: hover) {
+  .ds-account__trigger:hover {
+    background: var(--ds-interactive-hover);
+  }
+}
+
+.ds-account__trigger:focus-visible {
+  outline: var(--ds-focus-width) solid var(--ds-focus-ring);
+  outline-offset: 2px;
+}
+
+.ds-account__trigger--out {
+  height: 32px;
+  line-height: 20px;
+  color: var(--ds-label-primary);
+  text-decoration: none;
+}
+
+.ds-account__avatar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--ds-label-tertiary);
+  font-size: 13px;
+  background: var(--ds-bg-skeleton);
+  border-radius: 50%;
+}
+
+.ds-account__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ds-account__signed-out {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+/* 折叠态：36×36 只留头像；指针进入侧栏后回宽（与其余侧栏行同一口径） */
+html[data-rail-collapsed="true"] .ds-account__trigger {
+  justify-content: center;
+  gap: 0;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+}
+
+html[data-rail-collapsed="true"] .ds-account__label {
+  display: none;
+}
+
+html[data-rail-collapsed="true"] .ds-rail:hover .ds-account__trigger {
+  justify-content: flex-start;
+  gap: 8px;
+  width: 100%;
+  height: 44px;
+  padding: 6px;
+}
+
+html[data-rail-collapsed="true"] .ds-rail:hover .ds-account__label {
+  display: block;
+}
+
+/* 菜单：向上弹（侧栏底部），表面 = 半透明填充 + 40px 模糊 + 0.5px 描边 */
+.ds-menu {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 60;
+  min-width: 180px;
+  max-width: 280px;
+  padding: 4px;
+  border-radius: var(--ds-radius-lg);
+}
+
+.ds-menu[hidden] {
+  display: none;
+}
+
+.ds-menu__material {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: #fcfdfeb3;
+  border-radius: inherit;
+  box-shadow: 0 0 0 0.5px var(--ds-border-l3);
+  backdrop-filter: blur(40px) saturate(150%);
+}
+
+html[data-color-mode="dark"] .ds-menu__material {
+  background: #303136a3;
+}
+
+.ds-menu__list {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.ds-menu__form {
+  margin: 0;
+}
+
+.ds-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  color: var(--ds-label-primary);
+  font: inherit;
+  font-size: 14px;
+  line-height: 22px;
+  text-align: left;
+  text-decoration: none;
+  background: transparent;
+  border: 0;
+  border-radius: var(--ds-radius-md);
+  cursor: pointer;
+}
+
+.ds-menu__item:hover,
+.ds-menu__item:focus-visible {
+  background: var(--ds-interactive-hover);
+}
+
+.ds-menu__item:focus-visible {
+  outline: var(--ds-focus-width) solid var(--ds-focus-ring);
+  outline-offset: -2px;
+}
+
+.ds-menu__icon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: var(--ds-label-secondary);
+}
+
+.ds-menu__shortcut {
+  margin-left: auto;
+  color: var(--ds-label-tertiary);
+  font-size: 12px;
+}
+
+.ds-menu__badge {
+  margin-left: auto;
+  padding: 0 6px;
+  color: var(--ds-label-inverted);
+  background: var(--ds-state-business);
+  border-radius: var(--ds-radius-sm);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+/* 设置面板「我的」分区 */
+.ds-account-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.ds-account-card__avatar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  color: var(--ds-label-tertiary);
+  font-size: 16px;
+  background: var(--ds-bg-skeleton);
+  border-radius: 50%;
+}
+
+.ds-account-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ds-account-card__name {
+  color: var(--ds-label-primary);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 22px;
+}
+
+.ds-account-card__meta {
+  overflow: hidden;
+  color: var(--ds-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ds-settings__link {
+  color: var(--ds-link);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.ds-settings__state {
+  color: var(--ds-label-tertiary);
+  font-size: 13px;
+}
+/* 折叠态下账号块自身也要回宽：只给 trigger 100% 会因父块宽 36 而失效 */
+html[data-rail-collapsed="true"] .ds-account {
+  width: 36px;
+}
+
+html[data-rail-collapsed="true"] .ds-rail:hover .ds-account,
+html[data-rail-collapsed="true"] .as-sidebar:hover .ds-account {
+  width: 100%;
+}
+
+/* 设置面板两个分区面板共用 options 网格格位；显式兜住 [hidden]，避免样式表将来给
+   options 加 display 后把隐藏面板又画出来 */
+.ds-settings__options[hidden] {
+  display: none;
+}

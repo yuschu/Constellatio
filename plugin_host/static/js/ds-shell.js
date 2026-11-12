@@ -39,6 +39,81 @@
     });
   }
 
+  // ---------- 设置分区切换（通用 / 我的）----------
+  function initSettingsTabs(modal) {
+    var cells = modal.querySelectorAll('[data-ds-settings-tab]');
+    var panels = modal.querySelectorAll('[data-ds-settings-panel]');
+    if (cells.length === 0 || panels.length === 0) return;
+
+    function select(name) {
+      Array.prototype.forEach.call(cells, function (cell) {
+        var on = cell.getAttribute('data-ds-settings-tab') === name;
+        cell.classList.toggle('is-active', on);
+        if (on) cell.setAttribute('aria-current', 'true');
+        else cell.removeAttribute('aria-current');
+      });
+      Array.prototype.forEach.call(panels, function (panel) {
+        if (panel.getAttribute('data-ds-settings-panel') === name) panel.removeAttribute('hidden');
+        else panel.setAttribute('hidden', '');
+      });
+    }
+
+    Array.prototype.forEach.call(cells, function (cell) {
+      cell.addEventListener('click', function () {
+        select(cell.getAttribute('data-ds-settings-tab'));
+      });
+    });
+  }
+
+  // ---------- 账号菜单（dsh-client-ui-settings-account/AccountMenu）----------
+  function initAccount() {
+    var root = document.querySelector('[data-ds-account]');
+    if (!root) return;
+    var trigger = root.querySelector('[data-ds-account-trigger]');
+    var menu = root.querySelector('.ds-menu');
+    if (!trigger || !menu) return;
+
+    function isOpen() { return !menu.hasAttribute('hidden'); }
+
+    function open() {
+      menu.removeAttribute('hidden');
+      trigger.setAttribute('aria-expanded', 'true');
+      var first = menu.querySelector('[role=menuitem]');
+      if (first) first.focus({ preventScroll: true });
+    }
+
+    function close(refocus) {
+      if (!isOpen()) return;
+      menu.setAttribute('hidden', '');
+      trigger.setAttribute('aria-expanded', 'false');
+      if (refocus) trigger.focus({ preventScroll: true });
+    }
+
+    // 菜单自身算「内部」：点菜单项不经过 document 的关闭判断
+    menu.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+
+    trigger.addEventListener('click', function (e) {
+      e.preventDefault();
+      if (isOpen()) close(true); else open();
+    });
+
+    document.addEventListener('mousedown', function (e) {
+      if (isOpen() && !root.contains(e.target)) close(false);
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && isOpen()) {
+        e.preventDefault();
+        close(true);
+      }
+    });
+
+    // 点任一项都收起菜单；「设置」随后由 initSettings 打开面板
+    Array.prototype.forEach.call(menu.querySelectorAll('[role=menuitem]'), function (item) {
+      item.addEventListener('click', function () { close(false); });
+    });
+  }
+
   // ---------- 设置弹层 ----------
   function initSettings() {
     var modal = document.getElementById('ds-settings');
@@ -46,6 +121,8 @@
     var openers = document.querySelectorAll('[data-ds-settings-open]');
     var panel = modal.querySelector('.ds-settings__panel');
     var lastTrigger = null;
+
+    initSettingsTabs(modal);
 
     function isOpen() { return !modal.hasAttribute('hidden'); }
 
@@ -64,7 +141,12 @@
       modal.setAttribute('hidden', '');
       modal.setAttribute('aria-hidden', 'true');
       document.body.classList.remove('ds-modal-open');
-      if (lastTrigger) lastTrigger.focus({ preventScroll: true });
+      // 触发控件若在已收起的账号菜单里就不可见：焦点交还侧栏账号入口
+      var target = lastTrigger;
+      if (target && target.closest('[hidden]')) {
+        target = document.querySelector('[data-ds-account-trigger]') || null;
+      }
+      if (target) target.focus({ preventScroll: true });
     }
 
     Array.prototype.forEach.call(openers, function (el) {
@@ -143,6 +225,7 @@
   function boot() {
     initRail();
     initSettings();
+    initAccount();
     initComposer();
   }
 

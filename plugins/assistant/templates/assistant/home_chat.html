@@ -113,35 +113,70 @@
     </section>
 
     <div class="as-foot">
-      <div class="as-user-row">
-        <span class="as-avatar" aria-hidden="true">{{ request.user.last_name|default:request.user.username|slice:":1" }}</span>
-        <span class="as-user__name">{{ request.user.last_name|default:request.user.username }}</span>
-      </div>
-
-      <button type="button" class="as-settings-trigger" data-ds-settings-open
-              aria-haspopup="dialog" aria-controls="ds-settings">
-        <span class="as-settings-trigger__glyph" aria-hidden="true">
-          <svg class="as-ico" viewBox="0 0 16 16" width="16" height="16">
-            <circle cx="8" cy="8" r="2.2" stroke="currentColor" stroke-width="1.5" fill="none"/>
-            <path d="M8 2.4v1.6M8 12v1.6M2.4 8h1.6M12 8h1.6M4.05 4.05l1.13 1.13M10.82 10.82l1.13 1.13M11.95 4.05l-1.13 1.13M5.18 10.82L4.05 11.95"
-                  stroke="currentColor" stroke-width="1.5" fill="none"/>
-          </svg>
-        </span>
-        <span class="as-settings-trigger__label">{% trans "设置" %}</span>
-        <span class="as-settings-trigger__hint" aria-hidden="true">Ctrl+Alt+,</span>
-      </button>
-
-      <div class="as-foot-actions">
+      {# 账号入口：与业务页同一套 ds-account / ds-menu（dsh-client-ui-settings-account/AccountMenu） #}
+      <div class="ds-account" data-ds-account>
         {% if request.user.is_authenticated %}
-          {% if 'notify' in plugins_enabled %}
-          <a href="{% url 'notify:notify_list' %}" class="as-foot-link">{% trans "消息" %}</a>
-          {% endif %}
-          {% if 'user' in plugins_enabled %}
-          <a href="{% url 'user:profile' %}" class="as-foot-link">{% trans "我的" %}</a>
-          {% endif %}
+        <button type="button" class="ds-account__trigger" data-ds-account-trigger
+                aria-haspopup="menu" aria-expanded="false" aria-controls="ds-account-menu"
+                aria-label="{% trans '账号菜单' %}">
+          <span class="ds-account__avatar" aria-hidden="true">{{ request.user.last_name|default:request.user.username|slice:":1" }}</span>
+          <span class="ds-account__label">{{ request.user.last_name|default:request.user.username }}</span>
+        </button>
+
+        <div class="ds-menu" id="ds-account-menu" role="menu" hidden
+             aria-label="{% trans '账号菜单' %}">
+          <div class="ds-menu__material" aria-hidden="true"></div>
+          <div class="ds-menu__list">
+            <button type="button" role="menuitem" class="ds-menu__item" data-ds-settings-open
+                    aria-haspopup="dialog" aria-controls="ds-settings">
+              <span class="ds-menu__icon" aria-hidden="true">
+                <svg viewBox="0 0 16 16" width="16" height="16">
+                  <circle cx="8" cy="8" r="2.2" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                  <path d="M8 2.4v1.6M8 12v1.6M2.4 8h1.6M12 8h1.6M4.05 4.05l1.13 1.13M10.82 10.82l1.13 1.13M11.95 4.05l-1.13 1.13M5.18 10.82L4.05 11.95"
+                        stroke="currentColor" stroke-width="1.5" fill="none"/>
+                </svg>
+              </span>
+              <span>{% trans "设置" %}</span>
+              <span class="ds-menu__shortcut" aria-hidden="true">Ctrl+Alt+,</span>
+            </button>
+
+            {% if 'notify' in plugins_enabled %}
+            <a role="menuitem" class="ds-menu__item" href="{% url 'notify:notify_list' %}">
+              <span class="ds-menu__icon" aria-hidden="true">
+                <svg viewBox="0 0 16 16" width="16" height="16">
+                  <path d="M4 11h8M5.2 11V7.2a2.8 2.8 0 015.6 0V11M6.8 13h2.4"
+                        stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+                </svg>
+              </span>
+              <span>{% trans "消息" %}</span>
+              {% if notify_unread %}<span class="ds-menu__badge">{{ notify_unread }}</span>{% endif %}
+            </a>
+            {% endif %}
+
+            {% if 'auth' in plugins_enabled %}
+            <form method="post" action="{% url 'auth:logout' %}" class="ds-menu__form">
+              {% csrf_token %}
+              <button type="submit" role="menuitem" class="ds-menu__item">
+                <span class="ds-menu__icon" aria-hidden="true">
+                  <svg viewBox="0 0 16 16" width="16" height="16">
+                    <path d="M6.5 3.5H4a.5.5 0 00-.5.5v8a.5.5 0 00.5.5h2.5M9.5 10.5L12.5 8 9.5 5.5M12 8H6"
+                          stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+                  </svg>
+                </span>
+                <span>{% trans "登出" %}</span>
+              </button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+        {% else %}
+        <div class="ds-account__signed-out">
           {% if 'auth' in plugins_enabled %}
-          <form method="post" action="{% url 'auth:logout' %}" class="as-foot-form">{% csrf_token %}<button type="submit" class="as-foot-link">{% trans "登出" %}</button></form>
+          <a href="/plugins/auth/login/" class="ds-account__trigger ds-account__trigger--out">{% trans "登录" %}</a>
+          {% else %}
+          <span class="ds-account__label">{% trans "未登录" %}</span>
           {% endif %}
+        </div>
         {% endif %}
       </div>
     </div>
@@ -285,13 +320,19 @@
     <nav class="ds-settings__nav" aria-label="{% trans '设置分区' %}">
       <ul class="ds-settings__cells">
         <li>
-          <button type="button" class="ds-settings__cell is-active" aria-current="true">
+          <button type="button" class="ds-settings__cell is-active" aria-current="true"
+                  data-ds-settings-tab="general">
             {% trans "通用" %}
+          </button>
+        </li>
+        <li>
+          <button type="button" class="ds-settings__cell" data-ds-settings-tab="account">
+            {% trans "我的" %}
           </button>
         </li>
       </ul>
     </nav>
-    <div class="ds-settings__options" tabindex="0">
+    <div class="ds-settings__options" tabindex="0" data-ds-settings-panel="general">
       {% if 'language' in plugins_enabled %}
       <div class="ds-settings__row">
         <div>
@@ -352,6 +393,40 @@
         <div class="ds-settings__seg">
           <span class="ds-settings__opt is-active">Enter</span>
         </div>
+      </div>
+
+      <p class="ds-settings__version">Constellatio · {% trans "万物皆可插件" %}</p>
+    </div>
+
+    <div class="ds-settings__options" tabindex="0" data-ds-settings-panel="account" hidden>
+      <div class="ds-settings__row">
+        <div class="ds-account-card">
+          <span class="ds-account-card__avatar" aria-hidden="true">{{ request.user.last_name|default:request.user.username|slice:":1" }}</span>
+          <div class="ds-account-card__body">
+            <div class="ds-account-card__name">{{ request.user.last_name|default:request.user.username }}</div>
+            <div class="ds-account-card__meta">
+              {{ request.user.username }}{% if request.user.email %} · {{ request.user.email }}{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ds-settings__row">
+        <div>
+          <div class="ds-settings__row-title">{% trans "个人资料" %}</div>
+          <div class="ds-settings__row-desc">{% trans "姓名、邮箱与所属部门" %}</div>
+        </div>
+        {% if 'user' in plugins_enabled %}
+        <a class="ds-settings__link" href="{% url 'user:profile' %}">{% trans "打开" %}</a>
+        {% endif %}
+      </div>
+
+      <div class="ds-settings__row">
+        <div>
+          <div class="ds-settings__row-title">{% trans "登录状态" %}</div>
+          <div class="ds-settings__row-desc">{% trans "登出入口在侧栏账号菜单里" %}</div>
+        </div>
+        <span class="ds-settings__state">{% if request.user.is_authenticated %}{% trans "已登录" %}{% else %}{% trans "未登录" %}{% endif %}</span>
       </div>
 
       <p class="ds-settings__version">Constellatio · {% trans "万物皆可插件" %}</p>
