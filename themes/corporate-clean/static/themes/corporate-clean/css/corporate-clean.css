@@ -3707,6 +3707,33 @@ html:not([data-color-mode="dark"]) .lc-ov-session {
   display: flex;
   gap: var(--ds-space-2);
 }
+/* 统计格（签到详情的四张数卡）：DSH .lc-ov-kpis 的取法 —— auto-fit 列、16 间距、
+   标签 12-18 三级色、数值 26-32 主色 + tabular-nums，卡片内 4 间距。 */
+.at-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--ds-space-4);
+}
+
+.at-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+}
+
+.at-kpi__label {
+  color: var(--ds-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.at-kpi__value {
+  color: var(--ds-label-primary);
+  font-size: 26px;
+  line-height: 32px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
 
 .at-chart__canvas {
   width: 100%;

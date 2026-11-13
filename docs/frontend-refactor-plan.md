@@ -971,4 +971,8 @@ token 映射：`label-primary-foreground → --ds-on-primary`、`bg-module-platf
 
 **回归**：全量 `venv/run_tests_shim.py` **511 tests OK**（116s）、`ruff check plugins plugin_host` 全绿；`plugins/structure/tests.py` 的 `基本信息` 断言随行布局改成 `直属上级`（同一覆盖点）。
 
-**仍未收口（需拍板）**：`attendance:attendance_records`（286 行：6 项筛选 + 4 张统计卡 + 月度看板 + 明细表 + 补卡登记）、`attendance:attendance_stats`、`attendance:attendance_makeup` 三个**数据看板页**。它们没有父列表页，且正文是表格/图表而非设置项：塞进 `720` 正文列会显著压缩表格可读宽度。两种取法：①保持业务页（已按 §9.13.8 用 DSH 原语，仅统一表头/卡片密度）；②也套 `800×800` 面板（形态完全一致，但明细表只能用 720 宽 + 内部滚动）。等确认后再动。*
+**考勤三页的收口（用户拍板 ①）**：先核路由，`attendance:attendance_makeup` 是 POST 动作（登记后 302 回 `records/`）、`attendance:attendance_stats` 是 JSON 接口（`?month=` 图表数据源），两者都**不是页面**；真正待统一的只有 `attendance:attendance_records`（签到详情）。取法 ①：保持业务页宽度（明细表 8 列要横向可读），只把表头与卡片密度收回到考勤面板同一套 `at-*` 原语——`at-page`（纵向 16）/ `at-head`（标题 18-26 + 右侧徽标）/ `at-kpis`（四张数卡）/ `at-card` + `at-card__title`（15-22）/ `at-form` + `at-field`（标签 12-16 三级色）/ `at-actions` / `at-note`（12-18 三级色）；内联 `style="font-size:.75rem"` 与 `fs-3`/`fs-5` 全部清掉，`r-btn--plain` 换成 `r-btn--ghost`（§29 的 DSH ghost 取法）。CSS 在第 27 节 `.at-actions` 后追加 `.at-kpis`（`repeat(auto-fit,minmax(180px,1fr))` + `--ds-space-4` 间距）、`.at-kpi`（列向 + 4 间距）、`.at-kpi__label`（12-18 `--ds-label-tertiary`）、`.at-kpi__value`（26-32 `--ds-label-primary` 600 + `tabular-nums`）。
+
+**真机（1440×900，`/plugins/attendance/records/`）**：标题行 + 右侧时间范围徽标、6 项筛选（`at-field` 等宽 flex `1 1 10rem`，筛选/重置在 `at-actions` 换行起排）、四张数卡 180 起、月度看板与签到明细/补卡登记三张卡同 20 padding，明细表表头 10/16。模板测试原断言（`<td>迟到者</td>`、`月度看板`、`attendance-chart`、回退表、`本月暂无考勤记录`）全部保留。
+
+**回归**：`plugins.attendance` 73 tests OK（8.9s）；全量 `venv/run_tests_shim.py` **511 tests OK**（117s）；`ruff check plugins plugin_host` All checks passed。

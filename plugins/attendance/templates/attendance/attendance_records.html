@@ -2,223 +2,228 @@
 {% load i18n %}
 {% block title %}{% trans "签到详情" %} · Constellatio{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h2 class="mb-0">{% trans "签到详情" %}</h2>
-  <span class="r-badge">{{ start|date:"Y-m-d H:i" }} ~ {{ end|date:"Y-m-d H:i" }}</span>
-</div>
+{% comment %}
+v2.1.4：签到详情保持业务页宽度（明细表要横向可读），但表头 / 卡片 / 表单收回到考勤面板
+同一套 `at-*` 原语（§27 + §29）：`at-page` 纵向 16 间距、`at-head` 标题行、
+`at-kpis` 四个统计格、`at-card` 卡片列向 8 间距、`at-form` / `at-field` 表单、
+`at-note` 12-18 三级说明。不再用内联 flex/min-width 与 `.75rem` 硬编码。
+{% endcomment %}
+<div class="at-page">
+  <header class="at-head">
+    <h2 class="at-head__title">{% trans "签到详情" %}</h2>
+    <div class="at-head__aside">
+      <span class="r-badge">{{ start|date:"Y-m-d H:i" }} ~ {{ end|date:"Y-m-d H:i" }}</span>
+    </div>
+  </header>
 
-<div class="r-card mb-4">
-  <form method="get" class="d-flex flex-wrap align-items-end gap-2">
-    <div style="flex:1 1 9rem; min-width:8.5rem;">
-      <label class="form-label" for="start">{% trans "开始时间" %}</label>
-      <input class="r-input" type="datetime-local" id="start" name="start" value="{{ start_value }}">
-    </div>
-    <div style="flex:1 1 9rem; min-width:8.5rem;">
-      <label class="form-label" for="end">{% trans "结束时间" %}</label>
-      <input class="r-input" type="datetime-local" id="end" name="end" value="{{ end_value }}">
-    </div>
-    <div style="flex:1 1 7rem; min-width:6.5rem;">
-      <label class="form-label" for="status">{% trans "签到状态" %}</label>
-      <select class="r-input" id="status" name="status">
-        <option value="">{% trans "全部状态" %}</option>
-        {% for value, label in status_choices %}
-        <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div style="flex:1 1 7rem; min-width:6.5rem;">
-      <label class="form-label" for="sign_type">{% trans "签到类型" %}</label>
-      <select class="r-input" id="sign_type" name="sign_type">
-        <option value="">{% trans "全部类型" %}</option>
-        {% for value, label in sign_types %}
-        <option value="{{ value }}" {% if sign_type == value %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div style="flex:1 1 7rem; min-width:6.5rem;">
-      <label class="form-label" for="department">{% trans "部门" %}</label>
-      <select class="r-input" id="department" name="department">
-        <option value="">{% trans "全部部门" %}</option>
-        {% for dept in departments %}
-        <option value="{{ dept.id }}" {% if department_id == dept.id|stringformat:"s" %}selected{% endif %}>{{ dept.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div style="flex:1 1 8rem; min-width:7.5rem;">
-      <label class="form-label" for="q">{% trans "姓名或账号" %}</label>
-      <input class="r-input" type="search" id="q" name="q" value="{{ keyword }}" placeholder="{% trans "筛选" %}">
-    </div>
-    <div class="d-flex gap-2" style="flex:0 0 auto;">
-      <button class="r-btn" type="submit">{% trans "筛选" %}</button>
-      <a class="r-btn r-btn--plain" href="{% url 'attendance:attendance_records' %}">{% trans "重置" %}</a>
-    </div>
-  </form>
-</div>
+  <section class="r-card at-card" aria-label="{% trans "筛选" %}">
+    <form method="get" class="at-form">
+      <div class="at-field">
+        <label for="start">{% trans "开始时间" %}</label>
+        <input class="r-input" type="datetime-local" id="start" name="start" value="{{ start_value }}">
+      </div>
+      <div class="at-field">
+        <label for="end">{% trans "结束时间" %}</label>
+        <input class="r-input" type="datetime-local" id="end" name="end" value="{{ end_value }}">
+      </div>
+      <div class="at-field">
+        <label for="status">{% trans "签到状态" %}</label>
+        <select class="r-input" id="status" name="status">
+          <option value="">{% trans "全部状态" %}</option>
+          {% for value, label in status_choices %}
+          <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="at-field">
+        <label for="sign_type">{% trans "签到类型" %}</label>
+        <select class="r-input" id="sign_type" name="sign_type">
+          <option value="">{% trans "全部类型" %}</option>
+          {% for value, label in sign_types %}
+          <option value="{{ value }}" {% if sign_type == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="at-field">
+        <label for="department">{% trans "部门" %}</label>
+        <select class="r-input" id="department" name="department">
+          <option value="">{% trans "全部部门" %}</option>
+          {% for dept in departments %}
+          <option value="{{ dept.id }}" {% if department_id == dept.id|stringformat:"s" %}selected{% endif %}>{{ dept.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="at-field">
+        <label for="q">{% trans "姓名或账号" %}</label>
+        <input class="r-input" type="search" id="q" name="q" value="{{ keyword }}" placeholder="{% trans "筛选" %}">
+      </div>
+      <div class="at-actions">
+        <button class="r-btn" type="submit">{% trans "筛选" %}</button>
+        <a class="r-btn r-btn--ghost" href="{% url 'attendance:attendance_records' %}">{% trans "重置" %}</a>
+      </div>
+    </form>
+  </section>
 
-<div class="row g-4 mb-4">
-  <div class="col-md-3">
-    <div class="r-card">
-      <div class="text-muted" style="font-size:.75rem;">{% trans "签到记录" %}</div>
-      <div class="fs-3">{{ total }}</div>
+  <div class="at-kpis">
+    <div class="r-card at-kpi">
+      <span class="at-kpi__label">{% trans "签到记录" %}</span>
+      <span class="at-kpi__value">{{ total }}</span>
+    </div>
+    <div class="r-card at-kpi">
+      <span class="at-kpi__label">{% trans "涉及员工" %}</span>
+      <span class="at-kpi__value">{{ user_count }}</span>
+    </div>
+    <div class="r-card at-kpi">
+      <span class="at-kpi__label">{% trans "迟到次数" %}</span>
+      <span class="at-kpi__value">{{ late_count }}</span>
+    </div>
+    <div class="r-card at-kpi">
+      <span class="at-kpi__label">{% trans "缺卡次数" %}</span>
+      <span class="at-kpi__value">{{ missing_count }}</span>
     </div>
   </div>
-  <div class="col-md-3">
-    <div class="r-card">
-      <div class="text-muted" style="font-size:.75rem;">{% trans "涉及员工" %}</div>
-      <div class="fs-3">{{ user_count }}</div>
-    </div>
-  </div>
-  <div class="col-md-3">
-    <div class="r-card">
-      <div class="text-muted" style="font-size:.75rem;">{% trans "迟到次数" %}</div>
-      <div class="fs-3">{{ late_count }}</div>
-    </div>
-  </div>
-  <div class="col-md-3">
-    <div class="r-card">
-      <div class="text-muted" style="font-size:.75rem;">{% trans "缺卡次数" %}</div>
-      <div class="fs-3">{{ missing_count }}</div>
-    </div>
-  </div>
-</div>
 
-<div class="r-card mb-4">
-  <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
-    <h3 class="fs-5 mb-0">{% trans "月度看板" %}</h3>
+  <section class="r-card at-chart">
+    <div class="at-head at-head--tight">
+      <h3 class="at-card__title">{% trans "月度看板" %}</h3>
+      {% if chart %}
+      <div class="at-head__aside">
+        <label class="at-note" for="chart_month">{% trans "月份" %}</label>
+        <input class="r-input" type="month" id="chart_month" value="{{ month_value }}">
+      </div>
+      {% else %}
+      <span class="r-badge">{{ month_value }}</span>
+      {% endif %}
+    </div>
     {% if chart %}
-    <div class="d-flex align-items-center gap-2">
-      <label class="form-label mb-0" for="chart_month">{% trans "月份" %}</label>
-      <input class="r-input" type="month" id="chart_month" value="{{ month_value }}">
-    </div>
-    {% else %}
-    <span class="r-badge">{{ month_value }}</span>
+    <div id="attendance-chart" class="at-chart__canvas"
+         data-stats-url="{% url 'attendance:attendance_stats' %}"
+         data-month="{{ month_value }}"
+         data-department="{{ department_id }}"
+         role="img" aria-label="{% trans "月度看板" %}"></div>
     {% endif %}
-  </div>
-  {% if chart %}
-  <div id="attendance-chart" style="width:100%;height:360px;"
-       data-stats-url="{% url 'attendance:attendance_stats' %}"
-       data-month="{{ month_value }}"
-       data-department="{{ department_id }}"
-       role="img" aria-label="{% trans "月度看板" %}"></div>
-  {% endif %}
-  <div id="attendance-chart-fallback" {% if chart %}hidden{% endif %}
-       data-empty="{% trans "本月暂无考勤记录" %}">
+    <div id="attendance-chart-fallback" {% if chart %}hidden{% endif %}
+         data-empty="{% trans "本月暂无考勤记录" %}">
+      <table class="r-table">
+        <thead>
+          <tr>
+            <th>{% trans "日期" %}</th>
+            {% for value, label in status_choices %}
+            <th>{% trans label %}</th>
+            {% endfor %}
+            <th>{% trans "合计" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in chart_rows %}
+          <tr>
+            <td>{{ row.date }}</td>
+            <td>{{ row.normal }}</td>
+            <td>{{ row.late }}</td>
+            <td>{{ row.early }}</td>
+            <td>{{ row.missing }}</td>
+            <td>{{ row.makeup }}</td>
+            <td>{{ row.total }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="text-muted">{% trans "本月暂无考勤记录" %}</td></tr>
+          {% endfor %}
+        </tbody>
+        {% if chart_rows %}
+        <tfoot>
+          <tr>
+            <th>{% trans "合计" %}</th>
+            <td>{{ chart_totals.normal }}</td>
+            <td>{{ chart_totals.late }}</td>
+            <td>{{ chart_totals.early }}</td>
+            <td>{{ chart_totals.missing }}</td>
+            <td>{{ chart_totals.makeup }}</td>
+            <td>{{ chart_totals.records }}</td>
+          </tr>
+        </tfoot>
+        {% endif %}
+      </table>
+    </div>
+    <p class="at-note">{% trans "统计口径与签到记录一致；图表不可用时自动降级为表格。" %}</p>
+  </section>
+
+  <section class="r-card at-card">
+    <h3 class="at-card__title">{% trans "签到明细" %}</h3>
     <table class="r-table">
       <thead>
         <tr>
           <th>{% trans "日期" %}</th>
-          {% for value, label in status_choices %}
-          <th>{% trans label %}</th>
-          {% endfor %}
-          <th>{% trans "合计" %}</th>
+          <th>{% trans "姓名" %}</th>
+          <th>{% trans "账号" %}</th>
+          <th>{% trans "部门" %}</th>
+          <th>{% trans "签到类型" %}</th>
+          <th>{% trans "签到" %}</th>
+          <th>{% trans "签退" %}</th>
+          <th>{% trans "状态" %}</th>
         </tr>
       </thead>
       <tbody>
-        {% for row in chart_rows %}
+        {% for r in rows %}
         <tr>
-          <td>{{ row.date }}</td>
-          <td>{{ row.normal }}</td>
-          <td>{{ row.late }}</td>
-          <td>{{ row.early }}</td>
-          <td>{{ row.missing }}</td>
-          <td>{{ row.makeup }}</td>
-          <td>{{ row.total }}</td>
+          <td>{{ r.date|date:"Y-m-d" }}</td>
+          <td>{{ r.user.last_name|default:r.user.username }}</td>
+          <td>{{ r.user.username }}</td>
+          <td>{{ r.user.department.name|default:'—' }}</td>
+          <td>{% trans r.get_sign_type_display %}</td>
+          <td>{% if r.check_in %}{{ r.check_in|date:"H:i" }}{% else %}—{% endif %}</td>
+          <td>{% if r.check_out %}{{ r.check_out|date:"H:i" }}{% else %}—{% endif %}</td>
+          <td>
+            <span class="r-badge {% if r.status == 'normal' %}r-badge--blue{% elif r.status == 'late' or r.status == 'early' %}r-badge--orange{% endif %}">{% trans r.get_status_display %}</span>
+          </td>
         </tr>
         {% empty %}
-        <tr><td colspan="7" class="text-muted">{% trans "本月暂无考勤记录" %}</td></tr>
+        <tr><td colspan="8" class="text-muted">{% trans "当前条件下暂无签到记录" %}</td></tr>
         {% endfor %}
       </tbody>
-      {% if chart_rows %}
-      <tfoot>
-        <tr>
-          <th>{% trans "合计" %}</th>
-          <td>{{ chart_totals.normal }}</td>
-          <td>{{ chart_totals.late }}</td>
-          <td>{{ chart_totals.early }}</td>
-          <td>{{ chart_totals.missing }}</td>
-          <td>{{ chart_totals.makeup }}</td>
-          <td>{{ chart_totals.records }}</td>
-        </tr>
-      </tfoot>
-      {% endif %}
     </table>
-  </div>
-  <p class="text-muted mb-0 mt-2" style="font-size:.75rem;">{% trans "统计口径与签到记录一致；图表不可用时自动降级为表格。" %}</p>
-</div>
 
-<div class="r-card mb-4">
-  <table class="r-table">
-    <thead>
-      <tr>
-        <th>{% trans "日期" %}</th>
-        <th>{% trans "姓名" %}</th>
-        <th>{% trans "账号" %}</th>
-        <th>{% trans "部门" %}</th>
-        <th>{% trans "签到类型" %}</th>
-        <th>{% trans "签到" %}</th>
-        <th>{% trans "签退" %}</th>
-        <th>{% trans "状态" %}</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for r in rows %}
-      <tr>
-        <td>{{ r.date|date:"Y-m-d" }}</td>
-        <td>{{ r.user.last_name|default:r.user.username }}</td>
-        <td>{{ r.user.username }}</td>
-        <td>{{ r.user.department.name|default:'—' }}</td>
-        <td>{% trans r.get_sign_type_display %}</td>
-        <td>{% if r.check_in %}{{ r.check_in|date:"H:i" }}{% else %}—{% endif %}</td>
-        <td>{% if r.check_out %}{{ r.check_out|date:"H:i" }}{% else %}—{% endif %}</td>
-        <td>
-          <span class="r-badge {% if r.status == 'normal' %}r-badge--blue{% elif r.status == 'late' or r.status == 'early' %}r-badge--orange{% endif %}">{% trans r.get_status_display %}</span>
-        </td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="8" class="text-muted">{% trans "当前条件下暂无签到记录" %}</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+    {% include 'includes/pagination.html' %}
+  </section>
 
-  {% include 'includes/pagination.html' %}
-</div>
-
-<div class="r-card">
-  <h3 class="fs-5 mb-3">{% trans "补卡登记" %}</h3>
-  <form method="post" action="{% url 'attendance:attendance_makeup' %}" class="d-flex flex-wrap align-items-end gap-3">
-    {% csrf_token %}
-    <div>
-      <label class="form-label" for="makeup_user">{% trans "员工" %}</label>
-      <select class="r-input" id="makeup_user" name="user" required>
-        <option value="">{% trans "请选择员工" %}</option>
-        {% for u in employees %}
-        <option value="{{ u.id }}">{{ u.last_name|default:u.username }}（{{ u.username }}）</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div>
-      <label class="form-label" for="makeup_date">{% trans "日期" %}</label>
-      <input class="r-input" type="date" id="makeup_date" name="date" value="{{ end|date:'Y-m-d' }}" required>
-    </div>
-    <div>
-      <label class="form-label" for="makeup_in">{% trans "签到" %}</label>
-      <input class="r-input" type="time" id="makeup_in" name="check_in" value="09:00">
-    </div>
-    <div>
-      <label class="form-label" for="makeup_out">{% trans "签退" %}</label>
-      <input class="r-input" type="time" id="makeup_out" name="check_out" value="18:00">
-    </div>
-    <div>
-      <label class="form-label" for="makeup_type">{% trans "签到类型" %}</label>
-      <select class="r-input" id="makeup_type" name="sign_type">
-        {% for value, label in sign_types %}
-        <option value="{{ value }}">{{ label }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <button class="r-btn" type="submit">{% trans "登记补卡" %}</button>
-  </form>
-  <p class="text-muted mt-2 mb-0" style="font-size:.75rem;">{% trans "补卡由管理岗登记，状态标记为补卡，不改变原打卡时间口径。" %}</p>
+  <section class="r-card at-card">
+    <h3 class="at-card__title">{% trans "补卡登记" %}</h3>
+    <form method="post" action="{% url 'attendance:attendance_makeup' %}" class="at-form">
+      {% csrf_token %}
+      <div class="at-field">
+        <label for="makeup_user">{% trans "员工" %}</label>
+        <select class="r-input" id="makeup_user" name="user" required>
+          <option value="">{% trans "请选择员工" %}</option>
+          {% for u in employees %}
+          <option value="{{ u.id }}">{{ u.last_name|default:u.username }}（{{ u.username }}）</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="at-field">
+        <label for="makeup_date">{% trans "日期" %}</label>
+        <input class="r-input" type="date" id="makeup_date" name="date" value="{{ end|date:'Y-m-d' }}" required>
+      </div>
+      <div class="at-field">
+        <label for="makeup_in">{% trans "签到" %}</label>
+        <input class="r-input" type="time" id="makeup_in" name="check_in" value="09:00">
+      </div>
+      <div class="at-field">
+        <label for="makeup_out">{% trans "签退" %}</label>
+        <input class="r-input" type="time" id="makeup_out" name="check_out" value="18:00">
+      </div>
+      <div class="at-field">
+        <label for="makeup_type">{% trans "签到类型" %}</label>
+        <select class="r-input" id="makeup_type" name="sign_type">
+          {% for value, label in sign_types %}
+          <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="at-actions">
+        <button class="r-btn" type="submit">{% trans "登记补卡" %}</button>
+      </div>
+    </form>
+    <p class="at-note">{% trans "补卡由管理岗登记，状态标记为补卡，不改变原打卡时间口径。" %}</p>
+  </section>
 </div>
 {% endblock %}
 
