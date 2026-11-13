@@ -1009,3 +1009,22 @@ token 映射：`label-primary-foreground → --ds-on-primary`、`bg-module-platf
 - 测试：DepartmentFormPageTests 断言点搬到 ds-dept-form，并补 3 条（编辑深链开弹层且不渲染 col-lg-4、编辑 POST 成功改名并 302、编辑校验失败保持弹层打开且原名不变）。
 
 门禁：全量 514 tests OK（117s）、ruff All checks passed；容器重建后 `?view=edit&id=` 实拍弹层正常（.tmp-test/screens-v6/container/dept-edit.png）。
+
+### 9.13.16 破坏性操作确认框改用 DSH Modal（v2.1.5）
+
+用户口径：「停用 物理删除 禁用 冻结权限的弹窗移植 dsh 的」。这四处的确认一直是原生浏览器灰框（`plugin_host/static/js/confirm.js` 里 `window.confirm`）。
+
+字体/尺寸/间距全部照 DSH 源码字面量：
+
+- 组件本体：`@deepseek-ai/dsh-web-frontend/dist/assets/index-lh_YM6sT.css` 的 Modal 模块 —— `._root_14mp3_6{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px}`、`._mask_14mp3_18`、`._dialog_14mp3_33{gap:20px;width:min(380px,100%);padding:0 0 24px;border-radius:var(--dsw-radius-panel);background:var(--dsw-alias-bg-layer-2);box-shadow:var(--dsw-elevation-prominent)}`、`._header_14mp3_71{padding:22px 14px 12px 24px}`、`._title_14mp3_79{16px/24px/500}`、`._close_14mp3_87{28×28}`、`._description_14mp3_108{14px/22px;padding:0 24px}`、`._footer_14mp3_125{justify-content:flex-end;gap:8px}`。
+- 确认场景微调：`dsh-client-ui-schedule` 的 `.t-XoWW_confirmDialog{max-height:calc(100dvh - 48px)}`、`.t-XoWW_confirmPrompt{white-space:pre-wrap;overflow-wrap:anywhere;margin:0}`、`.t-XoWW_confirmActions{justify-content:flex-end;gap:8px}`；`Modal` 调用是 `title` + `description` + `footer`（`取消` 带 `data-modal-autofocus`、`确认`），所以本地也把焦点先给「取消」。
+- token 映射（唯一差异）：`--dsw-radius-panel`→`--ds-radius-panel`、`--dsw-alias-bg-layer-2`→`--ds-bg-layer-2`、`--dsw-elevation-prominent`→`--ds-elevation-overlay`、`--dsw-alias-bg-mask-1`→`--ds-bg-mask`、`--ds-transition-duration`+`--ds-ease-in-out`→`--ds-dur`+`--ds-ease`。DSH 遮罩另带 `backdrop-filter:var(--dsw-mask-blur)`，本项目无该 token（设置面板遮罩也一直无模糊），故不带模糊，已在 CSS 注释里写明。
+
+落点：
+
+- `themes/corporate-clean/static/themes/corporate-clean/css/corporate-clean.css` 新增第 32 节 `.ds-modal` / `__mask` / `__dialog` / `__content` / `__header` / `__title` / `__close` / `__description` / `__footer` + `@keyframes ds-modal-enter`（`prefers-reduced-motion` 里关动画）。
+- `plugin_host/static/js/confirm.js` 重写：仍是 `submit` 捕获 + 三种写法（按钮上 / `<form>` 上 / 表单内任意元素），命中 `data-confirm` 后 `preventDefault()` 再弹 DSH 弹窗；点「确认」用 `form.requestSubmit(submitter)` 复用原提交者（`resubmitting` 标志避免二次拦截）；取消 / 关闭 / 遮罩 / Esc 四路都能退出且不提交。弹窗节点 `role="dialog"` + `aria-modal` + `aria-labelledby`，文案 `textContent` 写入（不走 HTML 解析），高度复用 `.r-btn`。
+- 文案可翻译：`themes/corporate-clean/templates/base.html` 新增 `#ds-confirm-labels`（`data-title/data-cancel/data-confirm/data-close`，全部 `{% trans %}`），脚本只读不写死中文；`confirm.js` 链接同时带上 `?v={{ assets_version }}`，`_ASSET_STAMP_FILES` 追加 `plugin_host/static/js/confirm.js`，改脚本也会换版本戳（同名文件缓存问题不再复发）。
+- 覆盖的 11 个 `data-confirm` 点（部门停用/物理删除、用户禁用×2/冻结权限、审批删除、结构模板）无需改模板，机制换掉即生效。
+
+门禁：全量 **515 tests OK**（117s），`tests_csp` 相应改口 —— 脚本里 `window.confirm` 必须为 0、钉住 `ds-modal__*` 与 `#ds-confirm-labels`，并新增 `test_confirm_dialog_labels_are_translatable`；真机探针（`.tmp-test/confirm-probe.mjs`）实测部门/用户两页：弹窗 380×186 居中于 1440×900（x=530,y=357）、`取消` 默认聚焦、取消/关闭/Esc 都不提交；`.tmp-test/confirm-submit.mjs` 在临时部门 `zz_probe` 上走完「点停用 → 确认 → 302 回列表」并核到库里 `is_active=False`（探针部门已删）。容器重建后同套实测通过（`.tmp-test/screens-v7/container/`），CSS/JS 的 MD5 与 collected `staticfiles` 一致。
