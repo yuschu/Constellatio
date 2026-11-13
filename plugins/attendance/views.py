@@ -88,11 +88,11 @@ def _employee_count():
     return User.objects.filter(is_active=True).count()
 
 
-def _today_team(user, today, now):
+def _today_team(today, now):
     """今日在班情况：Jibble「Who's in」那一块。
 
-    姓名名单只给有 `attendance_report_view` 的人看（与签到详情同权限口径）；
-    其余人只拿到聚合数字，不暴露同事的打卡时刻。
+    v2.2.5：名单对全员可见（谁在班属于公共信息），不再按
+    `attendance_report_view` 收口；聚合数字与名单同一口径。
     """
     records = list(
         Attendance.objects.filter(date=today)
@@ -105,20 +105,19 @@ def _today_team(user, today, now):
     missing = max(total - len(signed), 0) if total else 0
 
     rows = []
-    if user.has_perm('attendance.attendance_report_view'):
-        for record in signed[:8]:
-            name = record.user.last_name or record.user.username
-            rows.append({
-                'name': name,
-                'initial': (name[:1] or '?').upper(),
-                'dept': record.user.department.name if record.user.department else '',
-                'check_in': timezone.localtime(record.check_in).strftime('%H:%M'),
-                'check_out': (timezone.localtime(record.check_out).strftime('%H:%M')
-                              if record.check_out else ''),
-                'hours_text': _hours_text(_worked_hours(record, now)),
-                'status_label': _(record.get_status_display()),
-                'done': record.check_out is not None,
-            })
+    for record in signed[:8]:
+        name = record.user.last_name or record.user.username
+        rows.append({
+            'name': name,
+            'initial': (name[:1] or '?').upper(),
+            'dept': record.user.department.name if record.user.department else '',
+            'check_in': timezone.localtime(record.check_in).strftime('%H:%M'),
+            'check_out': (timezone.localtime(record.check_out).strftime('%H:%M')
+                          if record.check_out else ''),
+            'hours_text': _hours_text(_worked_hours(record, now)),
+            'status_label': _(record.get_status_display()),
+            'done': record.check_out is not None,
+        })
 
     return {
         'rows': rows,
@@ -191,7 +190,7 @@ def attendance_context(request):
     # 月内工时合计：month_records 已在上面查过，这里只做内存累加，不再多打一轮库
     month_hours = sum(_worked_hours(item, now) for item in month_records)
     week = _week_bars(request.user, today, now)
-    team = _today_team(request.user, today, now)
+    team = _today_team(today, now)
     recent_rows = _recent_rows(request.user)
     if record is None:
         status_key = 'idle'

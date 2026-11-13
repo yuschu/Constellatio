@@ -1562,3 +1562,33 @@ body{--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l1);--dsh-scrollbar-thum
 - 全量 **556 tests OK**（555 + 1），`ruff check plugins plugin_host` 全过，`manage.py check` 干净。
 - 容器重建后 CSS 三处 MD5 一致 `bf9dc8bd9d891e68086ea0e5fc9c21d3`：本地源文件、`/app/themes/.../corporate-clean.css`、`/app/staticfiles/themes/.../corporate-clean.css`；容器 `/` 返回 200，模板弹层复测同为 5px / 795 / 深浅两套颜色。
 - 截图：`.tmp-test/screens-v21/`（`sb-classic-light|dark` 与裁切图、`sb-hover-light|dark`、`sb-scroll-light|dark`、`sb-rail-rest|hover`）与 `.tmp-test/screens-v21/container/`（`sb-light`、`sb-dark`）。
+
+
+### 9.13.33 考勤「谁在班」名单改为全员可见（v2.2.5 / 2026-11-13）
+
+**诉求与旧口径**
+
+- 上一轮交付时把「谁在班」的姓名名单收在 `attendance_report_view` 后面：无报表权限的人只拿聚合数字，同一张卡改标题为「最近打卡」并显示自己的最近记录；「我的最近打卡」整块也只对报表权限开放。
+- 本轮用户拍板：**全员可见**。
+
+**改动**
+
+1. `plugins/attendance/views.py::_today_team`：删掉 `if user.has_perm('attendance.attendance_report_view')` 包住 rows 的那层，名单改为一律构建；函数签名由 `(user, today, now)` 收成 `(today, now)`，唯一调用点同步。聚合数字（在班 / 已签退 / 迟到 / 未打卡 / 已签到比例）口径不变。
+2. `plugins/attendance/templates/attendance/_panel.html`：卡片标题固定「谁在班」，计数徽标与人员列表无条件渲染；删掉「无权限时在同一张卡里显示自己最近打卡」的 `else` 分支。
+3. 同一张 partial 里「我的最近打卡」去掉 `can_view_report` 外框：它只查 `user=本人`，属个人数据；普通员工原先靠那张卡看自己的历史，若只放开名单而不放开这块，员工会反而丢掉自己的记录。
+4. 权限边界未动：`签到详情`（团队报表页）仍然要 `attendance_report_view`；打卡、补签、统计、考勤规则各自的门禁一条没改。
+
+**门禁**
+
+- `AttendanceJibbleDashboardTests` 的 `test_staff_sees_aggregate_but_not_colleagues` 改名为 `test_staff_sees_team_names_without_report_entry`，断言无报表权限的员工能看到「谁在班」和同事姓名、能看到「我的最近打卡」，但**看不到**「签到详情」；经理那条（`test_manager_sees_team_and_activity_log`）保持不变。
+- 全量 **556 tests OK**，`ruff check plugins plugin_host` 全过，`manage.py check` 干净。
+
+**实测**
+
+- 本地 `:8011`，员工 `hr_li`（无 `attendance_report_view`）：HTTP 探针 `谁在班=True / 签到详情=False / 我的最近打卡=True`；管理员 `admin` 两项都为 `True`。
+- 播 4 条今日打卡（王 3h10m、赵 2h00m、郑 1h25m、李 0h40m，其中王/赵已签退）后：员工视角 `.atj-who` 由 249px 长到 284px，列出 4 人（姓名 / 部门 / 签到时刻 / 工时），`people=4`，无横向溢出；深色同版式；首页面板 `/?panel=attendance` 同样 `people=4`。截图 `.tmp-test/screens-v21/att-staff-who-light.png`、`att-staff-who-dark.png`、`att-home-staff.png`；演示数据测完已删除（当日记录归零）。
+- 容器 `:8000` 重建后三份文件 MD5 与本地一致：`views.py 4817256fe9ae6e4b7cc61d4c935ff30b`、`_panel.html 40d432acc0277d3c7fb2c9bb66709c56`、`tests.py 6d15cc8195a9ad8e1049d0a9a5a5ed7b`。容器内用 `hr_li` 的临时会话（`has_perm=False`）实测 `谁在班=True / 签到详情=False / 我的最近打卡=True`，`people=1`，截图 `.tmp-test/screens-v21/container/att-staff.png`、`att-staff-dark.png`；临时会话与 `/tmp` 脚本已删除。
+
+**仍待定的口径**
+
+- 卡片右上「在班 N」当前仍是「今日已签到人数」（含已签退的人），与「已签退 M」并列时会出现 `在班 4 · 已签退 2` 这种看起来重复的读法。是否拆成「在班 = 已签到 - 已签退」需要一个明确口径，本轮没有擅自改数字。

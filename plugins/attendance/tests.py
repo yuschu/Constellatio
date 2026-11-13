@@ -794,8 +794,8 @@ class AttendanceJibbleDashboardTests(TestCase):
     """v2.2.2：考勤看板 = Jibble 仪表盘。
 
     口径：今日状态英雄卡 / 今日概览 / 本周工时柱 / 谁在班 / 最近打卡。
-    姓名名单与「我的最近打卡」只给有 `attendance_report_view` 的人，
-    其余人只拿聚合数字（与签到详情页同权限）。
+    v2.2.5：谁在班名单与「我的最近打卡」对全员可见；
+    只有「签到详情」（团队报表）仍要 `attendance_report_view`。
     """
 
     @classmethod
@@ -854,7 +854,8 @@ class AttendanceJibbleDashboardTests(TestCase):
         self.assertEqual(week['total'], 0)
         self.assertEqual(week['total_text'], '0h 00m')
 
-    def test_staff_sees_aggregate_but_not_colleagues(self):
+    def test_staff_sees_team_names_without_report_entry(self):
+        """v2.2.5：无报表权限也能看「谁在班」名单；团队报表入口仍不给。"""
         day = timezone.localdate()
         record = Attendance.objects.create(user=self.colleague, date=day)
         record.check_in = timezone.now() - timedelta(hours=1)
@@ -865,11 +866,10 @@ class AttendanceJibbleDashboardTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '今日概览')
         self.assertContains(response, '本周工时')
-        self.assertContains(response, '最近打卡')
-        # 无报表权限：不出现同事姓名，也没有「谁在班」和管理岗的活动日志
-        self.assertNotContains(response, '同事丙')
-        self.assertNotContains(response, '谁在班')
-        self.assertNotContains(response, '我的最近打卡')
+        self.assertContains(response, '谁在班')
+        self.assertContains(response, '同事丙')
+        self.assertContains(response, '我的最近打卡')
+        self.assertNotContains(response, '签到详情')
 
     def test_manager_sees_team_and_activity_log(self):
         day = timezone.localdate()

@@ -155,56 +155,32 @@
 
     <section class="r-card atj-who">
       <div class="atj-card-head">
-        <h3 class="at-card__title atj-card-head__title">
-          {% if can_view_report %}{% trans "谁在班" %}{% else %}{% trans "最近打卡" %}{% endif %}
-        </h3>
-        {% if can_view_report %}
+        <h3 class="at-card__title atj-card-head__title">{% trans "谁在班" %}</h3>
         <span class="atj-who__counts">
           <span class="atj-dot atj-dot--live"></span>{% trans "在班" %} {{ team.signed }}
           <span class="atj-dot atj-dot--done"></span>{% trans "已签退" %} {{ team.done }}
         </span>
-        {% endif %}
       </div>
 
-      {% if can_view_report %}
-        {% if team.rows %}
-        <ul class="atj-people">
-          {% for person in team.rows %}
-          <li class="atj-person">
-            <span class="atj-avatar" aria-hidden="true">{{ person.initial }}</span>
-            <span class="atj-person__main">
-              <span class="atj-person__name">{{ person.name }}</span>
-              <span class="atj-person__meta">{% if person.dept %}{{ person.dept }} · {% endif %}{% blocktranslate with time=person.check_in %}{{ time }} 签到{% endblocktranslate %}</span>
-            </span>
-            <span class="atj-person__tail{% if person.done %} is-done{% endif %}">{{ person.hours_text }}</span>
-          </li>
-          {% endfor %}
-        </ul>
-        {% else %}
-        <p class="atj-empty">{% trans "今天还没有人签到" %}</p>
-        {% endif %}
+      {% if team.rows %}
+      <ul class="atj-people">
+        {% for person in team.rows %}
+        <li class="atj-person">
+          <span class="atj-avatar" aria-hidden="true">{{ person.initial }}</span>
+          <span class="atj-person__main">
+            <span class="atj-person__name">{{ person.name }}</span>
+            <span class="atj-person__meta">{% if person.dept %}{{ person.dept }} · {% endif %}{% blocktranslate with time=person.check_in %}{{ time }} 签到{% endblocktranslate %}</span>
+          </span>
+          <span class="atj-person__tail{% if person.done %} is-done{% endif %}">{{ person.hours_text }}</span>
+        </li>
+        {% endfor %}
+      </ul>
       {% else %}
-        {% if recent_rows %}
-        <ul class="atj-people">
-          {% for row in recent_rows %}
-          <li class="atj-person">
-            <span class="atj-avatar atj-avatar--date">{{ row.date }}</span>
-            <span class="atj-person__main">
-              <span class="atj-person__name">{{ row.status_label }}</span>
-              <span class="atj-person__meta">{{ row.weekday }} · {% if row.check_in %}{{ row.check_in }}{% else %}—{% endif %} → {% if row.check_out %}{{ row.check_out }}{% else %}—{% endif %}</span>
-            </span>
-            <span class="atj-person__tail">{{ row.hours_text }}</span>
-          </li>
-          {% endfor %}
-        </ul>
-        {% else %}
-        <p class="atj-empty">{% trans "还没有打卡记录" %}</p>
-        {% endif %}
+      <p class="atj-empty">{% trans "今天还没有人签到" %}</p>
       {% endif %}
     </section>
   </div>
 
-  {% if can_view_report %}
   <section class="r-card atj-feed">
     <div class="atj-card-head">
       <h3 class="at-card__title atj-card-head__title">{% trans "我的最近打卡" %}</h3>
@@ -224,7 +200,6 @@
     <p class="atj-empty">{% trans "还没有打卡记录" %}</p>
     {% endif %}
   </section>
-  {% endif %}
 
 {% if in_home_panel and perms.attendance.attendance_rule_manage %}
   {% include "attendance/_rules_modal.html" %}
