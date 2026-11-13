@@ -70,10 +70,12 @@
       </a>
       {% endfor %}
 
-      {% if more_menus %}
+      {% if common_menus %}
       {% comment %}
         更多：DSH 的 PanelMoreMenu 是一个与面板行同形的按钮（IconAppsAddOutlineRegular，
         展开 16 / 折叠 18），点开后弹出 .moreMenu（288px / max-width calc(100vw - 24px)）。
+        菜单行按 dsh-client-ui-entry-customization 的 EntryMenuContent：常用入口 +
+        分隔线 + 「浏览更多插件」（pinwheel）+「创建你的插件」（plus）。
       {% endcomment %}
       <div class="as-more" data-as-more>
         <button type="button" class="as-panel as-more__anchor" data-as-more-trigger
@@ -94,9 +96,42 @@
              aria-label="{% trans '更多' %}">
           <div class="ds-menu__material" aria-hidden="true"></div>
           <div class="ds-menu__list">
-            {% for menu in more_menus %}
-            <a role="menuitem" class="ds-menu__item" href="{{ menu.url }}"{% if menu.active %} aria-current="page"{% endif %}>{{ menu.label }}</a>
+            {% for menu in common_menus %}
+            <a role="menuitem" class="ds-menu__item" href="{{ menu.url }}"{% if menu.active %} aria-current="page"{% endif %}>
+              <span class="ds-menu__label">{{ menu.label }}</span>
+              {% if menu.active %}
+              <span class="ds-menu__check" aria-hidden="true">
+                <svg viewBox="0 0 16 16" width="14" height="14"
+                     fill="none" stroke="currentColor" stroke-width="1">
+                  <path d="M2.25 8.5L5.49732 11.7473C5.90519 12.1552 6.57263 12.1344 6.95426 11.7018L13.75 4"/>
+                </svg>
+              </span>
+              {% endif %}
+            </a>
             {% endfor %}
+            <div class="ds-menu__sep" role="separator"></div>
+            <a role="menuitem" class="ds-menu__item" href="/plugins/workspace/">
+              <span class="ds-menu__icon" aria-hidden="true">
+                <svg viewBox="0 0 16 16" width="14" height="14"
+                     fill="none" stroke="currentColor" stroke-width="1">
+                  <path d="M7.84457 5.06199C11.6605 4.93876 14.7962 6.14848 14.8484 7.76397C14.8875 8.97461 13.1838 10.0696 10.7215 10.5942"/>
+                  <path d="M5.12742 8.07731C5.00419 4.26138 6.21391 1.12568 7.8294 1.07351C9.04004 1.03441 10.135 2.73808 10.6596 5.20037"/>
+                  <path d="M8.02457 10.6802C4.20865 10.8034 1.07294 9.5937 1.02077 7.97821C0.981678 6.76758 2.68535 5.67262 5.14763 5.14798"/>
+                  <path d="M10.7476 7.89535C10.8708 11.7113 9.66109 14.847 8.0456 14.8991C6.83496 14.9382 5.74 13.2346 5.21536 10.7723"/>
+                </svg>
+              </span>
+              <span class="ds-menu__label">{% trans "浏览更多插件" %}</span>
+            </a>
+            <a role="menuitem" class="ds-menu__item" href="{{ create_plugin_url }}">
+              <span class="ds-menu__icon" aria-hidden="true">
+                <svg viewBox="0 0 16 16" width="14" height="14"
+                     fill="none" stroke="currentColor" stroke-width="1">
+                  <path d="M8 2V14"/>
+                  <path d="M2 8H14"/>
+                </svg>
+              </span>
+              <span class="ds-menu__label">{% trans "创建你的插件" %}</span>
+            </a>
           </div>
         </div>
       </div>
@@ -219,7 +254,7 @@
               <label class="as-sr-only" for="as-input">{% trans "输入消息" %}</label>
               <textarea id="as-input" class="as-input" rows="1" data-ds-input data-locked="{% if not model_configured %}1{% else %}0{% endif %}"
                         placeholder="{% trans '描述你要处理的事，/ 调用指令' %}"
-                        {% if not model_configured %}disabled{% endif %}></textarea>
+                        {% if not model_configured %}disabled{% endif %}>{{ draft_prompt }}</textarea>
               <div class="as-bar">
                 <button type="button" class="as-add" aria-label="{% trans '附加文件' %}"
                         {% if not model_configured %}disabled{% endif %}>
@@ -268,7 +303,7 @@
         <label class="as-sr-only" for="as-input">{% trans "输入消息" %}</label>
         <textarea id="as-input" class="as-input" rows="1" data-ds-input data-locked="{% if not model_configured %}1{% else %}0{% endif %}"
                   placeholder="{% trans '描述你要处理的事，/ 调用指令' %}"
-                  {% if not model_configured %}disabled{% endif %}></textarea>
+                  {% if not model_configured %}disabled{% endif %}>{{ draft_prompt }}</textarea>
         <div class="as-bar">
           <button type="button" class="as-add" aria-label="{% trans '附加文件' %}"
                   {% if not model_configured %}disabled{% endif %}>

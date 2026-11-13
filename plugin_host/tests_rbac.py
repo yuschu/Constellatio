@@ -69,9 +69,14 @@ class MenuGuardTests(TestCase):
         user = User.objects.create_user('mgr', password='pw')
         _role_with(user, '人力资源经理', 'attendance_report_view')
         self.client.force_login(user)
+        # 首页「更多」只放常用入口白名单（考勤/审批/抄送/消息），不再平铺全部业务菜单
         home = self.client.get('/')
-        self.assertContains(home, '签到详情')
-        self.assertNotContains(home, '插件开关')
+        self.assertContains(home, '更多')
+        self.assertNotContains(home, '签到详情')
+        # 业务页侧栏仍按权限平铺：有 attendance_report_view 才看得到签到详情
+        dashboard = self.client.get('/dashboard/')
+        self.assertContains(dashboard, '签到详情')
+        self.assertNotContains(dashboard, '插件开关')
 
 
 class AttendanceRecordsTests(TestCase):

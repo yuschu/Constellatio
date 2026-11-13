@@ -139,7 +139,10 @@ class AssistantHomePageTests(TestCase):
         # 「更多」抽屉存在（v2.0.10 起按 DSH PanelMoreMenu 做成按钮 + 浮层菜单），且确实承载了插件业务菜单
         self.assertIn('data-as-more-trigger', html)
         self.assertIn('id="as-more-menu"', html)
-        self.assertTrue(response.context['more_menus'])
+        self.assertTrue(response.context['common_menus'])
+        # DSH EntryMenuContent 的两条固定行（zh 文案原文）
+        self.assertIn('浏览更多插件', html)
+        self.assertIn('创建你的插件', html)
         # 顶部固定入口只有两条：助手 / 看板（「新会话」与「功能」由模板固定，不走 menus）
         self.assertEqual(len(response.context['primary_menus']), 2)
 

@@ -1037,10 +1037,24 @@ html[data-rail-collapsed="true"] .as-rail-toggle > svg {
   height: 18px;
 }
 
+/* 折叠态 iconButton 口径（dsh .collapsed .iconButton）：radius-md / 36×36 / label-primary */
 html[data-rail-collapsed="true"] .as-rail-toggle {
   width: 36px;
   height: 36px;
   margin-top: 0;
+  border-radius: var(--as-radius-md);
+  color: var(--as-label-primary);
+}
+
+/* dsh .iconButton.toggle:focus-visible{outline:focus-ring-width solid focus-ring-color;outline-offset:-2px}
+   focus-ring-color 回落 state-business-primary = deepseek-500 #4176e6 / dark deepseek-400 #7aaaff */
+.as-rail-toggle:focus-visible {
+  outline: 2px solid #4176e6;
+  outline-offset: -2px;
+}
+
+html[data-color-mode="dark"] .as-rail-toggle:focus-visible {
+  outline-color: #7aaaff;
 }
 
 /* ---------- 设置入口（42px 行） ---------- */
@@ -1557,21 +1571,47 @@ html[data-color-mode="dark"] .ds-menu__material {
 .ds-menu__item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   box-sizing: border-box;
   width: 100%;
-  min-height: 40px;
-  padding: 8px 10px;
+  min-height: 34px;
+  padding: 6px 8px;
   color: var(--as-label-primary);
   font: inherit;
-  font-size: 14px;
-  line-height: 22px;
+  font-size: 13px;
+  line-height: 20px;
   text-align: left;
   text-decoration: none;
   background: transparent;
   border: 0;
   border-radius: var(--as-radius-md);
   cursor: pointer;
+}
+
+.ds-menu__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds-menu__check {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  color: var(--as-label-primary);
+}
+
+/* DSH 的菜单分隔线（MenuItemButton separatorBefore）：
+   height .5px / margin 3px 8px / background border-l2 */
+.ds-menu__sep {
+  height: 0.5px;
+  margin: 3px 8px;
+  background: var(--as-border-l2);
 }
 
 .ds-menu__item:hover,
@@ -1589,8 +1629,8 @@ html[data-color-mode="dark"] .ds-menu__material {
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   color: var(--as-label-secondary);
 }
 

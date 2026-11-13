@@ -1668,3 +1668,12 @@ msgstr "For assistance, please contact your administrator."
 
 msgid "如需协助，请把响应头里的 X-Request-Id 报给管理员。"
 msgstr "If you need help, quote the X-Request-Id response header to your administrator."
+
+msgid "更多"
+msgstr "More"
+
+msgid "浏览更多插件"
+msgstr "Browse other plugins"
+
+msgid "创建你的插件"
+msgstr "Create your plugin"
