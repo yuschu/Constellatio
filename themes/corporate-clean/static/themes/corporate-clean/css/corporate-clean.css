@@ -4281,3 +4281,147 @@ html:not([data-color-mode="dark"]) .lc-ov-session {
   margin-inline: auto;
 }
 
+/* ==========================================================================
+   第 32 节：确认弹窗（DSH Modal 原语，字面量移植）
+   --------------------------------------------------------------------------
+   来源：@deepseek-ai/dsh-web-frontend/dist/assets/index-lh_YM6sT.css 的
+   Modal 模块（._root_14mp3_6 / ._mask_14mp3_18 / ._dialog_14mp3_33 /
+   ._content_14mp3_63 / ._header_14mp3_71 / ._title_14mp3_79 /
+   ._close_14mp3_87 / ._description_14mp3_108 / ._footer_14mp3_125），
+   以及 dsh-client-ui-schedule 的 .t-XoWW_confirmDialog{max-height:calc(100dvh - 48px)}
+   / .confirmPrompt{margin:0} / .confirmActions{justify-content:flex-end;gap:8px}。
+   字面量 vs 本项目的差异只有 token 映射：
+     --dsw-radius-panel          -> --ds-radius-panel (28px)
+     --dsw-alias-bg-layer-2      -> --ds-bg-layer-2
+     --dsw-elevation-prominent   -> --ds-elevation-overlay
+     --dsw-alias-bg-mask-1       -> --ds-bg-mask
+     --dsw-alias-interactive-bg-hover -> --ds-interactive-hover
+     --ds-transition-duration + --ds-ease-in-out -> --ds-dur + --ds-ease
+   DSH 遮罩另带 backdrop-filter:var(--dsw-mask-blur)，本项目没有该 token、
+   设置面板遮罩也一直是无模糊的 --ds-bg-mask，故此处同样不带模糊。
+   ========================================================================== */
+.ds-modal {
+  pointer-events: auto;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.ds-modal[hidden] {
+  display: none;
+}
+
+.ds-modal__mask {
+  position: absolute;
+  inset: 0;
+  background: var(--ds-bg-mask);
+}
+
+.ds-modal__dialog {
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: min(380px, 100%);
+  max-height: calc(100dvh - 48px);
+  padding: 0 0 24px;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--ds-radius-panel);
+  background: var(--ds-bg-layer-2);
+  box-shadow: var(--ds-elevation-overlay);
+  animation: ds-modal-enter var(--ds-dur) var(--ds-ease) linear;
+  outline: none;
+}
+
+.ds-modal__dialog:focus {
+  outline: none;
+}
+
+.ds-modal__content {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.ds-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 22px 14px 12px 24px;
+}
+
+.ds-modal__title {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 500;
+  color: var(--ds-label-primary);
+}
+
+.ds-modal__close {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--ds-radius-sm);
+  background: transparent;
+  color: var(--ds-label-secondary);
+  cursor: pointer;
+  outline: none;
+  transition: background-color var(--ds-dur-fast) linear;
+  corner-shape: var(--ds-corner);
+}
+
+.ds-modal__close:hover {
+  background: var(--ds-interactive-hover);
+}
+
+.ds-modal__description {
+  margin: 0;
+  padding: 0 24px;
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 400;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--ds-label-primary);
+}
+
+.ds-modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 24px;
+  flex-shrink: 0;
+}
+
+@keyframes ds-modal-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-modal__dialog {
+    animation: none;
+  }
+}

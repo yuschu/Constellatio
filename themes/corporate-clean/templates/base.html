@@ -240,9 +240,16 @@
     </div>
   </div>
 
+  {# v2.1.5：确认弹窗（DSH Modal 原语）的文案，JS 只读不写，保持可翻译 #}
+  <div id="ds-confirm-labels" hidden
+       data-title="{% trans '确认操作' %}"
+       data-cancel="{% trans '取消' %}"
+       data-confirm="{% trans '确认' %}"
+       data-close="{% trans '关闭' %}"></div>
+
   <script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
   <script src="{% static 'js/ds-shell.js' %}?v={{ assets_version }}" defer></script>
-  <script src="{% static 'js/confirm.js' %}" defer></script>
+  <script src="{% static 'js/confirm.js' %}?v={{ assets_version }}" defer></script>
   <script nonce="{{ request.csp_nonce }}">
     (function () {
       var el = document.getElementById('page-loader');

@@ -133,7 +133,8 @@ class InlineScriptTests(TestCase):
 
     def test_confirm_dialog_is_bound_once(self):
         """确认逻辑只能有一份实现：approval 模板曾自带绑定脚本 + 页脚日志脚本，
-        若两处都在，点「通过」会弹两次确认框。这里钉住「自建绑定已并入 confirm.js」。"""
+        若两处都在，点「通过」会弹两次确认框。这里钉住「自建绑定已并入 confirm.js」。
+        v2.1.5：原生 window.confirm 已整体换成 DSH Modal 确认弹窗，脚本里一个都不许剩。"""
         base = Path(settings.BASE_DIR)
         for rel in ('plugins/approval/templates/approval/approval_detail.html',
                     'plugins/approval/templates/approval/approval_list.html'):
@@ -141,7 +142,25 @@ class InlineScriptTests(TestCase):
             self.assertNotIn('window.confirm', text, f'{rel} 仍有自己的确认绑定')
         confirm_js = (base / 'plugin_host/static/js/confirm.js').read_text(encoding='utf-8')
         self.assertIn('data-confirm', confirm_js)
-        self.assertEqual(confirm_js.count('window.confirm'), 1)
+        self.assertNotIn('window.confirm', confirm_js)
+        # 弹窗形态钉住：DSH Modal 三类节点全在，且文案从 #ds-confirm-labels 读（可翻译）
+        for token in ('ds-modal__dialog', 'ds-modal__mask', 'ds-modal__description',
+                      'ds-modal__footer', 'ds-confirm-labels', 'requestSubmit'):
+            self.assertIn(token, confirm_js, token)
+
+    def test_confirm_dialog_labels_are_translatable(self):
+        """弹窗文案必须在模板里走 {% trans %}，脚本里不写死中文。"""
+        base = Path(settings.BASE_DIR)
+        base_html = (base / 'themes/corporate-clean/templates/base.html').read_text(encoding='utf-8')
+        self.assertIn('id="ds-confirm-labels"', base_html)
+        for attr in ('data-title', 'data-cancel', 'data-confirm', 'data-close'):
+            self.assertIn(attr, base_html, attr)
+        css = (base / 'themes/corporate-clean/static/themes/corporate-clean/css/'
+               'corporate-clean.css').read_text(encoding='utf-8')
+        for token in ('.ds-modal {', '.ds-modal__dialog', '.ds-modal__mask',
+                      'width: min(380px, 100%)', 'border-radius: var(--ds-radius-panel)',
+                      'max-height: calc(100dvh - 48px)'):
+            self.assertIn(token, css, token)
 
     def test_confirm_script_is_loaded_and_self_hosted(self):
         self.client.force_login(self.admin)
