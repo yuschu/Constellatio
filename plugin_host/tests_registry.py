@@ -123,6 +123,8 @@ class MenuPermissionTests(TestCase):
         urls = [menu['url'] for menu in get_menus(self.admin)]
         self.assertLess(urls.index('/'), urls.index('/plugins/workspace/'))
         self.assertLess(urls.index('/plugins/workspace/'), urls.index('/dashboard/'))
+        # v2.0.10：考勤紧跟看板（order 4），其余菜单保持注册序
+        self.assertLess(urls.index('/dashboard/'), urls.index('/plugins/attendance/'))
 
     def test_frozen_user(self):
         self._assert_equivalent(self.frozen)

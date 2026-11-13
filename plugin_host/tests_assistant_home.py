@@ -136,8 +136,9 @@ class AssistantHomePageTests(TestCase):
         self.client.force_login(self.user)
         response = self.client.get('/')
         html = response.content.decode()
-        # 「功能」抽屉存在，且确实承载了插件业务菜单
-        self.assertIn('as-more__list', html)
+        # 「更多」抽屉存在（v2.0.10 起按 DSH PanelMoreMenu 做成按钮 + 浮层菜单），且确实承载了插件业务菜单
+        self.assertIn('data-as-more-trigger', html)
+        self.assertIn('id="as-more-menu"', html)
         self.assertTrue(response.context['more_menus'])
         # 顶部固定入口只有两条：助手 / 看板（「新会话」与「功能」由模板固定，不走 menus）
         self.assertEqual(len(response.context['primary_menus']), 2)

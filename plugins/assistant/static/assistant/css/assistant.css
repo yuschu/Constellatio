@@ -308,6 +308,12 @@ textarea {
   color: var(--as-label-primary);
 }
 
+/* DSH：折叠态图标放大到 18（renderSlot size = wide ? 16 : 18） */
+html[data-rail-settled="true"] .as-panel__glyph .as-ico {
+  width: 18px;
+  height: 18px;
+}
+
 .as-panel__glyph {
   flex: none;
   display: inline-flex;
@@ -322,57 +328,28 @@ textarea {
   white-space: nowrap;
 }
 
-/* 「更多」：summary 与行同形，列表向上弹出 */
+/* 「更多」：DSH PanelMoreMenu —— anchor 复用 panelRow（.moreAnchor 只有
+   flex-direction: column; display: flex），浮层 .moreMenu 是 288px / max-width calc(100vw - 24px)。
+   浮层表面复用账号菜单的 .ds-menu，位置由 ds-shell.js 的 initMore 摆放（等价 DSH 的 portal 菜单，
+   不被侧栏 overflow 裁切）。 */
 .as-more {
-  position: relative;
-}
-
-.as-panel--summary {
-  list-style: none;
-}
-
-.as-panel--summary::-webkit-details-marker {
-  display: none;
-}
-
-.as-panel--summary[aria-expanded="true"],
-.as-more[open] > .as-panel--summary {
-  background-color: var(--as-interactive-hover);
-}
-
-.as-more__list {
-  position: absolute;
-  z-index: 20;
-  top: calc(100% + 4px);
-  left: 3px;
-  right: 3px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  max-height: 232px;
-  margin: 0;
-  padding: 4px;
-  overflow-y: auto;
-  list-style: none;
-  border-radius: var(--as-radius-md);
-  background: var(--as-input-major);
-  box-shadow: 0 0 0 0.5px var(--border-elevation),
-    0 4px 16px #00000008, 0 0 24px #00000008;
-  corner-shape: superellipse(1.5);
 }
 
-.as-more__list a {
-  display: block;
-  padding: 7px 9px;
-  border-radius: var(--as-radius-sm);
-  color: var(--as-label-secondary);
-  font-size: 14px;
-  line-height: 22px;
+.as-more__anchor {
+  width: 100%;
 }
 
-.as-more__list a:hover {
-  background: var(--as-interactive-hover);
-  color: var(--as-label-primary);
+/* 覆盖 .ds-menu 的默认 absolute / 280px 上限，落到 DSH .moreMenu 的字面量 */
+div.as-more__menu {
+  position: fixed;
+  top: 0;
+  bottom: auto;
+  left: 0;
+  min-width: 0;
+  width: 288px;
+  max-width: calc(100vw - 24px);
 }
 
 /* regionArea：margin-left -4 / margin-right -8 / padding-left 4 */

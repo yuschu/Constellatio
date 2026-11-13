@@ -182,6 +182,84 @@
     });
   }
 
+  // ---------- 侧栏「更多」 ----------
+  // DSH 的 PanelMoreMenu 是 anchor 附近弹出的 portal 菜单（Menu portal=true）；
+  // 这里用 fixed 定位做等价实现：优先向上弹，上方不够就翻到下方，并夹在视口内。
+  function initMore() {
+    var root = document.querySelector('[data-as-more]');
+    if (!root) return;
+    var trigger = root.querySelector('[data-as-more-trigger]');
+    var menu = root.querySelector('.as-more__menu');
+    if (!trigger || !menu) return;
+
+    function isOpen() { return !menu.hasAttribute('hidden'); }
+
+    function place() {
+      var r = trigger.getBoundingClientRect();
+      var vw = document.documentElement.clientWidth;
+      var vh = document.documentElement.clientHeight;
+      var gap = 4;
+      var edge = 8;
+      // 先按自然高度量一次，再决定向上还是向下、以及是否需要限高滚动
+      menu.style.maxHeight = 'none';
+      menu.style.overflowY = '';
+      var w = menu.offsetWidth;
+      var h = menu.offsetHeight;
+      var above = r.top - gap - edge;
+      var below = vh - r.bottom - gap - edge;
+      var up = above >= below;
+      var avail = Math.max(120, up ? above : below);
+      if (h > avail) {
+        menu.style.maxHeight = Math.round(avail) + 'px';
+        menu.style.overflowY = 'auto';
+      }
+      var top = up ? r.top - gap - Math.min(h, avail) : r.bottom + gap;
+      var left = Math.min(Math.max(edge, r.left), Math.max(edge, vw - w - edge));
+      menu.style.left = Math.round(left) + 'px';
+      menu.style.top = Math.round(top) + 'px';
+    }
+
+    function open() {
+      menu.removeAttribute('hidden');
+      trigger.setAttribute('aria-expanded', 'true');
+      place();
+      var first = menu.querySelector('[role=menuitem]');
+      if (first) first.focus({ preventScroll: true });
+    }
+
+    function close(refocus) {
+      if (!isOpen()) return;
+      menu.setAttribute('hidden', '');
+      trigger.setAttribute('aria-expanded', 'false');
+      if (refocus) trigger.focus({ preventScroll: true });
+    }
+
+    menu.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+
+    trigger.addEventListener('click', function (e) {
+      e.preventDefault();
+      if (isOpen()) close(true); else open();
+    });
+
+    document.addEventListener('mousedown', function (e) {
+      if (isOpen() && !root.contains(e.target)) close(false);
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && isOpen()) {
+        e.preventDefault();
+        close(true);
+      }
+    });
+
+    Array.prototype.forEach.call(menu.querySelectorAll('[role=menuitem]'), function (item) {
+      item.addEventListener('click', function () { close(false); });
+    });
+
+    // 侧栏宽窄切换 / 窗口尺寸变化后重新摆位（DSH 的 portal 菜单同样跟随 anchor）
+    window.addEventListener('resize', function () { if (isOpen()) place(); });
+  }
+
   // ---------- 设置弹层 ----------
   function initSettings() {
     var modal = document.getElementById('ds-settings');
@@ -294,6 +372,7 @@
     initRail();
     initSettings();
     initAccount();
+    initMore();
     initComposer();
   }
 

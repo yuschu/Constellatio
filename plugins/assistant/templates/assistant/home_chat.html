@@ -71,25 +71,35 @@
       {% endfor %}
 
       {% if more_menus %}
-      <details class="as-more">
-        <summary class="as-panel as-panel--summary">
+      {% comment %}
+        更多：DSH 的 PanelMoreMenu 是一个与面板行同形的按钮（IconAppsAddOutlineRegular，
+        展开 16 / 折叠 18），点开后弹出 .moreMenu（288px / max-width calc(100vw - 24px)）。
+      {% endcomment %}
+      <div class="as-more" data-as-more>
+        <button type="button" class="as-panel as-more__anchor" data-as-more-trigger
+                aria-haspopup="menu" aria-expanded="false" aria-controls="as-more-menu"
+                aria-label="{% trans '更多' %}">
           <span class="as-panel__glyph" aria-hidden="true">
-            <svg class="as-ico" viewBox="0 0 16 16" width="16" height="16">
-              <circle cx="3.6" cy="8" r="1.25" fill="currentColor"/>
-              <circle cx="8" cy="8" r="1.25" fill="currentColor"/>
-              <circle cx="12.4" cy="8" r="1.25" fill="currentColor"/>
+            <svg class="as-ico" viewBox="0 0 16 16" width="16" height="16"
+                 fill="none" stroke="currentColor" stroke-width="1">
+              <rect x="2.25" y="2.25" width="4" height="4" rx="1"/>
+              <rect x="2.25" y="9.75" width="4" height="4" rx="1"/>
+              <rect x="9.75" y="9.75" width="4" height="4" rx="1"/>
+              <path d="M11.75 1.75v5M9.25 4.25h5"/>
             </svg>
           </span>
           <span class="as-panel__title">{% trans "更多" %}</span>
-        </summary>
-        <ul class="as-more__list">
-          {% for menu in more_menus %}
-          <li>
-            <a href="{{ menu.url }}"{% if menu.active %} class="is-active" aria-current="page"{% endif %}>{{ menu.label }}</a>
-          </li>
-          {% endfor %}
-        </ul>
-      </details>
+        </button>
+        <div class="ds-menu as-more__menu" id="as-more-menu" role="menu" hidden
+             aria-label="{% trans '更多' %}">
+          <div class="ds-menu__material" aria-hidden="true"></div>
+          <div class="ds-menu__list">
+            {% for menu in more_menus %}
+            <a role="menuitem" class="ds-menu__item" href="{{ menu.url }}"{% if menu.active %} aria-current="page"{% endif %}>{{ menu.label }}</a>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
       {% endif %}
     </nav>
 
