@@ -25,6 +25,7 @@ from plugin_host.context_processors import (
     DEFAULT_COLOR_MODE,
     HOME_PANEL_URLS,
 )
+from plugin_host.registry import plugin_enabled
 
 # 顶部固定入口对应的菜单 URL，元组顺序即侧栏渲染顺序（v2.1.0 起与
 # 业务页侧栏的「已由主页承载」清单同源，避免两处各写一套）。
@@ -48,6 +49,16 @@ PANEL_TITLES = {
 # 只有考勤有二级页「考勤规则」；权限不足时退回上一级面板，不出 403。
 PANEL_SUBS = {
     'attendance': ('rules',),
+}
+
+# v2.1.7：面板 ←→ 插件 app_key。`/plugins/<name>/` 停用后由
+# PluginRouteGuardMiddleware 直接 404，但首页面板走的是 `/`，那层中间件管不到——
+# 结果就是「侧栏入口没了，`?panel=attendance` 却照样渲染出考勤看板」。
+# 入口与能用的口径必须同一个：这里按同一个开关再判一次，停用即回落对话态。
+# 看板（/dashboard/）是容器自己的视图，没有插件开关，故不登记。
+PANEL_PLUGIN_KEYS = {
+    'attendance': 'attendance',
+    'workspace': 'workspace',
 }
 
 SUB_TITLES = {
@@ -135,9 +146,16 @@ def home(request):
 
 
 def _resolve_panel(request):
-    """校验 `?panel=`：未知 key 与「当前账号点得亮、URL 却打得开」都回对话态。"""
+    """校验 `?panel=`：未知 key、「当前账号点得亮、URL 却打得开」都回对话态。
+
+    v2.1.7：插件停用也要回对话态——入口（侧栏 / 菜单）按启用插件生成，
+    面板正文若不按同一个开关判定，就会出现「入口隐藏了但 `?panel=` 还能用」。
+    """
     panel = request.GET.get('panel') or 'chat'
     if panel == 'chat' or panel not in PANEL_TITLES:
+        return 'chat'
+    plugin_key = PANEL_PLUGIN_KEYS.get(panel)
+    if plugin_key and not plugin_enabled(plugin_key):
         return 'chat'
     user = request.user
     if panel == 'workspace' and not (

@@ -210,6 +210,24 @@ class DashboardDataTests(TestCase):
         self.assertTrue(response.context['cards']['plugins']['alert'])
         self.assertContains(response, '插件未全部启用')
 
+    def test_dashboard_links_drop_with_disabled_plugins(self):
+        """v2.1.7：看板卡片上的入口也归启停管——停用插件的链接不能留在页面上。
+
+        卡片正文（统计数字）已经按 enabled_names 收敛，但标题右侧那几个深链
+        是写死在模板里的，停用后点了就是 404，等于把入口留在了明面上。
+        """
+        from plugins.workspace.models import PluginSwitch
+        for key in ('approval', 'structure'):
+            PluginSwitch.objects.create(app_key=key, enabled=False)
+        self.client.force_login(self.admin)
+        response = self.client.get('/dashboard/')
+        html = response.content.decode()
+        self.assertNotIn('/plugins/approval/', html)
+        self.assertNotContains(response, '查看组织架构')
+        self.assertNotContains(response, '审批中心')
+        # 插件卡片本身（管理插件的入口）不受影响
+        self.assertEqual(response.status_code, 200)
+
     def test_chart_disabled_degrades_to_numbers_and_tables(self):
         with override_settings(OA_CHARTS='none'):
             self.client.force_login(self.admin)

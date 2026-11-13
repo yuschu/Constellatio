@@ -1208,6 +1208,34 @@ input:focus-visible{outline:1px solid state-business;outline-offset:2px}
 
 **门禁**：全量 **529 tests OK**（新增 `test_rules_page_is_not_a_sidebar_menu`、`test_rules_page_still_reachable_by_deep_link`、`test_message_center_is_not_a_sidebar_menu`，并把 `test_unread_badge_in_nav` 改成认账号菜单的「消息」），ruff 通过。
 
+### 9.13.23 插件停用：入口藏掉，页面也必须断（v2.1.7）
+
+**用户口径**：「插件关闭后怎么还能使用，关闭后相应的入口也要隐藏」。
+
+**先说链路本来有两层**（这是先前评审认定「已闭环」的依据，也是这次的盲区所在）：
+1. **菜单层**：`get_menus(user, get_enabled_plugins())` —— 停用的插件根本不会进菜单列表，侧栏 / 首页三格 / 「更多」抽屉 / 账号菜单里的「消息」（`{% if 'notify' in plugins_enabled %}`）全都是启用插件才渲染。
+2. **路由层**：`PluginRouteGuardMiddleware` 对 `/plugins/<name>/` 每请求核对开关，停用直接 404，子路径（`/plugins/attendance/rules/`）同样拦。
+
+**盲区是 `/` 上的首页面板**：`?panel=attendance` 走的是 `plugins/assistant/views.py:_resolve_panel`，那里只判「key 认不认 + 有没有权限」，没判启停。于是 `/plugins/attendance/` 已经 404、侧栏「考勤」也消失了，`/?panel=attendance` 却照样把考勤看板渲染出来 —— 「入口藏了、页面还能用」，正是用户看到的现象。
+
+**同一类漏还有看板卡片上写死的深链**：`home_dashboard.html` 里「审批中心 →」（两处）、「打开插件开关 →」、「查看组织架构 →」都是硬编码链接，只做了 `notice` / `notify` 两张卡的门禁，其余四处在插件停用后仍在页面上，点进去 404。
+
+**改法**
+1. `assistant/views.py` 新增 `PANEL_PLUGIN_KEYS = {'attendance': 'attendance', 'workspace': 'workspace'}`，`_resolve_panel` 里按同一个 `plugin_enabled(key)` 再判一次，停用即回落对话态（二级页 `?sub=rules` 随之一起失效）。看板（`/dashboard/`）是容器自己的视图，没有插件开关，不登记。
+2. `home_dashboard.html` 四处深链加 `{% if 'approval' in plugins_enabled %}` / `'workspace'` / `'structure'` 门禁。
+
+**实测（本地 8011，admin，直改 `PluginSwitch` 后复原）**
+- 停用 `attendance`：`/plugins/attendance/` 404、`/plugins/attendance/rules/` 404；`/?panel=attendance` 回落 `data-active-panel="chat"`（无 `at-head`）；首页侧栏只剩 插件 / 看板 / 更多（考勤那格消失）。
+- 停用 `approval` + `structure`：`/dashboard/` 与 `/` 上都不再有 `/plugins/approval/`、`/plugins/structure/`，也没有「审批中心」「查看组织架构」文案；两个深链各自 404；侧栏的审批三条一起消失。
+- 复原（删掉开关行 → 回到 `OA_PLUGINS` 静态默认）后两页恢复原状。
+
+**门禁**：全量 **531 tests OK**（新增 `test_disabled_plugin_panel_falls_back_to_chat`、`test_dashboard_links_drop_with_disabled_plugins`），ruff 通过。
+
+**容器**：重建后 MD5 对齐 `plugins/assistant/views.py d9329511e675e40b49e9a92b2a0daade`、`plugin_host/templates/home_dashboard.html 876b63fcdd0a73b05b78574636539dbc`。容器 8000 上按同一手法直改开关复验：停 `attendance` → `/?panel=attendance`、`/?panel=attendance&sub=rules` 都是 `data-active-panel="chat"`、无 `at-head`，`/plugins/attendance/` 404；停 `approval` → `/dashboard/` 与 `/` 均无 `/plugins/approval/` 链接，深链 404。两处开关均已复原（删行 → 回静态默认）。截图 `.tmp-test/screens-v14/off-panel-attendance.png`、`off-home.png`。
+
+**没跟着藏的（记账）**：看板「插件分布」那张卡的预览行仍会列出停用插件的**历史留痕条数**（`workbench.build_dashboard` 的 pie 是 `BlockchainRecord.values('plugin')` 分组，只按 `blockchain` 自身启停判定）。那是统计口径不是入口、点点不进去，本版不动；要改就把 pie 也按 `enabled_names` 过滤，但那会让停用插件的留痕记录在统计里「凭空消失」，数据口径得单独拍板。
+
+
 **容器**：`docker compose up -d --build web` 重建，7 个文件 MD5 与本地逐一对齐（`plugins/attendance/apps.py 919dcb73acbbd889ebb0fc15dbc51123`、`plugins/notify/apps.py a3a3a1f1d78c2e0fcffb6d747990618d`、`plugins/assistant/views.py 072ff362754bf585fc30b4806b082138`、`attendance/_panel.html 7113de7a274b68cf992dde6857f94fcf`、`base.html f5b25bb1fe925baf5f63cf2a8b1e7974`、`home_chat.html 5e89ecb38d10bd1f489f0a38f2c4b133`、`ds-shell.js 5a1f7d146380ad337feb0dd66e87aec1`），`GET /plugins/auth/login/?next=/` 200。同一支探针在容器 8000 上复跑，数值与本地逐条一致：业务页侧栏同样 10 项、首页侧栏同样 9 项（考勤 / 插件 / 看板 + 更多六项），考勤 ⚙ 原地开「考勤规则」852 高、关闭回 `/plugins/attendance/`；账号菜单「消息」原地开「消息中心」296 高，点列表那条 → 原地换「审批详情 #106」（663 高），`__noReload` 仍存活，关闭回 `/plugins/user/departments/`。截图 `.tmp-test/screens-v13/container/`。
 
 > 容器重建后的**首次**探针里，消息中心那一步退化成了整页跳（`__noReload` 丢失、host 未打开）；此后同一支探针连跑两次、外加一支「只开菜单 + 点消息」的最小探针（含把点击提前到页面 `readyState` 刚 complete 的 150 ms 版本）全部正常，没能复现。原因**未定位**，不按已修记账：现有证据只说明该步偶发一次原生导航，`ds-shell.js` 的门面是 `DOMContentLoaded` 之后才挂上 `[data-ds-panel]` 的委托，真实早于它点击确实会走原生锚点，但首轮失败时页面早已加载完，对不上。

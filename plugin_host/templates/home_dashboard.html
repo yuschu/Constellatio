@@ -276,7 +276,9 @@
           <span class="lc-card-title-text">{% trans "部门签到" %}</span>
           {% else %}
           <span class="lc-card-title-text">{% trans "我的单据" %}</span>
+          {% if 'approval' in plugins_enabled %}
           <a class="lc-card-link" href="/plugins/approval/">{% trans "审批中心" %} →</a>
+          {% endif %}
           {% endif %}
         </div>
         <div class="lc-ov-tile-body">
@@ -311,7 +313,9 @@
       <div class="lc-card lc-ov-tile">
         <div class="lc-card-title">
           <span class="lc-card-title-text">{% trans "流程快捷发起" %}</span>
+          {% if 'approval' in plugins_enabled %}
           <a class="lc-card-link" href="{% url 'approval:approval_list' %}">{% trans "审批中心" %} →</a>
+          {% endif %}
         </div>
         <div class="lc-ov-tile-body">
           {% for s in shortcuts %}
@@ -349,7 +353,9 @@
           </div>
           <div class="lc-ov-session-preview">
             <span class="lc-ov-session-preview-label">{% trans "开关" %}</span>
+            {% if 'workspace' in plugins_enabled %}
             <a class="lc-ov-session-preview-text" href="{% url 'workspace:switch_list' %}">{% trans "打开插件开关" %} →</a>
+            {% endif %}
           </div>
         </div>
         {% endif %}
@@ -387,7 +393,9 @@
           </div>
           <div class="lc-ov-session-preview">
             <span class="lc-ov-session-preview-label">{% trans "组织" %}</span>
+            {% if 'structure' in plugins_enabled %}
             <a class="lc-ov-session-preview-text" href="/plugins/structure/">{% trans "查看组织架构" %} →</a>
+            {% endif %}
           </div>
         </div>
         {% endif %}

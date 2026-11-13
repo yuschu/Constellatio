@@ -170,6 +170,32 @@ class AssistantHomePageTests(TestCase):
         self.assertIn('data-active-panel="chat"', chat)
         self.assertIn('as-hero__title', chat)
 
+    def test_disabled_plugin_panel_falls_back_to_chat(self):
+        """v2.1.7：插件停用后首页面板不能绕过守卫。
+
+        `/plugins/<name>/` 由 PluginRouteGuardMiddleware 404，但面板走的是 `/` ——
+        只隐藏入口、`?panel=attendance` 还能渲染出考勤看板，就是「关了还能用」。
+        """
+        PluginSwitch.objects.create(app_key='attendance', enabled=False)
+        admin = User.objects.create_superuser('home_admin_off', '', 'pw')
+        self.client.force_login(admin)
+
+        # 业务深链照旧 404
+        self.assertEqual(self.client.get('/plugins/attendance/').status_code, 404)
+        self.assertEqual(
+            self.client.get('/plugins/attendance/rules/').status_code, 404)
+
+        # 面板（含二级页）回落对话态，侧栏也不给入口
+        for query in ({'panel': 'attendance'},
+                      {'panel': 'attendance', 'sub': 'rules'}):
+            response = self.client.get('/', query)
+            self.assertContains(response, 'data-active-panel="chat"')
+            self.assertNotContains(response, 'at-head')
+        response = self.client.get('/')
+        self.assertEqual(
+            [menu['url'] for menu in response.context['primary_menus']],
+            ['/plugins/workspace/', '/dashboard/'])
+
     def test_unknown_or_forbidden_panel_falls_back_to_chat(self):
         """未知 key 与权限不足都回落对话，而不是渲染半个面板。"""
         self.client.force_login(self.user)
