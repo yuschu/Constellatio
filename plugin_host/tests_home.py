@@ -182,6 +182,26 @@ class DashboardDataTests(TestCase):
         self.assertTrue(response.context['cards']['approval']['alert'])
         self.assertContains(response, '待办较多')
 
+    def test_employee_gets_fifth_kpi_instead_of_approval(self):
+        """没有 approval_approve 的账号看不到「待我审批」，第一格换成「我的待处理」。
+
+        KPI 恒为 5 张，3 列网格不留空位（DSH 的 kpis 是 repeat(3, ...)）。
+        """
+        for status in (Approval.Status.PENDING, Approval.Status.PENDING,
+                       Approval.Status.APPROVED):
+            Approval.objects.create(
+                approval_type=Approval.Type.LEAVE, title='我的单据',
+                applicant=self.staff, approver=self.manager, status=status)
+        self.client.force_login(self.staff)
+        response = self.client.get('/dashboard/')
+        html = response.content.decode()
+        # setUpTestData 里已有 1 条 pending，再补 2 条 → 3
+        self.assertEqual(response.context['cards']['mine']['pending'], 3)
+        # 注意 'lc-ov-kpis'（容器）是 'lc-ov-kpi'（卡片）的子串，必须连 class 一起数
+        self.assertEqual(html.count('class="lc-stat lc-ov-kpi"'), 5)
+        self.assertContains(response, '我的待处理')
+        self.assertNotContains(response, '待我审批')
+
     def test_plugin_alert_when_plugin_disabled(self):
         from plugins.workspace.models import PluginSwitch
         PluginSwitch.objects.create(app_key='notice', enabled=False)

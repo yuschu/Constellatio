@@ -41,6 +41,12 @@
           <span class="lc-stat-sub">{% blocktranslate with done=cards.approval.done total=cards.approval.total %}已完成 {{ done }} / 共 {{ total }}{% endblocktranslate %}</span>
           {% if cards.approval.alert %}<span class="lc-ov-chip lc-ov-chip--warn">{% trans "待办较多" %}</span>{% endif %}
         </div>
+        {% elif cards.mine %}
+        <div class="lc-stat lc-ov-kpi">
+          <span class="lc-stat-label">{% trans "我的待处理" %}</span>
+          <span class="lc-stat-value">{{ cards.mine.pending }}</span>
+          <span class="lc-stat-sub">{% blocktranslate with total=cards.mine.total %}共 {{ total }} 单{% endblocktranslate %}</span>
+        </div>
         {% endif %}
         {% if cards.flow %}
         <div class="lc-stat lc-ov-kpi">
@@ -266,7 +272,12 @@
 
       <div class="lc-card lc-ov-tile">
         <div class="lc-card-title">
+          {% if dept %}
           <span class="lc-card-title-text">{% trans "部门签到" %}</span>
+          {% else %}
+          <span class="lc-card-title-text">{% trans "我的单据" %}</span>
+          <a class="lc-card-link" href="/plugins/approval/">{% trans "审批中心" %} →</a>
+          {% endif %}
         </div>
         <div class="lc-ov-tile-body">
           {% if dept %}
@@ -280,6 +291,16 @@
           </div>
           {% empty %}
           <div class="lc-empty">{% trans "暂无部门数据" %}</div>
+          {% endfor %}
+          {% elif cards.mine %}
+          {% for row in cards.mine.status %}
+          <div class="lc-ov-tally">
+            <span class="lc-ov-tally-dot lc-tone-{{ forloop.counter }}"></span>
+            <span class="lc-ov-tally-name">{{ row.label }}</span>
+            <span class="lc-ov-tally-count">{{ row.count }}</span>
+            <span class="lc-ov-tally-bar lc-tone-{{ forloop.counter }}"
+                  style="width:{% widthratio row.count cards.mine.status_max 100 as pct %}{{ pct }}%"></span>
+          </div>
           {% endfor %}
           {% else %}
           <div class="lc-empty">{% trans "暂无部门数据" %}</div>

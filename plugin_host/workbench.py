@@ -313,6 +313,22 @@ def build_dashboard(*, user, is_admin, enabled_names, range_key, chart,
             # 流程发起：五类单据计数
             flow = _flow_counts(scope)
             flow_total = sum(flow.values())
+            # 没有审批权限的账号看不到「待我审批」，用「我的待处理」补第 5 张 KPI：
+            # 口径是本人提交、当前仍在 pending 的单据（实时，不受 range 影响）
+            my_pending = Approval.objects.filter(applicant=user, status='pending').count()
+            # 顺带给同一账号的「部门签到」位补一块等价内容：本人单据按状态分档
+            my_rows = {row['status']: row['n'] for row in
+                       Approval.objects.filter(applicant=user)
+                       .values('status').annotate(n=Count('id'))}
+            status_rows = [
+                {'label': _t(label), 'count': my_rows.get(key, 0)}
+                for key, label in (('pending', '审批中'), ('approved', '已通过'),
+                                   ('rejected', '已驳回'))
+            ]
+            cards['mine'] = {'pending': my_pending, 'total': flow_total,
+                             'link': '/plugins/approval/',
+                             'status': status_rows,
+                             'status_max': max((row['count'] for row in status_rows), default=0)}
             cards['flow'] = {
                 'total': flow_total,
                 'counts': [{'key': key, 'label': _t(FLOW_LABELS[key]), 'count': flow[key]}
