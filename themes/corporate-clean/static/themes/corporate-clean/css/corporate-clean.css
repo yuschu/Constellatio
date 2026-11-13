@@ -4425,3 +4425,104 @@ html:not([data-color-mode="dark"]) .lc-ov-session {
     animation: none;
   }
 }
+
+/* ==========================================================================
+   33. 二级页元素：字段 / 只读行 / 复选框按 DSH 字面量回归（v2.1.6）
+   --------------------------------------------------------------------------
+   出处全部来自 DSH 产物，不是估的：
+
+   · 字段行 = dsh-web-frontend/dist/assets/index-lh_YM6sT.css 里的 `_field_181ew`
+     模块（DSH 设置页 SettingsValueField 本体），逐条对齐它的字面量：
+       field          display:flex / flex-direction:column / gap:6px / padding:12px 0
+       field+field    border-top:.5px solid var(--dsw-alias-border-l2)
+       head           align-items:center / gap:8px
+       label          13px / font-weight:500 / line-height:1.5 / label-primary
+       help           padding:10px 0 0 / 12px / line-height:1.6 / label-secondary
+       invalid        margin:0 / 12px / line-height:1.5 / state-error-primary
+       input          34 / 0 12 / .5px border-l4 / radius-md / bg-layer-3 / 13 lh 1.5
+       input[aria-invalid=true]  border-color:state-error-primary
+     —— 我们原来 label 用了 secondary（偏灰）、help 用 tertiary 且没有 10 的上内距、
+        error 行高 18，这三处都跟源码不一致，这里改成源码值。
+
+   · 分区末行不画分隔线 = dsh-client-ui-settings-general/lib/client.js 的
+     `_WvWnq_section`：
+       ._WvWnq_section>[data-slot="settings.general.item"]>:last-child{border-bottom:none}
+     只读行（`.ds-settings__row`）沿用字段行的 12px 上下内距，让一个面板里
+     「表单行」和「只读行」的节奏一致。
+
+   · 复选框 = 同一份 dist CSS 的 `_checkbox_1wz3s_1`：
+       inline-flex / align-items:center / gap:6px / 14px lh 20 / label-primary
+       input 16×16 / margin:0 / accent-color:brand-primary / :has(input:disabled) 半透明
+     我们的 `.ds-field__checkbox`（公告置顶、组织架构模板授权在用）此前**没有任何
+     样式**，是整块漏移植，这里按源码补齐。
+   ========================================================================== */
+.ds-field__label {
+  color: var(--ds-label-primary);
+  line-height: 1.5;
+}
+
+.ds-field__help {
+  padding-top: 10px;
+  color: var(--ds-label-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.ds-field__error {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.r-input[aria-invalid="true"],
+.r-select[aria-invalid="true"],
+.r-textarea[aria-invalid="true"] {
+  border-color: var(--ds-state-error);
+}
+
+.ds-field__checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ds-label-primary);
+  cursor: pointer;
+}
+
+.ds-field__checkbox input {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--ds-brand);
+  cursor: inherit;
+}
+
+.ds-field__checkbox input:focus-visible {
+  outline: 1px solid var(--ds-state-business);
+  outline-offset: 2px;
+}
+
+.ds-field__checkbox:has(input:disabled) {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.ds-settings__row {
+  padding: 12px 0;
+}
+
+.ds-fields .ds-settings__row:last-child {
+  border-bottom: none;
+}
+
+.ds-settings__row-title {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.ds-settings__state {
+  line-height: 1.5;
+}

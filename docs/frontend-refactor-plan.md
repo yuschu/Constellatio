@@ -1059,3 +1059,38 @@ token 映射：`label-primary-foreground → --ds-on-primary`、`bg-module-platf
 真机（本地 8011 + 容器 8000 各一遍）：侧栏菜单「活动记录」、`<title>` = `活动记录 · Constellatio`、h2 = 活动记录、统计卡 = 活动统计、列表页全文不含「留痕链」；点「查看」进详情，面板标题「活动记录 #3489」、底部「返回活动记录」；切英文为 `Activity log` / `Activity log #` / `Back to activity log`。容器 `django.mo` md5 与本地一致（`425c80fb…`），`blockchain_detail.html` md5 一致（`c63efa7d…`）。
 
 docs 里的 `留痕链` 未回改：`docs/thesis/**`、`plugin-dev-*.md`、`roadmap.md`、`database-design.md` 等是版本史与交付记录，改写历史叙述会让「当时叫什么」失真；本文档从 9.13.17 起用新名字，历史小节保持原样。
+
+### 9.13.18 二级页元素按 DSH 字段模块对齐（v2.1.6）
+
+**用户诉求**：「二级页的元素移植 dsh 的风格，细节方面参考 dsh 源码」（同一要求在此之前重复过一次「看着 dsh 的源码来，别靠猜测」）。
+
+**取证路径**（先取证、后改样式，所有数值都能回到代码行）：
+- `dsh-web-frontend/dist/assets/index-lh_YM6sT.css` 里的 `_field_181ew` 模块 —— DSH 设置页的 SettingsValueField 本体（label / head / help / invalid / hint / input 全套）。
+- 同一份 dist CSS 的 `_checkbox_1wz3s_1` —— DSH 复选框。
+- `dsh-client-ui-settings-general/lib/client.js` 的 `_WvWnq_section` —— 分区末行不画线：`._WvWnq_section>[data-slot="settings.general.item"]>:last-child{border-bottom:none}`。
+- 已复核但**不改**的：`.r-btn`（36 / 14-22 / padding 0 14 / radius-md / gap 4）、`.r-input`（34 / 0 12 / .5 border-l4 / radius-md / bg-layer-3 / 13 lh 1.5）原本就与 `_button_1ulci_2` / `_input_181ew_115` 一致，本轮不动。
+
+**我们与源码的三处不一致（旧值 → 源码值）**：
+
+| 元素 | 旧值 | DSH 字面量（`_field_181ew`） |
+| --- | --- | --- |
+| `.ds-field__label` | `color: --ds-label-secondary`、lh 20px | `flex:1;min-width:0;font-size:13px;font-weight:500;line-height:1.5;color:label-primary` |
+| `.ds-field__help` | 12/18、`color: --ds-label-tertiary`、无上内距 | `padding:10px 0 0;font-size:12px;line-height:1.6;color:label-secondary` |
+| `.ds-field__error` | 12/18 | `margin:0;font-size:12px;line-height:1.5;color:state-error-primary` |
+
+顺带补两条同源规则：`.r-input/.r-select/.r-textarea[aria-invalid="true"]{border-color:state-error}`（对应 `._input_181ew_115[aria-invalid=true]{border-color:state-error-primary}`）、只读行 `.ds-settings__row` 上下内距 16 → **12**（字段行同为 `padding:12px 0`，一个面板里表单行/只读行节奏一致）、`.ds-fields .ds-settings__row:last-child{border-bottom:none}`（分区末行不画线）、`.ds-settings__row-title` 14/22 → **13 / 500 / 1.5 / label-primary**。
+
+**补一个整块漏移植的类**：`.ds-field__checkbox` 在 `_notice_create_body.html:27`（公告置顶）与 `_template_body.html:16`（授予管理员权限）里被用，但 CSS 里**一条规则都没有**（全站扫描：`plugins/**` 模板里出现却无样式的 `ds-/r-` 类只剩它一个），所以这两处一直渲染成裸 `checkbox`。按 `_checkbox_1wz3s_1` 补齐：
+
+```
+inline-flex / align-items:center / gap:6px / font-size:14px / line-height:20px / color:label-primary
+input{flex:0 0 auto;width:16px;height:16px;margin:0;accent-color:brand-primary;cursor:inherit}
+input:focus-visible{outline:1px solid state-business;outline-offset:2px}
+:has(input:disabled){cursor:default;opacity:.5}
+```
+
+**落点**：`corporate-clean.css` 第 33 节（文首逐条抄源码字面量，便于以后核对），全部用 `--ds-*` token 写、不再出现裸色值。
+
+**门禁**：`plugin_host/tests.py` 新增 `ThemeDiscoveryTest.test_panel_element_literals_match_dsh` —— 同一选择器在文件里出现多次（第 33 节覆盖旧值），断言取**最后一次**定义，逐条校验 label/help/error/checkbox/只读行/末行不画线，防旧值回潮。全量 tests OK，ruff 通过。
+
+**真机实测（本地 8011，admin，六块面板各一张截图 + 计算样式 dump）**：部门修改（`?view=edit&id=3`）、新建用户（`?view=new`）、发布公告、查看模板、活动记录 #3488、考勤规则。六处 `label` 计算值均为 `rgb(15,17,21) / 13px / 500 / 19.5px`；`help` 均为 `rgb(97,102,107) / 12px / 19.2px / padding-top 10px`；只读行为 `12/12` 内距；公告「置顶」与模板「授予管理员权限」的 checkbox 从裸控件变成 `16×16 / margin 0 / accent-color rgb(15,17,21)`。截图落 `.tmp-test/screens-v9/`（未入库）。

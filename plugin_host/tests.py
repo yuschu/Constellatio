@@ -127,6 +127,48 @@ class ThemeDiscoveryTest(TestCase):
         self.assertContains(response, 'themes/corporate-clean/css/corporate-clean.css')
         self.assertContains(response, 'r-loader')
 
+    def test_panel_element_literals_match_dsh(self):
+        """v2.1.6：二级页字段 / 只读行 / 复选框按 DSH 字面量落值。
+
+        字面量出处：dsh-web-frontend/dist/assets/index-lh_YM6sT.css 的
+        `_field_181ew`（字段行）与 `_checkbox_1wz3s_1`（复选框），以及
+        dsh-client-ui-settings-general/lib/client.js 的 `_WvWnq_section`
+        （分区末行不画线）。同一选择器在文件里出现过多次（旧值在前、第 33 节
+        在后覆盖），所以断言取**最后一次**定义，防止旧值回潮。
+        """
+        theme = get_theme(settings.BASE_DIR, 'corporate-clean')
+        css = (theme.static / 'themes/corporate-clean/css/corporate-clean.css').read_text(
+            encoding='utf-8')
+
+        def last_body(selector):
+            self.assertIn(selector, css, selector)
+            return css.rsplit(selector, 1)[1].split('}', 1)[0]
+
+        label = last_body('.ds-field__label {')
+        self.assertIn('var(--ds-label-primary)', label)   # 源码 label-primary
+        self.assertIn('line-height: 1.5', label)
+        # 字重 500 在旧块里，第 33 节只覆盖颜色与行高，所以断言整表仍有 500
+        self.assertIn('font-weight: 500', css.rsplit('.ds-field__label {', 1)[0])
+
+        help_body = last_body('.ds-field__help {')
+        self.assertIn('padding-top: 10px', help_body)     # 源码 padding:10px 0 0
+        self.assertIn('var(--ds-label-secondary)', help_body)
+        self.assertIn('line-height: 1.6', help_body)
+
+        self.assertIn('line-height: 1.5', last_body('.ds-field__error {'))
+
+        checkbox = last_body('.ds-field__checkbox {')
+        self.assertIn('gap: 6px', checkbox)
+        self.assertIn('line-height: 20px', checkbox)
+        checkbox_input = last_body('.ds-field__checkbox input {')
+        self.assertIn('width: 16px', checkbox_input)
+        self.assertIn('height: 16px', checkbox_input)
+        self.assertIn('accent-color: var(--ds-brand)', checkbox_input)
+
+        self.assertIn('padding: 12px 0', last_body('.ds-settings__row {'))
+        self.assertIn('.ds-fields .ds-settings__row:last-child {\n  border-bottom: none;',
+                      css)
+
 
 class ThemeRuntimeSwitchTest(TestCase):
     """v1.5.8：功能区主题切换（Cookie → 模板/静态随请求切换）。"""
