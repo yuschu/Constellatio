@@ -4104,9 +4104,11 @@ html:not([data-color-mode="dark"]) .lc-ov-session {
   padding: var(--ds-space-4) 0 var(--ds-space-6);
 }
 
+/* 深链页也是同一块面板：DSH 的面板高度是字面量 800，内容多了在 options 里滚动，
+   不因为内容短就缩、也不因为内容长就撑破页面。 */
 .ds-settings--inline .ds-settings__panel {
-  height: auto;
-  min-height: 420px;
+  height: min(800px, calc(100vh - 64px));
+  max-height: calc(100vh - 64px);
   margin: 0 auto;
 }
 
@@ -4178,4 +4180,42 @@ html:not([data-color-mode="dark"]) .lc-ov-session {
 
 .ds-fields--card .ds-field + .ds-field {
   border-top: 0;
+}
+/* ---- 单分区设置页：只有一个选项时不列左栏，内容与按钮居中 ----
+   DSH 的 nav 是「多个分区」的分区列；单分区时它就是一条没有信息的目录，
+   所以这里把面板改成两行栅格（标题 / 内容），内容收进居中列。 */
+.ds-settings--single .ds-settings__panel {
+  grid-template-areas: "title header" "options options";
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.ds-settings__stack {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.ds-settings__stack--wide {
+  max-width: 720px;
+}
+
+.ds-settings__actions--center {
+  justify-content: center;
+}
+
+/* 多选 select 不能被单行控件高度压扁（角色权限是多项选择） */
+.ds-field select[multiple] {
+  height: auto;
+  min-height: 132px;
+  padding: var(--ds-space-1) var(--ds-space-2);
+}
+
+/* 深链页的「返回」用箭头，图标尺寸与 ✕ 一致（28×28 命中区） */
+.ds-settings__back svg {
+  transform: translateX(-1px);
+}
+/* 单分区时 options 顶部留一点呼吸，标题行高 54 已被 header 撑开 */
+.ds-settings--single .ds-settings__options {
+  padding-top: var(--ds-space-2);
 }

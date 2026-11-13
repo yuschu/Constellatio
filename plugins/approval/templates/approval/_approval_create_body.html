@@ -1,0 +1,69 @@
+{% load i18n %}
+{% comment %}
+「发起审批」设置页正文（审批中心弹层 / 独立深链页 / 重新申请 共用）。
+类型 chips 的 href 由视图给出（弹层里是 `?view=new&type=…`，深链页是
+`?type=…`），所以切换类型不会把弹层丢掉。
+{% endcomment %}
+{% if reapply_of %}
+<p class="ds-settings__desc">
+  {% blocktranslate with id=reapply_of.id %}原申请 #{{ id }} 已驳回。修改内容后确认重新发起，确认后原记录将被新申请替换（留痕保留）。{% endblocktranslate %}
+  <span class="r-badge r-badge--blue">{{ reapply_of.get_approval_type_display }}</span>
+</p>
+{% else %}
+<p class="ds-settings__desc">{% trans "选择审批类型后填写对应字段；审批人与部门决定这张单据走哪条流程。" %}</p>
+<div class="ds-field">
+  <span class="ds-field__label">{% trans "选择审批类型" %}</span>
+  <div class="d-flex flex-wrap gap-2">
+    {% for t in type_chips %}
+    <a href="{{ t.href }}" class="r-badge {% if t.active %}r-badge--blue{% endif %}">{{ t.label }}</a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<form method="post" enctype="multipart/form-data" novalidate class="ds-settings__form">
+  {% csrf_token %}
+  <input type="hidden" name="approval_type" value="{{ type_key }}">
+  {% if reapply_of %}<input type="hidden" name="reapply_of" value="{{ reapply_of.id }}">{% endif %}
+
+  {% for error in form.non_field_errors %}
+  <div class="ds-field__error">{{ error }}</div>
+  {% endfor %}
+
+  <div class="ds-fields">
+    {% for field in form %}
+      {% if field.name != 'department' and field.name != 'approver' %}
+      <div class="ds-field">
+        <label class="ds-field__label" for="{{ field.id_for_label }}">
+          {{ field.label }}{% if field.field.required %} *{% endif %}
+        </label>
+        {{ field }}
+        {% if field.help_text %}<div class="ds-field__help">{{ field.help_text }}</div>{% endif %}
+        {% for e in field.errors %}<div class="ds-field__error">{{ e }}</div>{% endfor %}
+      </div>
+      {% endif %}
+    {% endfor %}
+
+    <div class="ds-field">
+      <label class="ds-field__label" for="{{ form.department.id_for_label }}">{% trans "部门" %} *</label>
+      {{ form.department }}
+      {% for e in form.department.errors %}<div class="ds-field__error">{{ e }}</div>{% endfor %}
+    </div>
+
+    <div class="ds-field">
+      <label class="ds-field__label" for="{{ form.approver.id_for_label }}">{% trans "审批人" %} *</label>
+      {{ form.approver }}
+      <div class="ds-field__help">{% trans "审批人限定为该审批类型的业务负责人（管辖部门经理）；提交后自动抄送申请人的直系领导。" %}</div>
+      {% for e in form.approver.errors %}<div class="ds-field__error">{{ e }}</div>{% endfor %}
+    </div>
+  </div>
+
+  <div class="ds-settings__actions ds-settings__actions--center">
+    <button class="r-btn" type="submit">{% if reapply_of %}{% trans "确认重新发起" %}{% else %}{% trans "提交审批" %}{% endif %}</button>
+    {% if reapply_of %}
+    <a href="{% url 'approval:approval_list' %}" class="r-btn r-btn--ghost">{% trans "取消" %}</a>
+    {% else %}
+    <button class="r-btn r-btn--ghost" type="button" data-ds-modal-close>{% trans "取消" %}</button>
+    {% endif %}
+  </div>
+</form>

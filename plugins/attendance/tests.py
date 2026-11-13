@@ -704,10 +704,12 @@ class AttendancePanelSubPageTests(TestCase):
         self.assertContains(response, 'data-ds-modal-open="ds-attendance-rules"')
         self.assertContains(response, 'id="ds-attendance-rules"')
         self.assertContains(response, 'ds-settings--subpage')
-        # 结构：设置外壳的四个座位（title / header / nav 188px / options）
+        # 结构：单分区（本页只有一个「考勤规则」）→ 不渲染 188px 分区列，
+        # 面板是 title / header / options 三块，正文收进居中列。
+        self.assertContains(response, 'ds-settings--single')
         self.assertContains(response, 'ds-settings__title')
-        self.assertContains(response, 'ds-settings__nav')
         self.assertContains(response, 'ds-settings__options')
+        self.assertContains(response, 'ds-settings__stack')
         # 看板上开着弹层时仍是看板本体（弹层盖在上面，不是替换正文）
         self.assertContains(response, 'at-grid')
         self.assertContains(response, '今日状态')

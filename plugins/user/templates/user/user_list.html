@@ -4,7 +4,7 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
   <h2 class="mb-0">{% trans "用户管理" %}</h2>
-  <a href="{% url 'user:user_create' %}" class="r-btn">＋ {% trans "新建用户" %}</a>
+  <a href="{{ user_create_url }}" class="r-btn" data-ds-modal-open="ds-user-create">＋ {% trans "新建用户" %}</a>
 </div>
 <div class="r-card">
   <div class="table-responsive">
@@ -87,4 +87,7 @@
     {% include 'includes/pagination.html' %}
   </div>
 </div>
+
+{% trans "新建用户" as sp_user_create_title %}
+{% include "includes/ds_settings_modal.html" with sp_id="ds-user-create" sp_title=sp_user_create_title sp_body="user/_user_create_body.html" sp_query="view=new" sp_url=user_create_url sp_base=user_list_url sp_open=user_form_open %}
 {% endblock %}

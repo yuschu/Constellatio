@@ -144,12 +144,32 @@ def department_list(request):
 # ---------------------------------------------------------------------------
 # 用户
 # ---------------------------------------------------------------------------
+def _render_user_list(request, form=None, form_open=False):
+    """用户列表的唯一渲染入口（列表 + 「新建用户」设置弹层）。
+
+    v2.1.3：新建改 DSH 设置弹层形态（遮罩 + 800×800 面板）。列表页里的入口是
+    `?view=new` 打开弹层，校验失败也回到这里（form_open=True），一次渲染完；
+    独立深链 /users/new/ 用同一块面板的无遮罩版本（user_create_page.html）。
+    本页只有一个分区，所以面板带 ds-settings--single：不渲染左侧 188px
+    分区列，内容与按钮居中。
+    """
+    users = paginate(
+        request, User.objects.select_related('department').prefetch_related('roles').order_by('id'))
+    list_url = reverse('user:user_list')
+    return render(request, 'user/user_list.html', {
+        'page_obj': users,
+        'form': form if form is not None else UserForm(operator=request.user),
+        'user_form_open': form_open,
+        'user_create_url': f'{list_url}?view=new',
+        'user_list_url': list_url,
+    })
+
+
 @require_perm('user_manage')
 def user_list(request):
     # v1.7.6：用户列表分页（排序在分页之前定死）
-    users = paginate(
-        request, User.objects.select_related('department').prefetch_related('roles').order_by('id'))
-    return render(request, 'user/user_list.html', {'page_obj': users})
+    return _render_user_list(
+        request, form_open=request.method == 'GET' and request.GET.get('view') == 'new')
 
 
 @require_perm('user_manage')
@@ -161,9 +181,12 @@ def user_create(request):
             user = form.save()
             user_created.send(sender=user.__class__, user_id=user.pk)
             return redirect('user:user_list')
-    else:
-        form = UserForm()
-    return render(request, 'user/user_form.html', {'form': form, 'title': _('新建用户')})
+        # 校验失败留在设置弹层里，把错误挂回对应字段
+        return _render_user_list(request, form, form_open=True)
+    return render(request, 'user/user_create_page.html', {
+        'form': UserForm(operator=request.user),
+        'user_list_back': reverse('user:user_list'),
+    })
 
 
 @require_perm('user_manage')
@@ -227,10 +250,22 @@ def user_status(request, user_id):
 # ---------------------------------------------------------------------------
 # 角色
 # ---------------------------------------------------------------------------
+def _render_role_list(request, form=None, form_open=False):
+    """角色列表的唯一渲染入口（列表 + 「新建角色」设置弹层，口径同用户列表）。"""
+    list_url = reverse('user:role_list')
+    return render(request, 'user/role_list.html', {
+        'roles': Role.objects.prefetch_related('permissions').order_by('id'),
+        'form': form if form is not None else RoleForm(operator=request.user),
+        'role_form_open': form_open,
+        'role_create_url': f'{list_url}?view=new',
+        'role_list_url': list_url,
+    })
+
+
 @require_perm('user_manage')
 def role_list(request):
-    roles = Role.objects.prefetch_related('permissions').order_by('id')
-    return render(request, 'user/role_list.html', {'roles': roles})
+    return _render_role_list(
+        request, form_open=request.method == 'GET' and request.GET.get('view') == 'new')
 
 
 @require_perm('user_manage')
@@ -240,9 +275,11 @@ def role_create(request):
         if form.is_valid():
             form.save()
             return redirect('user:role_list')
-    else:
-        form = RoleForm(operator=request.user)
-    return render(request, 'user/role_form.html', {'form': form, 'title': _('新建角色')})
+        return _render_role_list(request, form, form_open=True)
+    return render(request, 'user/role_create_page.html', {
+        'form': RoleForm(operator=request.user),
+        'role_list_back': reverse('user:role_list'),
+    })
 
 
 @require_perm('user_manage')

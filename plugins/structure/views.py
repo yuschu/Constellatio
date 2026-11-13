@@ -44,7 +44,7 @@ def structure_overview(request):
             'member_count': len(members),
             'members': members,
         })
-    return render(request, 'structure/overview.html', {
+    ctx = {
         'dept_org': dept_tree_data['roots'],
         'dept_stats': dept_tree_data['stats'],
         'role_rows': role_rows,
@@ -52,12 +52,32 @@ def structure_overview(request):
         'org_rows': org_tree['rows'],
         'org_stats': org_tree['stats'],
         'last_records': _last_records(),
-    })
+    }
+    # v2.1.3：模板架构改设置弹层（`?view=template`）；模板页要 structure_view，
+    # 无权限的账号既不渲染入口也不渲染弹层（避免越权取数）。
+    if request.user.has_perm('structure_view'):
+        overview_url = reverse('structure:overview')
+        template_ctx = _template_context(request)
+        # 键名与组织架构页的 role_rows 冲突，所以加 tmpl_ 前缀，弹层 include 里再映射回去
+        ctx.update({
+            'tmpl_dept_tree': template_ctx['dept_tree'],
+            'tmpl_role_rows': template_ctx['role_rows'],
+            'tmpl_dept_count': template_ctx['dept_count'],
+            'tmpl_user_count': template_ctx['user_count'],
+            'tmpl_users_by_dept': template_ctx['users_by_dept'],
+            'tmpl_can_apply': template_ctx['can_apply'],
+            'tmpl_last_records': template_ctx['last_records'],
+        })
+        ctx.update({
+            'template_open': request.method == 'GET' and request.GET.get('view') == 'template',
+            'template_url': f'{overview_url}?view=template',
+            'overview_url': overview_url,
+        })
+    return render(request, 'structure/overview.html', ctx)
 
 
-@require_perm('structure_view')
-def structure_template(request):
-    """模板架构详情：职能制模板部门 / 角色 / 用户；有 structure_manage 才渲染应用表单。"""
+def _template_context(request):
+    """模板架构上下文（组织架构页弹层与独立深链页同一口径）。"""
     users_by_dept = {}
     for account, name, dept, role in USERS:
         users_by_dept.setdefault(dept, []).append(
@@ -67,7 +87,7 @@ def structure_template(request):
          'codes': sorted(ROLE_PERMISSIONS.get(name, set()))}
         for name in ROLES
     ]
-    return render(request, 'structure/template.html', {
+    return {
         'dept_tree': dept_tree(),
         'role_rows': role_rows,
         'dept_count': len(DEPARTMENTS),
@@ -75,7 +95,19 @@ def structure_template(request):
         'users_by_dept': users_by_dept,
         'can_apply': request.user.has_perm('structure_manage'),
         'last_records': _last_records(),
-    })
+    }
+
+
+@require_perm('structure_view')
+def structure_template(request):
+    """模板架构详情：职能制模板部门 / 角色 / 用户；有 structure_manage 才渲染应用表单。
+
+    v2.1.3：独立深链 /structure/template/ 是设置面板的无遮罩版本；组织架构页的
+    「查看模板 →」用 `?view=template` 打开同一块面板的弹层。
+    """
+    ctx = _template_context(request)
+    ctx['back_url'] = reverse('structure:overview')
+    return render(request, 'structure/template.html', ctx)
 
 
 def _last_records():

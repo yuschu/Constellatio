@@ -36,8 +36,8 @@
 
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
   <h2 class="mb-0">{% trans "公告中心" %}</h2>
-  {% if perms.notice.notice_manage %}
-  <a href="{% url 'notice:notice_create' %}" class="r-btn">＋ {% trans "发布公告" %}</a>
+  {% if notice_create_url %}
+  <a href="{{ notice_create_url }}" class="r-btn" data-ds-modal-open="ds-notice-new">＋ {% trans "发布公告" %}</a>
   {% endif %}
 </div>
 
@@ -67,5 +67,9 @@
 
 {% include 'includes/pagination.html' %}
 
+{% endif %}
+{% if notice_create_url %}
+{% trans "发布公告" as sp_notice_create_title %}
+{% include "includes/ds_settings_modal.html" with sp_id="ds-notice-new" sp_title=sp_notice_create_title sp_body="notice/_notice_create_body.html" sp_query="view=new" sp_url=notice_create_url sp_base=notice_list_url sp_open=notice_form_open %}
 {% endif %}
 {% endblock %}

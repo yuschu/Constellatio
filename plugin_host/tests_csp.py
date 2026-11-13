@@ -113,7 +113,9 @@ class InlineScriptTests(TestCase):
         files = {
             'plugins/user/templates/user/department_list.html': 2,
             'plugins/user/templates/user/user_list.html': 3,
-            'plugins/structure/templates/structure/template.html': 1,
+            # v2.1.3：模板页正文抽到 _template_body.html（共享给弹层与深链页），
+            # 确认按钮随正文一起搬走，因此计数点跟着换到正文模板。
+            'plugins/structure/templates/structure/_template_body.html': 1,
         }
         total = 0
         for rel, expected in files.items():

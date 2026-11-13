@@ -19,13 +19,23 @@ def notice_list(request):
     v1.7.6：原实现每次进来都取全部公告 id 再全量 bulk_create，写入量与公告总量线性相关；
     改为「当页 → 已读集合 → 差集登记」。保留 `ignore_conflicts=True` 兜并发：
     两个请求同时判定未读时会各自 insert，由 `unique_together` 去重，不产生重复行。
+    v2.1.3：列表与「发布公告」设置弹层共用 _render_notice_list 一次渲染。
+    """
+    return _render_notice_list(
+        request, form_open=request.method == 'GET' and request.GET.get('view') == 'new')
+
+
+def _render_notice_list(request, form_data=None, form_open=False):
+    """公告中心的唯一渲染入口（列表 + 「发布公告」设置弹层）。
+
+    v2.1.3：发布公告改 DSH 设置弹层形态（单分区 → 不渲染左侧 188px 分区列，
+    内容与按钮居中）。`?view=new` 或标题/正文为空时 form_open=True，列表与
+    弹层一次渲染完，并把已填内容回填（原来非法 POST 直接丢字重画）。
     """
     announcements = (
         Announcement.objects.annotate(read_count=Count('read_records'))
-        # 分页前定死顺序（置顶 → 时间 → id 兜底），否则同一时间的多条记录翻页可能重复/漏行
         .order_by('-is_top', '-created_at', '-id'))
     page_obj = paginate(request, announcements)
-
     page_ids = [item.pk for item in page_obj]
     if page_ids:
         read_ids = set(
@@ -36,17 +46,19 @@ def notice_list(request):
                   for pk in page_ids if pk not in read_ids]
         if unread:
             AnnouncementRead.objects.bulk_create(unread, ignore_conflicts=True)
-            # 本页的 read_count 是登记**之前**聚合出来的（annotate 与列表是同一条 SQL），
-            # 刚插入的记录不在里面。这里原地 +1 而不重查：省一次聚合查询，同时保证
-            # 「已读 N 人」当次访问就把自己算进去（与 v1.7.2 起的语义一致）。
             fresh_ids = {row.announcement_id for row in unread}
             for item in page_obj:
                 if item.pk in fresh_ids:
                     item.read_count += 1
 
+    list_url = reverse('notice:notice_list')
     return render(request, 'notice/notice_list.html', {
         'announcements': page_obj,
         'page_obj': page_obj,
+        'notice_create_url': f'{list_url}?view=new',
+        'notice_list_url': list_url,
+        'notice_form_open': form_open,
+        'form_data': form_data or {},
     })
 
 
@@ -72,7 +84,11 @@ def notice_detail(request, pk):
 
 @require_perm('notice_manage')
 def notice_create(request):
-    """发布公告（需 notice_manage 权限），发布即发信号。"""
+    """发布公告（需 notice_manage 权限），发布即发信号。
+
+    v2.1.3：GET 渲染设置面板深链页；POST 校验失败回到公告中心并把已填内容
+    回填到弹层里（form_open=True）。
+    """
     if request.method == 'POST':
         title = request.POST.get('title', '').strip()
         content = request.POST.get('content', '')
@@ -82,4 +98,12 @@ def notice_create(request):
                 is_top=request.POST.get('is_top') == 'on')
             notice_published.send(sender=announcement.__class__, announcement_id=announcement.id)
             return redirect('notice:notice_list')
-    return render(request, 'notice/notice_form.html')
+        return _render_notice_list(request, {
+            'title': title,
+            'content': content,
+            'is_top': request.POST.get('is_top') == 'on',
+        }, form_open=True)
+    return render(request, 'notice/notice_form.html', {
+        'back_url': reverse('notice:notice_list'),
+        'form_data': {},
+    })

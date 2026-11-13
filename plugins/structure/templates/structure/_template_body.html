@@ -1,0 +1,86 @@
+{% load i18n %}
+{% comment %}
+「模板架构」设置页正文（组织架构页弹层 / 独立深链页共用）。
+内容与权限口径不变：can_apply 才渲染「应用模板」表单（POST structure:apply）。
+本页只有一个分区，正文列 720（两列布局要宽度），按钮居中。
+{% endcomment %}
+<p class="ds-settings__desc">
+  {% blocktranslate with dept=dept_count user=user_count %}职能制模板：{{ dept }} 个部门、{{ user }} 个账号；应用时只创建缺失项，幂等补齐角色权限，不覆盖既有数据。{% endblocktranslate %}
+</p>
+
+{% if can_apply %}
+<form method="post" action="{% url 'structure:apply' %}" class="ds-settings__form">
+  {% csrf_token %}
+  <div class="ds-fields">
+    <div class="ds-field">
+      <label class="ds-field__checkbox" for="grant_manager_perms">
+        <input class="form-check-input" type="checkbox" name="grant_manager_perms"
+               id="grant_manager_perms" value="1">
+        <span>{% trans "经理角色同时授予用户管理权限（L1）" %}</span>
+      </label>
+      <div class="ds-field__help">{% trans "仅当需要经理自行维护下属账号时勾选；不勾选则只补齐考勤与审批相关权限。" %}</div>
+    </div>
+  </div>
+
+  {% blocktranslate asvar confirm_apply %}应用职能制架构模板？仅创建缺失项、幂等补齐角色权限，不覆盖既有数据。{% endblocktranslate %}
+  <div class="ds-settings__actions ds-settings__actions--center">
+    <button class="r-btn" type="submit" data-confirm="{{ confirm_apply|escapejs }}">{% trans "⤓ 应用模板" %}</button>
+  </div>
+</form>
+{% endif %}
+
+{% if last_records %}
+<div class="ds-field">
+  <span class="ds-field__label">{% trans "最近应用" %}</span>
+  <div class="ds-field__help">
+    {% for rec in last_records %}
+    <div>#{{ rec.pk }} {{ rec.applied_by.last_name|default:rec.applied_by.username }}
+      {% blocktranslate with dept=rec.dept_created role=rec.role_created user=rec.user_created %}+{{ dept }}部门/+{{ role }}角色/+{{ user }}用户{% endblocktranslate %}
+      · {{ rec.applied_at|date:"m-d H:i" }}</div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<div class="ds-field">
+  <span class="ds-field__label">{% blocktranslate with count=dept_tree|length %}模板部门树（{{ count }} 个一级部门，共 {{ dept_count }} 个）{% endblocktranslate %}</span>
+  <ul class="list-unstyled mb-0" style="font-size:.88rem;">
+    {% for dept, children in dept_tree %}
+    <li class="mb-1">
+      <strong>{{ dept }}</strong>
+      {% if children %}
+      <ul class="list-unstyled ms-4 text-muted">
+        {% for c in children %}<li>└ {{ c }}</li>{% endfor %}
+      </ul>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+
+<div class="ds-field">
+  <span class="ds-field__label">{% blocktranslate with count=role_rows|length %}模板角色（{{ count }} 个，按模板授予权限）{% endblocktranslate %}</span>
+  <div>
+    {% for r in role_rows %}
+    <span class="r-badge me-2 mb-2" title="{{ r.codes|join:', ' }}">{{ r.name }}{% if r.perm_count %} · {{ r.perm_count }}{% endif %}</span>
+    {% endfor %}
+  </div>
+  <div class="ds-field__help">{% trans "全员基线：考勤打卡、公告浏览无需角色；管理岗模板含签到详情（attendance_report_view）。" %}</div>
+</div>
+
+<div class="ds-field">
+  <span class="ds-field__label">{% blocktranslate with count=user_count %}用户模板（{{ count }} 个，密码统一 constellatio123）{% endblocktranslate %}</span>
+  <div class="row g-3">
+    {% for dept, users in users_by_dept.items %}
+    <div class="col-md-6">
+      <div class="fw-bold mb-2" style="font-size:.85rem;">{{ dept }}</div>
+      {% for u in users %}
+      <div class="d-flex justify-content-between" style="font-size:.8rem;">
+        <span>{{ u.name }}（{{ u.account }}）</span>
+        <span class="text-muted">{{ u.role }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+</div>

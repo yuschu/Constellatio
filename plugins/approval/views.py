@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -101,8 +102,7 @@ def _summary(approval_type, cleaned, basis_label=''):
     return '\n'.join(lines)
 
 
-@require_perm('approval_view')
-def approval_list(request):
+def _approval_list_context(request):
     """我发起的审批（v1.5.16：已驳回且申请人隐藏的记录不再展示）。"""
     approvals = (
         Approval.objects
@@ -112,11 +112,57 @@ def approval_list(request):
         .order_by('-created_at', '-id')
     )
     page_obj = paginate(request, approvals, LIST_PAGE_SIZE)
-    return render(request, 'approval/approval_list.html', {
-        'approvals': page_obj,
-        'page_obj': page_obj,
-        'total': page_obj.paginator.count,
-    })
+    return {'approvals': page_obj, 'page_obj': page_obj, 'total': page_obj.paginator.count}
+
+
+def _create_context(request, form=None, type_key=None, source=None, chip_prefix='?type='):
+    """发起审批的设置页上下文（列表弹层与独立深链页同一口径）。
+
+    v2.1.3：发起审批改 DSH 设置弹层形态。列表页里的弹层用 `?view=new` 打开，
+    类型 chips 的 href 因此是 `?view=new&type=…`（chip_prefix），切类型不会
+    把弹层丢掉；独立深链 /approval/new/ 用 `?type=…`。
+    """
+    type_key = type_key or request.GET.get('type') or Approval.Type.LEAVE
+    if type_key not in forms.FORM_CLASSES:
+        type_key = Approval.Type.LEAVE
+
+    departments = _departments()
+    approvers = [u for u in resolve_candidates(type_key) if u.pk != request.user.pk]
+    if not approvers:
+        approvers = _fallback_approvers(request.user)
+    if form is None:
+        form = forms.form_for_type(
+            type_key, None, None, applicant=request.user,
+            departments=departments, approvers=approvers,
+            overtime_choices=_overtime_choices(request.user))
+        if approvers:
+            form.fields['approver'].initial = str(approvers[0].pk)
+    return {
+        'form': form,
+        'type_key': type_key,
+        'users': approvers,
+        'reapply_of': source,
+        'type_chips': [
+            {'key': key, 'label': Approval.Type(key).label,
+             'href': f'{chip_prefix}{key}', 'active': key == type_key}
+            for key in forms.FORM_TYPES
+        ],
+    }
+
+
+@require_perm('approval_view')
+def approval_list(request):
+    ctx = _approval_list_context(request)
+    if request.user.has_perm('approval_view'):
+        list_url = reverse('approval:approval_list')
+        ctx.update(_create_context(
+            request, chip_prefix=f'{list_url}?view=new&type='))
+        ctx.update({
+            'create_open': request.method == 'GET' and request.GET.get('view') == 'new',
+            'create_url': f'{list_url}?view=new',
+            'approval_list_url': list_url,
+        })
+    return render(request, 'approval/approval_list.html', ctx)
 
 
 @require_perm('approval_approve')
@@ -254,14 +300,29 @@ def approval_create(request):
                     return redirect('approval:approval_detail', approval_id=approval.pk)
             return redirect('approval:approval_list')
 
-    return render(request, 'approval/approval_form.html', {
-        'form': form,
-        'type_key': type_key,
-        'types': [{'key': key, 'label': Approval.Type(key).label}
-                  for key in forms.FORM_TYPES],
-        'users': approvers,
-        'reapply_of': source,
-    })
+    if source is not None:
+        # 重新申请带原单信息，仍走独立页（不塞进列表弹层）
+        ctx = _create_context(request, form=form, type_key=type_key, source=source)
+        ctx['back_url'] = reverse('approval:approval_list')
+        return render(request, 'approval/approval_form.html', ctx)
+
+    if request.method == 'POST':
+        # 校验失败：留在审批中心的设置弹层里，把错误挂回字段
+        list_url = reverse('approval:approval_list')
+        ctx = _approval_list_context(request)
+        ctx.update(_create_context(
+            request, form=form, type_key=type_key,
+            chip_prefix=f'{list_url}?view=new&type='))
+        ctx.update({
+            'create_open': True,
+            'create_url': f'{list_url}?view=new',
+            'approval_list_url': list_url,
+        })
+        return render(request, 'approval/approval_list.html', ctx)
+
+    ctx = _create_context(request, form=form, type_key=type_key)
+    ctx['back_url'] = reverse('approval:approval_list')
+    return render(request, 'approval/approval_form.html', ctx)
 
 
 @require_perm('approval_view')

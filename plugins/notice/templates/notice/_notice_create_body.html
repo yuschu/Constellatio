@@ -1,0 +1,40 @@
+{% load i18n %}
+{% comment %}
+「发布公告」设置页正文（公告中心弹层与独立深链页共用）。
+公告是手写字段（不是 ModelForm），校验失败回到这里时由 form_data 回填，
+避免用户重打一遍正文。
+{% endcomment %}
+<p class="ds-settings__desc">{% trans "公告发布后进入公告中心，并按角色范围推送到消息中心；置顶公告固定在最前。" %}</p>
+
+<form method="post" novalidate class="ds-settings__form">
+  {% csrf_token %}
+
+  <div class="ds-fields">
+    <div class="ds-field">
+      <label class="ds-field__label" for="notice_title">{% trans "标题" %}</label>
+      <input class="r-input" id="notice_title" type="text" name="title" required
+             value="{{ form_data.title|default:'' }}"
+             placeholder="{% trans '公告标题' %}">
+    </div>
+
+    <div class="ds-field">
+      <label class="ds-field__label" for="notice_content">{% trans "内容" %}</label>
+      <textarea class="r-input" id="notice_content" name="content" rows="8" required
+                placeholder="{% trans '公告正文' %}">{{ form_data.content|default:'' }}</textarea>
+    </div>
+
+    <div class="ds-field">
+      <label class="ds-field__checkbox" for="notice_is_top">
+        <input class="form-check-input" type="checkbox" name="is_top" id="notice_is_top"
+               {% if form_data.is_top %}checked{% endif %}>
+        <span>{% trans "置顶" %}</span>
+      </label>
+      <div class="ds-field__help">{% trans "置顶公告在公告中心排序最前，适合制度变更、全员通知。" %}</div>
+    </div>
+  </div>
+
+  <div class="ds-settings__actions ds-settings__actions--center">
+    <button class="r-btn" type="submit">{% trans "发布" %}</button>
+    <button class="r-btn r-btn--ghost" type="button" data-ds-modal-close>{% trans "取消" %}</button>
+  </div>
+</form>

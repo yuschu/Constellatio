@@ -1,0 +1,48 @@
+{% load i18n %}
+{% comment %}
+设置面板本体（DSH SettingsPanel 的那块 800×800 面板），供所有二级页复用。
+
+参数：
+  sp_title     标题（左上）
+  sp_title_id  标题元素 id（给 aria-labelledby 用）
+  sp_body      正文模板路径（options 区）
+  sp_modal     True → 右上角是关闭按钮（交给 ds-shell.js）；
+               False → 右上角是返回链接（sp_back）
+  sp_back      返回地址（sp_modal=False 时用；为空则不渲染右上角）
+  sp_stack     正文列宽：默认 560，可传 "wide"（720）
+
+单分区（本项目所有二级页都是单分区）：调用方给最外层加
+`ds-settings--single`，面板就变成「标题 / 内容」两行，左栏分区列不再渲染
+——用户口径：「页面中只有一个选项就没必要在左边列出来」。
+{% endcomment %}
+<div class="ds-settings__panel" tabindex="-1">
+  <h2 class="ds-settings__title"{% if sp_title_id %} id="{{ sp_title_id }}"{% endif %}>{{ sp_title }}</h2>
+  <div class="ds-settings__header">
+    {% if sp_modal %}
+    <button type="button" class="ds-settings__close" data-ds-modal-close
+            aria-label="{% trans '关闭' %}">
+      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+        <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5"
+              fill="none" stroke-linecap="round"/>
+      </svg>
+    </button>
+    {% elif sp_back %}
+    {% comment %}
+    返回用左箭头，不能用 ✕ —— 独立深链页没有遮罩，✕ 会被读成「关闭」，
+    而它实际是回上一级列表页。
+    {% endcomment %}
+    <a class="ds-settings__close ds-settings__back" href="{{ sp_back }}" aria-label="{% trans '返回' %}">
+      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+        <path d="M12.5 8H4M7.5 4.5L4 8l3.5 3.5" stroke="currentColor" stroke-width="1.5"
+              fill="none" stroke-linecap="round"/>
+      </svg>
+    </a>
+    {% endif %}
+  </div>
+
+  <div class="ds-settings__options" tabindex="0">
+    <div class="ds-settings__stack{% if sp_stack == 'wide' %} ds-settings__stack--wide{% endif %}">
+      {% include sp_body %}
+    </div>
+  </div>
+</div>

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "新建角色" %} · Constellatio{% endblock %}
+{% block content %}
+{% trans "新建角色" as sp_title_text %}
+{% comment %}
+「新建角色」独立深链页：同一块设置面板的无遮罩版本（ds-settings--inline），
+内容与按钮居中；列表页入口开的是同一份正文的弹层。
+{% endcomment %}
+<div class="ds-settings ds-settings--inline ds-settings--single">
+  {% include "includes/ds_settings_panel.html" with sp_title=sp_title_text sp_body="user/_role_create_body.html" sp_modal=False sp_back=role_list_back %}
+</div>
+{% endblock %}

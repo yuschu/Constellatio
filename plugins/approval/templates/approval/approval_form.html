@@ -2,69 +2,16 @@
 {% load i18n %}
 {% block title %}{% if reapply_of %}{% trans "重新申请" %}{% else %}{% trans "发起审批" %}{% endif %} · Constellatio{% endblock %}
 {% block content %}
-<div class="d-flex align-items-center gap-3 mb-4">
-  <a href="{% url 'approval:approval_list' %}" class="r-offset-hover">← {% trans "返回" %}</a>
-  <h2 class="mb-0">{% if reapply_of %}{% trans "重新申请" %} · #{{ reapply_of.id }}{% else %}{% trans "发起审批" %}{% endif %}</h2>
-</div>
+{% comment %}
+「发起审批 / 重新申请」独立深链页：同一块设置面板（无遮罩、单分区、居中）。
+审批中心列表里点「＋ 发起审批」打开的是同一份正文的弹层
+（_approval_create_body.html）。
 
-{% if reapply_of %}
-<div class="r-card mb-4" style="font-size:.85rem;">
-  {% blocktranslate with id=reapply_of.id %}原申请 #{{ id }} 已驳回。修改内容后确认重新发起，确认后原记录将被新申请替换（留痕保留）。{% endblocktranslate %}
-  <span class="r-badge r-badge--blue ms-2">{% trans reapply_of.get_approval_type_display %}</span>
-</div>
-{% else %}
-<div class="r-card mb-4">
-  <div class="r-sidebar-title">{% trans "选择审批类型" %}</div>
-  <div class="d-flex flex-wrap gap-2">
-    {% for t in types %}
-    <a href="?type={{ t.key }}" class="r-badge {% if t.key == type_key %}r-badge--blue{% endif %}">{{ t.label }}</a>
-    {% endfor %}
-  </div>
-</div>
-{% endif %}
-
-<div class="r-card position-relative" style="max-width:620px;">
-  <span class="r-register-mark"></span>
-  <form method="post" enctype="multipart/form-data" novalidate>
-    {% csrf_token %}
-    <input type="hidden" name="approval_type" value="{{ type_key }}">
-    {% if reapply_of %}<input type="hidden" name="reapply_of" value="{{ reapply_of.id }}">{% endif %}
-
-    {% if form.non_field_errors %}
-    <div class="text-danger mb-3" style="font-size:.85rem;">{{ form.non_field_errors }}</div>
-    {% endif %}
-
-    {% for field in form %}
-      {% if field.name != 'department' and field.name != 'approver' %}
-      <div class="mb-3">
-        <label class="form-label" for="{{ field.id_for_label }}" style="font-size:.75rem; text-transform:uppercase;">
-          {{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}
-        </label>
-        {{ field }}
-        {% for e in field.errors %}<div class="text-danger" style="font-size:.8rem;">{{ e }}</div>{% endfor %}
-      </div>
-      {% endif %}
-    {% endfor %}
-
-    <div class="mb-3">
-      <label class="form-label" for="{{ form.department.id_for_label }}" style="font-size:.75rem; text-transform:uppercase;">
-        {% trans "部门" %} <span class="text-danger">*</span>
-      </label>
-      {{ form.department }}
-      {% for e in form.department.errors %}<div class="text-danger" style="font-size:.8rem;">{{ e }}</div>{% endfor %}
-    </div>
-
-    <div class="mb-3">
-      <label class="form-label" for="{{ form.approver.id_for_label }}" style="font-size:.75rem; text-transform:uppercase;">{% trans "审批人" %} <span class="text-danger">*</span></label>
-      {{ form.approver }}
-      {% for e in form.approver.errors %}<div class="text-danger" style="font-size:.8rem;">{{ e }}</div>{% endfor %}
-      <div class="text-muted mt-1" style="font-size:.75rem;">{% trans "审批人限定为该审批类型的业务负责人（管辖部门经理）；提交后自动抄送申请人的直系领导。" %}</div>
-    </div>
-
-    <div class="d-flex align-items-center gap-3">
-      <button class="r-btn" type="submit">{% if reapply_of %}{% trans "确认重新发起" %}{% else %}{% trans "提交审批" %}{% endif %}</button>
-      {% if reapply_of %}<a href="{% url 'approval:approval_list' %}" class="r-offset-hover">{% trans "取消" %}</a>{% endif %}
-    </div>
-  </form>
+注意：`{% trans ... as %}` 必须写在 block 里 —— 子模板 extends 之后，block 之外
+的节点根本不执行，标题变量会是空的（v2.1.2 用过这一坑）。
+{% endcomment %}
+{% if reapply_of %}{% trans "重新申请" as sp_title_text %}{% else %}{% trans "发起审批" as sp_title_text %}{% endif %}
+<div class="ds-settings ds-settings--inline ds-settings--single">
+  {% include "includes/ds_settings_panel.html" with sp_title=sp_title_text sp_body="approval/_approval_create_body.html" sp_modal=False sp_back=back_url %}
 </div>
 {% endblock %}

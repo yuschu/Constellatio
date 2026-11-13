@@ -335,8 +335,11 @@ class DepartmentFormPageTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'ds-settings--subpage')
         self.assertContains(response, 'id="ds-dept-new"')
+        # 单分区（只有「新建部门」一项）→ 不渲染左侧 188px 分区列，内容与按钮居中
+        self.assertContains(response, 'ds-settings--single')
         self.assertContains(response, 'ds-settings__title')
-        self.assertContains(response, 'ds-settings__nav')
+        self.assertContains(response, 'ds-settings__stack')
+        self.assertContains(response, 'ds-settings__actions--center')
         self.assertContains(response, '新建部门')
         # 列表仍在弹层下面（不是换页）
         self.assertContains(response, 'r-table')

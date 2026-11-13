@@ -1,0 +1,31 @@
+{% load i18n %}
+{% comment %}
+「新建角色」设置页正文（角色列表弹层与独立深链页共用）。
+{% endcomment %}
+<p class="ds-settings__desc">{% trans "角色是权限的集合；新建后可在角色列表里继续调整权限，或分配给具体用户。" %}</p>
+
+<form method="post" novalidate class="ds-settings__form">
+  {% csrf_token %}
+
+  {% for error in form.non_field_errors %}
+  <div class="ds-field__error">{{ error }}</div>
+  {% endfor %}
+
+  <div class="ds-fields">
+    {% for field in form %}
+    <div class="ds-field">
+      <label class="ds-field__label" for="{{ field.id_for_label }}">
+        {{ field.label }}{% if field.field.required %} *{% endif %}
+      </label>
+      {{ field }}
+      {% if field.help_text %}<div class="ds-field__help">{{ field.help_text }}</div>{% endif %}
+      {% for e in field.errors %}<div class="ds-field__error">{{ e }}</div>{% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="ds-settings__actions ds-settings__actions--center">
+    <button class="r-btn" type="submit">{% trans "创建" %}</button>
+    <button class="r-btn r-btn--ghost" type="button" data-ds-modal-close>{% trans "取消" %}</button>
+  </div>
+</form>

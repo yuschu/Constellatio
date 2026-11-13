@@ -2,27 +2,12 @@
 {% load i18n %}
 {% block title %}{% trans "发布公告" %} · Constellatio{% endblock %}
 {% block content %}
-<div class="d-flex align-items-center gap-3 mb-4">
-  <a href="{% url 'notice:notice_list' %}" class="r-offset-hover">← {% trans "返回" %}</a>
-  <h2 class="mb-0">{% trans "发布公告" %}</h2>
-</div>
-<div class="r-card position-relative" style="max-width:560px;">
-  <span class="r-register-mark"></span>
-  <form method="post" novalidate>
-    {% csrf_token %}
-    <div class="mb-3">
-      <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">{% trans "标题" %}</label>
-      <input class="r-input" type="text" name="title" required placeholder="{% trans '公告标题' %}">
-    </div>
-    <div class="mb-3">
-      <label class="form-label" style="font-size:.75rem; text-transform:uppercase;">{% trans "内容" %}</label>
-      <textarea class="r-input" name="content" rows="8" required placeholder="{% trans '公告正文' %}"></textarea>
-    </div>
-    <div class="form-check mb-4">
-      <input class="form-check-input" type="checkbox" name="is_top" id="is_top">
-      <label class="form-check-label" for="is_top">{% trans "置顶" %}</label>
-    </div>
-    <button class="r-btn" type="submit">{% trans "发布" %}</button>
-  </form>
+{% trans "发布公告" as sp_title_text %}
+{% comment %}
+「发布公告」独立深链页：同一块设置面板（无遮罩、单分区、居中）。
+公告中心的「＋ 发布公告」打开的是同一份正文（_notice_create_body.html）的弹层。
+{% endcomment %}
+<div class="ds-settings ds-settings--inline ds-settings--single">
+  {% include "includes/ds_settings_panel.html" with sp_title=sp_title_text sp_body="notice/_notice_create_body.html" sp_modal=False sp_back=back_url %}
 </div>
 {% endblock %}

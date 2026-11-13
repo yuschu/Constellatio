@@ -4,7 +4,7 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
   <h2 class="mb-0">{% trans "审批中心" %}</h2>
-  <a href="{% url 'approval:approval_create' %}" class="r-btn">＋ {% trans "发起审批" %}</a>
+  {% if create_url %}<a href="{{ create_url }}" class="r-btn" data-ds-modal-open="ds-approval-new">＋ {% trans "发起审批" %}</a>{% endif %}
 </div>
 <div class="r-card">
   <div class="table-responsive">
@@ -56,4 +56,8 @@
   </div>
   {% include 'includes/pagination.html' %}
 </div>
+{% if create_url %}
+{% trans "发起审批" as sp_approval_create_title %}
+{% include "includes/ds_settings_modal.html" with sp_id="ds-approval-new" sp_title=sp_approval_create_title sp_body="approval/_approval_create_body.html" sp_query="view=new" sp_url=create_url sp_base=approval_list_url sp_open=create_open %}
+{% endif %}
 {% endblock %}

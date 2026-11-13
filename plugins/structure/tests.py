@@ -168,7 +168,7 @@ class StructureApplyTests(TestCase):
         self.assertContains(resp, '钱招聘')
         self.assertContains(resp, '招聘组')
         self.assertContains(resp, 'IT运维工程师')
-        self.assertContains(resp, '返回组织架构')
+        self.assertContains(resp, '/plugins/structure/')
 
     def test_overview_shows_current_architecture(self):
         """v1.5.9：组织架构页展示真实部门/角色，并给出「查看模板」入口。"""

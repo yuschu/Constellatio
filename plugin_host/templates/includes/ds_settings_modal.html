@@ -1,0 +1,23 @@
+{% load i18n %}
+{% comment %}
+设置式二级页弹层外壳（遮罩 + 面板），照 DSH SettingsPanel：
+  overlay + mask + panel(role=dialog aria-modal)
+
+参数：
+  sp_id     弹层元素 id（也是 data-ds-modal-open 的目标）
+  sp_title  标题
+  sp_body   正文模板路径
+  sp_query  打开这个弹层的 URL 键值对，如 "view=new"
+  sp_url    打开时 pushState 的地址
+  sp_base   关闭时 replaceState 回上一级
+  sp_open   服务端渲染时是否已是打开态
+  sp_stack  正文列宽（"wide" 可选）
+{% endcomment %}
+<div class="ds-settings ds-settings--subpage ds-settings--single" id="{{ sp_id }}"
+     role="dialog" aria-modal="true" aria-labelledby="{{ sp_id }}-title"
+     data-ds-subpage data-ds-subpage-query="{{ sp_query }}"
+     data-ds-subpage-url="{{ sp_url }}" data-ds-subpage-base="{{ sp_base }}"
+     {% if not sp_open %}hidden aria-hidden="true"{% endif %}>
+  <div class="ds-settings__overlay" aria-hidden="true" data-ds-modal-close></div>
+  {% include "includes/ds_settings_panel.html" with sp_title=sp_title sp_title_id=sp_id|add:"-title" sp_body=sp_body sp_modal=True sp_stack=sp_stack %}
+</div>

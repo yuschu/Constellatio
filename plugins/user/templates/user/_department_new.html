@@ -1,70 +1,8 @@
 {% load i18n %}
+{% trans "新建部门" as sp_title_text %}
 {% comment %}
-「新建部门」设置弹层（照 DSH 点开设置的那一页：遮罩 + 800×800 面板 +
-左 188px 分区列 + 右侧内容 + 右上 ✕）。打开/收起由 ds-shell.js 的
-subpage 控制器做文档级委托；`data-ds-subpage-query="view=new"` 让
-?view=new 深链也能直接打开。
+「新建部门」设置弹层：共享外壳 includes/ds_settings_modal.html。
+单分区 → 最外层 ds-settings--single，不渲染左侧分区列，内容与按钮居中。
+`?view=new` 是它的深链；表单仍 POST 到部门列表（action=create）。
 {% endcomment %}
-<div class="ds-settings ds-settings--subpage" id="ds-dept-new" role="dialog" aria-modal="true"
-     aria-labelledby="ds-dept-new-title"
-     data-ds-subpage data-ds-subpage-query="view=new"
-     data-ds-subpage-url="{{ dept_new_url|default:'?view=new' }}"
-     data-ds-subpage-base="{{ dept_list_url|default:'' }}"
-     {% if not dept_form_open %}hidden aria-hidden="true"{% endif %}>
-  <div class="ds-settings__overlay" aria-hidden="true" data-ds-modal-close></div>
-  <div class="ds-settings__panel" tabindex="-1">
-    <h2 class="ds-settings__title" id="ds-dept-new-title">{% trans "新建部门" %}</h2>
-    <div class="ds-settings__header">
-      <button type="button" class="ds-settings__close" data-ds-modal-close
-              aria-label="{% trans '关闭' %}">
-        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
-          <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5"
-                fill="none" stroke-linecap="round"/>
-        </svg>
-      </button>
-    </div>
-
-    <nav class="ds-settings__nav" aria-label="{% trans '部门分区' %}">
-      <ul class="ds-settings__cells">
-        <li>
-          <button type="button" class="ds-settings__cell is-active" aria-current="true">
-            {% trans "新建部门" %}
-          </button>
-        </li>
-      </ul>
-    </nav>
-
-    <div class="ds-settings__options" tabindex="0">
-      <p class="ds-settings__desc">{% trans "部门名称与上级部门决定组织树的位置；保存后立即出现在部门列表里。" %}</p>
-
-      <form method="post" action="{% url 'user:department_list' %}" novalidate
-            class="ds-settings__form">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="create">
-
-        {% for error in form.non_field_errors %}
-        <div class="ds-field__error">{{ error }}</div>
-        {% endfor %}
-
-        <div class="ds-fields">
-          <div class="ds-field">
-            <label class="ds-field__label" for="{{ form.name.id_for_label }}">{% trans "名称" %}</label>
-            {{ form.name }}
-            {% for error in form.name.errors %}<div class="ds-field__error">{{ error }}</div>{% endfor %}
-          </div>
-          <div class="ds-field">
-            <label class="ds-field__label" for="{{ form.parent.id_for_label }}">{% trans "上级部门" %}</label>
-            {{ form.parent }}
-            <div class="ds-field__help">{% trans "留空表示顶层部门；下级部门会挂到所选部门之下。" %}</div>
-            {% for error in form.parent.errors %}<div class="ds-field__error">{{ error }}</div>{% endfor %}
-          </div>
-        </div>
-
-        <div class="ds-settings__actions">
-          <button class="r-btn" type="submit">{% trans "创建" %}</button>
-          <button class="r-btn r-btn--ghost" type="button" data-ds-modal-close>{% trans "取消" %}</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
+{% include "includes/ds_settings_modal.html" with sp_id="ds-dept-new" sp_title=sp_title_text sp_body="user/_department_new_body.html" sp_query="view=new" sp_url=dept_new_url sp_base=dept_list_url sp_open=dept_form_open %}
