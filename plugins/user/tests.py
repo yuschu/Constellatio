@@ -276,13 +276,58 @@ class ProfileTests(TestCase):
     def setUp(self):
         self.client.force_login(self.user)
 
-    def test_profile_and_topbar_link(self):
+    def test_profile_page_still_exists_for_deep_link(self):
         response = self.client.get(reverse('user:profile'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '个人中心')
         self.assertContains(response, '编辑资料')
+
+    def test_settings_panel_carries_profile_instead_of_profile_link(self):
+        """v2.1.6：个人资料搬进设置「我的」分区，不再留「打开→个人中心」的跳转。
+
+        首页与业务页各有一份设置面板，两处口径必须一致；三个动作是 deep link +
+        `data-ds-panel`（由 ds-shell.js 原地取面板，不跳页）。
+        """
         home = self.client.get('/dashboard/')
-        self.assertContains(home, '/plugins/user/profile/')
+        self.assertContains(home, '姓名')
+        self.assertContains(home, '所属部门')
+        self.assertContains(home, '编辑资料')
+        self.assertContains(home, '查看权限')
+        self.assertContains(home, '修改密码')
+        self.assertNotContains(home, 'href="/plugins/user/profile/"')
+        html = home.content.decode()
+        for path in ('/plugins/user/profile/edit/', '/plugins/user/profile/permissions/',
+                     '/plugins/user/profile/password/'):
+            self.assertIn(f'href="{path}" data-ds-panel', html)
+
+        dept = self.client.get(reverse('user:department_list'))
+        self.assertContains(dept, '编辑资料')
+        self.assertNotContains(dept, 'href="/plugins/user/profile/"')
+
+    def test_profile_edit_invalid_returns_panel_with_errors(self):
+        """校验失败把带错的面板原样交回（原地打开时错误落在面板里）。"""
+        response = self.client.post(reverse('user:profile_edit'), {
+            'last_name': '', 'email': 'not-an-email'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'ds-settings__panel')
+        self.assertContains(response, 'ds-field__error')
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.last_name, '旧名')
+
+    def test_profile_edit_success_honours_next(self):
+        """保存成功回打开它的那一页（设置里原地打开时 next=当前页）。"""
+        response = self.client.post(reverse('user:profile_edit'), {
+            'last_name': '新名', 'email': 'new@example.com',
+            'next': reverse('user:department_list')})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], reverse('user:department_list'))
+
+    def test_profile_edit_ignores_offsite_next(self):
+        response = self.client.post(reverse('user:profile_edit'), {
+            'last_name': '新名', 'email': 'new@example.com',
+            'next': 'https://evil.example.com/'})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], reverse('user:profile'))
 
     def test_profile_permissions_page(self):
         response = self.client.get(reverse('user:profile_permissions'))

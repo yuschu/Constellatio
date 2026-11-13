@@ -4124,6 +4124,13 @@ html:not([data-color-mode="dark"]) .lc-ov-session {
   display: none;
 }
 
+/* 从设置面板里再开一层（个人资料 / 查看权限 / 修改密码）：DSH 的账号信息是
+   「在设置里打开」，不是第二扇窗。所以这层不再叠一块遮罩，两层面板同尺寸同位置
+   （都 800×min(800, 100vh-48)、都居中），盖上去读起来就是设置换了内容。 */
+.ds-settings--subpage--stack .ds-settings__overlay {
+  background: transparent;
+}
+
 /* 业务页深链：同一块 800×800 面板，不做遮罩，按文档流居中 */
 .ds-settings--inline {
   position: static;

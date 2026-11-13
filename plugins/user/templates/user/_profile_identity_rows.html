@@ -1,0 +1,24 @@
+{% load i18n %}
+{% comment %}
+「我的」账号资料行（设置面板与个人中心共用一份）。
+按 DSH settings-account 的账号信息口径排：左标题 13/500 primary、右值 13 secondary、
+0.5px 分隔行、末行不画线（`_WvWnq_section` 的 last-child 规则）。
+{% endcomment %}
+<div class="ds-fields">
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "用户名" %}</div>
+    <div class="ds-settings__state">{{ request.user.username }}</div>
+  </div>
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "姓名" %}</div>
+    <div class="ds-settings__state">{{ request.user.last_name|default:'—' }}</div>
+  </div>
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "电子邮件地址" %}</div>
+    <div class="ds-settings__state">{{ request.user.email|default:'—' }}</div>
+  </div>
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "所属部门" %}</div>
+    <div class="ds-settings__state">{{ request.user.department.name|default:'—' }}</div>
+  </div>
+</div>

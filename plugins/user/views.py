@@ -12,6 +12,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Permission
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _
 
 from plugin_host.pagination import paginate
@@ -495,6 +496,21 @@ def _profile_context(request, view='', edit_form=None, password_form=None):
     return context
 
 
+def _profile_saved_redirect(request):
+    """资料 / 密码保存成功后的落点。
+
+    v2.1.6：个人资料从设置面板里原地打开（不再是「跳个人中心页」），所以保存后
+    优先回到打开它的那一页（`next` 由 ds-shell.js 填成进面板前的地址）；没有
+    `next`（例如直接访问深链页提交）仍回个人中心，保持旧口径。
+    """
+    nxt = request.POST.get('next') or ''
+    if nxt and url_has_allowed_host_and_scheme(
+            nxt, allowed_hosts={request.get_host()},
+            require_https=request.is_secure()):
+        return redirect(nxt)
+    return redirect('user:profile')
+
+
 @login_required
 def profile(request):
     """个人中心：资料摘要 + 权限入口 + 修改密码入口（设置面板形态）。"""
@@ -512,10 +528,10 @@ def profile_edit(request):
         if form.is_valid():
             form.save()
             user_updated.send(sender=request.user.__class__, user_id=request.user.pk)
-            return redirect('user:profile')
-        # 校验失败：回到个人中心并让「编辑资料」弹层保持打开（错误就地显示）
-        return render(request, 'user/profile.html',
-                      _profile_context(request, 'edit', edit_form=form))
+            return _profile_saved_redirect(request)
+        # 校验失败：把带错的面板原样交回（在设置里原地打开时，错误直接落在面板里）
+        return render(request, 'user/profile_edit.html',
+                      _profile_context(request, edit_form=form))
     return render(request, 'user/profile_edit.html', _profile_context(request))
 
 
@@ -537,7 +553,7 @@ def profile_password(request):
             update_session_auth_hash(request, request.user)
             password_changed.send(sender=request.user.__class__,
                                   user_id=request.user.pk, operator_id=request.user.pk)
-            return redirect('user:profile')
-        return render(request, 'user/profile.html',
-                      _profile_context(request, 'password', password_form=form))
+            return _profile_saved_redirect(request)
+        return render(request, 'user/profile_password.html',
+                      _profile_context(request, password_form=form))
     return render(request, 'user/profile_password.html', _profile_context(request))

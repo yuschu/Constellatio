@@ -217,15 +217,15 @@
           </div>
         </div>
 
-        <div class="ds-settings__row">
-          <div>
-            <div class="ds-settings__row-title">{% trans "个人资料" %}</div>
-            <div class="ds-settings__row-desc">{% trans "姓名、邮箱与所属部门" %}</div>
-          </div>
-          {% if 'user' in plugins_enabled %}
-          <a class="ds-settings__link" href="{% url 'user:profile' %}">{% trans "打开" %}</a>
-          {% endif %}
+        {% if 'user' in plugins_enabled %}{% comment %}个人资料直接排在设置里（DSH AccountSection 的账号信息行），点「编辑资料 / 查看权限 / 修改密码」由 ds-shell.js 原地取回面板盖上，不再跳个人中心页。{% endcomment %}
+        {% include "user/_profile_identity_rows.html" %}
+
+        <div class="ds-settings__actions ds-settings__actions--center">
+          <a class="r-btn" href="{% url 'user:profile_edit' %}" data-ds-panel>{% trans "编辑资料" %}</a>
+          <a class="r-btn r-btn--ghost" href="{% url 'user:profile_permissions' %}" data-ds-panel>{% trans "查看权限" %}</a>
+          <a class="r-btn r-btn--ghost" href="{% url 'user:profile_password' %}" data-ds-panel>{% trans "修改密码" %}</a>
         </div>
+        {% endif %}
 
         <div class="ds-settings__row">
           <div>

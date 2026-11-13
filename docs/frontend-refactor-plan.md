@@ -1125,3 +1125,33 @@ input:focus-visible{outline:1px solid state-business;outline-offset:2px}
 **审批详情补验**：审批中心列表在 admin 账号下是空的（没有行可点），改用 `hr_li` 账号跑同一支探针 —— 列表里 2 个 `[data-ds-panel]`，点第一条原地开出「审批详情 #197」（`marker` 存活、地址栏 `/plugins/approval/197/`、无重载），截图 `screens-v10/inplace-approval-detail.png`。
 
 **仍未覆盖**：公告「已读人员」是自带地址页的独立弹层（原来靠 `data-ds-subpage-static` 豁免地址栏同步），改成原地开后关闭仍是回 `/plugins/notice/`。
+
+### 9.13.20 个人资料搬进设置「我的」分区（v2.1.6）
+
+**用户诉求**：「个人资料直接在设置中打开，不要跳转到功能页的个人中心，移到设置」。
+
+**旧态**：设置「我的」分区里只有一行「个人资料｜姓名、邮箱与所属部门」加一个「打开」，点了整页跳到 `/plugins/user/profile/`（功能页里的个人中心，一块 inline 面板）。这正是用户说的「转到功能页」—— 明明资料是账号自己的事，却要换一次页。
+
+**照的源码**：`dsh-client-ui-settings-account/lib/client.js` 的 `AccountSection`（第 2455 行起）—— 身份卡（头像 / 名字 / 状态）+「账号信息」入口，账号信息页是 **在设置里打开**（`showPage(openPlatformPage, "usage")` 把内嵌页换进设置，不是开新窗）。所以这里也把资料行直接排进设置，子页仍留在设置里开。
+
+**改法**：
+- 账号资料行抽成 `plugins/user/templates/user/_profile_identity_rows.html`（用户名 / 姓名 / 电子邮件地址 / 所属部门），设置面板与个人中心共用同一份，口径不会漂。
+- 设置「我的」里直接排这四行 + 三个动作（编辑资料 / 查看权限 / 修改密码）。三个动作是深链 + `data-ds-panel`，走 9.13.19 的原地取面板；原来那个「打开 → 个人中心」的跳转删掉（`base.html` 与首页 `plugins/assistant/templates/assistant/home_chat.html` 各一份设置面板，两处同步）。
+- **不再叠第二个遮罩**：`openPanel` 检测 `#ds-settings` 正开着就给 host 挂 `ds-settings--subpage--stack`，CSS 把这一层遮罩背景设成透明。两层都是 `800 × min(800px, 100vh - 48px)`、同一位置，盖上去读起来就是设置在换页（DSH 的账号信息页也是这个观感）。
+- 保存后落点：`next` 由 `ds-shell.js` 填成「进面板前的地址」，视图用 `url_has_allowed_host_and_scheme` 校验hosts，合法就回原页、否则回个人中心；直接访问深链页提交（没 `next`）仍是旧口径。
+- 校验失败不再渲染整个个人中心页（那样错误藏在它的弹层里、原地换面板会换错块），改成把带错的 `profile_edit.html` / `profile_password.html` 面板原样交回 —— 原地打开时错误直接落在面板里。
+- 顺手补一处缓存漏口：`home_chat.html` 那条 `ds-shell.js` 没有 `?v={{ assets_version }}`（业务页 `base.html` 早就有），首页会读到旧 JS。
+
+**实测（本地 8011，1440×900，admin）**：
+- 部门页 → 设置 → 我的：6 行（身份卡 + 四行资料 + 登录状态）、3 个按钮、`profileJump=false`（没有指向 `/plugins/user/profile/` 的链接）。
+- 点「编辑资料」：`stacked=true`、遮罩 `rgba(0,0,0,0)`、设置面板 `[320,50,800,800]` 与子面板 rect 完全相同、地址栏 `/plugins/user/profile/edit/`、`__noReload` 存活。
+- 邮箱填 `not-an-email` 提交：错误「输入一个有效的 Email 地址。」落在面板里、marker 仍存活（不重载）、地址栏不变；关闭后回 `/plugins/user/departments/`，设置面板仍开着。
+- 保存成功（姓名留空、邮箱合法）：302 回 `next`（实测回部门页），不再跳个人中心。
+- 首页 `/dashboard/` 同一分区：点「查看权限」原地开「我的权限」（L0 超级管理员 / 全员基线权限 / 有效权限），点「修改密码」原地开「修改密码」，关闭都回 `/dashboard/`。
+- 截图 `.tmp-test/screens-v11/`。
+
+**门禁**：`plugins/user/tests.py` 里原 `test_profile_and_topbar_link` 改成 `test_settings_panel_carries_profile_instead_of_profile_link`（断言两处设置面板都有资料行与三个 `data-ds-panel`、且没有 `href="/plugins/user/profile/"`），另加 `test_profile_edit_invalid_returns_panel_with_errors`、`test_profile_edit_success_honours_next`、`test_profile_edit_ignores_offsite_next`，个人中心页保留 `test_profile_page_still_exists_for_deep_link`（深链仍可用）。全量 **526 tests OK**，ruff 通过。
+
+**容器实测（`docker compose up -d --build web` 重建后，8000 端口，容器 admin）**：同一支探针结果与本地逐条一致（stacked / 透明遮罩 / 两个 800×800 完全重合 / 校验失败不重载 / 关闭回列表且设置仍开）。MD5 本地/容器一致：`base.html 94d0661006a73b6bb9d11da8806028e1`、`home_chat.html 4291ace265daf7df9f70c4e348fe417e`、`_profile_identity_rows.html 21d05545883b6bb58c02eb13412481e6`、`views.py d758210b0b3ae809cb5c414c8843e6ce`、`ds-shell.js 5d9eced342aa76fe8ecd9ecc0a1c2b2d`、`corporate-clean.css 297070282b645096a86bd7ea0141feea`。截图 `.tmp-test/screens-v11/container/`。
+
+**保留**：`/plugins/user/profile/` 个人中心页没删 —— 它是编辑资料等深链的宿主，也是「直接访问」的兜底；只是再没有任何入口跳过去。权限等级 / 角色只在「查看权限」面板里看（设置面板每页都要渲染，实时算 L0–L3 要多跑几条查询，不值当）。

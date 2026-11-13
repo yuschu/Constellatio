@@ -531,6 +531,10 @@
         e.preventDefault();
         var url = form.getAttribute('action') || window.location.href;
         var body = new FormData(form);
+        /* 保存成功后回哪：填进面板前的地址（设置里打开时就是当前页），
+           而不是被 pushState 顶上去的深链地址。 */
+        var base = host.getAttribute('data-ds-subpage-base');
+        if (base) body.set('next', base);
         if (e.submitter && e.submitter.name) {
           body.append(e.submitter.name, e.submitter.value);
         }
@@ -595,6 +599,12 @@
 
     function openPanel(url, trigger) {
       var host = hostEl();
+      /* 从设置面板里再点开一层（个人资料 / 查看权限 / 修改密码）：DSH 是在设置里
+         打开，不是再叠一个遮罩。这时候把 host 的遮罩做成透明，面板与设置面板同
+         位置同尺寸，看着就是「内容换了一层」。 */
+      var settings = document.getElementById('ds-settings');
+      var stacked = !!settings && !settings.hasAttribute('hidden');
+      host.classList.toggle('ds-settings--subpage--stack', stacked);
       var base = host.hasAttribute('hidden')
         ? window.location.pathname + window.location.search
         : host.getAttribute('data-ds-subpage-base');

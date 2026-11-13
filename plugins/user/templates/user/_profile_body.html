@@ -2,25 +2,12 @@
 {% comment %}
 「个人中心」设置页正文：账号信息按 DSH 的设置行（`ds-settings__row`：
 左标题 / 右值、0.5px 分隔行）排，下面是三个账号操作。
-三个子页（编辑资料 / 查看权限 / 修改密码）都是盖在这块面板上的弹层。
+v2.1.6：账号资料行抽成 `_profile_identity_rows.html`，设置面板「我的」分区
+直接复用同一份 —— 个人资料不再需要单开一个个人中心页才能看。
 {% endcomment %}
+{% include "user/_profile_identity_rows.html" %}
+
 <div class="ds-fields">
-  <div class="ds-settings__row">
-    <div class="ds-settings__row-title">{% trans "用户名" %}</div>
-    <div class="ds-settings__state">{{ request.user.username }}</div>
-  </div>
-  <div class="ds-settings__row">
-    <div class="ds-settings__row-title">{% trans "姓名" %}</div>
-    <div class="ds-settings__state">{{ request.user.last_name|default:'—' }}</div>
-  </div>
-  <div class="ds-settings__row">
-    <div class="ds-settings__row-title">{% trans "电子邮件地址" %}</div>
-    <div class="ds-settings__state">{{ request.user.email|default:'—' }}</div>
-  </div>
-  <div class="ds-settings__row">
-    <div class="ds-settings__row-title">{% trans "所属部门" %}</div>
-    <div class="ds-settings__state">{{ request.user.department.name|default:'—' }}</div>
-  </div>
   <div class="ds-settings__row">
     <div class="ds-settings__row-title">{% trans "权限等级" %}</div>
     <div>
