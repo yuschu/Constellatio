@@ -1738,3 +1738,90 @@ msgstr "AI assistant plugin is disabled"
 
 msgid "助手已停用"
 msgstr "Assistant disabled"
+
+msgid "今天 · %(day)s"
+msgstr "Today · %(day)s"
+
+msgid "%(check_in)s 上班打卡"
+msgstr "%(check_in)s clocked in"
+
+msgid "%(check_out)s 下班打卡"
+msgstr "%(check_out)s clocked out"
+
+msgid "已工作 %(hours)s"
+msgstr "%(hours)s worked"
+
+msgid "今天还没有打卡，点下面的「签到」开始计时"
+msgstr "No check-in yet today — tap “Clock in” to start the timer"
+
+msgid "今日概览"
+msgstr "Today at a glance"
+
+msgid "本周工时"
+msgstr "Weekly hours"
+
+msgid "谁在班"
+msgstr "Who's in"
+
+msgid "最近打卡"
+msgstr "Recent check-ins"
+
+msgid "我的最近打卡"
+msgstr "My recent check-ins"
+
+msgid "今日工时"
+msgstr "Today's hours"
+
+msgid "我的今日工时"
+msgstr "My hours today"
+
+msgid "在班"
+msgstr "In"
+
+msgid "已签到 %(signed)s / %(total)s 人"
+msgstr "%(signed)s / %(total)s clocked in"
+
+msgid "%(signed)s / %(total)s 人已签到"
+msgstr "%(signed)s / %(total)s people clocked in"
+
+msgid "人事插件未启用，无法统计在班人数"
+msgstr "HR plugin is disabled; team headcount unavailable"
+
+msgid "本月出勤（%(month)s）"
+msgstr "Attendance this month (%(month)s)"
+
+msgid "本月工时"
+msgstr "Hours this month"
+
+msgid "合计 %(hours)s"
+msgstr "Total %(hours)s"
+
+msgid "周一"
+msgstr "Mon"
+
+msgid "周二"
+msgstr "Tue"
+
+msgid "周三"
+msgstr "Wed"
+
+msgid "周四"
+msgstr "Thu"
+
+msgid "周五"
+msgstr "Fri"
+
+msgid "周六"
+msgstr "Sat"
+
+msgid "周日"
+msgstr "Sun"
+
+msgid "今天还没有人签到"
+msgstr "No one has clocked in today"
+
+msgid "还没有打卡记录"
+msgstr "No check-in records yet"
+
+msgid "%(time)s 签到"
+msgstr "in at %(time)s"

@@ -12,6 +12,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
+from django.utils.formats import date_format
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _
 
@@ -32,6 +33,121 @@ MONTH_FORMAT = '%Y-%m'
 def _now():
     """当前时区感知时间（单独抽出便于测试替换打卡时刻）。"""
     return timezone.localtime()
+
+
+# v2.2.2：Jibble 形态的工时口径只用这一处——时长为「签到 → 签退（或此刻）」。
+WEEK_LABELS = ('周一', '周二', '周三', '周四', '周五', '周六', '周日')
+
+
+def _worked_hours(record, now):
+    """一条考勤记录已工作的时长（小时，float）；未签到 / 未来日期返回 0。"""
+    if record is None or record.check_in is None:
+        return 0.0
+    end = record.check_out or now
+    if end < record.check_in:
+        return 0.0
+    return (end - record.check_in).total_seconds() / 3600.0
+
+
+def _hours_text(hours):
+    """小时数 → Jibble 的 `5h 12m` 写法（分钟四舍五入）。"""
+    total = int(round(max(hours, 0.0) * 60))
+    return f'{total // 60}h {total % 60:02d}m'
+
+
+def _week_bars(user, today, now):
+    """本周（周一为首日）逐日工时柱：Jibble「Tracked hours」那一块的取数。"""
+    start = today - timedelta(days=today.isoweekday() - 1)
+    bars = []
+    for offset in range(7):
+        day = start + timedelta(days=offset)
+        record = Attendance.objects.filter(user=user, date=day).first()
+        hours = _worked_hours(record, now) if day <= today else 0.0
+        bars.append({
+            'day': day,
+            'label': _(WEEK_LABELS[offset]),
+            'hours': hours,
+            'hours_text': _hours_text(hours),
+            'is_today': day == today,
+            'future': day > today,
+        })
+    # 柱高按「至少 8 小时」定标：正常一天不会把柱子挤满，短工时也不会被抹平
+    peak = max([bar['hours'] for bar in bars] + [8.0])
+    for bar in bars:
+        bar['percent'] = round(bar['hours'] / peak * 100, 1) if peak else 0.0
+    total = sum(bar['hours'] for bar in bars)
+    return {'start': start, 'bars': bars, 'total': total, 'total_text': _hours_text(total)}
+
+
+def _employee_count():
+    """在职人数（跨插件动态取 user.User，插件停用时降级为 0）。"""
+    try:
+        User = dj_apps.get_model('user', 'User')
+    except LookupError:
+        return 0
+    return User.objects.filter(is_active=True).count()
+
+
+def _today_team(user, today, now):
+    """今日在班情况：Jibble「Who's in」那一块。
+
+    姓名名单只给有 `attendance_report_view` 的人看（与签到详情同权限口径）；
+    其余人只拿到聚合数字，不暴露同事的打卡时刻。
+    """
+    records = list(
+        Attendance.objects.filter(date=today)
+        .select_related('user', 'user__department')
+        .order_by('check_in', 'user__username'))
+    signed = [item for item in records if item.check_in is not None]
+    done = [item for item in signed if item.check_out is not None]
+    late = [item for item in records if item.status == Attendance.Status.LATE]
+    total = _employee_count()
+    missing = max(total - len(signed), 0) if total else 0
+
+    rows = []
+    if user.has_perm('attendance.attendance_report_view'):
+        for record in signed[:8]:
+            name = record.user.last_name or record.user.username
+            rows.append({
+                'name': name,
+                'initial': (name[:1] or '?').upper(),
+                'dept': record.user.department.name if record.user.department else '',
+                'check_in': timezone.localtime(record.check_in).strftime('%H:%M'),
+                'check_out': (timezone.localtime(record.check_out).strftime('%H:%M')
+                              if record.check_out else ''),
+                'hours_text': _hours_text(_worked_hours(record, now)),
+                'status_label': _(record.get_status_display()),
+                'done': record.check_out is not None,
+            })
+
+    return {
+        'rows': rows,
+        'signed': len(signed),
+        'done': len(done),
+        'late': len(late),
+        'missing': missing,
+        'total': total,
+        'signed_percent': round(len(signed) / total * 100) if total else 0,
+    }
+
+
+def _recent_rows(user, limit=5):
+    """我的最近打卡（Jibble 的 activity log）：只取本人记录。"""
+    rows = []
+    for record in Attendance.objects.filter(user=user).order_by('-date')[:limit]:
+        rows.append({
+            'date': record.date.strftime('%m-%d'),
+            'weekday': _(WEEK_LABELS[record.date.isoweekday() - 1]),
+            'check_in': (timezone.localtime(record.check_in).strftime('%H:%M')
+                         if record.check_in else ''),
+            'check_out': (timezone.localtime(record.check_out).strftime('%H:%M')
+                          if record.check_out else ''),
+            'hours_text': _hours_text(_worked_hours(record, _now())),
+            'status_label': _(record.get_status_display()),
+            'status': record.status,
+            'sign_type_label': _(record.get_sign_type_display()),
+        })
+    return rows
 
 
 @login_required
@@ -71,13 +187,37 @@ def attendance_context(request):
         for item in month_stats['series']
     ]
     rule = AttendanceRule.get_solo()
+    today_hours = _worked_hours(record, now)
+    # 月内工时合计：month_records 已在上面查过，这里只做内存累加，不再多打一轮库
+    month_hours = sum(_worked_hours(item, now) for item in month_records)
+    week = _week_bars(request.user, today, now)
+    team = _today_team(request.user, today, now)
+    recent_rows = _recent_rows(request.user)
+    if record is None:
+        status_key = 'idle'
+        status_label = _('未打卡')
+    elif record.check_out:
+        status_key = 'done'
+        status_label = _('已签退')
+    else:
+        status_key = 'active'
+        status_label = _('已签到')
 
     return {
         'record': record,
         'today': today,
+        'today_text': date_format(today),
         'now': now,
         'month_days': month_records.count(),
         'month_late': late,
+        'month_hours_text': _hours_text(month_hours),
+        'today_hours_text': _hours_text(today_hours),
+        'status_key': status_key,
+        'status_label': status_label,
+        'week': week,
+        'team': team,
+        'recent_rows': recent_rows,
+        'can_view_report': request.user.has_perm('attendance.attendance_report_view'),
         'sign_types': Attendance.SignType.choices,
         'attendance_chart': attendance_chart,
         'status_totals': status_totals,

@@ -5024,3 +5024,621 @@ html[data-color-mode="dark"] select.r-select:not([multiple]) {
   border: 0;
   border-radius: 8px;
 }
+/* ============================================================
+   37. 考勤仪表盘（Jibble 结构 + DSH 字面量，v2.2.2）
+   结构照 Jibble：打卡卡 / 今日概览 / 本周工时柱 / 谁在班 / 最近打卡；
+   视觉一律走既有 token（0.5px 描边、radius、label 三级色），不引入第三方风格。
+   ============================================================ */
+.atj {
+  gap: var(--ds-space-4);
+}
+
+.at-head__lead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.atj-kicker {
+  margin: 0;
+  color: var(--ds-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.atj-kicker--inline {
+  display: inline-flex;
+  align-items: center;
+}
+
+.atj-top {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: var(--ds-space-4);
+  align-items: stretch;
+}
+
+/* 网格里的卡片是同一排，通用 `.r-card + .r-card` 的 12px 上间距会让右卡掉下去 */
+.atj-top > .r-card + .r-card,
+.atj-split > .r-card + .r-card {
+  margin-top: 0;
+}
+
+/* --- 打卡卡：Jibble 的大时钟 + 大按钮，按钮改成 pill（40 高、999 圆角） --- */
+.atj-clock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px 16px;
+}
+
+.atj-clock__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.atj-clock__time {
+  margin-top: 2px;
+  font-size: 34px;
+  line-height: 40px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.atj-clock__caption {
+  margin: 0;
+  color: var(--ds-label-secondary);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.atj-pill {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 500;
+}
+
+.atj-pill--active {
+  color: var(--ds-state-success);
+  background: color-mix(in srgb, var(--ds-state-success) 12%, transparent);
+}
+
+.atj-pill--done {
+  color: var(--ds-label-secondary);
+  background: var(--ds-interactive-hover);
+}
+
+.atj-pill--idle {
+  color: var(--ds-state-warn);
+  background: color-mix(in srgb, var(--ds-state-warn) 14%, transparent);
+}
+
+.atj-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  border-top: 0.5px solid var(--ds-border-l2);
+  border-bottom: 0.5px solid var(--ds-border-l2);
+}
+
+.atj-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 4px 10px 0;
+}
+
+.atj-fact + .atj-fact {
+  padding-left: 14px;
+  border-left: 0.5px solid var(--ds-border-l2);
+}
+
+.atj-fact dt {
+  margin: 0;
+  color: var(--ds-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.atj-fact dd {
+  margin: 0;
+  color: var(--ds-label-primary);
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.atj-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.atj-form__label {
+  margin: 0;
+  color: var(--ds-label-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+/* 打卡卡被右侧拉高时，口径说明落在卡底，作为一条分隔过的脚注 */
+.atj-clock .at-note {
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 0.5px solid var(--ds-border-l2);
+}
+
+.atj-form__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.atj-form__select {
+  flex: none;
+  width: 132px;
+}
+
+.atj-btn {
+  height: 40px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 999px;
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter var(--ds-dur-fast) linear,
+    background-color var(--ds-dur-fast) linear;
+}
+
+.atj-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.atj-btn--primary {
+  color: #fff;
+  background: var(--ds-state-business);
+}
+
+.atj-btn--primary:hover:not(:disabled) {
+  filter: brightness(0.94);
+}
+
+.atj-btn--quiet {
+  color: var(--ds-label-primary);
+  background: transparent;
+  box-shadow: inset 0 0 0 0.5px var(--ds-border-l3);
+}
+
+.atj-btn--quiet:hover:not(:disabled) {
+  background: var(--ds-interactive-hover);
+}
+
+/* --- 今日概览：Jibble 的四格数字，格间 0.5px 网格 --- */
+.atj-today {
+  padding: 18px 20px 16px;
+}
+
+.atj-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 0.5px solid var(--ds-border-l2);
+  border-radius: var(--ds-radius-md);
+  overflow: hidden;
+}
+
+.atj-metric {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-height: 64px;
+  padding: 10px 14px;
+}
+
+.atj-metric:nth-child(even) {
+  border-left: 0.5px solid var(--ds-border-l2);
+}
+
+.atj-metric:nth-child(n + 3) {
+  border-top: 0.5px solid var(--ds-border-l2);
+}
+
+.atj-metric__value {
+  color: var(--ds-label-primary);
+  font-size: 24px;
+  line-height: 30px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.atj-metric__value--small {
+  font-size: 18px;
+  line-height: 26px;
+}
+
+.atj-metric__value--warn {
+  color: var(--ds-state-warn);
+}
+
+.atj-metric__value--muted {
+  color: var(--ds-label-tertiary);
+}
+
+.atj-metric__label {
+  color: var(--ds-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.atj-progress {
+  height: 6px;
+  margin-top: 14px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--ds-interactive-hover);
+}
+
+.atj-progress__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ds-state-success);
+}
+
+.atj-today__note {
+  margin: 8px 0 0;
+  color: var(--ds-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.atj-today .at-kv {
+  margin-top: 12px;
+  border-top: 0.5px solid var(--ds-border-l2);
+}
+
+/* --- 卡片标题行（Jibble 每块都是「标题 + 数字」的细头） --- */
+.atj-split {
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  align-items: stretch;
+}
+
+.atj-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 0.5px solid var(--ds-border-l2);
+}
+
+.atj-card-head__title {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.atj-week {
+  display: flex;
+  flex-direction: column;
+  padding: 14px 16px 16px;
+}
+
+.atj-week__total {
+  color: var(--ds-label-secondary);
+  font-size: 12px;
+  line-height: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.atj-bars {
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+  align-items: stretch;
+  min-height: 176px;
+  padding-top: 4px;
+}
+
+.atj-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+}
+
+.atj-bar__value {
+  color: var(--ds-label-tertiary);
+  font-size: 11px;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* 柱子吃掉卡片剩余高度：Jibble 的 Tracked hours 是整块撑满，不留大片空白 */
+.atj-bar__track {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: flex-end;
+  width: 100%;
+  max-width: 44px;
+  min-height: 96px;
+  overflow: hidden;
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-interactive-hover);
+}
+
+.atj-bar__fill {
+  display: block;
+  width: 100%;
+  border-radius: inherit;
+  background: var(--ds-label-caption);
+  transition: height var(--ds-dur-slow) var(--ds-ease);
+}
+
+.atj-bar.is-today .atj-bar__fill {
+  background: var(--ds-state-business);
+}
+
+.atj-bar.is-future .atj-bar__track {
+  background: var(--ds-border-l1);
+}
+
+.atj-bar__label {
+  color: var(--ds-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.atj-bar.is-today .atj-bar__label {
+  color: var(--ds-label-primary);
+  font-weight: 600;
+}
+
+/* --- 谁在班 / 最近打卡：Jibble 右侧成员列表（头像 + 姓名 + 签到时刻） --- */
+.atj-who {
+  display: flex;
+  flex-direction: column;
+  padding: 14px 16px 12px;
+}
+
+.atj-who__counts {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ds-label-secondary);
+  font-size: 12px;
+  line-height: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.atj-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.atj-dot--live {
+  background: var(--ds-state-success);
+}
+
+.atj-dot--done {
+  margin-left: 8px;
+  background: var(--ds-label-caption);
+}
+
+.atj-people {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.atj-person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+}
+
+.atj-person + .atj-person {
+  border-top: 0.5px solid var(--ds-border-l2);
+}
+
+.atj-avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--ds-label-secondary);
+  background: var(--ds-bg-layer-3);
+  box-shadow: inset 0 0 0 0.5px var(--ds-border-l3);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.atj-avatar--date {
+  width: auto;
+  min-width: 48px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: var(--ds-radius-sm);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.atj-person__main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 1px;
+  min-width: 0;
+}
+
+.atj-person__name {
+  overflow: hidden;
+  color: var(--ds-label-primary);
+  font-size: 13px;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.atj-person__meta {
+  overflow: hidden;
+  color: var(--ds-label-tertiary);
+  font-size: 11px;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.atj-person__tail {
+  flex: none;
+  color: var(--ds-label-secondary);
+  font-size: 12px;
+  line-height: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.atj-person__tail.is-done {
+  color: var(--ds-label-tertiary);
+}
+
+.atj-empty {
+  margin: 0;
+  padding: 18px 0;
+  color: var(--ds-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+}
+
+/* --- 最近打卡（activity log）：日期 / 时段 / 工时 / 状态 --- */
+.atj-feed {
+  padding: 14px 16px 12px;
+}
+
+.atj-feed__rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.atj-feed__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.atj-feed__row + .atj-feed__row {
+  border-top: 0.5px solid var(--ds-border-l2);
+}
+
+.atj-feed__date {
+  flex: none;
+  width: 96px;
+  color: var(--ds-label-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.atj-feed__date em {
+  margin-left: 4px;
+  color: var(--ds-label-tertiary);
+  font-style: normal;
+}
+
+.atj-feed__span {
+  flex: 1;
+  color: var(--ds-label-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.atj-feed__hours {
+  flex: none;
+  color: var(--ds-label-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.atj-tag {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.atj-tag--normal {
+  color: var(--ds-state-success);
+  background: color-mix(in srgb, var(--ds-state-success) 12%, transparent);
+}
+
+.atj-tag--late,
+.atj-tag--early {
+  color: var(--ds-state-warn);
+  background: color-mix(in srgb, var(--ds-state-warn) 14%, transparent);
+}
+
+.atj-tag--missing {
+  color: var(--ds-state-error);
+  background: color-mix(in srgb, var(--ds-state-error) 12%, transparent);
+}
+
+.atj-tag--makeup {
+  color: var(--ds-state-business);
+  background: color-mix(in srgb, var(--ds-state-business) 12%, transparent);
+}
+
+@media (max-width: 1080px) {
+  .atj-top,
+  .atj-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .atj-bars {
+    gap: 6px;
+  }
+
+  .atj-bar__track {
+    height: 96px;
+  }
+
+  .atj-feed__date {
+    width: 76px;
+  }
+
+  .atj-feed__row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}

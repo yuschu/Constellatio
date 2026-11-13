@@ -788,3 +788,108 @@ class AttendancePanelSubPageTests(TestCase):
             {**self._payload(), 'next': 'https://evil.example/x'})
         self.assertEqual(response.status_code, 302)
         self.assertTrue(response['Location'].startswith('/plugins/attendance/rules/'))
+
+
+class AttendanceJibbleDashboardTests(TestCase):
+    """v2.2.2：考勤看板 = Jibble 仪表盘。
+
+    口径：今日状态英雄卡 / 今日概览 / 本周工时柱 / 谁在班 / 最近打卡。
+    姓名名单与「我的最近打卡」只给有 `attendance_report_view` 的人，
+    其余人只拿聚合数字（与签到详情页同权限）。
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        from django.contrib.auth.models import Permission
+
+        from plugins.user.models import Role
+
+        cls.staff = User.objects.create_user(
+            'jibblestaff', password='pw', last_name='员工甲')
+        cls.colleague = User.objects.create_user(
+            'jibblepeer', password='pw', last_name='同事丙')
+        cls.manager = User.objects.create_user(
+            'jibblemgr', password='pw', last_name='主管乙')
+        role = Role.objects.create(name='考勤报表可见')
+        role.permissions.add(
+            Permission.objects.get(codename='attendance_report_view'))
+        cls.manager.roles.add(role)
+
+    def _hours_text(self):
+        from .views import _hours_text
+        return _hours_text
+
+    def test_hours_text_uses_jibble_format(self):
+        from .views import _hours_text
+
+        self.assertEqual(_hours_text(5.2), '5h 12m')
+        self.assertEqual(_hours_text(0), '0h 00m')
+        self.assertEqual(_hours_text(9.999), '10h 00m')
+
+    def test_worked_hours_span_open_record_until_now(self):
+        from .views import _worked_hours
+
+        now = timezone.now()
+        day = timezone.localdate(now)
+        record = Attendance.objects.create(user=self.staff, date=day)
+        record.check_in = now - timedelta(hours=2, minutes=30)
+        record.save()
+        self.assertAlmostEqual(_worked_hours(record, now), 2.5, places=2)
+
+        record.check_out = record.check_in + timedelta(hours=8, minutes=15)
+        record.save()
+        self.assertAlmostEqual(_worked_hours(record, now), 8.25, places=2)
+        self.assertEqual(self._hours_text()(_worked_hours(record, now)), '8h 15m')
+
+    def test_week_bars_start_on_monday(self):
+        from .views import _week_bars
+
+        friday = date(2026, 11, 13)
+        now = timezone.make_aware(datetime.combine(friday, time(18, 0)))
+        week = _week_bars(self.staff, friday, now)
+        self.assertEqual(len(week['bars']), 7)
+        self.assertEqual(week['bars'][0]['label'], '周一')
+        self.assertTrue(week['bars'][4]['is_today'])
+        self.assertTrue(week['bars'][5]['future'])
+        self.assertEqual(week['total'], 0)
+        self.assertEqual(week['total_text'], '0h 00m')
+
+    def test_staff_sees_aggregate_but_not_colleagues(self):
+        day = timezone.localdate()
+        record = Attendance.objects.create(user=self.colleague, date=day)
+        record.check_in = timezone.now() - timedelta(hours=1)
+        record.save()
+
+        self.client.force_login(self.staff)
+        response = self.client.get('/plugins/attendance/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '今日概览')
+        self.assertContains(response, '本周工时')
+        self.assertContains(response, '最近打卡')
+        # 无报表权限：不出现同事姓名，也没有「谁在班」和管理岗的活动日志
+        self.assertNotContains(response, '同事丙')
+        self.assertNotContains(response, '谁在班')
+        self.assertNotContains(response, '我的最近打卡')
+
+    def test_manager_sees_team_and_activity_log(self):
+        day = timezone.localdate()
+        record = Attendance.objects.create(user=self.colleague, date=day)
+        record.check_in = timezone.now() - timedelta(hours=1)
+        record.save()
+
+        self.client.force_login(self.manager)
+        response = self.client.get('/plugins/attendance/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '谁在班')
+        self.assertContains(response, '同事丙')
+        self.assertContains(response, '我的最近打卡')
+        self.assertContains(response, '签到详情')
+
+    def test_dashboard_keeps_sign_form_contract(self):
+        self.client.force_login(self.staff)
+        response = self.client.get('/plugins/attendance/')
+        html = response.content.decode()
+        self.assertIn('name="action" value="in"', html)
+        self.assertIn('name="action" value="out"', html)
+        self.assertIn('name="sign_type"', html)
+        self.assertIn('name="next"', html)

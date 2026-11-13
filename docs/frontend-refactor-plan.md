@@ -1437,3 +1437,60 @@ select.zGbnIq_input{cursor:pointer;max-width:240px}
 - 容器重建后 10 个改动文件 MD5 与本地一致（`/app/staticfiles/assistant/css/assistant.css` 副本同值 `f71f6ce2bf3467590f3f2efa73226cb2`）。
 
 **仍未做（按原样保留）**：`更多` 里的「创建你的插件」实质也是起一个新会话（`/?prompt=…`），本轮只按用户口径锁了「新会话」；停用后 `/plugins/assistant/` 仍由 `PluginRouteGuardMiddleware` 404（首页 `/` 可用），是否符合「只关两块」待确认。
+
+### 9.13.30 考勤改成 Jibble 形态仪表盘（v2.2.2 / 2026-11-13）
+
+用户诉求：把「考勤」改成 Jibble 的仪表盘，风格按 DSH 字面量移植。这一轮只动考勤看板本体（`_panel.html` 与其取数），签到详情页（`attendance_records.html`）保持原样；考勤规则仍是考勤的二级页，不新增侧栏条目。
+
+**版式（对照 Jibble 截图，结构照搬、视觉走 token）**
+
+- 头部（沿用原有 `.at-head`）：`考勤` + 日期、`☰ 签到详情`（仅 `attendance_report_view`）、`⚙ 考勤规则`（仅 `attendance_rule_manage`，首页面板走 `data-ds-modal-open`，业务页走 `data-ds-panel`）、日期徽标。
+- `.atj-top`：左「今日状态」英雄卡（大时钟 34/40 + 状态 pill + 三个 facts + 签到类型/签到/签退按钮 + 卡底「考勤口径」脚注），右「今日概览」（已签到 / 迟到 / 未打卡 / 我的今日工时 四格 + 签到进度条 + 本月出勤、迟到次数、本月工时）。
+- `.at-grid.atj-split`：左「本周工时」7 根柱（周一为首日，柱高以「至少 8h」定标，今天那根走 business 蓝），右「谁在班」（头像 + 姓名 + 部门/签到时刻 + 工时；无 `attendance_report_view` 的人看到的是自己的「最近打卡」）。
+- 底部「我的最近打卡」活动日志（仅 `attendance_report_view`）：日期 / 时段 / 工时 / 状态标签。
+
+**取数与口径（`plugins/attendance/views.py`）**
+
+- `_worked_hours(record, now)`：时长 = 签到 → 签退（未签退则到此刻），负值归零——这是全看板唯一的工时口径。
+- `_hours_text(hours)`：分钟四舍五入成 `5h 12m`（Jibble 的写法）。
+- `_week_bars(user, today, now)`：本周按周一开头，逐日取一条记录；柱高 `hours / max(8, 当周最高)`。
+- `_today_team(user, today, now)`：今日在班聚合（已签到 / 已签退 / 迟到 / 未打卡）全员可见；**姓名名单只给 `attendance_report_view`**（与签到详情同权限）。
+- `_recent_rows(user)`：本人最近 5 条，含状态与签到类型。
+- `_employee_count()`：跨插件动态取 `user.User`（`is_active=True`），人事插件停用时降级为 0，模板出「人事插件未启用，无法统计在班人数」。
+- `attendance_context` 新增 `today_text`（`django.utils.formats.date_format`，中文「2026年11月13日」/ 英文「Nov. 13, 2026」）、`today_hours_text`、`month_hours_text`、`status_key`（idle/active/done）、`status_label`、`week`、`team`、`recent_rows`、`can_view_report`；`attendance_chart` / `status_totals` / `rule_*` / `rules_entry_url` 原样保留（签到详情页仍在用）。
+
+**兼容既有契约**
+
+- 打卡表单仍是 `POST /plugins/attendance/check/` + `action=in|out` + `sign_type` + `next`，签到/签退按「今天有没有签到、有没有签退」自动禁用。
+- `at-grid`、`今日状态`、`考勤口径：上班 09:00 · 下班 18:00 · 工作日 …`、`rules/` 按权限这些既有断言全部沿用；首页面板的 `_rules_modal.html` 仍按 `in_home_panel` include。
+
+**样式（主题 CSS 第 37 节）**
+
+- 新增 `.atj-*` 全族：`atj-top` / `atj-clock*` / `atj-pill--idle|active|done` / `atj-facts` / `atj-form*` / `atj-btn--primary|quiet`（40 高、999 圆角）/ `atj-metrics`（2×2 0.5px 网格）/ `atj-progress` / `atj-split` / `atj-bars` / `atj-bar*`（柱子 flex:1 撑满卡高，不再留大片空白）/ `atj-people` / `atj-person*` / `atj-avatar*` / `atj-tag--normal|late|early|missing|makeup` / `atj-feed*`；`1080px` 与 `720px` 两档响应式。
+- 只吃既有 token（`--ds-radius-*`、`--ds-label-*`、`--ds-state-*`、`--ds-bg-layer-3`、`--ds-ease`），未引入新色值。
+- 修了一处继承问题：`.r-card + .r-card{margin-top:12px}` 会让网格右卡比左卡低 12px，第 37 节用 `.atj-top > .r-card + .r-card` / `.atj-split > .r-card + .r-card` 归零。
+
+**实测（本地 8011 / 容器 8000）**
+
+- 本地 1440×900 业务页（注入 6 人本周记录后）：`clock 527×397`、`today 377×397`、`week 527×392`、`who 377×392`、`feed 920×273`；7 根柱 `fill=97/96/94/100/94/0/0`（2026-11-13 是周五，`bars[4].is_today=true`，周六日 `fill=0`）；`people=6`、`feedRows=5`、`metrics=['6','4','26','9h 01m']`、`status=已签退`、`overflowX=false`。
+- 签到中态（把本人今日 `check_out` 置空实测后复原）：`status=已签到`、今日工时 `13h 47m`、周五柱 `fill=100`。
+- 首页 `?panel=attendance`：`feed` 全宽 `1102×273`、`docH=900`（面板自身滚动），四块与业务页同构。
+- 1024 宽：`atj-top` / `atj-split` 降为单列（`clock 712×320`，`today 712×397`），`overflowX=false`。
+- 容器 8000 同版式：`clock 527×397`、`today 377×397`、`week/who 527/377×249`、`feed 920×273`、`people=1`、`feedRows=5`。截图 `.tmp-test/screens-v19/`（浅/深/英文/签到中/普通员工/空态）与 `.tmp-test/screens-v19/container/`。
+- 深色（`data-color-mode="dark"`）与浅色逐块对照：pill、进度条、今天柱、状态标签都走 token 反转，无写死颜色。
+
+**翻译**
+
+- `django.po` 新增 28 条：今日概览 / 本周工时 / 谁在班 / 最近打卡 / 我的最近打卡 / 今日工时 / 我的今日工时 / 本月工时 / 在班 / 周一..周日 / 今日状态文案 / 空态文案 / `今天 · %(day)s`、`%(check_in)s 上班打卡`、`已工作 %(hours)s`、`%(time)s 签到`、`本月出勤（%(month)s）`、`%(count)s 天`、`%(count)s 次（%(late)s 前签到为正常）`、`合计 %(hours)s` 等；`tools/compile_mo.py` 重编译。英文界面实测除部门名（数据）外无中文残留。
+- 两处 po 顺序坑：blocktranslate 的 msgid 变量顺序必须与模板一致（`已工作 %(hours)s`，不是 `%(hours)s 已工作`），否则英文回落到中文。
+
+**门禁**
+
+- 新增 `AttendanceJibbleDashboardTests` 6 条：`5h 12m` 格式、开放记录算到此刻、周一开头 + 未来置灰、普通员工看不到同事姓名 / 管理岗能看到谁在班与活动日志、表单契约（`action=in|out` / `sign_type` / `next`）。
+- 全量 **552 tests OK**（基线 546 +6）、`ruff check plugins plugin_host` 全过、`manage.py check` 干净。
+- 容器重建（三 env 带齐）后 6 个改动文件 MD5 与本地一致：`views.py 7ea0b266…`、`_panel.html 1117feca…`、`tests.py 5a5e261a…`、`corporate-clean.css a83a79a9…`（`/app/staticfiles/…` 副本同值）、`django.po ffdb778f…`、`django.mo f147998e…`。
+
+**未做 / 待拍板**
+
+- 月度图表从考勤看板移到了签到详情页的「月度看板」，首页不再出现；若仍想在看板看到月度趋势需另说。
+- 「谁在班」名单当前只对有 `attendance_report_view` 的人展示（其余人只给聚合数字）；若希望全员可见需改口径。

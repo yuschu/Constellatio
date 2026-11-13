@@ -1,12 +1,16 @@
 {% load i18n %}
-{# v2.1.0：考勤看板正文抽成 partial——业务页 /plugins/attendance/ 与首页「考勤」面板共用。 #}
-{# 不再依赖 bootstrap 栅格（首页不加载 bootstrap）：布局走 .at-*（定义在主题 CSS 第 27 节）， #}
-{# 卡片/表格/按钮/徽标仍是主题里的 r-* 组件，两侧同一份观感。 #}
-<div class="at-page">
-  {# 正文永远是考勤看板：二级页「考勤规则」是盖在它上面的设置弹层（DSH 点开设置那一页），不再替换面板正文。 #}
+{# v2.2.2：考勤看板改成 Jibble 形态的仪表盘，视觉仍按 DSH 字面量（0.5px 描边、token 色、.r-card）。 #}
+{# 业务页 /plugins/attendance/ 与首页「考勤」面板共用这一份正文。 #}
+<div class="at-page atj">
   <header class="at-head">
-    <h2 class="at-head__title">{% trans "考勤" %}</h2>
+    <div class="at-head__lead">
+      <h2 class="at-head__title">{% trans "考勤" %}</h2>
+      <span class="atj-kicker atj-kicker--inline">{% blocktranslate with day=today_text %}今天 · {{ day }}{% endblocktranslate %}</span>
+    </div>
     <div class="at-head__aside">
+      {% if can_view_report %}
+      <a href="{% url 'attendance:attendance_records' %}" class="r-btn r-btn--ghost">☰ {% trans "签到详情" %}</a>
+      {% endif %}
       {% if perms.attendance.attendance_rule_manage %}
       {# 业务页：二级页原地打开（data-ds-panel，DSH 点开设置那一页）；首页面板有自己的静态弹层 #}
       <a href="{{ rules_entry_url|default_if_none:'/plugins/attendance/rules/' }}"
@@ -16,96 +20,213 @@
     </div>
   </header>
 
-  <div class="at-grid">
-    <section class="r-card at-card">
-      <h3 class="at-card__title">{% trans "今日状态" %}</h3>
-      {% if record and record.check_in and record.check_out %}
-      <div class="at-row">
-        <span class="r-badge">{% trans record.get_status_display %} · {% trans record.get_sign_type_display %}</span>
-        <span class="at-row__note">{% blocktranslate with check_in=record.check_in|date:"H:i" check_out=record.check_out|date:"H:i" %}签到 {{ check_in }} · 签退 {{ check_out }}{% endblocktranslate %}</span>
+  <div class="atj-top">
+    <section class="r-card atj-clock">
+      <div class="atj-clock__head">
+        <div>
+          <p class="atj-kicker">{% trans "今日状态" %}</p>
+          <div class="atj-clock__time">{{ now|date:"H:i" }}</div>
+        </div>
+        <span class="atj-pill atj-pill--{{ status_key }}">{{ status_label }}</span>
       </div>
-      {% elif record and record.check_in %}
-      <div class="at-row">
-        <span class="r-badge r-badge--blue">{% trans "已签到" %} · {% trans record.get_sign_type_display %}</span>
-        <span class="at-row__note">{% blocktranslate with check_in=record.check_in|date:"H:i" now=now|date:"H:i" %}签到 {{ check_in }} · 当前 {{ now }}{% endblocktranslate %}</span>
-      </div>
-      {% else %}
-      <span class="r-badge r-badge--orange">{% trans "未打卡" %}</span>
-      {% endif %}
-      <p class="at-note">
-        {% blocktranslate with start=rule_start end=rule_end workdays=rule.workdays %}考勤口径：上班 {{ start }} · 下班 {{ end }} · 工作日 {{ workdays }}{% endblocktranslate %}
+
+      <p class="atj-clock__caption">
+        {% if record and record.check_in %}
+          {% blocktranslate with check_in=record.check_in|date:"H:i" %}{{ check_in }} 上班打卡{% endblocktranslate %}
+          {% if record.check_out %}
+            · {% blocktranslate with check_out=record.check_out|date:"H:i" %}{{ check_out }} 下班打卡{% endblocktranslate %}
+          {% else %}
+            · {% blocktranslate with hours=today_hours_text %}已工作 {{ hours }}{% endblocktranslate %}
+          {% endif %}
+        {% else %}
+          {% trans "今天还没有打卡，点下面的「签到」开始计时" %}
+        {% endif %}
       </p>
-      <form method="post" action="{% url 'attendance:attendance_check' %}" class="at-form">
+
+      <dl class="atj-facts">
+        <div class="atj-fact">
+          <dt>{% trans "签到" %}</dt>
+          <dd>{% if record and record.check_in %}{{ record.check_in|date:"H:i" }}{% else %}—{% endif %}</dd>
+        </div>
+        <div class="atj-fact">
+          <dt>{% trans "签退" %}</dt>
+          <dd>{% if record and record.check_out %}{{ record.check_out|date:"H:i" }}{% else %}—{% endif %}</dd>
+        </div>
+        <div class="atj-fact">
+          <dt>{% trans "今日工时" %}</dt>
+          <dd>{{ today_hours_text }}</dd>
+        </div>
+      </dl>
+
+      <form method="post" action="{% url 'attendance:attendance_check' %}" class="atj-form">
         {% csrf_token %}
         {# 打卡后回到当前落点：业务页就是本页，首页面板则回 /?panel=attendance #}
         <input type="hidden" name="next" value="{{ request.get_full_path }}">
-        <div class="at-field">
-          <label for="sign_type">{% trans "签到类型" %}</label>
-          <select class="r-input" id="sign_type" name="sign_type">
+        <label class="atj-form__label" for="sign_type">{% trans "签到类型" %}</label>
+        <div class="atj-form__row">
+          <select class="r-select atj-form__select" id="sign_type" name="sign_type">
             {% for value, label in sign_types %}
-            <option value="{{ value }}">{{ label }}</option>
+            <option value="{{ value }}">{% trans label %}</option>
             {% endfor %}
           </select>
-        </div>
-        <div class="at-actions">
-          <button class="r-btn r-btn--action" type="submit" name="action" value="in" {% if record and record.check_in %}disabled{% endif %}>{% trans "签到" %}</button>
-          <button class="r-btn r-btn--action" type="submit" name="action" value="out" {% if not record or not record.check_in or record.check_out %}disabled{% endif %}>{% trans "签退" %}</button>
+          <button class="atj-btn atj-btn--primary" type="submit" name="action" value="in"
+                  {% if record and record.check_in %}disabled{% endif %}>{% trans "签到" %}</button>
+          <button class="atj-btn atj-btn--quiet" type="submit" name="action" value="out"
+                  {% if not record or not record.check_in or record.check_out %}disabled{% endif %}>{% trans "签退" %}</button>
         </div>
       </form>
+
+      <p class="at-note">
+        {% blocktranslate with start=rule_start end=rule_end workdays=rule.workdays %}考勤口径：上班 {{ start }} · 下班 {{ end }} · 工作日 {{ workdays }}{% endblocktranslate %}
+      </p>
     </section>
 
-    <section class="r-card at-card">
-      <h3 class="at-card__title">{% blocktranslate with month=today|date:"Y-m" %}本月统计（{{ month }}）{% endblocktranslate %}</h3>
-      {# v2.1.1：改用 DSH field 行（标签在上位左、值右对齐，行间 0.5px 分隔），不再用 r-table #}
+    <section class="r-card atj-today">
+      <h3 class="at-card__title">{% trans "今日概览" %}</h3>
+      <div class="atj-metrics">
+        <div class="atj-metric">
+          <span class="atj-metric__value">{{ team.signed }}</span>
+          <span class="atj-metric__label">{% trans "已签到" %}</span>
+        </div>
+        <div class="atj-metric">
+          <span class="atj-metric__value atj-metric__value--warn">{{ team.late }}</span>
+          <span class="atj-metric__label">{% trans "迟到" %}</span>
+        </div>
+        <div class="atj-metric">
+          <span class="atj-metric__value atj-metric__value--muted">{{ team.missing }}</span>
+          <span class="atj-metric__label">{% trans "未打卡" %}</span>
+        </div>
+        <div class="atj-metric">
+          <span class="atj-metric__value atj-metric__value--small">{{ today_hours_text }}</span>
+          <span class="atj-metric__label">{% trans "我的今日工时" %}</span>
+        </div>
+      </div>
+
+      <div class="atj-progress" role="img"
+           aria-label="{% blocktranslate with signed=team.signed total=team.total %}已签到 {{ signed }} / {{ total }} 人{% endblocktranslate %}">
+        <span class="atj-progress__fill" style="width: {{ team.signed_percent }}%"></span>
+      </div>
+      <p class="atj-today__note">
+        {% if team.total %}
+          {% blocktranslate with signed=team.signed total=team.total %}{{ signed }} / {{ total }} 人已签到{% endblocktranslate %}
+        {% else %}
+          {% trans "人事插件未启用，无法统计在班人数" %}
+        {% endif %}
+      </p>
+
       <dl class="at-kv">
         <div class="at-kv__row">
-          <dt>{% trans "出勤天数" %}</dt>
+          <dt>{% blocktranslate with month=today|date:"Y-m" %}本月出勤（{{ month }}）{% endblocktranslate %}</dt>
           <dd>{% blocktranslate with count=month_days %}{{ count }} 天{% endblocktranslate %}</dd>
         </div>
         <div class="at-kv__row">
           <dt>{% trans "迟到次数" %}</dt>
           <dd>{% blocktranslate with count=month_late late=rule_late %}{{ count }} 次（{{ late }} 前签到为正常）{% endblocktranslate %}</dd>
         </div>
+        <div class="at-kv__row">
+          <dt>{% trans "本月工时" %}</dt>
+          <dd>{{ month_hours_text }}</dd>
+        </div>
       </dl>
     </section>
   </div>
 
-  <section class="r-card at-chart">
-    <div class="at-head at-head--tight">
-      <h3 class="at-card__title at-card__title--flush">{% trans "考勤图表" %}</h3>
-      <span class="r-badge">{{ today|date:"Y-m" }}</span>
-    </div>
-    {% if attendance_chart %}
-    <div id="attendance-dashboard-chart" class="at-chart__canvas"
-         role="img" aria-label="{% trans "考勤图表" %}"></div>
-    {{ attendance_chart|json_script:"attendance-dashboard-data" }}
-    {% else %}
-    <table class="r-table">
-      <thead><tr><th>{% trans "状态" %}</th><th>{% trans "天数" %}</th></tr></thead>
-      <tbody>
-        {% for item in status_totals %}
-        <tr><td>{{ item.label }}</td><td>{{ item.count }}</td></tr>
+  <div class="at-grid atj-split">
+    <section class="r-card atj-week">
+      <div class="atj-card-head">
+        <h3 class="at-card__title atj-card-head__title">{% trans "本周工时" %}</h3>
+        <span class="atj-week__total">
+          {% blocktranslate with hours=week.total_text %}合计 {{ hours }}{% endblocktranslate %}
+        </span>
+      </div>
+      <div class="atj-bars">
+        {% for bar in week.bars %}
+        <div class="atj-bar{% if bar.is_today %} is-today{% endif %}{% if bar.future %} is-future{% endif %}"
+             title="{{ bar.day|date:'n月j日' }} · {{ bar.hours_text }}">
+          <span class="atj-bar__value">{% if bar.hours %}{{ bar.hours_text }}{% endif %}</span>
+          <div class="atj-bar__track">
+            <span class="atj-bar__fill" style="height: {{ bar.percent }}%"></span>
+          </div>
+          <span class="atj-bar__label">{{ bar.label }}</span>
+        </div>
         {% endfor %}
-      </tbody>
-    </table>
+      </div>
+    </section>
+
+    <section class="r-card atj-who">
+      <div class="atj-card-head">
+        <h3 class="at-card__title atj-card-head__title">
+          {% if can_view_report %}{% trans "谁在班" %}{% else %}{% trans "最近打卡" %}{% endif %}
+        </h3>
+        {% if can_view_report %}
+        <span class="atj-who__counts">
+          <span class="atj-dot atj-dot--live"></span>{% trans "在班" %} {{ team.signed }}
+          <span class="atj-dot atj-dot--done"></span>{% trans "已签退" %} {{ team.done }}
+        </span>
+        {% endif %}
+      </div>
+
+      {% if can_view_report %}
+        {% if team.rows %}
+        <ul class="atj-people">
+          {% for person in team.rows %}
+          <li class="atj-person">
+            <span class="atj-avatar" aria-hidden="true">{{ person.initial }}</span>
+            <span class="atj-person__main">
+              <span class="atj-person__name">{{ person.name }}</span>
+              <span class="atj-person__meta">{% if person.dept %}{{ person.dept }} · {% endif %}{% blocktranslate with time=person.check_in %}{{ time }} 签到{% endblocktranslate %}</span>
+            </span>
+            <span class="atj-person__tail{% if person.done %} is-done{% endif %}">{{ person.hours_text }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="atj-empty">{% trans "今天还没有人签到" %}</p>
+        {% endif %}
+      {% else %}
+        {% if recent_rows %}
+        <ul class="atj-people">
+          {% for row in recent_rows %}
+          <li class="atj-person">
+            <span class="atj-avatar atj-avatar--date">{{ row.date }}</span>
+            <span class="atj-person__main">
+              <span class="atj-person__name">{{ row.status_label }}</span>
+              <span class="atj-person__meta">{{ row.weekday }} · {% if row.check_in %}{{ row.check_in }}{% else %}—{% endif %} → {% if row.check_out %}{{ row.check_out }}{% else %}—{% endif %}</span>
+            </span>
+            <span class="atj-person__tail">{{ row.hours_text }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="atj-empty">{% trans "还没有打卡记录" %}</p>
+        {% endif %}
+      {% endif %}
+    </section>
+  </div>
+
+  {% if can_view_report %}
+  <section class="r-card atj-feed">
+    <div class="atj-card-head">
+      <h3 class="at-card__title atj-card-head__title">{% trans "我的最近打卡" %}</h3>
+    </div>
+    {% if recent_rows %}
+    <div class="atj-feed__rows">
+      {% for row in recent_rows %}
+      <div class="atj-feed__row">
+        <span class="atj-feed__date">{{ row.date }} <em>{{ row.weekday }}</em></span>
+        <span class="atj-feed__span">{{ row.check_in|default:"—" }} → {{ row.check_out|default:"—" }}</span>
+        <span class="atj-feed__hours">{{ row.hours_text }}</span>
+        <span class="atj-tag atj-tag--{{ row.status }}">{% trans row.status_label %}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="atj-empty">{% trans "还没有打卡记录" %}</p>
     {% endif %}
   </section>
+  {% endif %}
 
 {% if in_home_panel and perms.attendance.attendance_rule_manage %}
   {% include "attendance/_rules_modal.html" %}
 {% endif %}
 </div>
-
-{% if chart and attendance_chart %}
-<script src="{{ chart.script_url }}"></script>
-<script src="{{ chart.adapter_url }}"></script>
-<script nonce="{{ request.csp_nonce }}">
-  (function () {
-    'use strict';
-    var el = document.getElementById('attendance-dashboard-chart');
-    var data = document.getElementById('attendance-dashboard-data');
-    if (!el || !data || !window.oaChartRender) { return; }
-    window.oaChartRender(el, JSON.parse(data.textContent));
-  })();
-</script>
-{% endif %}
