@@ -927,9 +927,6 @@ html[data-rail-settled="true"] .as-brand {
 }
 
 html[data-rail-settled="true"] .as-brand__name,
-html[data-rail-settled="true"] .as-brand__mark {
-  display: none;
-}
 
 /* newSession：36×36、透明底、无边框 */
 html[data-rail-settled="true"] .as-new {
@@ -1050,6 +1047,17 @@ html[data-rail-wide-in="true"] .as-foot {
 .as-rail-toggle:hover {
   background: var(--as-interactive-hover);
   color: var(--as-label-primary);
+}
+
+/* panelIcon：展开 16、折叠 18（dsh size={wide ? 16 : 18}） */
+.as-rail-toggle > svg {
+  width: 16px;
+  height: 16px;
+}
+
+html[data-rail-collapsed="true"] .as-rail-toggle > svg {
+  width: 18px;
+  height: 18px;
 }
 
 html[data-rail-collapsed="true"] .as-rail-toggle {

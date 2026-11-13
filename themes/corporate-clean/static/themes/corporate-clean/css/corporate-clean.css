@@ -371,12 +371,13 @@ a:hover {
   flex: none;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: flex-end;
   padding: 8px 0 8px 8px;
   overflow: hidden;
 }
 
 .ds-rail__brand a {
+  flex: 1;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -473,9 +474,6 @@ a:hover {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 8px 0 4px;
-  border-top: 0.5px solid var(--ds-border-l1);
-  margin-top: var(--ds-space-2);
 }
 
 .ds-rail__user {
@@ -1278,10 +1276,7 @@ a:hover {
   transition: none;
 }
 
-/* --- 品牌行：文字 / 24px 标记 + 28px 折叠按钮 --- */
-.ds-rail__brand {
-  justify-content: space-between;
-}
+/* --- 品牌行：品牌名 + 28px 折叠按钮（DSH logoRow justify:flex-end） --- */
 
 .ds-rail__brand-name {
   min-width: 0;
@@ -1290,20 +1285,6 @@ a:hover {
   white-space: nowrap;
 }
 
-.ds-rail__mark {
-  display: none;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: var(--ds-radius-xs);
-  background: var(--ds-bg-selector);
-  color: var(--ds-label-primary);
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1;
-}
 
 .ds-rail__toggle {
   flex: none;
@@ -1330,6 +1311,17 @@ a:hover {
 
 .ds-rail__toggle:focus-visible {
   box-shadow: 0 0 0 var(--ds-focus-width) var(--ds-border-l3);
+}
+
+/* panelIcon：展开 16、折叠 18（dsh size={wide ? 16 : 18}） */
+.ds-rail__toggle > svg {
+  width: 16px;
+  height: 16px;
+}
+
+html[data-rail-collapsed="true"] .ds-rail__toggle > svg {
+  width: 18px;
+  height: 18px;
 }
 
 /* --- 收起：slide + crossfade（dsh-client-ui-sidebar/SidebarRoot）
@@ -1380,9 +1372,6 @@ html[data-rail-settled="true"] .ds-rail__brand > a {
 }
 
 html[data-rail-settled="true"] .ds-rail__brand-name,
-html[data-rail-settled="true"] .ds-rail__mark {
-  display: none;
-}
 
 html[data-rail-settled="true"] .ds-rail__nav {
   margin: 0;
