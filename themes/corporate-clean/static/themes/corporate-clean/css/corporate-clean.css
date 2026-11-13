@@ -4257,9 +4257,11 @@ html:not([data-color-mode="dark"]) .lc-ov-session {
 .ds-settings__desc--group {
   margin-top: var(--ds-space-5);
 }
-/* 单分区时 options 顶部留一点呼吸，标题行高 54 已被 header 撑开 */
+/* 单分区时 options 顶部留一点呼吸，标题行高 54 已被 header 撑开；
+   底部那 24 挪进下方的按钮条自己（见 sticky 那条），否则按钮条会压住紧随其后的字段 */
 .ds-settings--single .ds-settings__options {
   padding-top: var(--ds-space-2);
+  padding-bottom: 0;
 }
 
 /* ---- 二级页面板高度跟着内容走（v2.1.6）----
@@ -4279,15 +4281,16 @@ html:not([data-color-mode="dark"]) .lc-ov-session {
 }
 
 /* 内容真的塞不进一屏时（编辑用户、已读人员这类长清单），最下面那排按钮停在面板
-   底部：滚内容也始终看得见「保存」。短面板没有溢出，这条不生效。options 的 20px
-   下内边距也在滚动区里，按钮条贴底时会露出一条内容，用同色阴影铺掉。 */
+   底部：滚内容也始终看得见「保存」。短面板没有溢出，这条不生效。options 的 24px
+   下内边距已经挪到这条按钮条的下内边距里，贴底时由它自己的底色铺满（v2.2.3 之前
+   用 box-shadow 向外铺，白色阴影会越过按钮条压住紧随其后的字段 —— 组织架构「查看
+   模板」里的「最近应用」就是这样只露出下半行）。 */
 .ds-settings--single .ds-settings__actions {
   position: sticky;
   bottom: 0;
   z-index: 1;
-  padding-top: var(--ds-space-3);
+  padding: var(--ds-space-3) 0 var(--ds-space-5);
   background: var(--ds-bg-layer-1);
-  box-shadow: 0 var(--ds-space-5) 0 0 var(--ds-bg-layer-1);
 }
 
 /* ==========================================================================

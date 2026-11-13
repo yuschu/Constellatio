@@ -456,6 +456,11 @@
       var base = modal.getAttribute('data-ds-subpage-base');
       if (base && url && sameUrl(url, window.location.href)) {
         try { window.history.replaceState({}, '', base); } catch (e) { /* 同上 */ }
+      } else if (base && !url && modal.hasAttribute('data-ds-subpage-static')) {
+        /* 自带地址页的静态弹层（组织架构「用户资料」）没有自己的 URL，页面本身是
+           `/structure/user/<id>/`；关掉它地址栏退回它底下的组织架构总览，免得地址
+           说在用户页、画面却是总览。 */
+        try { window.history.replaceState({}, '', base); } catch (e) { /* 同上 */ }
       }
       var trigger = RETURN ? RETURN.get(modal) : null;
       if (trigger && document.contains(trigger)) {
@@ -636,9 +641,18 @@
       /* 叠层时把底下那块设置面板先藏起来（遮罩留着当暗底）：二级页面板按内容收
          高度，矮面板浮在一张 800 的面板里，四周全是空白。 */
       if (settings) settings.classList.toggle('ds-settings--stacked', stacked);
-      var base = host.hasAttribute('hidden')
+      /* 从另一个二级页弹层里再点开（组织架构「用户资料」→「用户管理」）：先把那层
+         收掉，否则两个遮罩叠一起。落点沿用那层的 base —— 关掉新面板就回到它底下
+         的那一页（组织架构总览），而不是停在用户页。 */
+      var open = document.querySelector('[data-ds-subpage]:not([hidden])');
+      var openBase = '';
+      if (open && open.id !== HOST_ID) {
+        openBase = open.getAttribute('data-ds-subpage-base') || '';
+        closeModal(open);
+      }
+      var base = openBase || (host.hasAttribute('hidden')
         ? window.location.pathname + window.location.search
-        : host.getAttribute('data-ds-subpage-base');
+        : host.getAttribute('data-ds-subpage-base'));
       var landed = url;
       fetch(url, { credentials: 'same-origin' })
         .then(function (res) {

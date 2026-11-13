@@ -1494,3 +1494,31 @@ select.zGbnIq_input{cursor:pointer;max-width:240px}
 
 - 月度图表从考勤看板移到了签到详情页的「月度看板」，首页不再出现；若仍想在看板看到月度趋势需另说。
 - 「谁在班」名单当前只对有 `attendance_report_view` 的人展示（其余人只给聚合数字）；若希望全员可见需改口径。
+
+### 9.13.31 组织架构两处：用户管理原地浮层 / 最近应用被裁（v2.2.3 / 2026-11-13）
+
+用户报了两条：① 组织架构「查看成员」浮层里点「用户管理」会整页跳到用户页；② 「查看模板」浮层里「最近应用」的字只剩一半。两条都先复现再改，不是照着描述直接动。
+
+**① 用户管理：改成原地浮层（不跳用户页）**
+
+- 病因：`plugins/structure/templates/structure/_user_detail_body.html` 底部那颗按钮是普通 `<a href="{% url 'user:user_edit' target.pk %}">`，浏览器整页导航到用户编辑页；数据、权限都没问题，缺的只是「原地开面板」的接线。
+- 改法：链接加 `data-ds-panel`（`href` 保留，无 JS / 新标签页仍是可用深链）。ds-shell 的 `initSubpages` 本来就有这条路：点带 `data-ds-panel` 的链接 → `openPanel()` 取回目标页里的 `.ds-settings__panel` 换进 `#ds-subpage-host`，页面不重载、侧栏不重绘，地址栏 pushState 成 `/plugins/user/users/<id>/edit/`。
+- 两层遮罩：`_user_detail_body` 所在的「用户资料」本身是一层 `[data-ds-subpage]`（`sp_static`）。`openPanel` 之前不处理「已经有一层开着」的情况，直接再开一层就是两个遮罩叠在一起。现在 `openPanel` 先把当前那层收掉（`closeModal`），再把它的 `data-ds-subpage-base` 交给新面板当落点。
+- 落点：`overview.html` 的「用户资料」include 补 `sp_base=overview_url`（原来是空串）。于是关掉编辑浮层回到 `/plugins/structure/`（组织架构总览），而不是停在用户页地址。
+- 顺带修了同一层的地址栏不一致：`closeModal` 对「静态弹层」（没有自己的 `sp_url`）也认 `sp_base`，✕ / 遮罩 / Escape 关掉用户资料后 `replaceState` 回组织架构总览；在这之前地址栏会留在 `/plugins/structure/user/<id>/` 而画面已经是总览。
+- 保存：`_save_user_edit` 成功分支原来固定 `redirect('user:user_list')`。ds-shell 原地提交时会往表单塞 `next`（打开面板前的页面），现在走 `_user_saved_redirect`：有合法 `next`（`url_has_allowed_host_and_scheme`，站外地址忽略）就回去，没有就仍回用户列表。所以从组织架构进编辑、保存后回组织架构并看到更新后的资料，校验失败则面板原地显示字段错误（`openPanel` 的 submit 拦截负责换回带错误的面板）。
+- 实测（1440×900，admin）：资料层 `800×596 @ (320,152)` → 点「用户管理」后 URL `/plugins/user/users/8/edit/`、host 面板 `800×852 @ (320,24)`、标题「编辑用户：王经理」、表单在、按钮「保存」；关闭后 URL `/plugins/structure/`、无任何弹层。容器 8000 同值（用户 4）。
+
+**② 最近应用只剩半行：sticky 按钮条的白色阴影压住了下一个字段**
+
+- 复现：模板弹层里「最近应用」label 的 rect 是 `y=277 h=20`，glyph 完整；但截图只看到下半截。点探（`elementsFromPoint`）在 label 上方 280/285 都命中 label 自身 —— 说明不是 label 自己被裁，而是**有一层同色块盖在它上面**。
+- 病因：`.ds-settings--single .ds-settings__actions`（单分区面板底部的 sticky 按钮条）带 `box-shadow: 0 24px 0 0 var(--ds-bg-layer-1)`。这条 24px 白色阴影是给「内容溢出、按钮贴底时，滚动区 24px 下内边距露出内容」打补丁的，但它**没有粘住时也照画**：表单（应用模板）在 y=265 结束，阴影就从 265 铺到 289，而紧随其后的「最近应用」label 在 277–297 —— 上半截被这块白盖掉。空数据时没有这段内容，所以只有「最近应用」出现时才看得见。
+- 改法：把 options 的 24px 下内边距挪进按钮条自己，阴影删掉。`padding` 由 `12 0 0` 改成 `12 0 24`，`.ds-settings--single .ds-settings__options` 的 `padding-bottom` 归 0。按钮条贴底时由它自己的底色铺满那 24px（不再需要向外画阴影），没粘住时也多不出空白：面板总高仍是 852，「最近应用」label 从 `y=277` 下移到 `y=301`，完整可见。
+- 复测：浅色 / 深色都完整（深色下按钮条底色换成 layer-1 的暗色，仍然是同色铺）。用户列表的编辑用户弹层、考勤规则页两块既有面板回归截图，按钮位置与下边距没变。
+
+**门禁与一致性**
+
+- 新增 `UserEditReturnTests` 3 条：保存带 `next` 回原页 / 不带 `next` 回用户列表 / 站外 `next` 被忽略；`StructureUserDetailTests` 补一条「用户管理」带 `data-ds-panel` 的断言。
+- 全量 **555 tests OK**（552 + 3），`ruff check plugins plugin_host` 全过，`manage.py check` 干净。
+- 容器重建后 7 个改动文件 MD5 与本地一致：`plugins/user/views.py 981ec1c9…`、`plugins/user/tests.py 489efd6f…`、`_user_detail_body.html b443d92d…`、`overview.html 5344f321…`、`plugins/structure/tests.py 869d2715…`、`plugin_host/static/js/ds-shell.js c075b450…`、`corporate-clean.css 13431fb2…`（`/app/staticfiles/` 的 js/css 副本同值）。
+- 截图：`.tmp-test/screens-v20/`（`template-modal`（复现）、`template-modal-fixed`、`template-modal-dark`、`user-detail`、`user-panel-edit`、`after-close`、`user-list-edit`、`attendance-rules`）与 `.tmp-test/screens-v20/container/`。

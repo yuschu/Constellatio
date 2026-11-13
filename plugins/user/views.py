@@ -276,6 +276,18 @@ def user_create(request):
     })
 
 
+def _user_saved_redirect(request):
+    """用户保存后的落点：优先回打开编辑面板的那一页（ds-shell.js 往表单里塞了
+    `next`，组织架构「用户资料 → 用户管理」就是这样原地开、保存后回组织架构），
+    没有可用的 next 就回用户列表（旧口径）。"""
+    nxt = request.POST.get('next') or ''
+    if nxt and url_has_allowed_host_and_scheme(
+            nxt, allowed_hosts={request.get_host()},
+            require_https=request.is_secure()):
+        return redirect(nxt)
+    return redirect('user:user_list')
+
+
 def _save_user_edit(request, user_id, host='page'):
     """编辑用户的校验与落库（口径同 `_save_user_create` 的 host 分派）。"""
     user = get_object_or_404(User, pk=user_id)
@@ -311,7 +323,7 @@ def _save_user_edit(request, user_id, host='page'):
                     status='enabled' if user.is_active else 'disabled',
                     operator_id=request.user.pk)
             user_updated.send(sender=user.__class__, user_id=user.pk)
-            return redirect('user:user_list')
+            return _user_saved_redirect(request)
     if host == 'list':
         return _render_user_list(request, form, form_open=True, edit_user=user)
     return render(request, 'user/user_edit_page.html', {

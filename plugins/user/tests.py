@@ -510,3 +510,55 @@ class DepartmentFormPageTests(TestCase):
         self.assertContains(response, 'name="action" value="edit"')
         self.assertTrue(response.context['dept_form_open'])
         self.assertEqual(Department.objects.get(pk=dept.pk).name, '保持原名部门')
+
+
+class UserEditReturnTests(TestCase):
+    """v2.2.3：编辑用户保存后的落点。
+
+    ds-shell.js 原地打开面板时会往表单里塞 `next`（打开它的那一页）。组织架构
+    「用户资料 → 用户管理」靠这条回到组织架构，而不是被弹到用户列表；没有 next
+    的旧入口仍回用户列表。
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin = User.objects.create_superuser('edit_return', '', 'pw')
+        cls.target = User.objects.create_user('edit_target', password='pw')
+
+    def _payload(self, **extra):
+        data = {
+            'username': self.target.username,
+            'last_name': '改后姓名',
+            'email': '',
+            'is_active': 'on',
+            'password': '',
+            'password_confirm': '',
+        }
+        data.update(extra)
+        return data
+
+    def test_save_honours_next(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(
+            reverse('user:user_edit', args=[self.target.pk]),
+            self._payload(next='/plugins/structure/'))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], '/plugins/structure/')
+        self.target.refresh_from_db()
+        self.assertEqual(self.target.last_name, '改后姓名')
+
+    def test_save_without_next_falls_back_to_user_list(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(
+            reverse('user:user_edit', args=[self.target.pk]), self._payload())
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], reverse('user:user_list'))
+
+    def test_foreign_next_is_ignored(self):
+        """站外地址不能当跳板（与 profile 的口径一致）。"""
+        self.client.force_login(self.admin)
+        response = self.client.post(
+            reverse('user:user_edit', args=[self.target.pk]),
+            self._payload(next='https://evil.example.com/'))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], reverse('user:user_list'))

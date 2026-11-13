@@ -422,8 +422,10 @@ class StructureUserDetailTests(TestCase):
             self.client.get(reverse('structure:user_detail', args=[self.target.pk])), edit_url)
         admin = User.objects.create_superuser('detail_admin', '', 'pw')
         self.client.force_login(admin)
-        self.assertContains(
-            self.client.get(reverse('structure:user_detail', args=[self.target.pk])), edit_url)
+        resp = self.client.get(reverse('structure:user_detail', args=[self.target.pk]))
+        self.assertContains(resp, edit_url)
+        # v2.2.3：这颗按钮原地开编辑浮层（data-ds-panel），不再整页跳到用户页
+        self.assertContains(resp, f'href="{edit_url}" class="r-btn" data-ds-panel')
 
     def test_roster_links_to_user_detail(self):
         self.client.force_login(self.viewer)

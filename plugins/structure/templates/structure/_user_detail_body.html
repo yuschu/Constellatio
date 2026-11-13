@@ -60,7 +60,8 @@
 
 {% if can_manage %}
 <div class="ds-settings__actions ds-settings__actions--center">
-  <a href="{% url 'user:user_edit' target.pk %}" class="r-btn">{% trans "用户管理" %}</a>
+  {# 原地开编辑浮层（data-ds-panel：ds-shell.js 取回面板换进同一层，不跳用户页）；href 留给无 JS / 新标签页 #}
+  <a href="{% url 'user:user_edit' target.pk %}" class="r-btn" data-ds-panel>{% trans "用户管理" %}</a>
   <button class="r-btn r-btn--ghost" type="button" data-ds-modal-close>{% trans "关闭" %}</button>
 </div>
 {% endif %}
