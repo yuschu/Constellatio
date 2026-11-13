@@ -4652,3 +4652,48 @@ html:not([data-color-mode="dark"]) .lc-ov-session {
   font-size: 12px;
   line-height: 1.6;
 }
+
+/* ============================================================
+   35. 下拉（select）按 DSH 字面量对齐（v2.1.10）
+
+   DSH 设置页的原生控件其实是**原生 <select> + 纯 CSS 箭头**，没有自绘
+   下拉组件：`dsh-client-ui-settings-models/lib/client.js` 里
+   `className: input + selectInput` 直接挂在 <select> 上，字面量取自
+   同一文件的 CSS module `zGbnIq_*`：
+
+     .zGbnIq_selectInput{
+       appearance:none;
+       background-image:url("data:image/svg+xml, ... M3 4.5L6 7.5L9 4.5 ... stroke='%2381858C'");
+       background-position:right 12px center;
+       background-repeat:no-repeat;
+       background-size:12px 12px;
+       padding-right:32px;
+     }
+     select.zGbnIq_input{cursor:pointer;max-width:240px}
+
+   这里只搬「select 专属那一层」（去原生外观 + 12×12 折线箭头 + 右内边距），
+   控件盒子仍走我们的 --ds-control-h / --ds-bg-input / inset 0.5px 描边，
+   与旁边的文本输入框保持同一套观感。两处刻意不照抄：
+   - max-width:240px 是 DSH 给「短标签」用的（协议名、推理档位）；我们的
+     下拉装的是部门名/员工姓名，照抄会截断，所以不设上限。
+   - 多选 select 是列表框，不能抹掉外观、更不能画单箭头，故用 :not([multiple])。
+   ============================================================ */
+select.r-input:not([multiple]),
+select.r-select:not([multiple]) {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%2381858C' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position: right 12px center;
+  background-repeat: no-repeat;
+  background-size: 12px 12px;
+  padding-right: 32px;
+}
+
+/* 深色下同一个灰箭头会糊在底上。DSH 只给了浅色字面量（#81858C，正是我们
+   浅色的 --ds-label-tertiary），深色这边沿用同一条口径换成深色的
+   --ds-label-tertiary (#ADB2B8)，形状与尺寸不变。 */
+html[data-color-mode="dark"] select.r-input:not([multiple]),
+html[data-color-mode="dark"] select.r-select:not([multiple]) {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%23ADB2B8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}

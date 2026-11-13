@@ -169,6 +169,67 @@ class ThemeDiscoveryTest(TestCase):
         self.assertIn('.ds-fields .ds-settings__row:last-child {\n  border-bottom: none;',
                       css)
 
+    def test_select_chevron_matches_dsh_literal(self):
+        """v2.1.11：下拉去掉浏览器原生箭头，改 DSH 的 12×12 折线箭头。
+
+        字面量出处：`dsh-client-ui-settings-models/lib/client.js` 内联的 CSS
+        module（前缀 `zGbnIq_`）——DSH 设置页的 select 是**原生 `<select>` +
+        纯 CSS 箭头**，没有自绘下拉组件：
+
+            .zGbnIq_selectInput{appearance:none;
+              background-image:url("data:image/svg+xml,...M3 4.5L6 7.5L9 4.5...
+              stroke='%2381858C'...");
+              background-position:right 12px center;
+              background-repeat:no-repeat;background-size:12px 12px;
+              padding-right:32px}
+            select.zGbnIq_input{cursor:pointer;max-width:240px}
+
+        #81858C 与我们浅色的 --ds-label-tertiary 同值，深色换成深色的该 token
+        (#ADB2B8)；max-width:240px 是 DSH 给短标签用的，我们的下拉装部门名/
+        员工姓名，照抄会截断，故不搬（第 35 节注释里记了这条偏差）。
+        """
+        theme = get_theme(settings.BASE_DIR, 'corporate-clean')
+        css = (theme.static / 'themes/corporate-clean/css/corporate-clean.css').read_text(
+            encoding='utf-8')
+
+        block = re.search(
+            r'select\.r-input:not\(\[multiple\]\),\s*select\.r-select:not\(\[multiple\]\)'
+            r'\s*\{([^}]*)\}', css, re.S)
+        self.assertIsNotNone(block, '缺少第 35 节的下拉规则')
+        body = block.group(1)
+        self.assertIn('appearance: none', body)               # 抹掉原生箭头
+        self.assertIn('-webkit-appearance: none', body)       # Safari/旧内核
+        self.assertIn('cursor: pointer', body)
+        self.assertIn('background-position: right 12px center', body)
+        self.assertIn('background-repeat: no-repeat', body)
+        self.assertIn('background-size: 12px 12px', body)
+        self.assertIn('padding-right: 32px', body)            # 文字不压到箭头上
+        self.assertIn('M3 4.5L6 7.5L9 4.5', body)             # DSH 的 chevron 折线
+        self.assertIn("stroke-width='1.5'", body)             # 源码 1.5
+        self.assertIn('%2381858C', body)                      # 源码 #81858C
+        self.assertNotIn('max-width', body)                   # 见 docstring 的偏差说明
+
+        dark = re.search(
+            r'html\[data-color-mode="dark"\]\s*select\.r-input:not\(\[multiple\]\),\s*'
+            r'html\[data-color-mode="dark"\]\s*select\.r-select:not\(\[multiple\]\)'
+            r'\s*\{([^}]*)\}', css, re.S)
+        self.assertIsNotNone(dark, '缺深色下的箭头覆盖')
+        self.assertIn('%23ADB2B8', dark.group(1))
+        self.assertIn('M3 4.5L6 7.5L9 4.5', dark.group(1))
+
+    def test_every_select_uses_control_class(self):
+        """所有 `<select>` 都要带上 r-input/r-select，否则第 35 节的箭头落不到它身上。"""
+        tags = []
+        for folder in ('plugins', 'plugin_host', 'themes'):
+            for path in (settings.BASE_DIR / folder).rglob('*.html'):
+                text = path.read_text(encoding='utf-8')
+                for tag in re.findall(r'<select[^>]*>', text):
+                    tags.append((path.relative_to(settings.BASE_DIR).as_posix(), tag))
+        self.assertTrue(tags, '一个 select 都没找到，选择器可能已改名')
+        for name, tag in tags:
+            with self.subTest(template=name, tag=tag):
+                self.assertRegex(tag, r'class="[^"]*\br-(?:input|select)\b')
+
 
 class SubpageInPlaceTest(TestCase):
     """v2.1.6：二级页改成「原地取内容」，与 DSH 点开设置一致。

@@ -1299,3 +1299,45 @@ input:focus-visible{outline:1px solid state-business;outline-offset:2px}
 全量 532 tests OK（基线 531 +1）、`ruff check plugins plugin_host` 全过。
 
 **容器**：`docker compose up -d --build web` 重建，5 个文件 MD5 与本地逐一对齐（`workbench.py c88483a1677529100c1e247ae3ac42bb`、`views.py 67969a041fc3c3140a1bbc48696bdb32`、`static/js/dashboard-range.js 4cd89ac9d3215e4b5a4249f8040be6a4`、`templates/home_dashboard.html 480e367bbdf39cedf339051eb067101c`、`context_processors.py 7ee09ee26a91c4fba1808455509e7891`），`GET /plugins/auth/login/?next=/` 200，容器 8000 同一支探针复跑数值与本地一致。
+
+### 9.13.26 下拉（select）改 DSH 箭头（v2.1.11）
+
+**背景与更正的判断**：§9.13.18 之后留了「① 面板里 `select` 还是浏览器原生箭头（DSH 设置页的 select 组件不在 dist CSS 里，没字面量可抄）」。用户要求「翻一下 dsh 的源码看看有没有可用的」。翻完的结论是：**那句话只对了一半**——dist 的 `index-lh_YM6sT.css` 里确实没有 `select` 规则，但 DSH 的每个 `dsh-client-ui-*` 包自带一份内联 CSS module（各自独立前缀），设置页的 select 就在包里，字面量完整可抄。
+
+**取证**（脚本 `.tmp-test/dsh_select_scan.py` / `dsh_select_dump.py` / `dsh_ctx.py`，均只读）
+- 全量扫 `dsh-client-ui-*/lib/*.js` + `dist/assets/*.css`：dist 只有 2 个 CSS（`index-lh_YM6sT.css` 87,126 B、`vendor-DV2921Zo.css` 27,312 B），`_selectInput` 在 index CSS 里**零命中**——这就是「没有字面量」的由来。
+- 出处锁定在 `dsh-client-ui-settings-models/lib/client.js`：文件里内联整张 CSS module（前缀 `zGbnIq_`），类名映射表含 `"selectInput": "zGbnIq_selectInput"`；两处 JSX 直接挂在**原生 `<select>`** 上：`className: "${input} ${selectInput}"`（推理档位、自定义 API 协议两处）。
+- DSH 里没有自绘下拉组件：`dsh-client-ui-permission-presets`（`_selector`/`_optionLabel`/`_chevron`）、`dsh-client-ui-user-questions`（`_optionRow`/`_optionSelected`）是别的交互（弹出选择器/问答卡片），不是表单 select。唯一大量用原生 select 的文件是 pdf/excel 预览器（vendor 性质，不参考）。
+
+**抄到的字面量**（`zGbnIq_*`，原样）
+```css
+.zGbnIq_input{box-sizing:border-box;border:.5px solid var(--dsw-alias-border-l4);
+  border-radius:var(--dsw-radius-md);width:100%;height:32px;font:inherit;
+  background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);
+  padding:0 10px;font-size:14px;line-height:22px}
+select.zGbnIq_input{cursor:pointer;max-width:240px}
+.zGbnIq_selectInput{appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg ... width='12' height='12' ...
+    %3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%2381858C' stroke-width='1.5' .../%3E%3C/svg%3E");
+  background-position:right 12px center;background-repeat:no-repeat;
+  background-size:12px 12px;padding-right:32px}
+```
+
+**改法**（`themes/.../corporate-clean.css` 新增第 35 节，模板一个字没动）
+- 选择器 `select.r-input:not([multiple]), select.r-select:not([multiple])`：搬 DSH 的「select 专属那一层」——`appearance:none`（含 `-webkit-`）、`cursor:pointer`、12×12 折线箭头（`background-position: right 12px center`、`background-size: 12px 12px`）、`padding-right:32px`。控件盒子仍走我们的 `--ds-control-h` / `--ds-bg-input` / inset 0.5px 描边，与旁边的文本输入框同一套观感。现网 7 处 select（考勤打卡 1、签到详情筛选 3、补签 2、活动记录「时间窗口」1）**本来就都带 `class="r-input"`**，所以不用改模板就全部生效。
+  - 两个模块的差异不是遗漏：我们的控件盒子早先按另一个 DSH 模块 `_input_181ew_115`（§9.13.18 表里那行：height 34 / padding 0 12 / border .5px l4 / radius-md / 13px）对齐，`zGbnIq_input` 是设置页模型管理自己的盒子（height 32 / padding 0 10 / 14px）。同一个仓库两套 input 字面量，我们只取后者里 select 独有的那层，盒子继续用 `_input_181ew_115`，这样下拉与旁边的文本框、日期框才是同一高度（实测 34）。
+- 深色：DSH 只给了浅色描边值（`#81858C`，正好等于我们浅色的 `--ds-label-tertiary`）。同一个灰在 `#2c2c2e` 上偏暗，深色下按同一口径换成深色的 `--ds-label-tertiary`（`#ADB2B8`），形状与尺寸不变。
+- **两处刻意不照抄，理由写进 CSS 注释**：① `max-width:240px` 是 DSH 给短标签（协议名、推理档位）用的，我们的下拉装部门名/员工姓名，照抄会截断；② 多选 select 是列表框，不能抹外观、更不能画单箭头，故 `:not([multiple])`（`.ds-field select[multiple]` 的 132px 规则原样保留）。
+
+**实测（本地 8011，admin，1440×900；探针 `.tmp-test/select-probe.mjs`，读的是 `getComputedStyle` 而不是看图猜）**
+- 5 个页面 × 深浅两态，7 个 select 全部：`appearance: none`、`cursor: pointer`、`background-image` 含 `svg+xml`（长度 254）、`background-position: calc(100% - 12px) 50%`、`background-size: 12px 12px`、`padding-right: 32px`；浅色底 `rgb(245,246,247)`、深色底 `rgb(53,54,56)`，都是原来的 token 值——说明只换了箭头层，盒子没被带偏。
+- 尺寸没塌：签到 343×34、签到详情筛选 171×34（5 个，含部门）、活动记录「时间窗口」94×34、首页考勤面板 227×34；`padding-right` 加到 32 后文字仍完整显示（部门「全部部门」、活动记录「近 30 天」都不截断）。
+- 深浅两态截图：`.tmp-test/screens-v16/select-attendance-light.png`、`select-attendance-records-light.png`、`select-activity-dark.png`、`select-home-attendance-*.png`。
+
+**测试**（`plugin_host/tests.py`，`ThemeDiscoveryTest` 17 条 OK，基线 15 +2）
+- `test_select_chevron_matches_dsh_literal`：正则取第 35 节两个规则体，逐条断言 `appearance`/`background-position`/`background-size`/`padding-right`/`cursor`、chevron 的 `M3 4.5L6 7.5L9 4.5`、`stroke-width='1.5'`、`%2381858C`，并断言**没有** `max-width`（把偏差钉住，防止以后顺手抄回来）；深色块断言 `%23ADB2B8`。
+- `test_every_select_uses_control_class`：遍历 `plugins/`、`plugin_host/`、`themes/` 的所有 `.html`，凡是 `<select` 都必须带 `r-input`/`r-select`——以后新增 select 忘了带类名会直接红。
+
+全量 538 tests OK（基线 536 +2）、`ruff check plugins plugin_host` 全过。
+
+**容器**：`docker compose up -d --build web` 重建，`corporate-clean.css 4660a3ce4ae54a5bff0e708c143c1498`、`plugin_host/tests.py 685700f758495f32e7407a8962a404d9` 本地与容器逐一对齐；`/app/staticfiles/.../corporate-clean.css` 里 chevron path 命中 3 次（collectstatic 的副件也换新，说明线上走的是新规则）。容器 8000 同一支探针复跑，5 页面 × 深浅两态数值与本地完全一致（签到 343×34、筛选 171×34、活动记录 94×34、首页面板 227×34，`appearance:none` + `calc(100% - 12px) 50%` + 12×12），截图在 `.tmp-test/screens-v16/container/`。`GET /plugins/auth/login/?next=/` 200。
