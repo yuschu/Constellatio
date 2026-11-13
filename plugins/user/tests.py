@@ -357,6 +357,25 @@ class DepartmentFormPageTests(TestCase):
         html = response.content.decode()
         self.assertLess(html.index('id="ds-dept-form"'), html.index('name="action" value="create"'))
 
+    def test_row_edit_link_is_deep_link_not_modal_opener(self):
+        """回归：行内「修改」曾带 data-ds-modal-open，就地打开的是列表页预渲染的
+        「新建」弹层 → 点修改看到的是空白新建表单。修改必须走 ?view=edit&id= 深链，
+        由服务端渲染成 edit 模式；列表页预渲染的那块只能是 create。"""
+        self.client.force_login(self.admin)
+        dept = Department.objects.create(name='深链部门')
+        response = self.client.get(reverse('user:department_list'))
+        html = response.content.decode()
+        edit_href = f'?view=edit&amp;id={dept.pk}'
+        self.assertIn(edit_href, html)
+        for chunk in html.split('<a '):
+            if edit_href in chunk:
+                self.assertNotIn('data-ds-modal-open', chunk.split('</a>')[0])
+        # 列表页预渲染的弹层只能是「新建」（这正是就地打开会变成新建页的原因）
+        self.assertContains(response, 'name="action" value="create"')
+        self.assertNotIn('name="action" value="edit"', html)
+        # 模板注释不能漏到渲染结果里（Django 的 {# #} 只支持单行，多行会原样输出）
+        self.assertNotIn('{#', html)
+
     def test_create_invalid_keeps_dialog_open(self):
         self.client.force_login(self.admin)
         response = self.client.post(reverse('user:department_list'), {

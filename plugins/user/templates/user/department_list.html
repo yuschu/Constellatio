@@ -35,10 +35,9 @@
           <td class="text-nowrap">{% if d.is_active %}<span class="r-badge r-badge--green">{% trans "启用" %}</span>{% else %}<span class="r-badge r-badge--orange">{% trans "停用" %}</span>{% endif %}</td>
           <td class="text-nowrap">
             <div class="d-flex align-items-center gap-2">
-              {# v2.1.5：修改也是二级弹层（`?view=edit&id=`），不再展开右侧常驻卡片 #}
+              {# v2.1.5：修改走 ?view=edit&id= 深链；不能带 data-ds-modal-open，就地打开的是列表页预渲染的「新建」弹层 #}
               <a class="r-btn r-btn--ghost r-btn--action"
-                 href="{{ dept_edit_url }}{{ d.id }}"
-                 data-ds-modal-open="ds-dept-form">{% trans "修改" %}</a>
+                 href="{{ dept_edit_url }}{{ d.id }}">{% trans "修改" %}</a>
               {% if d.is_active %}
               <form method="post" action="{% url 'user:department_list' %}" class="m-0">
                 {% csrf_token %}
