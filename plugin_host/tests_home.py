@@ -158,6 +158,22 @@ class DashboardDataTests(TestCase):
         self.assertEqual(response.context['range_key'], 'month')
         self.assertEqual(len(response.context['trend']['categories']), 30)
 
+    def test_range_links_stay_on_current_page(self):
+        """v2.1.9：范围切换留在当前页——原来写死 /?range=…，点一下就离开看板。"""
+        self.client.force_login(self.staff)
+        response = self.client.get('/dashboard/')
+        # 默认 range=month 那一格是 aria-current 的 span，只有另外两格带 href
+        self.assertContains(response, 'href="/dashboard/?range=today"')
+        self.assertContains(response, 'href="/dashboard/?range=week"')
+        self.assertNotContains(response, 'href="/?range=')
+
+        response = self.client.get('/', {'panel': 'dashboard'})
+        self.assertEqual(response.context['panel'], 'dashboard')
+        self.assertContains(response, 'href="/?panel=dashboard&amp;range=today"')
+        self.assertContains(response, 'href="/?panel=dashboard&amp;range=week"')
+        # 范围切换走原地替换，脚本在首页与业务页都要带上
+        self.assertContains(response, 'js/dashboard-range.js')
+
     def test_dashboard_payloads_and_links(self):
         self.client.force_login(self.staff)
         response = self.client.get('/dashboard/')

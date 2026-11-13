@@ -273,8 +273,13 @@ def _build_insight(*, user, is_admin, enabled_names, now):
 
 
 def build_dashboard(*, user, is_admin, enabled_names, range_key, chart,
-                    pending_approvals, attendance_today):
-    """组装看板上下文（cards / trend / pie / dept / range_links）。"""
+                    pending_approvals, attendance_today, range_base='/'):
+    """组装看板上下文（cards / trend / pie / dept / range_links）。
+
+    v2.1.9：`range_base` 由调用方给「当前页 + 其余查询参数」，范围切换才留得住页面。
+    此前这里写死 `/?range=<key>`：在 /dashboard/ 点「本周」会跳到首页对话面板，
+    在首页「看板」面板里点又会丢掉 `panel=dashboard` —— 也就是用户看到的「切换失效」。
+    """
     now = timezone.localtime()
     start, start_date, _days = _window(range_key, now)
     mode, bucket_keys, bucket_labels = _bucket_axis(range_key, now)
@@ -492,7 +497,7 @@ def build_dashboard(*, user, is_admin, enabled_names, range_key, chart,
     range_links = [{
         'key': key,
         'label': _t(RANGE_LABELS[key]),
-        'url': f'/?range={key}',
+        'url': f'{range_base}{"&" if "?" in range_base else "?"}range={key}',
         'active': key == range_key,
     } for key in RANGE_KEYS]
 

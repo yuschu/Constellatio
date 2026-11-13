@@ -34,6 +34,19 @@ def _model(app_label, model_name):
         return None
 
 
+def _range_base(request):
+    """v2.1.9：统计范围切换要留在当前页，并保住除 range 之外的所有查询参数。
+
+    /dashboard/ → '/dashboard/'
+    /?panel=dashboard → '/?panel=dashboard'（切完还在首页「看板」面板里）
+    不带 range 的其它参数原样保留，顺序按原查询串。
+    """
+    params = request.GET.copy()
+    params.pop('range', None)
+    query = params.urlencode()
+    return f'{request.path}?{query}' if query else request.path
+
+
 def _pending_approvals(user):
     Approval = _model('approval', 'Approval')
     if Approval is None:
@@ -137,6 +150,7 @@ def dashboard_context(request):
         chart=get_active_chart(),
         pending_approvals=pending,
         attendance_today=attendance_today,
+        range_base=_range_base(request),
     )
     messages_preview = (_recent_notifications(user)
                         if 'notify' in enabled_names else [])

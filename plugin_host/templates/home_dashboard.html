@@ -23,7 +23,7 @@
         <div class="lc-gran lc-ov-range" role="group" aria-label="{% trans '统计范围' %}">
           {% for item in range_links %}
           {% if item.active %}
-          <span class="lc-gran-btn lc-gran-on" aria-current="true">{{ item.label }}</span>
+          <span class="lc-gran-btn lc-gran-on" aria-current="true" tabindex="-1">{{ item.label }}</span>
           {% else %}
           <a class="lc-gran-btn" href="{{ item.url }}">{{ item.label }}</a>
           {% endif %}
@@ -485,3 +485,6 @@
 
   </div>
 </div>
+{# v2.1.9：范围切换原地换内容（不再整页跳），脚本见 plugin_host/static/js/dashboard-range.js #}
+{% load static %}
+<script defer src="{% static 'js/dashboard-range.js' %}?v={{ assets_version }}"></script>

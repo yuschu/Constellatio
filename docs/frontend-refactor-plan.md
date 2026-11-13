@@ -1269,3 +1269,33 @@ input:focus-visible{outline:1px solid state-business;outline-offset:2px}
 **容器**：`docker compose up -d --build web` 重建，7 个文件 MD5 与本地逐一对齐（`plugins/attendance/apps.py 919dcb73acbbd889ebb0fc15dbc51123`、`plugins/notify/apps.py a3a3a1f1d78c2e0fcffb6d747990618d`、`plugins/assistant/views.py 072ff362754bf585fc30b4806b082138`、`attendance/_panel.html 7113de7a274b68cf992dde6857f94fcf`、`base.html f5b25bb1fe925baf5f63cf2a8b1e7974`、`home_chat.html 5e89ecb38d10bd1f489f0a38f2c4b133`、`ds-shell.js 5a1f7d146380ad337feb0dd66e87aec1`），`GET /plugins/auth/login/?next=/` 200。同一支探针在容器 8000 上复跑，数值与本地逐条一致：业务页侧栏同样 10 项、首页侧栏同样 9 项（考勤 / 插件 / 看板 + 更多六项），考勤 ⚙ 原地开「考勤规则」852 高、关闭回 `/plugins/attendance/`；账号菜单「消息」原地开「消息中心」296 高，点列表那条 → 原地换「审批详情 #106」（663 高），`__noReload` 仍存活，关闭回 `/plugins/user/departments/`。截图 `.tmp-test/screens-v13/container/`。
 
 > 容器重建后的**首次**探针里，消息中心那一步退化成了整页跳（`__noReload` 丢失、host 未打开）；此后同一支探针连跑两次、外加一支「只开菜单 + 点消息」的最小探针（含把点击提前到页面 `readyState` 刚 complete 的 150 ms 版本）全部正常，没能复现。原因**未定位**，不按已修记账：现有证据只说明该步偶发一次原生导航，`ds-shell.js` 的门面是 `DOMContentLoaded` 之后才挂上 `[data-ds-panel]` 的委托，真实早于它点击确实会走原生锚点，但首轮失败时页面早已加载完，对不上。
+
+### 9.13.25 看板 d/w/m（今日 / 本周 / 本月）切换失效（v2.1.9）
+
+**现象**：看板顶栏三个分段按钮点了不生效，点完人离开看板。用户原话「看板的 d/w/m 切换失效，定位并修复」。
+
+**复现（`.tmp-test/range-probe.mjs`，1440×900，admin，本地 8011）**
+- `/dashboard/` 初始 active = 本月，控制条只有两个链接：`今日 -> /?range=today`、`本周 -> /?range=week`（active 项渲染成 span，本来就没 href）。点「本周」→ 地址栏变 `/?range=week`、`panel=chat`、`.lc-ov-page` 消失、`.as-panels` 出现 —— **看板整个没了，跳到首页对话面板**。
+- `/?panel=dashboard` 初始同样 active = 本月、链接同样写死 `/?range=…`，切完 `panel=dashboard` 丢失、退回 chat。
+
+**根因**：`plugin_host/workbench.py:build_dashboard` 里 `range_links` 的 url 写死 `f'/?range={key}'`，既不管当前页是 `/dashboard/` 还是首页面板，也不带 `panel` 等其它查询参数。
+
+**改法**
+- 后端：`views.py` 新增 `_range_base(request)`（复制 `request.GET` → 弹掉 `range` → 取 `request.path` + 剩余参数串）；`build_dashboard` 新增形参 `range_base='/'`，`range_links` 的 url 改成 `f'{range_base}{"&" if "?" in range_base else "?"}range={key}'`。于是 `/dashboard/` 下生成 `/dashboard/?range=week`，首页面板下生成 `/?panel=dashboard&range=week`，其它参数（比如以后要加的部门筛选）同样保住。
+- 前端：新增 `plugin_host/static/js/dashboard-range.js`。点范围按钮不整页刷新——`fetch` 同一地址（`credentials: same-origin`）→ `DOMParser` 取出 `.lc-ov-page` → `current.replaceWith(document.importNode(next, true))` → `history.pushState` 换地址栏 → 焦点还给新的 `.lc-gran-on`（键盘用户不掉回页顶）；`pending` 防连点；取回的不是看板页（登录过期跳登录页、或结构变了没有 `.lc-ov-page`）就 `location.assign` 整页兜底，不给人「点了没反应」的界面。DSH 的看板切换本来就是原地换数据，不闪整屏。
+- **补漏（探针量出来的）**：第一版只处理点击，浏览器「后退」时地址栏变成了 `range=today`、画面仍是本月的数据，两处错位。加 `popstate` → 用当前 `location.href` 再走一次同样的替换，但 `push` 传 false，不再往历史里塞新条目。现在 back / forward 都能对齐。
+- `<script>` 挂在 `plugin_host/templates/home_dashboard.html` 末尾（该模板被业务页与首页面板各 include 一次，一处加两处生效），并给 `{% load static %}`、`?v={{ assets_version }}`；`plugin_host/context_processors.py` 的 `_ASSET_STAMP_FILES` 加入这个 js，资源戳跟着 mtime 走（本机实测渲染成 `/static/js/dashboard-range.js?v=1794571605`）。
+
+**不改动的地方**：`home-panels.js` 只接管 `[data-home-panel]` / `[data-panel-link]`，`ds-shell.js` 的委托只管 `#ds-subpage-host` 内部——范围链接两者都不沾，没有抢事件的冲突。
+
+**实测（本地 8011 与容器 8000 逐条一致，admin，1440×900；探针 `.tmp-test/range-probe2.mjs`）**
+- `/dashboard/`：`本月(active, 近 30 天) → 点本周: /dashboard/?range=week / active 本周 / 近 7 天 → 点今日: /dashboard/?range=today / active 今日 / 今日 · 24 小时 → 点本月: 回近 30 天`。全程 `__probeAlive` 标记存活 = 没有整页重载，`.lc-ov-page` 一直在，控制条上另两格自动换成新 href。
+- 后退：URL 回 `range=today`，画面同步成「今日 · 24 小时」；再前进回 `range=month` / 「近 30 天」。两条都带标记存活。
+- `/?panel=dashboard`：点今日 → `/?panel=dashboard&range=today`，仍停在看板面板；控制条 href 是 `/?panel=dashboard&range=week`、`...&range=month`，`panel` 没丢。`window.__dsRangeErrors` 为 null（无异常）。
+- 生产侧验证没有盲区：KPI「单据总量」的副标题由 `trend.window_label` 驱动，三档分别是「近 30 天 / 近 7 天 / 今日 · 24 小时」，探针读的就是这一格，能证明换的不只是按钮高亮。
+- 截图 `.tmp-test/screens-v15/range2-dash-week.png`、`range2-dash-today.png`、`range2-home-today.png`，容器同名在 `.tmp-test/screens-v15/container/`。
+
+**测试**：`plugin_host/tests_home.py` 新增 `DashboardDataTests.test_range_links_stay_on_current_page` —— 断言 `/dashboard/` 下 today/week 是 `/dashboard/?range=…` 且不存在 `href="/?range=`；`/?panel=dashboard` 下是 `/?panel=dashboard&range=…`（`&` 走模板转义成 `&amp;`）、`context['panel'] == 'dashboard'`、页面带 `js/dashboard-range.js`。**注意** active 那一格是 `aria-current` 的 span（无 href），不能三档一起断言 href —— 第一版就是这么写才红了一次。
+全量 532 tests OK（基线 531 +1）、`ruff check plugins plugin_host` 全过。
+
+**容器**：`docker compose up -d --build web` 重建，5 个文件 MD5 与本地逐一对齐（`workbench.py c88483a1677529100c1e247ae3ac42bb`、`views.py 67969a041fc3c3140a1bbc48696bdb32`、`static/js/dashboard-range.js 4cd89ac9d3215e4b5a4249f8040be6a4`、`templates/home_dashboard.html 480e367bbdf39cedf339051eb067101c`、`context_processors.py 7ee09ee26a91c4fba1808455509e7891`），`GET /plugins/auth/login/?next=/` 200，容器 8000 同一支探针复跑数值与本地一致。
