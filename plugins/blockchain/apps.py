@@ -126,9 +126,9 @@ class BlockchainConfig(AppConfig):
         register(PluginMeta(
             name='blockchain',
             version='1.3.0',
-            title=_('操作留痕链'),
+            title=_('活动记录'),
             menus=[
-                {'label': _('留痕链'), 'icon': '▣', 'url': '/plugins/blockchain/', 'perm': 'blockchain_view'},
+                {'label': _('活动记录'), 'icon': '▣', 'url': '/plugins/blockchain/', 'perm': 'blockchain_view'},
             ],
             permissions=['blockchain_view', 'blockchain_verify'],
             urls='plugins.blockchain.urls',

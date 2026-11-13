@@ -76,6 +76,32 @@ class BlockchainTest(TestCase):
         self.assertContains(response, record.prev_hash)
         self.assertContains(response, '操作记录')
 
+    def test_menu_label_and_page_title_are_activity_log(self):
+        """v2.1.6 改名：菜单 label / 插件 title / 列表页 h2 / 详情返回按钮统一叫「活动记录」。"""
+        from plugin_host.registry import get_menus
+
+        labels = [m['label'] for m in get_menus(self.user)]
+        self.assertIn('活动记录', labels)
+        self.assertNotIn('留痕链', labels)
+
+        self.client.force_login(self.user)
+        response = self.client.get('/plugins/blockchain/')
+        self.assertContains(response, '活动记录')
+        self.assertNotContains(response, '留痕链')
+        self.assertNotContains(response, '操作留痕链')
+
+        record = BlockchainRecord.append(
+            'notice', 'notice_published', 'a:2', operator=self.user)
+        detail = self.client.get(f'/plugins/blockchain/{record.id}/')
+        self.assertContains(detail, '返回活动记录')
+        self.assertNotContains(detail, '留痕链')
+
+    def test_activity_log_is_translated(self):
+        self.client.force_login(self.user)
+        self.client.cookies['django_language'] = 'en'
+        response = self.client.get('/plugins/blockchain/')
+        self.assertContains(response, 'Activity log')
+
     def test_plugin_and_action_labels_follow_language(self):
         self.client.force_login(self.user)
         record = BlockchainRecord.append(
@@ -90,12 +116,12 @@ class BlockchainTest(TestCase):
 
 
 class BlockchainStatsTests(TestCase):
-    """v1.6.1：留痕统计（按日 × 来源插件）+ 权限 / 窗口 / 图表降级。"""
+    """v1.6.1：活动统计（按日 × 来源插件）+ 权限 / 窗口 / 图表降级。"""
 
     @classmethod
     def setUpTestData(cls):
         cls.viewer = User.objects.create_user('statsviewer', password='pw')
-        role = cls.viewer.roles.create(name='留痕统计')
+        role = cls.viewer.roles.create(name='活动统计')
         role.permissions.add(Permission.objects.get(codename='blockchain_view'))
         now = timezone.now()
 
@@ -169,7 +195,7 @@ class BlockchainStatsTests(TestCase):
     def test_list_page_renders_chart(self):
         response = self.client.get('/plugins/blockchain/')
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, '留痕统计')
+        self.assertContains(response, '活动统计')
         self.assertContains(response, 'blockchain-chart')
         self.assertContains(response, 'vendor/echarts.min.js')
 
@@ -177,7 +203,7 @@ class BlockchainStatsTests(TestCase):
     def test_list_page_degrades_without_chart(self):
         response = self.client.get('/plugins/blockchain/')
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, '留痕统计')
+        self.assertContains(response, '活动统计')
         self.assertContains(response, 'blockchain-chart-fallback')
         self.assertNotContains(response, 'vendor/echarts.min.js')
 

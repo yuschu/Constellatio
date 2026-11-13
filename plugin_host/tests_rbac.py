@@ -61,7 +61,7 @@ class MenuGuardTests(TestCase):
         self.assertContains(home, '公告中心')
         self.assertNotContains(home, '签到详情')
         self.assertNotContains(home, '审批中心')
-        self.assertNotContains(home, '留痕链')
+        self.assertNotContains(home, '活动记录')
         self.assertNotContains(home, '组织架构')
         self.assertNotContains(home, '插件开关')
 

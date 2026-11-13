@@ -30,7 +30,7 @@ ACTION_LABELS = {
 
 
 class BlockchainRecord(AuditModel):
-    """操作留痕链表 blockchain_record（显式 db_table，对齐数据库设计）。"""
+    """活动记录表 blockchain_record（显式 db_table，对齐数据库设计；表名与模型名保留区块链语义）。"""
 
     plugin = models.CharField('来源插件', max_length=50)
     action = models.CharField('操作类型', max_length=50)

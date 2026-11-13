@@ -135,7 +135,7 @@ def _stats_snapshot(days=DEFAULT_STATS_DAYS):
 
 @require_perm('blockchain_view')
 def blockchain_list(request):
-    """留痕链列表（倒序，50/页） + 校验结果 + 近 30 天统计看板。
+    """活动记录列表（倒序，50/页） + 校验结果 + 近 30 天统计看板。
 
     v1.7.6：原来硬切 [:100]，第 100 条以前的记录 UI 上不可达；改为分页并保留总数，
     看板走 60 秒快照（每页都渲染，不会出现「直接打开第 2 页看板是空的」）。
@@ -162,7 +162,7 @@ def blockchain_list(request):
 
 @require_perm('blockchain_view')
 def blockchain_stats(request):
-    """留痕统计 JSON（v1.6.1）：按日 × 来源插件；图表停用时 payload=null。"""
+    """活动统计 JSON（v1.6.1）：按日 × 来源插件；图表停用时 payload=null。"""
     try:
         days = _parse_days(request.GET.get('days'))
     except ValueError:

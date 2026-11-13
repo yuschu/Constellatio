@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% load i18n %}
-{% block title %}{% trans "操作留痕" %} · Constellatio{% endblock %}
+{% block title %}{% trans "活动记录" %} · Constellatio{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-  <h2 class="mb-0">{% trans "操作留痕链" %}</h2>
+  <h2 class="mb-0">{% trans "活动记录" %}</h2>
   <span class="r-badge">{% blocktranslate with count=total %}共 {{ count }} 条{% endblocktranslate %}</span>
 </div>
 <div class="r-card mb-4 position-relative">
@@ -16,7 +16,7 @@
 </div>
 <div class="r-card mb-4">
   <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
-    <h3 class="fs-5 mb-0">{% trans "留痕统计" %}</h3>
+    <h3 class="fs-5 mb-0">{% trans "活动统计" %}</h3>
     {% if chart %}
     <div class="d-flex align-items-center gap-2">
       <label class="form-label mb-0 text-nowrap" for="chart_days">{% trans "时间窗口" %}</label>
@@ -35,10 +35,10 @@
        data-stats-url="{% url 'blockchain:blockchain_stats' %}"
        data-days="{{ chart_days }}"
        data-colspan="{{ chart_colspan }}"
-       role="img" aria-label="{% trans "留痕统计" %}"></div>
+       role="img" aria-label="{% trans "活动统计" %}"></div>
   {% endif %}
   <div id="blockchain-chart-fallback" {% if chart %}hidden{% endif %}
-       data-empty="{% trans "该时间范围内暂无留痕记录" %}">
+       data-empty="{% trans "该时间范围内暂无活动记录" %}">
     <table class="r-table">
       <thead>
         <tr>
@@ -55,7 +55,7 @@
           <td>{{ row.total }}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="{{ chart_colspan }}" class="text-muted">{% trans "该时间范围内暂无留痕记录" %}</td></tr>
+        <tr><td colspan="{{ chart_colspan }}" class="text-muted">{% trans "该时间范围内暂无活动记录" %}</td></tr>
         {% endfor %}
       </tbody>
       {% if chart_rows %}
@@ -69,7 +69,7 @@
       {% endif %}
     </table>
   </div>
-  <p class="text-muted mb-0 mt-2" style="font-size:.75rem;">{% trans "统计按来源插件聚合，与留痕记录同源；图表不可用时自动降级为表格。" %}</p>
+  <p class="text-muted mb-0 mt-2" style="font-size:.75rem;">{% trans "统计按来源插件聚合，与活动记录同源；图表不可用时自动降级为表格。" %}</p>
 </div>
 <div class="r-card">
   <table class="r-table">
@@ -89,7 +89,7 @@
         <td><a href="{% url 'blockchain:record_detail' r.id %}" class="r-offset-hover">{% trans "查看" %}</a></td>
       </tr>
       {% empty %}
-      <tr><td colspan="8" class="text-muted">{% trans "暂无留痕记录（业务操作会自动上链）" %}</td></tr>
+      <tr><td colspan="8" class="text-muted">{% trans "暂无活动记录（业务操作会自动上链）" %}</td></tr>
       {% endfor %}
     </tbody>
   </table>
