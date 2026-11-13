@@ -18,8 +18,10 @@ class AttendanceConfig(AppConfig):
                 {'label': _('考勤'), 'icon': '▣', 'url': '/plugins/attendance/',
                  'perm': 'attendance_view', 'order': 4},
                 {'label': _('签到详情'), 'icon': '☷', 'url': '/plugins/attendance/records/', 'perm': 'attendance_report_view'},
-                # v1.7.2：考勤规则设置（影响全员迟到 / 早退口径）
-                {'label': _('考勤规则'), 'icon': '⚙', 'url': '/plugins/attendance/rules/', 'perm': 'attendance_rule_manage'},
+                # v1.7.2：考勤规则设置（影响全员迟到 / 早退口径）。
+                # v2.1.6：**不再作为侧栏菜单**——它是「考勤」的二级页（点开设置那一页的形态），
+                # 从考勤看板右上角的 ⚙ 原地打开；侧栏里同一个插件列三条（考勤 / 签到详情 /
+                # 考勤规则）就是用户说的冗余。URL 与权限保留，深链照旧可达。
             ],
             permissions=[
                 'attendance_view', 'attendance_check', 'attendance_report_view',

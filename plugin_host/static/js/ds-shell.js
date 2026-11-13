@@ -558,6 +558,29 @@
           .catch(function () { form.submit(); });
       });
 
+      /* 面板里的站内链接也留在面板里（消息中心读一条 → 列表原地刷新；活动记录里
+         换一条记录）。取回的不是面板页（比如点到了列表页）就交给 fallback 整页走。
+         修饰键 / 中键 / target / 下载照浏览器原生行为，不接管。 */
+      host.addEventListener('click', function (e) {
+        if (e.defaultPrevented || e.button !== 0) return;
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        if (host.hasAttribute('hidden')) return;
+        var link = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+        if (!link || !host.contains(link)) return;
+        if (link.hasAttribute('data-ds-modal-close') || link.hasAttribute('data-ds-close')) return;
+        if (link.hasAttribute('data-ds-modal-open') || link.hasAttribute('data-ds-panel')) return;
+        if (link.hasAttribute('target') || link.hasAttribute('download')) return;
+        if (link.hasAttribute('data-ds-allow-native')) return;
+        var href = link.getAttribute('href');
+        if (!href || href.charAt(0) === '#') return;
+        var target;
+        try { target = new URL(link.href, window.location.href); } catch (err) { return; }
+        if (target.origin !== window.location.origin) return;
+        if (target.pathname === window.location.pathname && target.hash) return;
+        e.preventDefault();
+        openPanel(link.href, link);
+      });
+
       document.body.appendChild(host);
       return host;
     }
@@ -616,16 +639,19 @@
       var base = host.hasAttribute('hidden')
         ? window.location.pathname + window.location.search
         : host.getAttribute('data-ds-subpage-base');
+      var landed = url;
       fetch(url, { credentials: 'same-origin' })
         .then(function (res) {
           if (!res.ok) throw new Error('HTTP ' + res.status);
+          /* 取回后可能被重定向（如消息「已读」跳回列表）：地址栏认落点，不认请求串 */
+          landed = res.url || url;
           return res.text();
         })
         .then(function (html) {
           var panel = panelFrom(html);
           if (!panel) throw new Error('no panel');
           mountPanel(host, panel);
-          host.setAttribute('data-ds-subpage-url', url);
+          host.setAttribute('data-ds-subpage-url', landed);
           host.setAttribute('data-ds-subpage-base', base);
           openModal(host, trigger || null);
         })

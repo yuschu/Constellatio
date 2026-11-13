@@ -77,7 +77,9 @@
               </button>
 
               {% if 'notify' in plugins_enabled %}
-              <a role="menuitem" class="ds-menu__item" href="{% url 'notify:notify_list' %}">
+              {# v2.1.6：消息中心是二级页——点「消息」原地开面板，不再整页跳到功能页 #}
+              <a role="menuitem" class="ds-menu__item" href="{% url 'notify:notify_list' %}"
+                 data-ds-panel>
                 <span class="ds-menu__icon" aria-hidden="true">
                   <svg viewBox="0 0 16 16" width="16" height="16">
                     <path d="M4 11h8M5.2 11V7.2a2.8 2.8 0 015.6 0V11M6.8 13h2.4"

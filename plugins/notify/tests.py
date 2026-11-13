@@ -112,8 +112,23 @@ class NotificationFlowTests(TestCase):
         Notification.objects.create(recipient=self.applicant, title='未读消息')
         self.client.force_login(self.applicant)
         response = self.client.get('/')
-        self.assertContains(response, '消息中心')
+        # v2.1.6：账号菜单里的「消息」原地开二级页，不再是侧栏菜单项
+        self.assertContains(response, '消息')
+        self.assertContains(response, 'data-ds-panel')
         self.assertEqual(response.context['notify_unread'], 1)
+
+    def test_message_center_is_not_a_sidebar_menu(self):
+        """v2.1.6：消息中心没有父列表页，单列成侧栏菜单等于把二级页当功能页。"""
+        import re
+
+        self.client.force_login(self.applicant)
+        for url in ('/', '/plugins/approval/'):
+            response = self.client.get(url)
+            html = response.content.decode()
+            self.assertEqual(html.count('href="/plugins/notify/"'), 1)
+            self.assertRegex(
+                html, re.compile(
+                    r'<a[^>]*href="/plugins/notify/"[^>]*\bdata-ds-panel', re.S))
 
     def test_plugin_disabled_hides_entry(self):
         from plugins.workspace.models import PluginSwitch

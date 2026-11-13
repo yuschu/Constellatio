@@ -1187,3 +1187,27 @@ input:focus-visible{outline:1px solid state-business;outline-offset:2px}
 - 截图 `.tmp-test/screens-v12/`：`sized-dept-edit.png`、`sized-user-edit.png`、`sized-attendance-rules.png`、`sized-stacked-profile-edit.png` 等。
 
 **门禁**：全量 **526 tests OK**、`plugin_host` 207 OK、ruff 通过。**容器**：`docker compose up -d --build web` 重建后同一支探针逐条一致（数值同上），MD5 对齐 `corporate-clean.css 8e004261a056003e930d3108c314b0ce`、`ds-shell.js ac642b39c9f00f612fb6499e35e7f524`，截图 `.tmp-test/screens-v12/container/`。
+
+### 9.13.22 导航收口：考勤规则 / 消息中心不再占侧栏（v2.1.6）
+
+**用户口径**：「功能页和主页都有考勤是否冗余；考勤规则是考勤的二级页不应该在侧栏单独列出，点击消息打开二级页的消息中心而不是在应用页把消息中心单独列出」。
+
+**先说「冗余」问的是什么**：业务页侧栏从 v2.1.0 起就不再列「考勤 / 插件 / 看板」（这三条由主页的固定入口承载），所以「功能页和主页都有考勤」不是两份数据，是同一份菜单在两种外壳上各渲染一次。真正重复的是**一个插件被拆成三条菜单**：考勤插件原来挂 考勤 / 签到详情 / 考勤规则 三条，其中「考勤规则」从 9.13.5 起就是考勤的二级页（点开设置那一页的形态），把它单列等于把二级页当功能页。
+
+**改法**：
+1. `plugins/attendance/apps.py` 删掉「考勤规则」那条菜单（URL 与 `attendance_rule_manage` 保留，深链照旧可达）。入口只剩考勤看板右上角的 ⚙：业务页现在带 `data-ds-panel`（原地开二级页，见 9.13.19），首页面板仍走自己的静态弹层。
+2. `plugins/notify/apps.py` 的 `menus` 清空 —— 消息中心本来就没有父列表页，单列菜单等于把二级页当功能页。入口改成账号菜单里的「消息」（`base.html` 与 `home_chat.html` 两处），锚点带 `data-ds-panel`，点了原地开二级页；首页「更多」抽屉里的 `COMMON_MENU_URLS` 也删掉 `/plugins/notify/`。
+3. 二级页面板里点站内链接以前是整页跳（消息「已读」就是 302 回列表）。host 补了一个 click 委托：同源 GET 链接交给 `openPanel` 换面板，取回的不是面板页才整页走；修饰键 / `target` / `download` / 需要弹层的锚点照原生行为不接管。`openPanel` 改用 `res.url` 当落点 —— 消息已读是 302 回 `/plugins/notify/`，地址栏要认 redirect 后的地址，不能认请求串。
+
+**实测（本地 8011，1440×900，admin）**
+- 业务页侧栏（部门页 / 看板）：部门、用户、角色、审批中心、待我审批、抄送我的、公告中心、签到详情、活动记录、组织架构 —— **没有**「考勤规则」「消息中心」。
+- 首页侧栏：考勤 / 插件 / 看板 + 更多（待我审批、抄送我的、审批中心、公告中心、浏览更多插件、创建你的插件）—— 也没有消息中心。
+- 考勤页点 ⚙：`__noReload` 存活，面板「考勤规则」852 高（内容 842，1460 那套数据下仍差几十像素，见 9.13.21），地址栏 `/plugins/attendance/rules/`，关闭回 `/plugins/attendance/`。
+- 账号菜单点「消息」：面板「消息中心」296 高（内容短就按内容收高），地址栏 `/plugins/notify/`；点列表里那条审批待办 → **原地**换成「审批详情 #227」（663 高），`__noReload` 仍存活；关闭回 `/plugins/user/departments/`。
+- 截图 `.tmp-test/screens-v13/`：`nav_plugins_user_departments_.png`、`attendance-page.png`、`attendance-rules-inplace.png`、`account-menu.png`、`message-center-inplace.png`、`message-center-after-read.png`。
+
+**门禁**：全量 **529 tests OK**（新增 `test_rules_page_is_not_a_sidebar_menu`、`test_rules_page_still_reachable_by_deep_link`、`test_message_center_is_not_a_sidebar_menu`，并把 `test_unread_badge_in_nav` 改成认账号菜单的「消息」），ruff 通过。
+
+**容器**：`docker compose up -d --build web` 重建，7 个文件 MD5 与本地逐一对齐（`plugins/attendance/apps.py 919dcb73acbbd889ebb0fc15dbc51123`、`plugins/notify/apps.py a3a3a1f1d78c2e0fcffb6d747990618d`、`plugins/assistant/views.py 072ff362754bf585fc30b4806b082138`、`attendance/_panel.html 7113de7a274b68cf992dde6857f94fcf`、`base.html f5b25bb1fe925baf5f63cf2a8b1e7974`、`home_chat.html 5e89ecb38d10bd1f489f0a38f2c4b133`、`ds-shell.js 5a1f7d146380ad337feb0dd66e87aec1`），`GET /plugins/auth/login/?next=/` 200。同一支探针在容器 8000 上复跑，数值与本地逐条一致：业务页侧栏同样 10 项、首页侧栏同样 9 项（考勤 / 插件 / 看板 + 更多六项），考勤 ⚙ 原地开「考勤规则」852 高、关闭回 `/plugins/attendance/`；账号菜单「消息」原地开「消息中心」296 高，点列表那条 → 原地换「审批详情 #106」（663 高），`__noReload` 仍存活，关闭回 `/plugins/user/departments/`。截图 `.tmp-test/screens-v13/container/`。
+
+> 容器重建后的**首次**探针里，消息中心那一步退化成了整页跳（`__noReload` 丢失、host 未打开）；此后同一支探针连跑两次、外加一支「只开菜单 + 点消息」的最小探针（含把点击提前到页面 `readyState` 刚 complete 的 150 ms 版本）全部正常，没能复现。原因**未定位**，不按已修记账：现有证据只说明该步偶发一次原生导航，`ds-shell.js` 的门面是 `DOMContentLoaded` 之后才挂上 `[data-ds-panel]` 的委托，真实早于它点击确实会走原生锚点，但首轮失败时页面早已加载完，对不上。

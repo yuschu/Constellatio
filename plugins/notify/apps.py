@@ -129,10 +129,9 @@ class NotifyConfig(AppConfig):
             name='notify',
             version='1.0.0',
             title=_('消息提醒'),
-            menus=[{
-                'label': _('消息中心'), 'icon': '✉',
-                'url': '/plugins/notify/', 'perm': 'notify_view',
-            }],
+            # v2.1.6：消息中心不再占一条侧栏菜单（它本来就没有父列表页，单列出来等于把
+            # 二级页当功能页）。入口是账号菜单里的「消息」，点了原地开二级页。
+            menus=[],
             permissions=['notify_view'],
             urls='plugins.notify.urls',
             signals=['approval_submitted', 'approval_finished', 'notice_published'],

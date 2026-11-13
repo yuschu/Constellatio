@@ -750,6 +750,22 @@ class AttendancePanelSubPageTests(TestCase):
         # 深链页没有遮罩弹层，关闭 = 返回考勤看板
         self.assertNotContains(response, 'ds-settings--subpage')
 
+    def test_rules_page_is_not_a_sidebar_menu(self):
+        """v2.1.6：考勤规则不再占一条侧栏菜单（同一插件列三条就是用户说的冗余）。
+
+        入口只剩考勤看板右上角那个 ⚙，且业务页上是原地开二级页（data-ds-panel）。
+        """
+        self.client.force_login(self.manager)
+        response = self.client.get('/plugins/attendance/')
+        html = response.content.decode()
+        self.assertEqual(html.count('/plugins/attendance/rules/'), 1)
+        self.assertContains(response, 'data-ds-panel')
+
+    def test_rules_page_still_reachable_by_deep_link(self):
+        self.client.force_login(self.manager)
+        response = self.client.get('/plugins/attendance/rules/')
+        self.assertEqual(response.status_code, 200)
+
     def test_sub_page_post_prg_back_to_panel(self):
         self.client.force_login(self.manager)
         response = self.client.post(

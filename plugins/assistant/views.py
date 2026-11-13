@@ -56,12 +56,12 @@ SUB_TITLES = {
 
 # 「更多」菜单里的常用入口，元组顺序即菜单行顺序（DSH 的更多菜单只放轻量导航，
 # 不把全部业务菜单铺进去；完整清单在业务页侧栏）。考勤已在顶部固定入口，这里不重复。
+# v2.1.6：消息中心下线这条——它由账号菜单的「消息」原地开二级页，不再占导航位置。
 COMMON_MENU_URLS = (
     '/plugins/approval/pending/',  # 待我审批
     '/plugins/approval/cc/',       # 抄送我的
     '/plugins/approval/',          # 审批中心
     '/plugins/notice/',            # 公告中心
-    '/plugins/notify/',            # 消息中心
 )
 
 # DSH 的「创建你的插件」不是打开某个管理页，而是起一个带预设 prompt 的新会话

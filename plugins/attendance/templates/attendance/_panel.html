@@ -8,9 +8,9 @@
     <h2 class="at-head__title">{% trans "考勤" %}</h2>
     <div class="at-head__aside">
       {% if perms.attendance.attendance_rule_manage %}
-      {# 面板里点开就是设置弹层（DSH 点开设置的那一页）；业务页仍是普通深链 #}
+      {# 业务页：二级页原地打开（data-ds-panel，DSH 点开设置那一页）；首页面板有自己的静态弹层 #}
       <a href="{{ rules_entry_url|default_if_none:'/plugins/attendance/rules/' }}"
-         class="r-btn r-btn--ghost"{% if in_home_panel %} data-ds-modal-open="ds-attendance-rules"{% endif %}>⚙ {% trans "考勤规则" %}</a>
+         class="r-btn r-btn--ghost"{% if in_home_panel %} data-ds-modal-open="ds-attendance-rules"{% else %} data-ds-panel{% endif %}>⚙ {% trans "考勤规则" %}</a>
       {% endif %}
       <span class="r-badge">{{ today|date:"Y-m-d" }}</span>
     </div>
