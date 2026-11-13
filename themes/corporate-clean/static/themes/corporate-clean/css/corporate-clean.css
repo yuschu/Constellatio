@@ -1832,6 +1832,9 @@ body.ds-modal-open {
   flex-direction: column;
   gap: 14px;
   max-width: 760px;
+  /* 760 的清单要落在列中线，不是贴着左边；首页面板与业务页共用这一份 */
+  width: 100%;
+  margin-inline: auto;
   color: var(--ds-label-primary);
 }
 

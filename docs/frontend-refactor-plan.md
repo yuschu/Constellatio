@@ -739,6 +739,7 @@ OA 口径映射（DSH 是「按会话自身各请求时间归属」，本项目�
 - `themes/*/templates/base.html`（两套同构）：删掉 head 的 `rail-boot.js`（业务页没有折叠态了，首帧还原不再需要）；`.ds-rail__toggle` 按钮换成 `<a href="/" class="ds-rail__toggle ds-rail__home" aria-label="返回主页">` + house 图标；侧栏循环 `menus` → `sidebar_menus`。
 - `corporate-clean.css` 第 28 节：`.ds-rail__home` 收回链接色（主题全局 `a` 规则会把它染成链接蓝）、`.at-*` 考勤面板布局（`minmax(0,5fr) minmax(0,7fr)`，<900px 单列，`.at-grid > .r-card + .r-card{margin-top:0}` 抵掉 `.r-card + .r-card` 的上边距，`.at-card > .r-badge{align-self:flex-start}` 防止列向 flex 把徽标拉满整行）。`risograph.css` 只 `@import` corporate，无需改。
   - **返回主页按钮的几何**：品牌行里的 `.ds-rail__brand a`（`flex:1` / `height:24px` / 18px 字号，specificity 0,1,1）会把同一行里的返回按钮一并命中，把 `.ds-rail__toggle` 的 28×28 挤成 **127×24**。修法是 `.ds-rail__brand a.ds-rail__home` 显式收回 `flex:none / display:grid / 28×28 / min-width / 16px 图标 / hover 底色`，与首页 `.as-rail-toggle` 实测一致（两者 CDP 量出来都是 `box [28,28]`、`svg [16,16]`、`color rgb(97,102,107)`、`radius 8px`）。
+  - **插件清单居中**：`.ds-plugins` 原本只有 `max-width:760`，没有 auto 外边距，760 的清单贴在 1102 内容区的左边（右边空 340）。补 `width:100% + margin-inline:auto` 后，首页面板与 `/plugins/workspace/` 都是落在列中线：CDP 量到业务页 `leftGap 200 / rightGap 200`，首页面板 `195 / 205`（差的 10px 是 `.as-panelview` 的 `scrollbar-gutter: stable` 预留，属正常）。
 - `assistant.css` 第 27 节：`.as-main--panel` / `.as-panelbody`（flex column / flex 1 / min-height 0）/ `.as-panelview`（flex 1 / overflow-y auto / padding 20px 24px 40px / scrollbar-gutter stable）+ 两条桥接（`body.as-body .as-sidebar a` 收回链接色、`.as-panelview a` 用 `--ds-link`）。
 
 ### 9.13.5 门禁 + 真机实测（1440×900，本地 `:8011`）
