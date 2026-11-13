@@ -1,0 +1,7 @@
+{% load i18n %}
+{% comment %}
+部门表单设置弹层（新建 / 修改共用）：共享外壳 includes/ds_settings_modal.html。
+单分区 → 最外层 ds-settings--single，不渲染左侧分区列，内容与按钮居中。
+深链：`?view=new` / `?view=edit&id=<pk>`；表单 POST 回列表页按 `?view=` 分派。
+{% endcomment %}
+{% include "includes/ds_settings_modal.html" with sp_id="ds-dept-form" sp_title=dept_form_title sp_body="user/_department_form_body.html" sp_query=dept_form_query sp_url=dept_form_url sp_base=dept_list_url sp_open=dept_form_open %}

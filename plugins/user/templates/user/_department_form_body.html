@@ -1,0 +1,43 @@
+{% load i18n %}
+{% comment %}
+部门表单正文（新建 / 修改共用）。
+字段行沿用设置页的 SettingsValueField 口径：标签 13/20 secondary、控件 34、
+说明 12/18 tertiary；操作按钮居中。
+提交文案由宿主给（`dept_form_submit`：创建 / 保存修改），两种模式不复制正文。
+隐藏字段 `action` 随模式切换：create / edit；edit 模式再带 `dept_id`。
+{% endcomment %}
+<p class="ds-settings__desc">
+  {% if dept_form_mode == 'edit' %}{% trans "只改名称与上级部门；停用 / 物理删除回列表用行内操作（物理删除会发起会签审批单）。" %}{% else %}{% trans "部门名称与上级部门决定组织树的位置；保存后立即出现在部门列表里。" %}{% endif %}
+</p>
+
+<form method="post" novalidate class="ds-settings__form">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="{{ dept_form_mode }}">
+
+  {% for error in form.non_field_errors %}
+  <div class="ds-field__error">{{ error }}</div>
+  {% endfor %}
+
+  <div class="ds-fields">
+    <div class="ds-field">
+      <label class="ds-field__label" for="{{ form.name.id_for_label }}">
+        {{ form.name.label }}{% if form.name.field.required %} *{% endif %}
+      </label>
+      {{ form.name }}
+      {% for error in form.name.errors %}<div class="ds-field__error">{{ error }}</div>{% endfor %}
+    </div>
+    <div class="ds-field">
+      <label class="ds-field__label" for="{{ form.parent.id_for_label }}">
+        {{ form.parent.label }}
+      </label>
+      {{ form.parent }}
+      <div class="ds-field__help">{% trans "留空表示顶层部门；下级部门会挂到所选部门之下。" %}</div>
+      {% for error in form.parent.errors %}<div class="ds-field__error">{{ error }}</div>{% endfor %}
+    </div>
+  </div>
+
+  <div class="ds-settings__actions ds-settings__actions--center">
+    <button class="r-btn" type="submit">{{ dept_form_submit|default:_("保存") }}</button>
+    <button class="r-btn r-btn--ghost" type="button" data-ds-modal-close>{% trans "取消" %}</button>
+  </div>
+</form>
