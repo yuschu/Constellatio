@@ -54,10 +54,17 @@
 
     <section class="r-card at-card">
       <h3 class="at-card__title">{% blocktranslate with month=today|date:"Y-m" %}本月统计（{{ month }}）{% endblocktranslate %}</h3>
-      <table class="r-table">
-        <tr><th>{% trans "出勤天数" %}</th><td>{% blocktranslate with count=month_days %}{{ count }} 天{% endblocktranslate %}</td></tr>
-        <tr><th>{% trans "迟到次数" %}</th><td>{% blocktranslate with count=month_late late=rule_late %}{{ count }} 次（{{ late }} 前签到为正常）{% endblocktranslate %}</td></tr>
-      </table>
+      {# v2.1.1：改用 DSH field 行（标签在上位左、值右对齐，行间 0.5px 分隔），不再用 r-table #}
+      <dl class="at-kv">
+        <div class="at-kv__row">
+          <dt>{% trans "出勤天数" %}</dt>
+          <dd>{% blocktranslate with count=month_days %}{{ count }} 天{% endblocktranslate %}</dd>
+        </div>
+        <div class="at-kv__row">
+          <dt>{% trans "迟到次数" %}</dt>
+          <dd>{% blocktranslate with count=month_late late=rule_late %}{{ count }} 次（{{ late }} 前签到为正常）{% endblocktranslate %}</dd>
+        </div>
+      </dl>
     </section>
   </div>
 

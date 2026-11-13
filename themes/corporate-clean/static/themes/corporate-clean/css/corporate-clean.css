@@ -3712,3 +3712,354 @@ html:not([data-color-mode="dark"]) .lc-ov-session {
   width: 100%;
   height: 300px;
 }
+
+/* ==========================================================================
+   29. DSH 原语回流：业务页与考勤面板（v2.1.1）
+   --------------------------------------------------------------------------
+   这一节把业务页/考勤用到的 r-* 组件按 DSH 源码字面量收回，取值全部来自
+   dsh-web-frontend/dist/assets/index-lh_YM6sT.css（不是截图采样）：
+
+     Button  ._button_1ulci_2   inline-flex / gap 4 / radius-md / 14-22 /
+                                padding 0 14 / 透明底
+             ._md_1ulci_23      height 36
+             ._sm_1ulci_28      height 28 / 12-18 / padding 0 10 / radius-sm
+             ._primary_1ulci_36 button-primary-fill + label-primary-foreground
+             ._ghost_1ulci_46   hover interactive-bg-hover / active interactive-bg-active
+             ._outline_1ulci_56 border .5px transparent + inset 0 0 0 .5px border-l3
+     Input   ._input_181ew_115  height 34 / padding 0 12 / border .5px border-l4 /
+                                radius-md / bg-layer-3 / 13px / lh 1.5；
+                                focus-visible 只换 border-color(business)
+     Field   ._field_181ew_3    column / gap 6 / padding 12px 0；相邻 field 上边
+                                .5px border-l2
+     Table   ._tableScroll th   padding 10px 16px / border-bottom .5px border-l3
+             ._tableScroll td   padding 10px 16px / border-bottom .5px border-l2
+     Tag     ._tag_brmue_4      radius 999 / padding 1px 8px / 11-17 / 500
+             tones                neutral = bg-module-platform；success / warn /
+                                  error / business = 10~12% color-mix
+     Icon    ._iconButton_3oazc_539  28x28 / padding 6 / svg 15 / radius-sm
+
+   DSH token → 本项目 token：label-primary-foreground→on-primary、
+   bg-module-platform→bg-layer-3、state-business-primary→state-business、
+   radius-md/sm/xl→同名。
+   ========================================================================== */
+
+/* --- 业务页标题：bootstrap 会把 h1/h2 拉到 2rem/32px 的展示级字阶，
+       DSH 的页面标题是 18/26/600（settings section heading 的字面量） --- */
+.ds-main__body h1,
+.ds-main__body h2 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 26px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+/* --- 按钮：md 36 / sm 28，14-22，radius-md，gap 4 --- */
+.r-btn {
+  height: 36px;
+  min-height: 36px;
+  gap: 4px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--ds-radius-md);
+  font-size: 14px;
+  line-height: 22px;
+  box-shadow: none;
+}
+
+.r-btn--sm {
+  height: 28px;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: var(--ds-radius-sm);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+/* 表格行内动作走 sm 口径，否则一行按钮就 36 高 */
+.r-table .r-btn {
+  height: 28px;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: var(--ds-radius-sm);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+/* 行内动作不是主操作：DSH 的列表/工具栏按钮走 outline，实心主按钮只留给页头
+   的那个提交动作（.r-btn--blue / --danger 保留各自语义色）。 */
+.r-table .r-btn:not(.r-btn--blue):not(.r-btn--danger) {
+  background: transparent;
+  color: var(--ds-label-primary);
+  box-shadow: inset 0 0 0 0.5px var(--ds-border-l3);
+}
+
+.r-table .r-btn:not(.r-btn--blue):not(.r-btn--danger):hover {
+  background: var(--ds-interactive-hover);
+  color: var(--ds-label-primary);
+  box-shadow: inset 0 0 0 0.5px var(--ds-border-l3);
+}
+
+/* outline：DSH 用 inset .5px 描边，不用底色（等价原 --plain） */
+.r-btn--plain {
+  background: transparent;
+  color: var(--ds-label-primary);
+  box-shadow: inset 0 0 0 0.5px var(--ds-border-l3);
+}
+
+.r-btn--plain:hover {
+  background: var(--ds-interactive-hover);
+  color: var(--ds-label-primary);
+  box-shadow: inset 0 0 0 0.5px var(--ds-border-l3);
+}
+
+/* ghost：透明底、无描边，hover 只叠一层 interactive-hover */
+.r-btn--ghost {
+  background: transparent;
+  color: var(--ds-label-secondary);
+  box-shadow: none;
+}
+
+.r-btn--ghost:hover {
+  background: var(--ds-interactive-hover);
+  color: var(--ds-label-primary);
+  box-shadow: none;
+}
+
+/* --- 输入/下拉：34 高、.5px border-l4、radius-md、bg-layer-3、13/1.5 --- */
+.r-input,
+.r-select,
+.r-textarea {
+  height: 34px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 0.5px solid var(--ds-border-l4);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-bg-layer-3);
+  box-shadow: none;
+  font-size: 13px;
+  line-height: 1.5;
+  transition: border-color var(--ds-dur-fast) var(--ds-ease);
+}
+
+.r-textarea {
+  height: auto;
+  min-height: 96px;
+  padding: 8px 12px;
+}
+
+.r-input:hover,
+.r-select:hover,
+.r-textarea:hover {
+  border-color: var(--ds-border-l4);
+  box-shadow: none;
+}
+
+/* DSH 的 focus-visible：outline:none + border-color 换 business 蓝 */
+.r-input:focus,
+.r-select:focus,
+.r-textarea:focus,
+.r-input:focus-visible,
+.r-select:focus-visible,
+.r-textarea:focus-visible {
+  outline: none;
+  border-color: var(--ds-state-business);
+  box-shadow: none;
+}
+
+.r-input:disabled,
+.r-select:disabled,
+.r-textarea:disabled {
+  color: var(--ds-label-tertiary);
+  cursor: default;
+}
+
+/* --- 表格：表头 10/16 + .5px border-l3，单元格 10/16 + .5px border-l2 --- */
+.r-table th,
+.r-table td {
+  height: auto;
+  padding: 10px 16px;
+  border-bottom: 0.5px solid var(--ds-border-l2);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.r-table th {
+  border-bottom-color: var(--ds-border-l3);
+  color: var(--ds-label-tertiary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* --- 徽标：DSH tag 口径，pill + 1px 8px + 11/17 --- */
+.r-badge {
+  height: auto;
+  padding: 1px 8px;
+  border: 0;
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 17px;
+  font-weight: 500;
+}
+
+.r-badge--blue,
+.r-badge--pink {
+  background: color-mix(in srgb, var(--ds-state-business) 10%, transparent);
+  color: var(--ds-state-business);
+}
+
+.r-badge--green {
+  background: color-mix(in srgb, var(--ds-state-success) 10%, transparent);
+  color: var(--ds-state-success);
+}
+
+.r-badge--orange {
+  background: color-mix(in srgb, var(--ds-state-warn) 12%, transparent);
+  color: var(--ds-state-warn);
+}
+
+/* --- 卡片：.5px 描边 + 无投影（DSH 卡片不靠阴影分层） --- */
+.r-card {
+  padding: 14px 16px;
+  border: 0.5px solid var(--ds-border-l3);
+  box-shadow: none;
+}
+
+.r-card:hover {
+  box-shadow: none;
+}
+
+/* --- 考勤面板：卡片标题按 DSH cardTitle（14/20/600 + 浅色下 0.5px 下边） --- */
+.at-card {
+  padding: 14px 16px;
+}
+
+.at-card__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 9px;
+  padding-bottom: 7px;
+  border-bottom: 0.5px solid var(--ds-border-l2);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+/* 图表卡是独立一张，标题行跟卡片内边距对齐；下边一条 0.5px 分隔（同 lc-card-title） */
+.at-chart {
+  padding: 14px 16px;
+}
+
+.at-head--tight {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 0.5px solid var(--ds-border-l2);
+}
+
+.at-chart .at-card__title {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+/* 月度统计：DSH field 行（padding 12px 0 + 相邻 .5px border-l2） */
+.at-kv {
+  margin: 0;
+}
+
+.at-kv__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+}
+
+.at-kv__row + .at-kv__row {
+  border-top: 0.5px solid var(--ds-border-l2);
+}
+
+.at-kv dt {
+  margin: 0;
+  color: var(--ds-label-tertiary);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.at-kv dd {
+  margin: 0;
+  color: var(--ds-label-primary);
+  font-size: 13px;
+  line-height: 20px;
+  text-align: right;
+}
+
+/* 打卡表单：DSH field 的 gap 6 + 12/18 的字段名 */
+.at-form {
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.at-field {
+  gap: 6px;
+}
+
+.at-field > label {
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.at-note {
+  margin-top: 2px;
+}
+
+/* --- 表单排布：DSH field 的节奏（字段名 13/20 secondary、间距 14、
+       帮助文字 12/18 tertiary、错误 12/18 error） ---
+   模板里这些是 inline style（.form-label 的 .75rem + uppercase），
+   所以这里必须用 !important 才能盖住；只作用于业务页 .ds-main__body。 */
+.ds-main__body form .form-label,
+.ds-main__body form > label,
+.ds-main__body form .mb-3 > label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--ds-label-secondary);
+  font-size: 13px !important;
+  line-height: 20px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none !important;
+}
+
+.ds-main__body form .text-muted {
+  margin-top: 4px;
+  color: var(--ds-label-tertiary) !important;
+  font-size: 12px !important;
+  line-height: 18px;
+}
+
+.ds-main__body form .text-danger {
+  margin-top: 4px;
+  color: var(--ds-state-error) !important;
+  font-size: 12px !important;
+  line-height: 18px;
+}
+
+.ds-main__body form .mb-3 {
+  margin-bottom: 14px !important;
+}
+
+/* 复选/单选：DSH 用 16x16 + accent-color 走品牌色（._checkbox_1wz3s_1 input） */
+.ds-main__body form input[type="checkbox"],
+.ds-main__body form input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  margin: 0 8px 0 0;
+  accent-color: var(--ds-button-primary-fill);
+  cursor: pointer;
+}
+
+/* 下拉在字段列里要占满一列（DSH 的 select 与 input 同宽） */
+.ds-main__body form .mb-3 select {
+  width: 100%;
+}
