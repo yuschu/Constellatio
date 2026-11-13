@@ -592,6 +592,29 @@ v2.0.0 起 `/` 已被 assistant 接管成对话首页，于是这条「工作台
 - 折叠态 toggle：`(10,18) 36×36`，与 `dsh .collapsed{padding:18px 10px 6px}` + `.collapsed .iconButton{36×36}` 一致。
 - 菜单里不再有任何「收起/折叠」条目 —— 两条动作行之外只有 6 条业务入口（上一轮的 13 项混排已去掉）。
 
+### 「收了又自己弹回」：状态没跨页，不是交互丢了
+
+排查方式：`setAttribute/removeAttribute` 打点 + 12 次采样（0.4s 步长）。结果折叠属性只被写一次（`sync` 在 `ds-shell.js:43-52`，调用栈来自 toggle 的 click），12 次采样一直是 `w=56 / settled=true` —— 单页内没有任何东西回写。
+
+真正原因是**换页**：DSH 的 `layoutInfo.sidebar` 存在 SPA 客户端内存里，翻路由不丢；本站是 Django 多页，任何导航（点「更多」里的条目、点账号菜单、点门户入口）都会重新初始化，`sync(false, false)` 把侧栏拉回 280 —— 观感就是「收了又自己弹回」。
+
+| 落点 | 做法 |
+|---|---|
+| `plugin_host/static/js/ds-shell.js` | 新增 `RAIL_STORE_KEY = 'constellatio.rail-collapsed'`，`sync()` 结尾 `writeStoredRail(collapsed)`，初始化从 `sync(false, false)` 改为 `sync(readStoredRail(), false)`；用 **sessionStorage**（会话内保持、关标签页清空），不写 localStorage，与 DSH「不跨会话持久化」的口径一致 |
+| `plugin_host/static/js/rail-boot.js`（新增） | 在 `<head>` 同步读同一个键并先把 `data-rail-collapsed` / `data-rail-settled` 落到 `<html>`。`ds-shell.js` 是 `defer`，实测冷导航会先出现一帧 `280`（`loading|280|null` → `complete|56|true`），首帧脚本把这个跳变去掉 |
+| 三个模板 | `home_chat.html`、`corporate-clean/base.html`、`risograph/base.html` 的 `</head>` 前加 `<script src="{% static 'js/rail-boot.js' %}"></script>`（同步、同源，CSP 不需要 nonce） |
+| 测试 | 新增 `test_rail_collapsed_state_booted_before_first_paint`：首页与 `/dashboard/` 都引用 `js/rail-boot.js`、引用位置在 `</head>` 之前、脚本里出现同一个键名 |
+
+**实测（`:8011`）**
+
+| 场景 | 结果 |
+|---|---|
+| 首页点收起 → 去 `/dashboard/` → 回首页 | `56 / collapsed=true / settled=true` 全程保持 |
+| 折叠态点「更多」→ 考勤页 | `56` 保持 |
+| 再展开 → 去 `/dashboard/` | `280` 保持 |
+| 冷导航首帧 | 有元素的第一帧就是 `56|true`，不再有 `280` 中间态 |
+| 会话键 | `sessionStorage['constellatio.rail-collapsed']` 随点击在 `1 / 0` 之间切换 |
+
 ---
 
 *本文不含实现代码；确认后按阶段逐个交付，每阶段单独提交与验收。*
