@@ -1682,3 +1682,27 @@ body{--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l1);--dsh-scrollbar-thum
 - 本地 `:8011` + 容器 `:8000`，admin，9229（禁用 overlay）：`.as-scroll` 与 `.as-tree` 的 `offsetWidth-clientWidth` 均为 **5**，`getComputedStyle(el,'::-webkit-scrollbar').width` 为 `5px`；`.as-tree` `gutter=stable`、`padding-right=5px`、`margin-right=2px`；强制 40 条会话后条正常出现。浅/深两张截图 `.tmp-test/screens-v21/session-scroll-{after,dark}.png`，容器 `.tmp-test/screens-v21/container/session-scroll-after.png`。
 - 容器重建后 `assistant.css 60906ef0a02de64b96029a37602ef851`（源文件 / `/app/plugins/...` / `/app/staticfiles/...` 三处一致）、`tests_assistant_home.py 94f8a729565430e7dac5fc00eadab75b` 与本地同哈希。
 
+
+### 9.13.37 收起态「新会话」加号居中（v2.2.9 / 2026-11-14）
+
+**现象与根因**
+
+- 收起态按钮 36×36，图标 18，但加号中心落在 x=25，按钮中心 x=28，偏左 3px（CDP 量得）。
+- 原因：`.as-new__content` 仍是 `gap:6px`，折叠规则只把 `.as-new__label` 的 `max-width` 压到 0；标签宽度变成 0，但 flex 的 6px 间距还在，等于图标 + 6px + 0 一起居中，图标被左推 3px。
+
+**改动**（`plugins/assistant/static/assistant/css/assistant.css`）
+
+- 折叠态新增 `html[data-rail-settled="true"] .as-new__content { gap:0 }`；展开态保留 6px。
+- 尺寸/图标 18px/hover 底色不动。
+
+**门禁**
+
+- `plugin_host/tests.py::test_rail_new_session_matches_panel_rows` 增加折叠态 `gap:0` 断言。
+- 全量 **560 tests OK**，ruff / `manage.py check` 干净。
+
+**实测**
+
+- 本地与容器，9229（禁用 overlay）：`.as-new`、面板行、「更多」的按钮中心与图标中心均为 **x=28**，`gap=0 / 6 / 6`；hover 底色仍为 `rgba(38,49,72,0.06)`。
+- 截图 `.tmp-test/screens-v21/rail-new-center-after.png`、`.tmp-test/screens-v21/container/rail-new-center-after.png`。
+- 容器 `assistant.css d60fa3c8e6e99bba88c2b5b0c4afe138` 三处一致，`tests.py 14dad395e2de950d3fdcef951f84ab71` 与本地同哈希。
+

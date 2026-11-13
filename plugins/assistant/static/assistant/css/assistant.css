@@ -997,6 +997,13 @@ html[data-rail-settled="true"] .as-new__label {
   max-width: 0;
 }
 
+/* 折叠态只剩图标：内容行的 6px gap 仍在（label 只是 max-width:0，仍参与
+ * flex 间距），会把 18px 图标往左推 3px。这里把 gap 归零，图标与面板行
+ * 一样落在按钮正中。 */
+html[data-rail-settled="true"] .as-new__content {
+  gap: 0;
+}
+
 /* 折叠态图标与面板行同档：DSH 的 newSession 在 wide=false 时渲染 18px
  * （展开才是 14），面板 glyph 也是 18；不同档会让新会话看起来比旁边小一圈。 */
 html[data-rail-settled="true"] .as-new__ico {

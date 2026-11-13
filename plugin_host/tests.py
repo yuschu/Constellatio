@@ -135,6 +135,8 @@ class ThemeDiscoveryTest(TestCase):
             'html[data-rail-settled="true"] .as-new:not(.is-disabled):hover {\n'
             '    background-color: var(--as-interactive-hover);\n  }', css)
         self.assertIn('html[data-rail-settled="true"] .as-panel__glyph .as-ico', css)
+        self.assertIn(
+            'html[data-rail-settled="true"] .as-new__content {\n  gap: 0;\n}', css)
 
     def test_top_nav_replaced_by_rail(self):
         """v2.0：顶部横向导航由 DSH 侧栏取代；.r-nav 只保留兼容规则。"""
