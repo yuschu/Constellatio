@@ -319,36 +319,49 @@ class ProfileTests(TestCase):
         self.assertContains(response, '当前密码错误')
 
 class DepartmentFormPageTests(TestCase):
-    """v2.1.2：部门新建 = 部门页的二级页（`?view=new`，DSH detail 的 crumb 头部）。"""
+    """v2.1.2：部门新建 = 部门页的二级页，形态是「点开设置的那一页」。
+
+    弹层 `#ds-dept-new` 复用 DSH SettingsPanel（遮罩 + 800×800 + 左 188px 分区列），
+    `?view=new` 打开；列表本体留在弹层底下，不再另开一套页面版式。
+    """
 
     @classmethod
     def setUpTestData(cls):
         cls.admin = User.objects.create_superuser('deptpage', '', 'pw')
 
-    def test_new_page_renders_crumb_and_form(self):
+    def test_new_page_opens_settings_dialog_over_list(self):
         self.client.force_login(self.admin)
         response = self.client.get(reverse('user:department_list') + '?view=new')
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'ds-sub__crumb')
+        self.assertContains(response, 'ds-settings--subpage')
+        self.assertContains(response, 'id="ds-dept-new"')
+        self.assertContains(response, 'ds-settings__title')
+        self.assertContains(response, 'ds-settings__nav')
         self.assertContains(response, '新建部门')
-        self.assertNotContains(response, 'r-table')   # 列表不在二级页里
-        self.assertEqual(response.context['title'], '新建部门')
+        # 列表仍在弹层下面（不是换页）
+        self.assertContains(response, 'r-table')
+        self.assertTrue(response.context['dept_form_open'])
 
     def test_list_keeps_entry_button_but_no_inline_create_card(self):
         self.client.force_login(self.admin)
         response = self.client.get(reverse('user:department_list'))
+        self.assertContains(response, 'data-ds-modal-open="ds-dept-new"')
         self.assertContains(response, '?view=new')
-        # 列表页不再有 create 表单（新建只在二级页）
-        self.assertNotContains(response, 'name="action" value="create"')
+        # 收起态：弹层带 hidden；新建表单只存在于弹层里，不再有随列表常驻的右列卡片
+        self.assertContains(response, 'hidden aria-hidden="true"')
+        self.assertFalse(response.context['dept_form_open'])
+        html = response.content.decode()
+        self.assertLess(html.index('id="ds-dept-new"'), html.index('name="action" value="create"'))
 
-    def test_create_invalid_stays_on_second_level(self):
+    def test_create_invalid_keeps_dialog_open(self):
         self.client.force_login(self.admin)
         response = self.client.post(reverse('user:department_list'), {
             'action': 'create', 'name': '', 'parent': '',
         })
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'ds-sub__crumb')
+        self.assertContains(response, 'id="ds-dept-new"')
         self.assertContains(response, 'ds-field__error')
+        self.assertTrue(response.context['dept_form_open'])
         self.assertEqual(Department.objects.count(), 0)
 
     def test_create_valid_still_redirects_to_list(self):

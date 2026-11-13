@@ -3,16 +3,14 @@
 {# 不再依赖 bootstrap 栅格（首页不加载 bootstrap）：布局走 .at-*（定义在主题 CSS 第 27 节）， #}
 {# 卡片/表格/按钮/徽标仍是主题里的 r-* 组件，两侧同一份观感。 #}
 <div class="at-page">
-{% if panel_sub == 'rules' %}
-  {# 二级页：考勤规则（DSH detail 形态，crumb 返回考勤） #}
-{% include "attendance/_rules.html" %}
-{% else %}
-
+  {# 正文永远是考勤看板：二级页「考勤规则」是盖在它上面的设置弹层（DSH 点开设置那一页），不再替换面板正文。 #}
   <header class="at-head">
     <h2 class="at-head__title">{% trans "考勤" %}</h2>
     <div class="at-head__aside">
       {% if perms.attendance.attendance_rule_manage %}
-      <a href="{{ rules_entry_url|default_if_none:'/plugins/attendance/rules/' }}" class="r-btn r-btn--ghost"{% if in_home_panel %} data-panel-link{% endif %}>⚙ {% trans "考勤规则" %}</a>
+      {# 面板里点开就是设置弹层（DSH 点开设置的那一页）；业务页仍是普通深链 #}
+      <a href="{{ rules_entry_url|default_if_none:'/plugins/attendance/rules/' }}"
+         class="r-btn r-btn--ghost"{% if in_home_panel %} data-ds-modal-open="ds-attendance-rules"{% endif %}>⚙ {% trans "考勤规则" %}</a>
       {% endif %}
       <span class="r-badge">{{ today|date:"Y-m-d" }}</span>
     </div>
@@ -93,10 +91,12 @@
     {% endif %}
   </section>
 
+{% if in_home_panel and perms.attendance.attendance_rule_manage %}
+  {% include "attendance/_rules_modal.html" %}
 {% endif %}
 </div>
 
-{% if panel_sub != 'rules' and chart and attendance_chart %}
+{% if chart and attendance_chart %}
 <script src="{{ chart.script_url }}"></script>
 <script src="{{ chart.adapter_url }}"></script>
 <script nonce="{{ request.csp_nonce }}">

@@ -132,7 +132,8 @@ def attendance_rules(request):
     保存成功走 PRG（redirect 回本页并带 ``?saved=1``），页面内展示成功标识，
     与项目现有「表单页 + 内联提示」的风格一致（未引入 messages 渲染）。
 
-    v2.1.2：本页也是首页「考勤」面板的二级页（`/?panel=attendance&sub=rules`）。
+    v2.1.2：本页既是独立深链，也是首页「考勤」面板设置弹层里的同一块正文
+    （`/?panel=attendance&sub=rules` 打开弹层，弹层内容复用 `_rules_panel.html`）。
     面板里的表单把 `next` 指回面板 URL，保存成功后 PRG 回面板并带 `saved=1`；
     不带宽限时仍回本页（既有行为与测试断言不变）。
     """
@@ -154,10 +155,7 @@ def attendance_rules(request):
         form = AttendanceRuleForm(instance=rule)
 
     context = rules_context(request, rule=rule, form=form, saved=saved)
-    context['rules_back_url'] = reverse('attendance:attendance_dashboard')
-    context['rules_back_label'] = _('考勤')
-    context['rules_back_aria'] = _('返回考勤')
-    context['rules_next'] = ''
+    context['rules_close_url'] = reverse('attendance:attendance_dashboard')
     return render(request, 'attendance/attendance_rules.html', context)
 
 

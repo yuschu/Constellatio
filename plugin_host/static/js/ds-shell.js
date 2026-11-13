@@ -386,9 +386,128 @@
     });
   }
 
+  // ---------- 设置式二级页（复用 DSH SettingsPanel 的那一页）----------
+  /* 二级页不是「换正文」，而是像 DSH 点开设置一样盖一层弹层：
+     overlay + 800×800 panel（见 settings-general SettingsPanel / .ds-settings*）。
+     这里只做开合与地址栏同步，且全部走文档级委托 —— 首页面板正文由
+     home-panels.js 整块替换后不需要重新绑定。 */
+  function initSubpages() {
+    var RETURN = typeof WeakMap === 'function' ? new WeakMap() : null;
+
+    function searchHas(query) {
+      if (!query) return false;
+      var eq = query.indexOf('=');
+      if (eq < 0) return false;
+      var key = query.slice(0, eq);
+      var value = query.slice(eq + 1);
+      var params = new URLSearchParams(window.location.search);
+      return params.get(key) === value;
+    }
+
+    function modals() {
+      return document.querySelectorAll('[data-ds-subpage]');
+    }
+
+    function focusFirst(modal) {
+      var target = modal.querySelector('.ds-settings__cell.is-active') ||
+        modal.querySelector('.ds-settings__panel');
+      if (!target) return;
+      try { target.focus({ preventScroll: true }); } catch (e) { target.focus(); }
+    }
+
+    function openModal(modal, trigger) {
+      modal.removeAttribute('hidden');
+      modal.setAttribute('aria-hidden', 'false');
+      if (RETURN) RETURN.set(modal, trigger || null);
+      document.body.classList.add('ds-modal-open');
+      focusFirst(modal);
+      var url = modal.getAttribute('data-ds-subpage-url');
+      if (url && (window.location.pathname + window.location.search) !== url) {
+        try { window.history.pushState({ dsSubpage: modal.id }, '', url); }
+        catch (e) { /* 不支持 history 的环境退化为原地打开 */ }
+      }
+    }
+
+    function closeModal(modal) {
+      if (modal.hasAttribute('hidden')) return;
+      modal.setAttribute('hidden', '');
+      modal.setAttribute('aria-hidden', 'true');
+      var url = modal.getAttribute('data-ds-subpage-url');
+      var base = modal.getAttribute('data-ds-subpage-base');
+      if (base && url && (window.location.pathname + window.location.search) === url) {
+        try { window.history.replaceState({}, '', base); } catch (e) { /* 同上 */ }
+      }
+      var trigger = RETURN ? RETURN.get(modal) : null;
+      if (trigger && document.contains(trigger)) {
+        try { trigger.focus({ preventScroll: true }); } catch (e) { trigger.focus(); }
+      }
+      syncBodyClass();
+    }
+
+    function syncBodyClass() {
+      var anyOpen = document.querySelector('[data-ds-subpage]:not([hidden])');
+      var settingsOpen = document.getElementById('ds-settings');
+      if (anyOpen || (settingsOpen && !settingsOpen.hasAttribute('hidden'))) {
+        document.body.classList.add('ds-modal-open');
+      } else {
+        document.body.classList.remove('ds-modal-open');
+      }
+    }
+
+    /* 地址栏是唯一真源：?sub=rules / ?view=new 在 → 打开，不在 → 收起。
+       面板正文被换掉后由 home-panels.js 调一次 window.DSSubpage.sync()。 */
+    function sync() {
+      Array.prototype.forEach.call(modals(), function (modal) {
+        var shouldOpen = searchHas(modal.getAttribute('data-ds-subpage-query'));
+        if (shouldOpen && modal.hasAttribute('hidden')) openModal(modal, null);
+        else if (!shouldOpen && !modal.hasAttribute('hidden')) closeModal(modal);
+      });
+      syncBodyClass();
+    }
+
+    document.addEventListener('click', function (e) {
+      var t = e.target;
+      if (!t || !t.closest) return;
+      var opener = t.closest('[data-ds-modal-open]');
+      if (opener) {
+        var modal = document.getElementById(opener.getAttribute('data-ds-modal-open'));
+        if (modal && modal.hasAttribute('data-ds-subpage')) {
+          e.preventDefault();
+          openModal(modal, opener);
+          return;
+        }
+      }
+      var closer = t.closest('[data-ds-modal-close]');
+      if (closer) {
+        var ancestor = closer.closest('[data-ds-subpage]');
+        if (ancestor) {
+          e.preventDefault();
+          closeModal(ancestor);
+        }
+      }
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      var open = document.querySelector('[data-ds-subpage]:not([hidden])');
+      if (!open) return;
+      e.preventDefault();
+      closeModal(open);
+    });
+
+    window.addEventListener('popstate', sync);
+    window.DSSubpage = { sync: sync, closeAll: function () {
+      Array.prototype.forEach.call(modals(), function (m) { closeModal(m); });
+      syncBodyClass();
+    } };
+
+    sync();
+  }
+
   function boot() {
     initRail();
     initSettings();
+    initSubpages();
     initAccount();
     initMore();
     initComposer();

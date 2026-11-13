@@ -6,8 +6,9 @@
   <h2 class="mb-0">{% trans "部门管理" %}</h2>
   <div class="d-flex align-items-center gap-2">
     <span class="r-badge">user_manage</span>
-    {# v2.1.2：新建走二级页（DSH detail 的 crumb 头部），不再常驻右侧卡片 #}
-    <a class="r-btn" href="?view=new">＋ {% trans "新建部门" %}</a>
+    {# v2.1.2：新建走设置式二级弹层（DSH 点开设置那一页），不再常驻右侧卡片 #}
+    <a class="r-btn" href="{{ dept_new_url|default:'?view=new' }}"
+       data-ds-modal-open="ds-dept-new">＋ {% trans "新建部门" %}</a>
   </div>
 </div>
 {% if error %}<div class="r-card mb-4" style="box-shadow: var(--r-shadow-orange);">{{ error }}</div>{% endif %}
@@ -107,4 +108,6 @@
     {% endif %}
   </div>
 </div>
+
+{% include "user/_department_new.html" %}
 {% endblock %}

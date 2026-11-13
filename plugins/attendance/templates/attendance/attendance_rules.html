@@ -2,7 +2,12 @@
 {% load i18n %}
 {% block title %}{% trans "考勤规则" %} · Constellatio{% endblock %}
 {% block content %}
-{# v2.1.2：正文抽成 _rules.html，与首页「考勤」面板的二级页共用一份版式。
-   本页是深链落点（详情页整页形态），头部 crumb 回考勤看板。 #}
-{% include "attendance/_rules.html" %}
+{% comment %}
+深链落点：同一块设置面板（.ds-settings--inline 去掉遮罩、按 800px 居中），
+右上角 ✕ 是返回考勤看板的链接。首页「考勤」面板里点开的是同一份
+attendance/_rules_panel.html，只是外面多一层遮罩弹层。
+{% endcomment %}
+<div class="ds-settings ds-settings--inline">
+  {% include "attendance/_rules_panel.html" %}
+</div>
 {% endblock %}

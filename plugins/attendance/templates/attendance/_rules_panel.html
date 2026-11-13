@@ -1,0 +1,52 @@
+{% load i18n %}
+{% comment %}
+设置弹层的面板本体（DSH SettingsRoot 的 .panel 网格）：
+title（左上）· header（右上，只放关闭）· nav 188px（左下分区列）· options（右下内容）。
+
+div class 与 corporate-clean.css 的 .ds-settings* 一一对应：
+  grid-template: "title header" "nav options" / 188px minmax(0,1fr)
+  title  padding 22px 12px 8px 24px / 16-24-500
+  header height 54 / padding 20px 14px 8px 10px，关闭按钮 28×28
+  nav    padding 10px 12px 0，cell 40px / radius-md / 14-22
+  options padding 0 24px 24px，可滚动
+
+两种落点共用一份：
+  * 面板里（in_home_panel）—— 右上角是「关闭」按钮，交给 ds-shell.js 收起弹层；
+  * 业务页深链 /plugins/attendance/rules/ —— 没有遮罩，右上角是返回考勤看板的链接。
+{% endcomment %}
+<div class="ds-settings__panel" tabindex="-1">
+  <h2 class="ds-settings__title" id="ds-attendance-rules-title">{% trans "考勤规则" %}</h2>
+  <div class="ds-settings__header">
+    {% if in_home_panel %}
+    <button type="button" class="ds-settings__close" data-ds-modal-close
+            aria-label="{% trans '关闭' %}">
+      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+        <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5"
+              fill="none" stroke-linecap="round"/>
+      </svg>
+    </button>
+    {% else %}
+    <a class="ds-settings__close" href="{{ rules_close_url|default:'/plugins/attendance/' }}"
+       aria-label="{% trans '返回考勤' %}">
+      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+        <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5"
+              fill="none" stroke-linecap="round"/>
+      </svg>
+    </a>
+    {% endif %}
+  </div>
+
+  <nav class="ds-settings__nav" aria-label="{% trans '考勤分区' %}">
+    <ul class="ds-settings__cells">
+      <li>
+        <button type="button" class="ds-settings__cell is-active" aria-current="true">
+          {% trans "考勤规则" %}
+        </button>
+      </li>
+    </ul>
+  </nav>
+
+  <div class="ds-settings__options" tabindex="0">
+    {% include "attendance/_rules_body.html" %}
+  </div>
+</div>

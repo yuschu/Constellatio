@@ -1,0 +1,20 @@
+{% load i18n %}
+{% comment %}
+「考勤规则」设置弹层：遮罩 + 800×800 面板（DSH SettingsPanel：body 里的 portal，
+overlay + mask + panel role=dialog aria-modal）。
+
+打开/收起由 ds-shell.js 的 subpage 控制器负责（文档级委托，面板正文被
+home-panels.js 换掉后照样生效）：
+  data-ds-subpage          —— 标记这是二级页弹层
+  data-ds-subpage-query    —— URL 出现该 kv 时视为打开（深链 /?panel=attendance&sub=rules）
+  data-ds-subpage-url/base —— 打开时 pushState，关闭时 replaceState 回上一级
+{% endcomment %}
+<div class="ds-settings ds-settings--subpage" id="ds-attendance-rules" role="dialog"
+     aria-modal="true" aria-labelledby="ds-attendance-rules-title"
+     data-ds-subpage data-ds-subpage-query="sub=rules"
+     data-ds-subpage-url="{{ rules_entry_url }}"
+     data-ds-subpage-base="{{ rules_back_url }}"
+     {% if not rules_open %}hidden aria-hidden="true"{% endif %}>
+  <div class="ds-settings__overlay" aria-hidden="true" data-ds-modal-close></div>
+  {% include "attendance/_rules_panel.html" %}
+</div>

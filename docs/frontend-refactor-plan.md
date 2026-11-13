@@ -783,6 +783,10 @@ token 映射：`label-primary-foreground → --ds-on-primary`、`bg-module-platf
 
 ### 9.13.9 v2.1.2：二级页（考勤规则 / 部门新建）按 DSH detail 移植
 
+> **形态作废**：用户当场否决了这一版（原话「不对，不是这种二级页，是点开设置的那个页面」）。
+> 本节保留为取证记录与历史对照；实际实现见 **§9.13.10（设置弹层形态）**。
+> 其中唯一仍然成立的部分是「DSH 取值不看截图」的方法论，以及 `._detail*` 这组字面量的来源。
+
 **取证方式**：仍不看截图。DSH 的「设置/详情二级页」不是独立框架页面，而是从插件页进入的**整页子视图**（`dsh-client-ui-settings-shell/README.zh.md` 明说「在侧栏打开插件，在官方分组里选择终端…」，它注册进 `plugins.item` slot，由 `dsh-client-ui-plugin-manager` 承载）。因此字面量直接从 `dsh-client-ui-plugin-manager/lib/client.js`（428KB）取：统一顶栏组件是 `function DetailTop({ crumbLabel, crumbText, onBack, icon, actions })`，三类详情（包 / 组件 / 行）与「更多」列表页共用；对应 CSS 以 `X_2TxG_` 前缀**内嵌在该 js 的 CSS 字符串里**（主 CSS bundle 搜不到这些类名）。
 
 | DSH 类 | 字面量 | 落到本项目（`corporate-clean.css` 第 30 节） |
@@ -813,6 +817,53 @@ token 映射：`label-primary-foreground → --ds-on-primary`、`bg-module-platf
 **门禁与真机**：全量 `venv/run_tests_shim.py` **510 tests OK**（新增 9 条：面板二级页 5 条 + 部门二级页 4 条）。容器 `docker compose up -d --build web`（`GUNICORN_WORKERS=3`）重建后 MD5 全对齐：`corporate-clean.css` `b02ca3d296142cbd293bcc0f0ae9b077`、`assistant.css` `443d3c6499067b6e0424ea9c9f928704`、`home-panels.js` `e01777d6e813dce9eaf6f5aed0ef3818`、`_rules.html` `ce06b91d865a6d5a58f332238a5e6d16`、`_panel.html` `5b76476d17c53592cf1c83525f69fd74`、`attendance_rules.html` `bfc825264d937baad8a7a8df5b7f6943`、`department_form.html` `0044520cee9cc96712d35a45dd269e65`、`department_list.html` `054d5ad5751eca8b4f7d14d9ef465c4a`、三个 `views.py` 与本地同哈希。深浅两态图存 `.tmp-test/screens-panel/sub-*.png`、`.tmp-test/screens-container/sub-*.png`。
 
 **坑**：Django 的 `{# … #}` 是**单行**注释，多行会原样输出到页面（本轮首版两个模板都踩了，截图里整段注释出现在页面顶部）；多行一律用 `{% comment %}…{% endcomment %}`。
+
+### 9.13.10 v2.1.2 二版：二级页 = 「点开设置的那一页」（设置弹层形态）
+
+**形态结论**：二级页不是换掉面板正文，而是像 DSH 里点开设置一样，在 `document.body` 上盖一层设置弹层。同一份面板本体两处复用：首页面板里是弹层，业务页深链是 inline 卡片。
+
+**取证（源码字面量，仍不看截图）**
+- `dsh-client-ui-settings/lib/client.js` 是设置领域**底座**，自身不渲染 UI（`configForms` / `settingsMirror` / slot 投影）。
+- `dsh-client-ui-settings-shell/lib/client.js` 的 `ShellCard` 只组合 `SettingsForm` + `SettingsValueField`（字段 = label + hint + input + 保存/丢弃），即「设置项」的粒度。
+- 真正的外壳在 `dsh-client-ui-settings-general/lib/client.js`：`SettingsPanel` 用 `createPortal(document.body)` 挂 `overlay` + `mask` + `panel(role=dialog aria-modal)`；`renderSlot("settings.header")`，`nav` 由 `settings.section` 投影，`options` 放当前分区；关闭路径 = header ✕ / 点遮罩 / document Escape；`useModalLayer(panel, true, onClose)`。
+- 面板 CSS（同文件第 60 行内嵌串，`VOzbGW_*`）：
+
+| DSH 字面量 | 值 | 本项目落点（`corporate-clean.css` 第 12 节 `.ds-settings*`，二级页只加修饰类） |
+|---|---|---|
+| `overlay` | `position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:1000` | `.ds-settings`（第 12 节既有） |
+| `mask` | `position:absolute; inset:var(--dsh-frame-chrome-top,0px) 0 0; background:var(--dsw-alias-bg-mask-1); backdrop-filter:var(--dsw-mask-blur)` | `.ds-settings__overlay`（`--ds-bg-mask` = `rgba(0,0,0,.24)`） |
+| `panel` | `width:800px; height:min(800px, calc(100vh - 2*max(24px, var(--dsh-frame-overlay-top,24px)))); max-width:calc(100vw - 48px); border-radius:var(--dsw-radius-panel); background:var(--dsw-alias-bg-layer-2); box-shadow:var(--dsw-elevation-prominent); grid-template:"title header" "nav options" minmax(0,1fr) / 188px minmax(0,1fr); overflow:hidden` | `.ds-settings__panel`（实测 800×800，1440 视口下 x=320 居中） |
+| `navTitle` | `padding:22px 12px 8px 24px; font-size:16px; font-weight:500; line-height:24px` | `.ds-settings__title`（`grid-area: title`） |
+| `nav` | `padding:10px 12px 0`；`navList` column、`gap:4`、`overflow-y:auto` | `.ds-settings__nav` / `__cells` |
+| `navCell` | `height:40; border-radius:radius-md; padding:9px 16px 9px 12px; gap:8; font-size:14; line-height:22`；active = `--dsw-specific-sidebar-nav-item-active` | `.ds-settings__cell`（本轮把左内边距由 16 修为 12，对齐字面量） |
+| `header` | `height:54; padding:20px 14px 8px 10px; justify-content:space-between`；`close` 28×28 / `radius-sm` | `.ds-settings__header` / `__close` |
+| `options` | `padding:0 24px 24px; overflow-y:auto` | `.ds-settings__options` |
+| ≤767px | 移动端栅格变体（title 单行、nav 横排） | **未移植**（本项目桌面端优先，见 §9.13.7） |
+
+**落点**
+- 考勤规则：`attendance/_panel.html` 的正文永远是看板；`⚙ 考勤规则` 从面板内切页（`data-panel-link`）改成弹层触发器 `data-ds-modal-open="ds-attendance-rules"`（`href` 保留为无 JS 兜底）。看板末尾在 `perms.attendance.attendance_rule_manage` 且 `in_home_panel` 时 include `attendance/_rules_modal.html`。
+- 弹层三段：`_rules_modal.html`（遮罩 + `data-ds-subpage*` 外壳）/ `_rules_panel.html`（`title` + `header` + 188px `nav` + `options`）/ `_rules_body.html`（两句 desc + 已保存徽标 + 6 个 `.ds-field` + 保存）。业务页 `attendance_rules.html` 只包一层 `.ds-settings--inline` 复用同一份 `_rules_panel.html`，右上 ✕ 变成返回看板的链接。
+- 部门新建：`department_list.html` 头部「＋ 新建部门」改触发器，页尾 include `user/_department_new.html`（同款三段，`?view=new` 打开，创建/取消在 `options` 底部）。`user/views.py` 用 `_render_department_page()` 统一渲染，create 校验失败也让弹层保持打开（`dept_form_open=True`）。
+- 地址栏是唯一真源：`?sub=rules` / `?view=new` 在 → 打开，不在 → 收起。`ds-shell.js` 新增 `initSubpages()`：文档级委托处理 `[data-ds-modal-open]` / `[data-ds-modal-close]`、Escape 关闭最上层、`popstate → sync()`，开时 `pushState` 到 `data-ds-subpage-url`、关时 `replaceState` 回 `data-ds-subpage-base`，焦点先落 `.ds-settings__cell.is-active`、关闭后还给触发器；暴露 `window.DSSubpage.sync()`，由 `home-panels.js` 在 `render()` 换完正文后调用（面板正文被整块替换时不丢行为）。
+- `assistant.css` 撤掉 `a:not(.ds-sub__crumb)` 特例，恢复 `body.as-body .as-panelview a` 与 `:hover` 两条原规则（crumb 已不存在）。
+- CSS 第 30 节整体重写：删 `.ds-sub*`，改成 `.ds-settings--subpage`（`z-index:1001` + `[hidden]{display:none}`）、`.ds-settings--inline`（`position:static`、面板 `height:auto; min-height:420px; margin:0 auto`）、`.ds-settings__desc/__status/__form/__actions`，并保留 `.ds-field*` 原语（含 `.ds-fields--card` 给部门「修改」右列）。
+
+**无刷新与开合实测**（CDP，`.tmp-test/subpage.mjs`，本地 `:8011`）
+
+| 步骤 | URL | 弹层 | `__noReloadMark` |
+|---|---|---|---|
+| 看板初始 | `/?panel=attendance` | `hidden` / `aria-hidden=true` | 1 |
+| 点 ⚙ | `?panel=attendance&sub=rules` | 打开 / `aria-hidden=false` | 1 |
+| 点 ✕ | `/?panel=attendance` | 收起 | 1 |
+| Escape | `/?panel=attendance` | 收起 | 1 |
+| 切到看板面板 | `/?panel=dashboard` | 节点随正文替换消失 | 1 |
+| 切回考勤 | `/?panel=attendance` | 收起 | 1 |
+
+几何：overlay 覆盖整视口（`0,0,1440,900`）、`position:fixed; z-index:1001`、遮罩 `rgba(0,0,0,.24)`；面板 `800×800`，`x=320,y=50`。
+
+**门禁与真机**：全量 `venv/run_tests_shim.py` **511 tests OK**。测试按弹层形态重写：`AttendancePanelSubPageTests` 5 条（看板带 `#ds-attendance-rules` + 收起态 `hidden`、`?sub=rules` 时 `rules_open=True` 且看板仍在、无权限不渲染弹层、业务页 `--inline` 无 `--subpage`、POST→PRG），`DepartmentFormPageTests` 4 条（`?view=new` 弹层 + 列表仍在、列表页收起态、校验失败保持打开、成功 303）。容器 `docker compose up -d --build web`（`GUNICORN_WORKERS=3`）重建后 MD5 与本地逐文件对齐（值见本轮提交说明）。深浅两态图：`.tmp-test/screens-v2/rules-modal-light.png` / `rules-modal-dark.png` / `dept-new-light.png` / `dept-new-dark.png` / `rules-inline-light.png`。
+
+**坑（重复踩了一次）**：Django `{# … #}` 只能单行；`attendance/_panel.html` 的 div 内多行注释又被原样渲染到页面顶部，截图才发现。多行一律 `{% comment %}`。
 
 ### 9.13.7 仍未对齐 / 待用户拍板
 

@@ -1669,7 +1669,7 @@ html[data-rail-wide-in="true"] .ds-rail__foot {
   box-sizing: border-box;
   width: 100%;
   height: var(--ds-control-h-sm);
-  padding: 9px var(--ds-space-4);
+  padding: 9px var(--ds-space-4) 9px var(--ds-space-3);
   border: 0;
   border-radius: var(--ds-radius-md);
   background: transparent;
@@ -4064,98 +4064,78 @@ html:not([data-color-mode="dark"]) .lc-ov-session {
   width: 100%;
 }
 
+
 /* ==========================================================================
-   30. DSH 二级页（detail）：crumb 返回 + 标题 + 字段（v2.1.2）
+   30. DSH 设置弹层（settings）承载的二级页（v2.1.2）
    --------------------------------------------------------------------------
-   版式取自 dsh-client-ui-plugin-manager/lib/client.js 内嵌的 CSS 字符串
-   （`X_2TxG_` 前缀，主 CSS bundle 搜不到这些类名），组件是同一个
-   `DetailTop({ crumbLabel, crumbText, onBack, icon, actions })`：
-
-     _detail          column flex
-     _detailTop       padding-top var(--plugin-page-top-inset) = 28px
-     _crumb           12.5px / label-tertiary / inline-flex / gap 6 / padding 0 /
-                      background 0 0 / border 0；hover → label-primary；
-                      focus-visible → focus ring、offset 2px
-     _crumbIcon       transform: rotate(90deg)（chevron-down 转成朝左）
-     _detailHead      gap 12 / margin 32px 0 0
-     _detailMain      column / gap 8 / margin-top 20
-     _detailTitle     20px / 500 / 28px
-     _detailDesc      label-secondary / 14px / 22px
-     字段行           相邻 .5px border-l2 上分隔 / padding 12px 0 /
-                      label 13-20 secondary / help 12-18 tertiary / error 12-18
-   考勤规则二级页与部门新建二级页共用这一份原语（业务页整页 + 首页面板都用它）。
+   二级页 = 用户在 DSH 里「点开设置」看到的那个页面，不是整页替换正文：
+     dsh-client-ui-settings-general/lib/client.js  SettingsPanel →：
+       overlay        fixed inset 0 / flex center / z-index 1000
+       mask           absolute，background var(--dsw-alias-bg-mask-1)
+       panel          width 800 / height min(800, 100vh - 48) / max-width 100vw - 48 /
+                      radius panel / bg layer-2 / grid:
+                      "title header" "nav options" / 188px minmax(0,1fr)
+       navTitle       padding 22px 12px 8px 24px / 16px 500 24px
+       nav            padding 10px 12px 0，列表 column gap 4，可滚动
+       navCell        height 40 / radius-md / padding 9px 16px 9px 12px / gap 8 / 14-22-400
+       header         height 54 / padding 20px 14px 8px 10px / 关闭 28×28
+       options        padding 0 24px 24px / overflow-y auto
+   上面这套是 .ds-settings*（第 12 节已落码），本节的 .ds-settings--subpage /
+   --inline 只加「二级页复用它」需要的三件事：
+     * 弹层叠在基础设置弹层之上（z-index +1）
+     * 深链页（业务页）把同一块面板当 inline 卡片居中，去掉遮罩
+     * options 里的说明 / 状态 / 表单 / 操作区节奏
+   字段行本身来自设置页的 SettingsForm（dsh-client-ui-settings-shell 的
+   ShellCard → SettingsForm + SettingsValueField）：标签 13-20 secondary、
+   输入 34、说明 12-18 tertiary、相邻行 0.5px border-l2、操作区按钮 36。
    ========================================================================== */
-.ds-sub {
-  display: flex;
-  flex-direction: column;
+.ds-settings--subpage {
+  z-index: 1001;
 }
 
-.ds-sub__crumb {
-  display: inline-flex;
-  align-items: center;
-  align-self: flex-start;
-  gap: 6px;
-  padding: 0;
-  margin: 0;
-  border: 0;
-  background: 0 0;
-  color: var(--ds-label-tertiary);
-  font: inherit;
-  font-size: 12.5px;
-  line-height: 18px;
-  text-decoration: none;
-  cursor: pointer;
+.ds-settings--subpage[hidden] {
+  display: none;
 }
 
-.ds-sub__crumb:hover {
-  color: var(--ds-label-primary);
-  text-decoration: none;
+/* 业务页深链：同一块 800×800 面板，不做遮罩，按文档流居中 */
+.ds-settings--inline {
+  position: static;
+  display: block;
+  padding: var(--ds-space-4) 0 var(--ds-space-6);
 }
 
-.ds-sub__crumb:focus-visible {
-  outline: 2px solid var(--ds-state-business, var(--ds-label-primary));
-  outline-offset: 2px;
+.ds-settings--inline .ds-settings__panel {
+  height: auto;
+  min-height: 420px;
+  margin: 0 auto;
 }
 
-.ds-sub__chevron {
-  width: 14px;
-  height: 14px;
-  flex: none;
-}
-
-.ds-sub__head {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 32px;
-}
-
-.ds-sub__title {
-  margin: 0;
-  color: var(--ds-label-primary);
-  font-size: 20px;
-  font-weight: 500;
-  line-height: 28px;
-}
-
-.ds-sub__desc {
-  margin: 8px 0 0;
+/* options 区内容：说明 14-22 secondary，与 DSH 分区描述同口径 */
+.ds-settings__desc {
+  margin: 0 0 var(--ds-space-2);
   color: var(--ds-label-secondary);
-  font-size: 14px;
-  line-height: 22px;
+  font-size: var(--ds-text-sub);
+  line-height: var(--ds-text-sub-lh);
 }
 
-.ds-sub__note {
-  margin-top: 16px;
+.ds-settings__status {
+  margin-top: var(--ds-space-3);
 }
 
-.ds-sub__form {
+.ds-settings__form {
   display: flex;
   flex-direction: column;
-  max-width: 760px;
-  margin-top: 20px;
+  margin-top: var(--ds-space-3);
 }
 
+.ds-settings__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  margin-top: var(--ds-space-4);
+}
+
+/* ---- 设置表单字段行（SettingsValueField 口径） ---- */
 .ds-fields {
   display: flex;
   flex-direction: column;
@@ -4198,11 +4178,4 @@ html:not([data-color-mode="dark"]) .lc-ov-session {
 
 .ds-fields--card .ds-field + .ds-field {
   border-top: 0;
-}
-
-.ds-sub__actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 20px;
 }

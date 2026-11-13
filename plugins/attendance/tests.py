@@ -660,10 +660,14 @@ class AttendanceRuleEntryTests(TestCase):
         self.assertContains(response, '/plugins/attendance/rules/')
 
 class AttendancePanelSubPageTests(TestCase):
-    """v2.1.2：考勤规则 = 考勤面板的二级页（DSH detail：crumb 返回 + 标题 + 字段）。
+    """v2.1.2：考勤规则 = 考勤面板的二级页，形态是「点开设置的那一页」。
 
-    面板内导航由 home-panels.js 拦截 `[data-panel-link]`，服务端只需保证
-    `/?panel=attendance&sub=rules` 渲染二级页、侧栏仍落在考勤、表单 POST 后 PRG 回面板。
+    二级页不是换正文，而是像 DSH 点开设置：遮罩 + 800×800 设置弹层
+    （.ds-settings--subpage，取自 dsh-client-ui-settings-general 的 SettingsPanel），
+    考勤看板本体留在弹层下面。服务端只保证：
+      * 看板渲染出 `#ds-attendance-rules` 弹层与 `[data-ds-modal-open]` 入口；
+      * `?panel=attendance&sub=rules` 时弹层以「打开」态渲染（rules_open=True）；
+      * 表单 POST 后 PRG 回面板并带 saved=1。
     """
 
     @classmethod
@@ -692,31 +696,57 @@ class AttendancePanelSubPageTests(TestCase):
         data.update(overrides)
         return data
 
-    def test_dashboard_panel_links_to_sub_page(self):
+    def test_dashboard_panel_carries_settings_shell(self):
         self.client.force_login(self.admin)
         response = self.client.get('/?panel=attendance')
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, '/?panel=attendance&amp;sub=rules')
-        self.assertContains(response, 'data-panel-link')
+        # 入口是弹层触发器（href 只作无 JS 兜底），不是面板内切页
+        self.assertContains(response, 'data-ds-modal-open="ds-attendance-rules"')
+        self.assertContains(response, 'id="ds-attendance-rules"')
+        self.assertContains(response, 'ds-settings--subpage')
+        # 结构：设置外壳的四个座位（title / header / nav 188px / options）
+        self.assertContains(response, 'ds-settings__title')
+        self.assertContains(response, 'ds-settings__nav')
+        self.assertContains(response, 'ds-settings__options')
+        # 看板上开着弹层时仍是看板本体（弹层盖在上面，不是替换正文）
+        self.assertContains(response, 'at-grid')
+        self.assertContains(response, '今日状态')
+        # 看板默认是收起态（DSH 的弹层开合就是 hidden 这一个属性）
+        self.assertContains(response, 'hidden aria-hidden="true"')
 
-    def test_sub_page_renders_detail_header(self):
+    def test_sub_page_opens_settings_dialog(self):
         self.client.force_login(self.admin)
         response = self.client.get('/?panel=attendance&sub=rules')
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'ds-sub__crumb')
-        self.assertContains(response, 'ds-sub__title')
+        self.assertContains(response, 'ds-settings__title')
         self.assertContains(response, '考勤规则')
-        # 侧栏还停在考勤：面板 key 不变，二级页只是主区换了正文
         self.assertContains(response, 'data-active-panel="attendance"')
         self.assertEqual(response.context['panel_sub'], 'rules')
         self.assertEqual(response.context['panel_title'], '考勤规则')
+        self.assertTrue(response.context['rules_open'])
+        # 打开态不再带 hidden（DSH 的弹层开合就是这一个属性）
+        html = response.content.decode()
+        self.assertIn('data-ds-subpage-query="sub=rules"', html)
+        # 看板本体仍在（弹层底下的内容不被抽掉）
+        self.assertContains(response, 'at-grid')
 
     def test_sub_page_falls_back_without_perm(self):
         self.client.force_login(self.staff)
         response = self.client.get('/?panel=attendance&sub=rules')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context['panel_sub'], '')
-        self.assertNotContains(response, 'ds-sub__crumb')
+        self.assertNotContains(response, 'id="ds-attendance-rules"')
+        self.assertNotContains(response, 'ds-settings--subpage')
+
+    def test_business_page_renders_same_panel_inline(self):
+        self.client.force_login(self.manager)
+        response = self.client.get('/plugins/attendance/rules/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'ds-settings--inline')
+        self.assertContains(response, 'ds-settings__panel')
+        self.assertContains(response, '考勤规则')
+        # 深链页没有遮罩弹层，关闭 = 返回考勤看板
+        self.assertNotContains(response, 'ds-settings--subpage')
 
     def test_sub_page_post_prg_back_to_panel(self):
         self.client.force_login(self.manager)

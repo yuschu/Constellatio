@@ -162,16 +162,16 @@ def _panel_context(request, panel, sub=''):
     if panel == 'attendance':
         from plugins.attendance.views import attendance_context, rules_context
         context = attendance_context(request)
-        # 面板态：入口指回面板，不走业务页；二级页要能被 home-panels.js 拦截换正文
+        # 面板态：入口指回面板，不走业务页；「考勤规则」是盖在面板上的设置弹层
         context['in_home_panel'] = True
         context['panel_sub'] = sub
         context['rules_entry_url'] = '/?panel=attendance&sub=rules'
-        if sub == 'rules':
+        context['rules_back_url'] = '/?panel=attendance'
+        if request.user.has_perm('attendance_rule_manage'):
+            # 弹层正文要表单实例；无权限时连规则数值都不下发
             context.update(rules_context(request))
-            context['rules_back_url'] = '/?panel=attendance'
-            context['rules_back_label'] = '考勤'
-            context['rules_back_aria'] = '返回考勤'
             context['rules_next'] = '/?panel=attendance&sub=rules'
+            context['rules_open'] = sub == 'rules'
         return context
     if panel == 'workspace':
         from plugins.workspace.views import switch_list_context

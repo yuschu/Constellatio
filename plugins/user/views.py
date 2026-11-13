@@ -62,12 +62,25 @@ def _guard_superuser(request, target):
 # ---------------------------------------------------------------------------
 # 部门
 # ---------------------------------------------------------------------------
-def _render_department_form(request, form):
-    """部门新建的二级页（`?view=new`）：crumb 返回部门 + 标题 + 表单。"""
-    return render(request, 'user/department_form.html', {
-        'form': form,
-        'title': _('新建部门'),
-        'back_url': reverse('user:department_list'),
+def _render_department_page(request, form=None, dept_id=None, error='', form_open=False):
+    """部门页的唯一渲染入口（列表 + 「新建」设置弹层）。
+
+    v2.1.2：新建走二级页，形态照 DSH 点开设置的那一页 —— 遮罩 + 800×800 面板
+    （title / header / nav 188px / options），由 user/department_list.html 里的
+    `#ds-dept-new` 弹层承载。`?view=new` 或表单校验失败时 `form_open=True`，
+    页面一次渲染完，弹层只是盖在列表上，不再换模板、不再走第二套版式。
+    """
+    departments = paginate(request, Department.objects.all().order_by('id'))
+    list_url = reverse('user:department_list')
+    return render(request, 'user/department_list.html', {
+        'page_obj': departments,
+        'form': form if form is not None else DepartmentForm(),
+        'dept_id': dept_id,
+        'edit_dept': Department.objects.filter(pk=dept_id).first() if dept_id else None,
+        'error': error,
+        'dept_form_open': form_open,
+        'dept_new_url': f'{list_url}?view=new',
+        'dept_list_url': list_url,
     })
 
 
@@ -75,11 +88,11 @@ def _render_department_form(request, form):
 def department_list(request):
     """部门列表 + 新建 + 修改 + 软删（停用）+ 硬删请求（会签审批）。
 
-    v2.1.2：新建不再占用列表右侧的常驻卡片，改成部门页的二级页
-    （`?view=new`，DSH plugin detail 的 crumb 头部口径），列表页只留列表。
+    v2.1.2：新建不再占用列表右侧的常驻卡片，改成部门页的二级弹层
+    （`?view=new` 打开，形态照 DSH 点开设置的那一页），列表页只留列表。
     """
     if request.method == 'GET' and request.GET.get('view') == 'new':
-        return _render_department_form(request, DepartmentForm())
+        return _render_department_page(request, DepartmentForm(), form_open=True)
     if request.method == 'POST':
         action = request.POST.get('action', 'create')
         if action == 'create':
@@ -87,8 +100,8 @@ def department_list(request):
             if form.is_valid():
                 form.save()
                 return redirect('user:department_list')
-            # 校验失败留在二级页，把错误挂在对应字段上
-            return _render_department_form(request, form)
+            # 校验失败留在弹层里，把错误挂在对应字段上
+            return _render_department_page(request, form, form_open=True)
         elif action == 'edit':
             dept_id = request.POST.get('dept_id')
             dept = get_object_or_404(Department, pk=dept_id)
@@ -109,12 +122,9 @@ def department_list(request):
             dept_id = request.POST.get('dept_id')
             dept = get_object_or_404(Department, pk=dept_id)
             if dept.members.exists():
-                form = DepartmentForm()
-                return render(request, 'user/department_list.html', {
-                    'departments': Department.objects.all().order_by('id'),
-                    'form': form,
-                    'error': f'部门「{dept.name}」仍有成员，不能直接物理删除；请先调整成员归属。',
-                })
+                return _render_department_page(
+                    request,
+                    error=f'部门「{dept.name}」仍有成员，不能直接物理删除；请先调整成员归属。')
             # 发起部门删除审批单（会签：全部具备 dept_delete_approve 权限的管理员）
             dept_delete_requested.send(
                 sender=Department, dept_id=dept.pk, operator_id=request.user.pk,
@@ -128,12 +138,7 @@ def department_list(request):
         form = DepartmentForm()
         dept_id = None
 
-    # v1.7.6：部门列表分页（排序在分页之前定死）
-    departments = paginate(request, Department.objects.all().order_by('id'))
-    return render(request, 'user/department_list.html', {
-        'page_obj': departments, 'form': form, 'dept_id': dept_id,
-        'edit_dept': Department.objects.filter(pk=dept_id).first() if dept_id else None,
-    })
+    return _render_department_page(request, form, dept_id)
 
 
 # ---------------------------------------------------------------------------

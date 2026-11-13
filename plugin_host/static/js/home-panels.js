@@ -70,6 +70,9 @@
     if (url && url !== window.location.href) {
       window.history.pushState({ panel: body.getAttribute('data-active-panel') }, '', url);
     }
+    /* 二级页弹层（考勤规则 / 新建部门）是地址栏驱动的：
+       换完正文后让 ds-shell.js 按新 URL 重新开合一次。 */
+    if (window.DSSubpage) { window.DSSubpage.sync(); }
   }
 
   function load(url) {
