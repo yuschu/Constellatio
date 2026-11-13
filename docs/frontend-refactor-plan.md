@@ -425,6 +425,44 @@ token 映射：`interactive-bg-hover→interactive-hover`、`bg-skeleton→bg-sk
 - 宽度过渡与落位共用一条时间轴（150ms 落位 / 300ms 滑完），中间约 150ms 存在「图标已落 36、列还在收」的重叠帧。DSH 用 grid track 裁切 + 内容冻结规避，本项目是 flex 列，用 `overflow: hidden` 近似 —— 观感对齐，机制不同。
 - 首页新增 `--as-dur-slow: 0.3s`（与 `--ds-dur-slow` 等值），业务页直接复用已有 `--ds-dur-slow`。
 
+## 9.8 侧栏展开态对齐（v2.0.9）
+
+9.7 只收敛了收起态。本轮按 `dsh-client-ui-sidebar/lib/client.js` 第 116 行的 `css$` 常量（单行 10,899 字符，格式化后 102 条规则，编号 00–102）逐条比对展开态，只改字面量不符的四处，不做像素采样。
+
+| DSH 规则 | 源码字面量 | 本项目落点 |
+|---|---|---|
+| `[34] .logoRow` | `justify-content: flex-end; gap: 8px; height: 60px; padding: 8px 0 8px 8px; overflow: hidden` | `.as-logo-row` 已是 `flex-end`；`.ds-rail__brand` 原为 `justify-content: flex-start`，改 `flex-end`，并删掉第 24 节里覆盖成 `space-between` 的重复块 |
+| `[36] .brand` | `min-width: 0; flex: 1; padding: 0; display: inline-flex; overflow: hidden` | `.ds-rail__brand a` 补 `flex: 1`，品牌可点区撑满到 toggle 前（实测首页 220 / 业务页 227） |
+| `[96]–[100] .footArea` | 只有 `flex-direction: column; flex: none`，无分隔线、无内边距、无外边距 | `.ds-rail__foot` 去掉 `border-top: .5px`、`padding: 8px 0 4px`、`margin-top: 8px`，高度 57 → 44 |
+| `[45] / [49] .iconButton` | 展开 `28×28`、折叠 `36×36` | 已对齐，未改 |
+| `[50]` | 折叠态 `.toggle .panelIcon { display: none }`（`railMark` 常显） | 本项目去掉了 logo，`railMark` 占位元素不存在，折叠态固定显示 panelIcon，见 9.7 的已知未收敛 |
+
+**折叠按钮图标换真值**。`IconPanelLeftOutlineRegular` 是 sprite 引用 `M("panel-left-outline", "regular")`，描边宽度由 `Vp = { regular: 1, medium: 1.3 }` 决定 → regular **1**。原始 SVG 串（`dsh-web-frontend/dist/assets/index-BgUyXZcc.js` 第 567536 字符，`size: 16`）：
+
+```html
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" stroke-width="1">
+  <path d="M13.5 1.5H2.5C1.94772 1.5 1.5 1.94772 1.5 2.5V13.5C1.5 14.0523 1.94772 14.5 2.5 14.5H13.5C14.0523 14.5 14.5 14.0523 14.5 13.5V2.5C14.5 1.94772 14.0523 1.5 13.5 1.5Z" stroke="currentColor"/>
+  <path d="M5.5 1.5V14.5" stroke="currentColor"/>
+</svg>
+```
+
+三处模板（`home_chat.html`、corporate `base.html`、risograph `base.html`）把原来的 chevron 换成这两条 path，`<svg>` 根补 `fill="none"`（否则 path 无 fill 时会被填成实心块）。尺寸走源码的 `size={wide || windowsTitlebar ? 16 : 18}`：`.as-rail-toggle > svg / .ds-rail__toggle > svg` 16px，`html[data-rail-collapsed="true"]` 下 18px。
+
+**品牌 mark「C」移除**。源码 `logoRow.children` 是 `[wide && brand, toggle]`，品牌本身不含 mark 元素，toggle 里的 `railMark` 只在 `!wide` 渲染。本项目既已去 logo，三处模板的 `<span>…C</span>` 与两份 CSS 的 `__mark` 规则（含折叠段的 `[data-rail-settled]` 覆盖）一并删除。
+
+**真机数值**（1440×900，容器 `:8000`，浅深 × 首页 / 业务页各一轮，与本地 `:8011` 逐项一致）
+
+| 项 | 首页 | 业务页 |
+|---|---|---|
+| rail | `280 × 804` | `280 × 804` |
+| logoRow | `x8 264×60`，padding `8 0 8 8`，gap `8`，justify `flex-end` | `x8 263×60`，justify `flex-end` |
+| brand | `x16 220×24` | `x16 227×24`，gap `6` |
+| toggle | `x244 28×28`，radius `8` | `x243 28×28` |
+| foot | `x8 264×44`，padding `0` / margin `0` / borderWidth `0` | `x8 263×44`，同 |
+| 折叠后 | rail `56`、brand `display: none`、toggle `x10 w36`、行 `x10 w36`、`data-rail-settled=true` | 同 |
+
+`newBtn` 声明 `border: .5px solid` 与源码 `[57]` 一致，`getComputedStyle` 读回 `1px` 是 Chrome 对亚像素边框的取整，未改。
+
 ---
 
 *本文不含实现代码；确认后按阶段逐个交付，每阶段单独提交与验收。*
