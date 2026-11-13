@@ -496,6 +496,48 @@ v2.0.0 起 `/` 已被 assistant 接管成对话首页，于是这条「工作台
 
 **门禁**：`check` 0 issue、`ruff` 全绿、全量 **497 项 OK**（`e51b7c1` 时的 497 条基线，无新增、无 skip、无放宽）。容器重建后 8 个文件 MD5 与本地逐一相同。
 
+### 9.10 考勤紧跟看板 + 首页「更多」按 DSH PanelMoreMenu（v2.0.10）
+
+**考勤顺序**：业务页侧栏原为 `助手 / 插件 / 看板 / 部门 / … / 考勤 / 签到详情 / 考勤规则 / …`。考勤是最日常的业务入口，提到看板之后：`plugins/attendance/apps.py` 的首条菜单加 `'order': 4`，其余两条（签到详情、考勤规则）保持缺省 `order 100` 的注册序。`get_menus()` 的排序键是稳定的，所以只有考勤提前，`签到详情 / 考勤规则` 的相对位置不动。`plugin_host/tests_registry.py` 的顺序契约补一条锚定：`/dashboard/` 必须排在 `/plugins/attendance/` 之前。
+
+**「更多」重做**。DSH 的实现在 `dsh-client-ui-sidebar/lib/client.js:240-286` 的 `PanelMoreMenu`：
+
+| 元素 | 源码字面量 |
+|---|---|
+| anchor | `button.panelRow`（与面板行同形），`aria-haspopup="menu"`、`aria-expanded={open}`，点击 `setOpen(v => !v)` |
+| anchor 图标 | `IconAppsAddOutlineRegular`，`size: wide ? 16 : 18` |
+| 图标 SVG（sprite `apps-add-outline`，regular 描边 1） | 三个 `rect`（`2.25/2.25`、`2.25/9.75`、`9.75/9.75`，各 `4×4`、`rx 1`）+ `path "M11.75 1.75v5M9.25 4.25h5"` |
+| 浮层 | primitives `Menu`：`portal: true`、`autoFocus: true`、`className: moreAnchor`、`listClassName: moreMenu` |
+| `.moreAnchor`（规则） | `flex-direction: column; display: flex` |
+| `.moreMenu`（规则） | `width: 288px; max-width: calc(100vw - 24px)` |
+| 菜单项 | 由 `sidebar.panellist.actions` 槽渲染（各面板的 pin / 显隐 action） |
+
+本项目原来是 `<details class="as-more">` + `<ul class="as-more__list">`（summary 与行同形、列表在侧栏内向上弹）。改为：
+
+| 落点 | 做法 |
+|---|---|
+| 模板 `plugins/assistant/templates/assistant/home_chat.html` | `<button class="as-panel as-more__anchor" data-as-more-trigger aria-haspopup="menu" aria-expanded="false" aria-controls="as-more-menu">` + `div.ds-menu.as-more__menu#as-more-menu[role=menu]`，菜单表面复用账号菜单的 `.ds-menu`（上一轮已按 DSH 菜单材质做过） |
+| 图标 | 换成 `apps-add-outline` 原文（16px、`fill="none"`、`stroke-width 1`） |
+| `.as-more` | `display: flex; flex-direction: column`（对齐 `.moreAnchor`） |
+| `div.as-more__menu` | `position: fixed; width: 288px; max-width: calc(100vw - 24px)`，覆盖 `.ds-menu` 默认的 `absolute / bottom 100% / max-width 280`（用 `div` + class 提高特异性，避免被后面的 `.ds-menu` 规则压回） |
+| 定位 | `ds-shell.js` 的 `initMore()` 按 `getBoundingClientRect()` 摆放：上下空间取大的一侧、不遮挡 anchor、水平夹在视口内 —— 等价 DSH `Menu portal` 的浮层行为，且不会被侧栏 `overflow` 裁切 |
+| 限高 | 空间不足时 `max-height` 收到可用高度 + `overflow-y: auto`（DSH 源码没有这条，是 13 项菜单在 804px 视口下的必要兜底；DSH 的 actions 菜单只有几条，不会触发） |
+| 交互 | 点击切换、点外部关闭、`Esc` 关闭并回焦、点菜单项关闭、`resize` 重新摆位（同 `initAccount`） |
+| 折叠态图标 | 新增 `html[data-rail-settled="true"] .as-panel__glyph .as-ico { width: 18px; height: 18px }`，对齐 `size = wide ? 16 : 18` |
+
+**真机实测**（1440×900，本地 `:8011`，浅 / 深 / 折叠）
+
+| 项 | 值 |
+|---|---|
+| 业务页侧栏顺序 | `助手 / 插件 / 看板 / 考勤 / 部门 / 用户 / 角色 / 审批中心 / 待我审批 / 抄送我的 / 公告中心 / 签到详情 / 考勤规则 / 留痕链 / 组织架构 / 消息中心` |
+| 首页主入口 | `助手 / 插件 / 看板 / 更多`（`primary_menus` 仍 2 条 + 插件 + 更多） |
+| 更多 anchor | `x8 264×36`，glyph `16×16`，4 条 path（3 rect + 1 path） |
+| 更多浮层 | `288×528`，`position: fixed`，`radius 16`、`padding 4`；浅色材质 `rgba(252,253,254,0.7)` + `blur(40px) saturate(1.5)`，深色 `rgba(48,49,54,0.64)` |
+| 浮层位置 | 展开态 `(8, 268)` —— anchor 下方 4px 起，13 项完整可见；折叠态 `(10, 298)`、高 498 并 `overflow-y: auto` |
+| 折叠态 | `data-rail-settled=true`、glyph `18×18`、anchor `x10 w36` |
+
+**门禁**：`check` 0 issue、`ruff` 全绿、全量 **497 项 OK**。`tests_assistant_home.test_sidebar_caps_entries_and_hides_rest_in_drawer` 的锚点从 `as-more__list` 改到 `data-as-more-trigger` / `id="as-more-menu"`（结构变更，断言仍要求「更多」承载业务菜单）。
+
 ---
 
 *本文不含实现代码；确认后按阶段逐个交付，每阶段单独提交与验收。*
