@@ -1749,12 +1749,14 @@ body.as-body .as-sidebar a:hover {
   text-decoration: none;
 }
 
-/* 面板内部仍要主题的链接口径（「查看全部公告」「审批中心 →」等） */
-body.as-body .as-panelview a {
+/* 面板内部仍要主题的链接口径（「查看全部公告」「审批中心 →」等）；
+   v2.1.2：二级页的 crumb 是导航不是链接，DSH 的 _crumb 用 label-tertiary，
+   所以把它排除在外（否则会被这条规则染成链接蓝） */
+body.as-body .as-panelview a:not(.ds-sub__crumb) {
   color: var(--ds-link);
 }
 
-body.as-body .as-panelview a:hover {
+body.as-body .as-panelview a:not(.ds-sub__crumb):hover {
   text-decoration: underline;
   text-underline-offset: 2px;
 }

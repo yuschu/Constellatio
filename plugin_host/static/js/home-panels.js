@@ -92,14 +92,23 @@
     if (event.defaultPrevented || event.button !== 0) { return; }
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) { return; }
     var link = event.target.closest('[data-home-panel]');
-    if (!link) { return; }
-    var key = link.getAttribute('data-home-panel');
-    if (key === body.getAttribute('data-active-panel')) {
+    if (link) {
+      var key = link.getAttribute('data-home-panel');
+      if (key === body.getAttribute('data-active-panel')) {
+        event.preventDefault();
+        return;
+      }
       event.preventDefault();
+      load(link.getAttribute('href'));
       return;
     }
+    /* 二级页进出（v2.1.2）：面板里的「考勤规则」与二级页的 crumb 返回都带
+       data-panel-link —— 同样是换 [data-panel-body] + pushState，
+       于是面板内导航不进整页、侧栏不动、浏览器返回键可回上一级。 */
+    var subLink = event.target.closest('[data-panel-link]');
+    if (!subLink) { return; }
     event.preventDefault();
-    load(link.getAttribute('href'));
+    load(subLink.getAttribute('href'));
   });
 
   window.addEventListener('popstate', function () {

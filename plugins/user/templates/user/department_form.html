@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{{ title }} · Constellatio{% endblock %}
+{% block content %}
+{% comment %}
+部门页的二级页：版式取自 DSH plugin detail 的 DetailTop（crumb 返回 + 标题 + 说明），
+字面量见 corporate-clean.css 第 30 节：crumb 12.5/tertiary、title 20/500/28、desc 14/22。
+{% endcomment %}
+<div class="ds-sub">
+  <a class="ds-sub__crumb" href="{{ back_url }}" aria-label="{% trans "返回部门" %}">
+    <svg class="ds-sub__chevron" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M10 3.5 5.5 8l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>{% trans "部门" %}</span>
+  </a>
+
+  <div class="ds-sub__head">
+    <h1 class="ds-sub__title">{{ title }}</h1>
+    <p class="ds-sub__desc">{% trans "创建后即可在用户设置里选为所属部门；名称在全站唯一。" %}</p>
+  </div>
+
+  <form method="post" novalidate class="ds-sub__form">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="create">
+    <div class="ds-fields">
+      <div class="ds-field">
+        <label class="ds-field__label" for="{{ form.name.id_for_label }}">{% trans "名称" %}</label>
+        {{ form.name }}
+        <div class="ds-field__help">{% trans "部门的显示名，例如「人力资源部」。" %}</div>
+        {% for e in form.name.errors %}<div class="ds-field__error">{{ e }}</div>{% endfor %}
+      </div>
+      <div class="ds-field">
+        <label class="ds-field__label" for="{{ form.parent.id_for_label }}">{% trans "上级部门" %}</label>
+        {{ form.parent }}
+        <div class="ds-field__help">{% trans "留空即为顶层部门。" %}</div>
+        {% for e in form.parent.errors %}<div class="ds-field__error">{{ e }}</div>{% endfor %}
+      </div>
+    </div>
+    <div class="ds-sub__actions">
+      <button class="r-btn" type="submit">{% trans "创建" %}</button>
+      <a class="r-btn r-btn--ghost" href="{{ back_url }}">{% trans "取消" %}</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -4063,3 +4063,146 @@ html:not([data-color-mode="dark"]) .lc-ov-session {
 .ds-main__body form .mb-3 select {
   width: 100%;
 }
+
+/* ==========================================================================
+   30. DSH 二级页（detail）：crumb 返回 + 标题 + 字段（v2.1.2）
+   --------------------------------------------------------------------------
+   版式取自 dsh-client-ui-plugin-manager/lib/client.js 内嵌的 CSS 字符串
+   （`X_2TxG_` 前缀，主 CSS bundle 搜不到这些类名），组件是同一个
+   `DetailTop({ crumbLabel, crumbText, onBack, icon, actions })`：
+
+     _detail          column flex
+     _detailTop       padding-top var(--plugin-page-top-inset) = 28px
+     _crumb           12.5px / label-tertiary / inline-flex / gap 6 / padding 0 /
+                      background 0 0 / border 0；hover → label-primary；
+                      focus-visible → focus ring、offset 2px
+     _crumbIcon       transform: rotate(90deg)（chevron-down 转成朝左）
+     _detailHead      gap 12 / margin 32px 0 0
+     _detailMain      column / gap 8 / margin-top 20
+     _detailTitle     20px / 500 / 28px
+     _detailDesc      label-secondary / 14px / 22px
+     字段行           相邻 .5px border-l2 上分隔 / padding 12px 0 /
+                      label 13-20 secondary / help 12-18 tertiary / error 12-18
+   考勤规则二级页与部门新建二级页共用这一份原语（业务页整页 + 首页面板都用它）。
+   ========================================================================== */
+.ds-sub {
+  display: flex;
+  flex-direction: column;
+}
+
+.ds-sub__crumb {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 6px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: 0 0;
+  color: var(--ds-label-tertiary);
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 18px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.ds-sub__crumb:hover {
+  color: var(--ds-label-primary);
+  text-decoration: none;
+}
+
+.ds-sub__crumb:focus-visible {
+  outline: 2px solid var(--ds-state-business, var(--ds-label-primary));
+  outline-offset: 2px;
+}
+
+.ds-sub__chevron {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+
+.ds-sub__head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 32px;
+}
+
+.ds-sub__title {
+  margin: 0;
+  color: var(--ds-label-primary);
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 28px;
+}
+
+.ds-sub__desc {
+  margin: 8px 0 0;
+  color: var(--ds-label-secondary);
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.ds-sub__note {
+  margin-top: 16px;
+}
+
+.ds-sub__form {
+  display: flex;
+  flex-direction: column;
+  max-width: 760px;
+  margin-top: 20px;
+}
+
+.ds-fields {
+  display: flex;
+  flex-direction: column;
+}
+
+.ds-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 0;
+}
+
+.ds-field + .ds-field {
+  border-top: 0.5px solid var(--ds-border-l2);
+}
+
+.ds-field__label {
+  color: var(--ds-label-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.ds-field__help {
+  color: var(--ds-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.ds-field__error {
+  color: var(--ds-state-error);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+/* 卡片里的字段排布（部门「修改」右列）：行内更紧凑，不加外分隔 */
+.ds-fields--card .ds-field {
+  padding: 6px 0;
+}
+
+.ds-fields--card .ds-field + .ds-field {
+  border-top: 0;
+}
+
+.ds-sub__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+}

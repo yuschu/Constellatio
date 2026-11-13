@@ -44,6 +44,16 @@ PANEL_TITLES = {
     'dashboard': '看板',
 }
 
+# 面板可进的二级页（DSH 的详情页：crumb 返回父级 + detailTitle）。
+# 只有考勤有二级页「考勤规则」；权限不足时退回上一级面板，不出 403。
+PANEL_SUBS = {
+    'attendance': ('rules',),
+}
+
+SUB_TITLES = {
+    ('attendance', 'rules'): '考勤规则',
+}
+
 # 「更多」菜单里的常用入口，元组顺序即菜单行顺序（DSH 的更多菜单只放轻量导航，
 # 不把全部业务菜单铺进去；完整清单在业务页侧栏）。考勤已在顶部固定入口，这里不重复。
 COMMON_MENU_URLS = (
@@ -87,6 +97,7 @@ def home(request):
     """
     color_mode = _resolve_color_mode(request)
     panel = _resolve_panel(request)
+    sub = _resolve_sub(request, panel)
     primary_menus, common_menus = _split_menus(request, panel)
     context = {
         'color_mode': color_mode,
@@ -97,9 +108,10 @@ def home(request):
         'create_plugin_url': '/?prompt=' + quote(CREATE_PLUGIN_PROMPT),
         'draft_prompt': request.GET.get('prompt', ''),
         'panel': panel,
-        'panel_title': PANEL_TITLES.get(panel, '助手'),
+        'panel_sub': sub,
+        'panel_title': SUB_TITLES.get((panel, sub)) or PANEL_TITLES.get(panel, '助手'),
     }
-    context.update(_panel_context(request, panel))
+    context.update(_panel_context(request, panel, sub))
     if panel != 'chat':
         theme = getattr(getattr(request, 'theme', None), 'key', settings.OA_THEME)
         # 面板正文（考勤卡 / 插件清单 / 看板）用的是主题组件类，
@@ -127,14 +139,40 @@ def _resolve_panel(request):
     return panel
 
 
-def _panel_context(request, panel):
+def _resolve_sub(request, panel):
+    """校验 `?sub=`：只有该面板登记过的二级页才认，权限不足退回上一级。
+
+    DSH 的详情页是同一套整页子视图（plugin detail 的 DetailTop），
+    进不去时留在列表/面板本身，而不是抛 403 —— 与 `_resolve_panel` 同口径。
+    """
+    sub = request.GET.get('sub') or ''
+    if sub not in PANEL_SUBS.get(panel, ()):
+        return ''
+    if (panel, sub) == ('attendance', 'rules') and not request.user.has_perm(
+            'attendance_rule_manage'):
+        return ''
+    return sub
+
+
+def _panel_context(request, panel, sub=''):
     """面板正文的上下文：直接复用业务页的构造函数，不另算一套口径。"""
     if panel == 'dashboard':
         from plugin_host.views import dashboard_context
         return dashboard_context(request)
     if panel == 'attendance':
-        from plugins.attendance.views import attendance_context
-        return attendance_context(request)
+        from plugins.attendance.views import attendance_context, rules_context
+        context = attendance_context(request)
+        # 面板态：入口指回面板，不走业务页；二级页要能被 home-panels.js 拦截换正文
+        context['in_home_panel'] = True
+        context['panel_sub'] = sub
+        context['rules_entry_url'] = '/?panel=attendance&sub=rules'
+        if sub == 'rules':
+            context.update(rules_context(request))
+            context['rules_back_url'] = '/?panel=attendance'
+            context['rules_back_label'] = '考勤'
+            context['rules_back_aria'] = '返回考勤'
+            context['rules_next'] = '/?panel=attendance&sub=rules'
+        return context
     if panel == 'workspace':
         from plugins.workspace.views import switch_list_context
         return switch_list_context()

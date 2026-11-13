@@ -11,6 +11,7 @@ from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Permission
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils.translation import gettext as _
 
 from plugin_host.pagination import paginate
@@ -61,9 +62,24 @@ def _guard_superuser(request, target):
 # ---------------------------------------------------------------------------
 # 部门
 # ---------------------------------------------------------------------------
+def _render_department_form(request, form):
+    """部门新建的二级页（`?view=new`）：crumb 返回部门 + 标题 + 表单。"""
+    return render(request, 'user/department_form.html', {
+        'form': form,
+        'title': _('新建部门'),
+        'back_url': reverse('user:department_list'),
+    })
+
+
 @require_perm('user_manage')
 def department_list(request):
-    """部门列表 + 新建 + 修改 + 软删（停用）+ 硬删请求（会签审批）。"""
+    """部门列表 + 新建 + 修改 + 软删（停用）+ 硬删请求（会签审批）。
+
+    v2.1.2：新建不再占用列表右侧的常驻卡片，改成部门页的二级页
+    （`?view=new`，DSH plugin detail 的 crumb 头部口径），列表页只留列表。
+    """
+    if request.method == 'GET' and request.GET.get('view') == 'new':
+        return _render_department_form(request, DepartmentForm())
     if request.method == 'POST':
         action = request.POST.get('action', 'create')
         if action == 'create':
@@ -71,7 +87,8 @@ def department_list(request):
             if form.is_valid():
                 form.save()
                 return redirect('user:department_list')
-            dept_id = None
+            # 校验失败留在二级页，把错误挂在对应字段上
+            return _render_department_form(request, form)
         elif action == 'edit':
             dept_id = request.POST.get('dept_id')
             dept = get_object_or_404(Department, pk=dept_id)

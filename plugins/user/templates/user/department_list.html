@@ -4,11 +4,15 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
   <h2 class="mb-0">{% trans "部门管理" %}</h2>
-  <span class="r-badge">user_manage</span>
+  <div class="d-flex align-items-center gap-2">
+    <span class="r-badge">user_manage</span>
+    {# v2.1.2：新建走二级页（DSH detail 的 crumb 头部），不再常驻右侧卡片 #}
+    <a class="r-btn" href="?view=new">＋ {% trans "新建部门" %}</a>
+  </div>
 </div>
 {% if error %}<div class="r-card mb-4" style="box-shadow: var(--r-shadow-orange);">{{ error }}</div>{% endif %}
 <div class="row g-4 align-items-start">
-  <div class="col-12 col-lg-8">
+  <div class="col-12 {% if edit_dept %}col-lg-8{% endif %}">
     <div class="r-card">
       <div class="table-responsive">
         <table class="r-table r-table--roomy align-middle">
@@ -74,52 +78,33 @@
     </div>
   </div>
   <div class="col-12 col-lg-4">
+    {% if edit_dept %}
     <div class="r-card position-relative">
       <span class="r-register-mark"></span>
-      {% if edit_dept %}
-        <h3 class="fs-5 mb-3">{% blocktranslate with name=edit_dept.name %}修改部门：{{ name }}{% endblocktranslate %}</h3>
-        <form method="post" novalidate>
-          {% csrf_token %}
-          <input type="hidden" name="action" value="edit">
-          <input type="hidden" name="dept_id" value="{{ edit_dept.id }}">
-          <div class="d-grid gap-3">
-            <div>
-              <label class="form-label" for="{{ form.name.id_for_label }}">{% trans "名称" %}</label>
-              {{ form.name }}
-              {% for e in form.name.errors %}<div class="text-danger" style="font-size:.8rem;">{{ e }}</div>{% endfor %}
-            </div>
-            <div>
-              <label class="form-label" for="{{ form.parent.id_for_label }}">{% trans "上级部门" %}</label>
-              {{ form.parent }}
-            </div>
+      <h3 class="at-card__title">{% blocktranslate with name=edit_dept.name %}修改部门：{{ name }}{% endblocktranslate %}</h3>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="action" value="edit">
+        <input type="hidden" name="dept_id" value="{{ edit_dept.id }}">
+        <div class="ds-fields ds-fields--card">
+          <div class="ds-field">
+            <label class="ds-field__label" for="{{ form.name.id_for_label }}">{% trans "名称" %}</label>
+            {{ form.name }}
+            {% for e in form.name.errors %}<div class="ds-field__error">{{ e }}</div>{% endfor %}
           </div>
-          <div class="d-flex align-items-center gap-2 mt-3">
-            <button class="r-btn" type="submit">{% trans "保存修改" %}</button>
-            <a href="{% url 'user:department_list' %}" class="r-offset-hover">{% trans "取消" %}</a>
+          <div class="ds-field">
+            <label class="ds-field__label" for="{{ form.parent.id_for_label }}">{% trans "上级部门" %}</label>
+            {{ form.parent }}
+            {% for e in form.parent.errors %}<div class="ds-field__error">{{ e }}</div>{% endfor %}
           </div>
-        </form>
-      {% else %}
-        <h3 class="fs-5 mb-3">{% trans "新建部门" %}</h3>
-        <form method="post" novalidate>
-          {% csrf_token %}
-          <input type="hidden" name="action" value="create">
-          <div class="d-grid gap-3">
-            <div>
-              <label class="form-label" for="{{ form.name.id_for_label }}">{% trans "名称" %}</label>
-              {{ form.name }}
-              {% for e in form.name.errors %}<div class="text-danger" style="font-size:.8rem;">{{ e }}</div>{% endfor %}
-            </div>
-            <div>
-              <label class="form-label" for="{{ form.parent.id_for_label }}">{% trans "上级部门" %}</label>
-              {{ form.parent }}
-            </div>
-          </div>
-          <div class="d-flex align-items-center gap-2 mt-3">
-            <button class="r-btn" type="submit">{% trans "创建" %}</button>
-          </div>
-        </form>
-      {% endif %}
+        </div>
+        <div class="d-flex align-items-center gap-2 mt-3">
+          <button class="r-btn" type="submit">{% trans "保存修改" %}</button>
+          <a href="{% url 'user:department_list' %}" class="r-btn r-btn--ghost">{% trans "取消" %}</a>
+        </div>
+      </form>
     </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

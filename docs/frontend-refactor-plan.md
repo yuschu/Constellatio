@@ -781,12 +781,46 @@ token 映射：`label-primary-foreground → --ds-on-primary`、`bg-module-platf
 
 **门禁与真机**：全量 `venv/run_tests_shim.py` **501 tests OK**；本地 `:8011` 与容器 `:8000` 各出浅/深两态图（`?panel=attendance`、`/plugins/user/users/`、`/plugins/user/users/new/`、`/plugins/approval/`、`/plugins/user/roles/`）；容器重建后按 MD5 对齐：`corporate-clean.css` 本地/容器均 `c4c358de0b24e8474dfcaa26ccfee6eb`、`attendance/_panel.html` 均 `6e3b6641a50a8242b846f0227ce6e7ba`。容器考勤面板有数据（2 天 / 2 次迟到），图表柱正常绘制。
 
+### 9.13.9 v2.1.2：二级页（考勤规则 / 部门新建）按 DSH detail 移植
+
+**取证方式**：仍不看截图。DSH 的「设置/详情二级页」不是独立框架页面，而是从插件页进入的**整页子视图**（`dsh-client-ui-settings-shell/README.zh.md` 明说「在侧栏打开插件，在官方分组里选择终端…」，它注册进 `plugins.item` slot，由 `dsh-client-ui-plugin-manager` 承载）。因此字面量直接从 `dsh-client-ui-plugin-manager/lib/client.js`（428KB）取：统一顶栏组件是 `function DetailTop({ crumbLabel, crumbText, onBack, icon, actions })`，三类详情（包 / 组件 / 行）与「更多」列表页共用；对应 CSS 以 `X_2TxG_` 前缀**内嵌在该 js 的 CSS 字符串里**（主 CSS bundle 搜不到这些类名）。
+
+| DSH 类 | 字面量 | 落到本项目（`corporate-clean.css` 第 30 节） |
+|---|---|---|
+| `._detail` / `._detailTop` | column flex；`padding-top: var(--plugin-page-top-inset)` = **28px** | `.ds-sub` column flex |
+| `._crumb` | 12.5px / `label-tertiary` / inline-flex / gap **6** / padding 0 / 无边框无底色；hover → `label-primary`；focus-visible → focus ring、offset 2 | `.ds-sub__crumb`（篇内 `a:not(...)` 特例，见下） |
+| `._crumbIcon` | `transform: rotate(90deg)`（chevron-down 转朝左） | inline SVG 左向 chevron 14×14（`.ds-sub__chevron`） |
+| `._detailHead` | margin **32px 0 0** / gap 12 | `.ds-sub__head` margin-top 32、gap 4 |
+| `._detailTitle` | **20px / 500 / 28px** | `.ds-sub__title`（实测 20/500/28） |
+| `._detailDesc` | `label-secondary` / **14 / 22** | `.ds-sub__desc` margin-top 8 |
+| Field 行 | 相邻 **.5px border-l2** 上分隔 / padding **12px 0** / gap 6 | `.ds-field`（实测 padding 12/12、gap 6，边框同 `.at-kv__row`） |
+| `._field` 文本 | label 13/20 secondary、help 12/18 tertiary、error 12/18 | `.ds-field__label/__help/__error` |
+| `._moreBack` / `._pageTitle` | 返回按钮 28×28、`IconChevronLeftOutlineMedium size=20`；页标题 20/500/28 | 二级页头部同一颗 20/500 标题（本轮不做「更多」列表页） |
+
+**考勤规则 = 考勤面板二级页**
+- 路由：`/?panel=attendance&sub=rules`。`assistant/views.py` 新增 `PANEL_SUBS`（`attendance: ('rules',)`）、`_resolve_sub()`（未登记或**缺 `attendance_rule_manage`** 时退回上一级面板，不出 403，口径同 `_resolve_panel`）、`SUB_TITLES`（标题变「考勤规则」），`_panel_context(request, panel, sub)` 把 `attendance_context` 与 `rules_context` 合并，并注入 `in_home_panel` / `panel_sub` / `rules_entry_url` / `rules_back_url` / `rules_back_aria` / `rules_next`。
+- 正文：新增 `attendance/_rules.html`（crumb「‹ 考勤」+ 标题 + 两行说明 + 6 个字段行 + 保存）。业务页 `attendance/attendance_rules.html` 变成 `{% include %}` 外壳，深链与整页形态都保留。
+- 保存：`attendance_rules` 成功后 `_return_url(request)` 优先（沿用打卡已有的 host 校验），无 `next` 时仍回 `/plugins/attendance/rules/?saved=1`（既有断言不动）。面板表单带 `next=/?panel=attendance&sub=rules`，PRG 回面板并带 `saved=1`。
+- 面板内导航：`home-panels.js` 把拦截面从 `[data-home-panel]` 扩到 `[data-panel-link]`（面板里的「⚙ 考勤规则」与二级页的 crumb 返回都走它），仍是 fetch → 换 `[data-panel-body]` → 重跑 script → `pushState`，`popstate` 逻辑不变。
+- 样式冲突：`assistant.css` 的 `body.as-body .as-panelview a` 会把 crumb 染成链接蓝（`--ds-link`），改成 `a:not(.ds-sub__crumb)`（hover 的 underline 同样排除），实测 crumb 恢复 `rgb(129,133,140)` = `label-tertiary`，hover 变 `rgb(15,17,21)` = `label-primary`。
+
+**部门新建 = 部门页二级页**
+- `user/views.py::department_list`：`GET ?view=new` 渲染新模板 `user/department_form.html`（crumb「‹ 部门」+ 标题「新建部门」+ name/parent 两字段行 + 创建/取消）；`action=create` 校验失败**留在二级页**（原先回落到列表页右侧内联卡），成功仍 `redirect` 回列表。
+- `department_list.html`：头部右侧加「＋ 新建部门」主按钮指向 `?view=new`，删掉右列常驻的「新建部门」card；`edit_dept` 时右列「修改部门」card 保留（原 POST edit 流程未动），列表在没有 edit 时恢复整行 12 栏。右列字段行同时换成 `.ds-field`（去掉 inline `.75rem/uppercase`）。
+
+**几何实测**（CDP，`.tmp-test/subflow.mjs`，`/?panel=attendance&sub=rules`，本地 `:8011` 与容器 `:8000` 双端一致）：crumb `12.5px` + `rgb(129,133,140)` + gap `6px`；title `20px/500/28px`；字段 `padding 12/12`、`row-gap 6`；input **34**；主按钮 **36**；表单列 **760**。**无刷新证据**：点「考勤规则」→ crumb 返回 → `history.back()`，全程 `performance.timeOrigin`（docId）不变、`window.__noReloadMark` 保持，URL 依次 `/?panel=attendance` → `?panel=attendance&sub=rules` → 回来 → 再前进，侧栏 `.is-active` 始终是 `attendance`。
+
+**门禁与真机**：全量 `venv/run_tests_shim.py` **510 tests OK**（新增 9 条：面板二级页 5 条 + 部门二级页 4 条）。容器 `docker compose up -d --build web`（`GUNICORN_WORKERS=3`）重建后 MD5 全对齐：`corporate-clean.css` `b02ca3d296142cbd293bcc0f0ae9b077`、`assistant.css` `443d3c6499067b6e0424ea9c9f928704`、`home-panels.js` `e01777d6e813dce9eaf6f5aed0ef3818`、`_rules.html` `ce06b91d865a6d5a58f332238a5e6d16`、`_panel.html` `5b76476d17c53592cf1c83525f69fd74`、`attendance_rules.html` `bfc825264d937baad8a7a8df5b7f6943`、`department_form.html` `0044520cee9cc96712d35a45dd269e65`、`department_list.html` `054d5ad5751eca8b4f7d14d9ef465c4a`、三个 `views.py` 与本地同哈希。深浅两态图存 `.tmp-test/screens-panel/sub-*.png`、`.tmp-test/screens-container/sub-*.png`。
+
+**坑**：Django 的 `{# … #}` 是**单行**注释，多行会原样输出到页面（本轮首版两个模板都踩了，截图里整段注释出现在页面顶部）；多行一律用 `{% comment %}…{% endcomment %}`。
+
 ### 9.13.7 仍未对齐 / 待用户拍板
 
 1. 面板态不放 `as-header`（纯 `.as-panelview`，标题由各面板自己的 `.lc-ov-head` / `.at-head` 承担）。
 2. 三个业务 URL 保留为深链，只从侧栏移除（若要去掉入口而非 URL，需再定）。
 3. 双柱口径（提交 vs 已办结）、热力口径（人天签到）、看板「插件启用 / 未读消息」对普通账号的语义，仍按上一轮实现未验收。
-4. 业务页表单卡片的宽度还是模板 inline 的 `max-width:560px`（DSH settings 表面是 760），且部分表单模板仍有 inline `.75rem + uppercase`，目前靠 §29 的 `!important` 压制——是否逐个模板清理 inline 样式待定。
+4. 业务页表单卡片的宽度：部门新建二级页已是 DSH 的 **760**，但 `user_form.html` 等仍是模板 inline 的 `max-width:560px`，且部分表单模板还有 inline `.75rem + uppercase`（目前靠 §29 的 `!important` 压制）——是否把其余业务表单逐个清 inline、统一到 760 待定。
+5. 部门「修改」仍是 POST 驱动的右列内联卡（本轮只把「新建」做成二级页）；是否同样改成二级页未定。
 
 ---
 

@@ -87,6 +87,9 @@ def attendance_context(request):
         'rule_end': rule.work_end.strftime('%H:%M'),
         'rule_late': rule.late_threshold().strftime('%H:%M'),
         'rule_early': rule.early_threshold().strftime('%H:%M'),
+        # v2.1.2：「考勤规则」是考勤的二级页。业务页按 URL 直链打开整页；
+        # 首页面板会在 assistant 里把它改写成 `/?panel=attendance&sub=rules`。
+        'rules_entry_url': reverse('attendance:attendance_rules'),
     }
 
 
@@ -128,8 +131,13 @@ def attendance_rules(request):
 
     保存成功走 PRG（redirect 回本页并带 ``?saved=1``），页面内展示成功标识，
     与项目现有「表单页 + 内联提示」的风格一致（未引入 messages 渲染）。
+
+    v2.1.2：本页也是首页「考勤」面板的二级页（`/?panel=attendance&sub=rules`）。
+    面板里的表单把 `next` 指回面板 URL，保存成功后 PRG 回面板并带 `saved=1`；
+    不带宽限时仍回本页（既有行为与测试断言不变）。
     """
     rule = AttendanceRule.get_solo()
+    saved = request.GET.get('saved') == '1'
     if request.method == 'POST':
         # 用独立实例绑定表单：ModelForm 会把校验后的字段原地写回 instance，
         # 直接传 get_solo() 的缓存对象会让非法输入污染进程内缓存。
@@ -139,17 +147,36 @@ def attendance_rules(request):
             rule = form.save(commit=False)
             rule.updated_by = request.user
             rule.save()
-            return redirect(f'{reverse("attendance:attendance_rules")}?saved=1')
+            target = _return_url(request) or reverse('attendance:attendance_rules')
+            sep = '&' if '?' in target else '?'
+            return redirect(f'{target}{sep}saved=1')
     else:
         form = AttendanceRuleForm(instance=rule)
 
-    return render(request, 'attendance/attendance_rules.html', {
+    context = rules_context(request, rule=rule, form=form, saved=saved)
+    context['rules_back_url'] = reverse('attendance:attendance_dashboard')
+    context['rules_back_label'] = _('考勤')
+    context['rules_back_aria'] = _('返回考勤')
+    context['rules_next'] = ''
+    return render(request, 'attendance/attendance_rules.html', context)
+
+
+def rules_context(request, rule=None, form=None, saved=None):
+    """考勤规则页的上下文字段（业务页与首页面板二级页共用）。
+
+    只做只读装配：保存逻辑仍留在 `attendance_rules` 视图里，
+    面板二级页拿到的就是同一份表单实例与阈值口径。
+    """
+    rule = rule if rule is not None else AttendanceRule.get_solo()
+    form = form if form is not None else AttendanceRuleForm(instance=rule)
+    saved = request.GET.get('saved') == '1' if saved is None else saved
+    return {
         'form': form,
         'rule': rule,
-        'saved': request.GET.get('saved') == '1',
+        'saved': saved,
         'rule_late': rule.late_threshold().strftime('%H:%M'),
         'rule_early': rule.early_threshold().strftime('%H:%M'),
-    })
+    }
 
 
 def _departments():

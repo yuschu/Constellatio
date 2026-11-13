@@ -317,3 +317,45 @@ class ProfileTests(TestCase):
         })
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '当前密码错误')
+
+class DepartmentFormPageTests(TestCase):
+    """v2.1.2：部门新建 = 部门页的二级页（`?view=new`，DSH detail 的 crumb 头部）。"""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin = User.objects.create_superuser('deptpage', '', 'pw')
+
+    def test_new_page_renders_crumb_and_form(self):
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse('user:department_list') + '?view=new')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'ds-sub__crumb')
+        self.assertContains(response, '新建部门')
+        self.assertNotContains(response, 'r-table')   # 列表不在二级页里
+        self.assertEqual(response.context['title'], '新建部门')
+
+    def test_list_keeps_entry_button_but_no_inline_create_card(self):
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse('user:department_list'))
+        self.assertContains(response, '?view=new')
+        # 列表页不再有 create 表单（新建只在二级页）
+        self.assertNotContains(response, 'name="action" value="create"')
+
+    def test_create_invalid_stays_on_second_level(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(reverse('user:department_list'), {
+            'action': 'create', 'name': '', 'parent': '',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'ds-sub__crumb')
+        self.assertContains(response, 'ds-field__error')
+        self.assertEqual(Department.objects.count(), 0)
+
+    def test_create_valid_still_redirects_to_list(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(reverse('user:department_list'), {
+            'action': 'create', 'name': '二级页部门', 'parent': '',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], reverse('user:department_list'))
+        self.assertTrue(Department.objects.filter(name='二级页部门').exists())

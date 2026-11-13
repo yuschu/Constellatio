@@ -658,3 +658,85 @@ class AttendanceRuleEntryTests(TestCase):
         self.client.force_login(self.manager)
         response = self.client.get('/plugins/attendance/')
         self.assertContains(response, '/plugins/attendance/rules/')
+
+class AttendancePanelSubPageTests(TestCase):
+    """v2.1.2：考勤规则 = 考勤面板的二级页（DSH detail：crumb 返回 + 标题 + 字段）。
+
+    面板内导航由 home-panels.js 拦截 `[data-panel-link]`，服务端只需保证
+    `/?panel=attendance&sub=rules` 渲染二级页、侧栏仍落在考勤、表单 POST 后 PRG 回面板。
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        from django.contrib.auth.models import Permission
+
+        from plugins.user.models import Role
+
+        cls.admin = User.objects.create_superuser('panelroot', '', 'pw')
+        cls.staff = User.objects.create_user('panelstaff', password='pw')
+        role = Role.objects.create(name='面板规则管理员')
+        role.permissions.add(
+            Permission.objects.get(codename='attendance_rule_manage'))
+        cls.manager = User.objects.create_user('panelmanager', password='pw')
+        cls.manager.roles.add(role)
+
+    def _payload(self, **overrides):
+        data = {
+            'work_start': '09:00',
+            'work_end': '18:00',
+            'late_grace_minutes': '0',
+            'early_grace_minutes': '0',
+            'workdays': '1,2,3,4,5',
+            'makeup_window_days': '7',
+        }
+        data.update(overrides)
+        return data
+
+    def test_dashboard_panel_links_to_sub_page(self):
+        self.client.force_login(self.admin)
+        response = self.client.get('/?panel=attendance')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '/?panel=attendance&amp;sub=rules')
+        self.assertContains(response, 'data-panel-link')
+
+    def test_sub_page_renders_detail_header(self):
+        self.client.force_login(self.admin)
+        response = self.client.get('/?panel=attendance&sub=rules')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'ds-sub__crumb')
+        self.assertContains(response, 'ds-sub__title')
+        self.assertContains(response, '考勤规则')
+        # 侧栏还停在考勤：面板 key 不变，二级页只是主区换了正文
+        self.assertContains(response, 'data-active-panel="attendance"')
+        self.assertEqual(response.context['panel_sub'], 'rules')
+        self.assertEqual(response.context['panel_title'], '考勤规则')
+
+    def test_sub_page_falls_back_without_perm(self):
+        self.client.force_login(self.staff)
+        response = self.client.get('/?panel=attendance&sub=rules')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['panel_sub'], '')
+        self.assertNotContains(response, 'ds-sub__crumb')
+
+    def test_sub_page_post_prg_back_to_panel(self):
+        self.client.force_login(self.manager)
+        response = self.client.post(
+            '/plugins/attendance/rules/',
+            {**self._payload(work_start='10:00'),
+             'next': '/?panel=attendance&sub=rules'})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response['Location'], '/?panel=attendance&sub=rules&saved=1')
+        rule = AttendanceRule.objects.get(pk=1)
+        self.assertEqual(rule.work_start, time(10, 0))
+        # 回面板后带成功标识（与业务页同一颗徽标）
+        response = self.client.get('/?panel=attendance&sub=rules&saved=1')
+        self.assertContains(response, '考勤规则已保存')
+
+    def test_next_on_other_host_ignored(self):
+        self.client.force_login(self.manager)
+        response = self.client.post(
+            '/plugins/attendance/rules/',
+            {**self._payload(), 'next': 'https://evil.example/x'})
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response['Location'].startswith('/plugins/attendance/rules/'))

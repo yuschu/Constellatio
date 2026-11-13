@@ -3,12 +3,16 @@
 {# 不再依赖 bootstrap 栅格（首页不加载 bootstrap）：布局走 .at-*（定义在主题 CSS 第 27 节）， #}
 {# 卡片/表格/按钮/徽标仍是主题里的 r-* 组件，两侧同一份观感。 #}
 <div class="at-page">
+{% if panel_sub == 'rules' %}
+  {# 二级页：考勤规则（DSH detail 形态，crumb 返回考勤） #}
+{% include "attendance/_rules.html" %}
+{% else %}
 
   <header class="at-head">
     <h2 class="at-head__title">{% trans "考勤" %}</h2>
     <div class="at-head__aside">
       {% if perms.attendance.attendance_rule_manage %}
-      <a href="{% url 'attendance:attendance_rules' %}" class="r-btn r-btn--ghost">⚙ {% trans "考勤规则" %}</a>
+      <a href="{{ rules_entry_url|default_if_none:'/plugins/attendance/rules/' }}" class="r-btn r-btn--ghost"{% if in_home_panel %} data-panel-link{% endif %}>⚙ {% trans "考勤规则" %}</a>
       {% endif %}
       <span class="r-badge">{{ today|date:"Y-m-d" }}</span>
     </div>
@@ -89,9 +93,10 @@
     {% endif %}
   </section>
 
+{% endif %}
 </div>
 
-{% if chart and attendance_chart %}
+{% if panel_sub != 'rules' and chart and attendance_chart %}
 <script src="{{ chart.script_url }}"></script>
 <script src="{{ chart.adapter_url }}"></script>
 <script nonce="{{ request.csp_nonce }}">
