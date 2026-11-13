@@ -5,10 +5,10 @@
 {% trans "新建用户" as sp_title_text %}
 {% comment %}
 「新建用户」独立深链页：同一块设置面板（ds-settings--inline，无遮罩、居中），
-右上 ✕ 是返回用户列表的链接。列表页里点「＋ 新建用户」打开的是同一份
-_user_create_body.html，只是外面多一层遮罩弹层。
+右上角是返回用户列表的箭头。列表页里点「＋ 新建用户」打开的是同一份
+_user_form_body.html，只是外面多一层遮罩弹层。
 {% endcomment %}
 <div class="ds-settings ds-settings--inline ds-settings--single">
-  {% include "includes/ds_settings_panel.html" with sp_title=sp_title_text sp_body="user/_user_create_body.html" sp_modal=False sp_back=user_list_back %}
+  {% include "includes/ds_settings_panel.html" with sp_title=sp_title_text sp_body="user/_user_form_body.html" sp_modal=False sp_back=user_list_back %}
 </div>
 {% endblock %}

@@ -405,7 +405,7 @@ class StructureUserDetailTests(TestCase):
         self.assertContains(resp, 't@example.com')
         self.assertContains(resp, '资料查看')
         self.assertContains(resp, '上级甲')
-        self.assertContains(resp, '基本信息')
+        self.assertContains(resp, '直属上级')
 
     def test_unknown_user_404(self):
         self.client.force_login(self.viewer)

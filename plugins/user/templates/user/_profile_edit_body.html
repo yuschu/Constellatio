@@ -1,0 +1,32 @@
+{% load i18n %}
+{% comment %}
+「编辑资料」设置页正文（个人中心弹层与独立深链页共用）。
+提交到 user:profile_edit；校验失败由视图渲染回个人中心并保持弹层打开。
+{% endcomment %}
+<p class="ds-settings__desc">{% trans "只修改自己的姓名与邮箱；角色、部门与权限由管理员在用户管理里调整。" %}</p>
+
+<form method="post" action="{{ profile_edit_url }}" novalidate class="ds-settings__form">
+  {% csrf_token %}
+
+  {% for error in profile_edit_form.non_field_errors %}
+  <div class="ds-field__error">{{ error }}</div>
+  {% endfor %}
+
+  <div class="ds-fields">
+    {% for field in profile_edit_form %}
+    <div class="ds-field">
+      <label class="ds-field__label" for="{{ field.id_for_label }}">
+        {{ field.label }}{% if field.field.required %} *{% endif %}
+      </label>
+      {{ field }}
+      {% if field.help_text %}<div class="ds-field__help">{{ field.help_text }}</div>{% endif %}
+      {% for e in field.errors %}<div class="ds-field__error">{{ e }}</div>{% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="ds-settings__actions ds-settings__actions--center">
+    <button class="r-btn" type="submit">{% trans "保存" %}</button>
+    <button class="r-btn r-btn--ghost" type="button" data-ds-modal-close>{% trans "取消" %}</button>
+  </div>
+</form>

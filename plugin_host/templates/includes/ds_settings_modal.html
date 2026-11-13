@@ -11,12 +11,14 @@
   sp_url    打开时 pushState 的地址
   sp_base   关闭时 replaceState 回上一级
   sp_open   服务端渲染时是否已是打开态
+  sp_static 该弹层的开合不跟地址栏走（独立地址页自带弹层，如「已读人员」）
   sp_stack  正文列宽（"wide" 可选）
 {% endcomment %}
 <div class="ds-settings ds-settings--subpage ds-settings--single" id="{{ sp_id }}"
      role="dialog" aria-modal="true" aria-labelledby="{{ sp_id }}-title"
      data-ds-subpage data-ds-subpage-query="{{ sp_query }}"
      data-ds-subpage-url="{{ sp_url }}" data-ds-subpage-base="{{ sp_base }}"
+     {% if sp_static %}data-ds-subpage-static{% endif %}
      {% if not sp_open %}hidden aria-hidden="true"{% endif %}>
   <div class="ds-settings__overlay" aria-hidden="true" data-ds-modal-close></div>
   {% include "includes/ds_settings_panel.html" with sp_title=sp_title sp_title_id=sp_id|add:"-title" sp_body=sp_body sp_modal=True sp_stack=sp_stack %}

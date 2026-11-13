@@ -125,6 +125,28 @@ def _return_url(request):
     return None
 
 
+def save_rules(request):
+    """校验并保存考勤规则：返回 ``(form, response)``。
+
+    保存成功时第二个元素是 PRG 响应（回 `next` / 本页并带 `saved=1`）；
+    校验失败时第二个元素是 ``None``，宿主（业务页或首页面板）就地渲染错误。
+    两个宿主共用这一份校验，避免出现「面板里能填、业务页里不校验」这类双口径。
+    """
+    rule = AttendanceRule.get_solo()
+    # 用独立实例绑定表单：ModelForm 会把校验后的字段原地写回 instance，
+    # 直接传 get_solo() 的缓存对象会让非法输入污染进程内缓存。
+    form = AttendanceRuleForm(
+        request.POST, instance=AttendanceRule.objects.get(pk=rule.pk))
+    if not form.is_valid():
+        return form, None
+    rule = form.save(commit=False)
+    rule.updated_by = request.user
+    rule.save()
+    target = _return_url(request) or reverse('attendance:attendance_rules')
+    sep = '&' if '?' in target else '?'
+    return form, redirect(f'{target}{sep}saved=1')
+
+
 @require_perm('attendance_rule_manage')
 def attendance_rules(request):
     """考勤规则设置（单例）：上下班时间 / 迟到早退宽限 / 工作日 / 补卡回溯。
@@ -135,22 +157,14 @@ def attendance_rules(request):
     v2.1.2：本页既是独立深链，也是首页「考勤」面板设置弹层里的同一块正文
     （`/?panel=attendance&sub=rules` 打开弹层，弹层内容复用 `_rules_panel.html`）。
     面板里的表单把 `next` 指回面板 URL，保存成功后 PRG 回面板并带 `saved=1`；
-    不带宽限时仍回本页（既有行为与测试断言不变）。
+    校验/保存本身在 `save_rules()`，首页 POST 时由 home 直接调用同一份。
     """
     rule = AttendanceRule.get_solo()
     saved = request.GET.get('saved') == '1'
     if request.method == 'POST':
-        # 用独立实例绑定表单：ModelForm 会把校验后的字段原地写回 instance，
-        # 直接传 get_solo() 的缓存对象会让非法输入污染进程内缓存。
-        form = AttendanceRuleForm(
-            request.POST, instance=AttendanceRule.objects.get(pk=rule.pk))
-        if form.is_valid():
-            rule = form.save(commit=False)
-            rule.updated_by = request.user
-            rule.save()
-            target = _return_url(request) or reverse('attendance:attendance_rules')
-            sep = '&' if '?' in target else '?'
-            return redirect(f'{target}{sep}saved=1')
+        form, response = save_rules(request)
+        if response is not None:
+            return response
     else:
         form = AttendanceRuleForm(instance=rule)
 

@@ -1,0 +1,79 @@
+{% load i18n %}
+{% get_current_language as LANGUAGE_CODE %}
+{% comment %}
+「查看权限」设置页正文：等级 / 角色 / 基线 / 直接 / 有效权限五块。
+权限码按语言给中英文两套标法（英文站用 app_label | codename，中文站用权限名）。
+{% endcomment %}
+<p class="ds-settings__desc">{% trans "L0 超级管理员 / L1 系统管理 / L2 管理岗 / L3 员工；等级取自身权限中的最高级。" %}</p>
+
+<div class="ds-settings__row">
+  <div>
+    <div class="ds-settings__row-title">{% trans "权限等级" %}</div>
+    <div class="ds-settings__row-desc">{% trans "等级取自身权限中的最高级。" %}</div>
+  </div>
+  <div><span class="r-badge r-badge--blue">{{ user_level_label }}</span></div>
+</div>
+
+<div class="ds-settings__row">
+  <div>
+    <div class="ds-settings__row-title">{% trans "角色" %}</div>
+    <div class="ds-settings__row-desc">{% trans "角色带来的权限；角色变动会即时生效。" %}</div>
+  </div>
+  <div>
+    {% for role in roles %}
+      <div class="mb-2">
+        <span class="r-badge">{{ role.name }}</span>
+        <span class="r-badge r-badge--blue">{{ role.level_label }}</span>
+        {% for p in role.permissions.all %}
+          <span class="r-badge r-badge--blue me-1">{% if LANGUAGE_CODE == 'en' %}{{ p.content_type.app_label }} | {{ p.codename }}{% else %}{{ p.name }}{% endif %}</span>
+        {% endfor %}
+      </div>
+    {% empty %}
+      <span class="ds-settings__state">{% trans "暂无角色" %}</span>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="ds-settings__row">
+  <div>
+    <div class="ds-settings__row-title">{% trans "全员基线权限" %}</div>
+    <div class="ds-settings__row-desc">{% trans "登录即可用，无需分配角色；权限被冻结时同样失效。" %}</div>
+  </div>
+  <div>
+    {% for p in baseline_permissions %}
+      <span class="r-badge me-1">{% if LANGUAGE_CODE == 'en' %}{{ p.content_type.app_label }} | {{ p.codename }}{% else %}{{ p.name }}{% endif %}</span>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="ds-settings__row">
+  <div>
+    <div class="ds-settings__row-title">{% trans "直接权限" %}</div>
+    <div class="ds-settings__row-desc">{% trans "管理员直接分配给本账号的权限。" %}</div>
+  </div>
+  <div>
+    {% for p in direct_permissions %}
+      <span class="r-badge r-badge--blue me-1">{% if LANGUAGE_CODE == 'en' %}{{ p.content_type.app_label }} | {{ p.codename }}{% else %}{{ p.name }}{% endif %}</span>
+    {% empty %}
+      <span class="ds-settings__state">{% trans "暂无直接权限" %}</span>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="ds-settings__row">
+  <div>
+    <div class="ds-settings__row-title">{% trans "有效权限" %}</div>
+    <div class="ds-settings__row-desc">{% trans "基线 + 角色 + 直接权限的并集，扣掉冻结状态。" %}</div>
+  </div>
+  <div>
+    {% if request.user.is_superuser %}
+      <span class="r-badge">{% trans "超级管理员：拥有全部权限" %}</span>
+    {% else %}
+      {% for p in effective_permissions %}
+        <span class="r-badge me-1">{% if LANGUAGE_CODE == 'en' %}{{ p.content_type.app_label }} | {{ p.codename }}{% else %}{{ p.name }}{% endif %}</span>
+      {% empty %}
+        <span class="ds-settings__state">{% trans "暂无权限" %}</span>
+      {% endfor %}
+    {% endif %}
+  </div>
+</div>

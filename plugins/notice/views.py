@@ -21,16 +21,22 @@ def notice_list(request):
     两个请求同时判定未读时会各自 insert，由 `unique_together` 去重，不产生重复行。
     v2.1.3：列表与「发布公告」设置弹层共用 _render_notice_list 一次渲染。
     """
-    return _render_notice_list(
-        request, form_open=request.method == 'GET' and request.GET.get('view') == 'new')
+    # 弹层里的表单 action 为空 → POST 回到本页，这里分派给 notice_create，
+    # 校验失败由 notice_create 渲染回列表弹层（错误就地显示）。
+    if request.method == 'POST':
+        return notice_create(request)
+    return _render_notice_list(request, form_open=request.GET.get('view') == 'new')
 
 
-def _render_notice_list(request, form_data=None, form_open=False):
-    """公告中心的唯一渲染入口（列表 + 「发布公告」设置弹层）。
+def _render_notice_list(request, form_data=None, form_open=False, readers=None):
+    """公告中心的唯一渲染入口（列表 + 发布 / 已读人员两个设置弹层）。
 
     v2.1.3：发布公告改 DSH 设置弹层形态（单分区 → 不渲染左侧 188px 分区列，
     内容与按钮居中）。`?view=new` 或标题/正文为空时 form_open=True，列表与
     弹层一次渲染完，并把已填内容回填（原来非法 POST 直接丢字重画）。
+
+    「已读人员」也不再是另一套页面：`readers` 传入某条公告时，同一个列表页
+    把名单渲染进设置弹层（`notice_readers` 视图就是这么用的）。
     """
     announcements = (
         Announcement.objects.annotate(read_count=Count('read_records'))
@@ -52,6 +58,16 @@ def _render_notice_list(request, form_data=None, form_open=False):
                     item.read_count += 1
 
     list_url = reverse('notice:notice_list')
+    readers_ctx = {}
+    if readers is not None:
+        readers_ctx = {
+            'readers_view': readers,
+            'readers': list(
+                AnnouncementRead.objects.filter(announcement=readers)
+                .select_related('user').order_by('-read_at')),
+            'readers_open': True,
+            'readers_url': reverse('notice:notice_readers', args=[readers.pk]),
+        }
     return render(request, 'notice/notice_list.html', {
         'announcements': page_obj,
         'page_obj': page_obj,
@@ -59,20 +75,19 @@ def _render_notice_list(request, form_data=None, form_open=False):
         'notice_list_url': list_url,
         'notice_form_open': form_open,
         'form_data': form_data or {},
+        **readers_ctx,
     })
 
 
 @require_perm('notice_manage')
 def notice_readers(request, pk):
-    """公告已读人员明细（仅 notice_manage 可见）。"""
+    """公告已读人员明细（仅 notice_manage 可见）：同一张列表页 + 设置弹层。
+
+    不再复制一套「已读人员」页面：明细塞进公告中心的设置弹层里，
+    地址仍是本页，弹层默认打开（`data-ds-subpage-url` 指向本页）。
+    """
     announcement = get_object_or_404(Announcement, pk=pk)
-    readers = list(
-        AnnouncementRead.objects.filter(announcement=announcement)
-        .select_related('user').order_by('-read_at'))
-    return render(request, 'notice/notice_list.html', {
-        'readers_view': announcement,
-        'readers': readers,
-    })
+    return _render_notice_list(request, readers=announcement)
 
 
 @login_required

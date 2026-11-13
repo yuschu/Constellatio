@@ -7,6 +7,7 @@ from django.db.models import Count, Max
 from django.db.models.functions import TruncDate
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
@@ -194,4 +195,5 @@ def blockchain_detail(request, record_id):
         'record': record,
         'verify_ok': ok,
         'broken_id': broken_id,
+        'back_url': reverse('blockchain:blockchain_list'),
     })

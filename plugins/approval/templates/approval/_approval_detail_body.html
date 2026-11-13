@@ -1,0 +1,156 @@
+{% load i18n %}
+{% comment %}
+审批详情正文（设置面板形态）。单分区 → 不列左侧分区栏，全部内容一列居中：
+申请信息 → 流转记录 → 抄送 → 会签 → 审批操作。操作按钮居中。
+{% endcomment %}
+<div class="ds-fields">
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "状态" %}</div>
+    <div><span class="r-badge">{{ approval.get_status_display }}</span></div>
+  </div>
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "类型" %}</div>
+    <div class="ds-settings__state">{% trans approval.get_approval_type_display %}</div>
+  </div>
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "标题" %}</div>
+    <div class="ds-settings__state">{{ approval.title }}</div>
+  </div>
+  {% if approval.department_name %}
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "部门" %}</div>
+    <div class="ds-settings__state">{{ approval.department_name }}</div>
+  </div>
+  {% endif %}
+  {% for label, value in form_rows %}
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{{ label }}</div>
+    <div class="ds-settings__state" style="white-space:pre-wrap;">{{ value }}</div>
+  </div>
+  {% endfor %}
+  {% if approval.attachment %}
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "附件" %}</div>
+    <div>
+      <a href="{% url 'approval:approval_attachment' approval.pk %}" class="ds-settings__link">
+        {% trans "下载附件" %} · {{ approval.attachment.name|cut:"approval_attachments/"|truncatechars:40 }}
+      </a>
+    </div>
+  </div>
+  {% endif %}
+  {% if not approval.form_data and approval.content %}
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "内容" %}</div>
+    <div class="ds-settings__state" style="white-space:pre-wrap;">{{ approval.content }}</div>
+  </div>
+  {% endif %}
+  {% if approval.amount %}
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "金额" %}</div>
+    <div class="ds-settings__state">￥{{ approval.amount }}</div>
+  </div>
+  {% endif %}
+  {% if approval.form_data.e_seal %}
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "电子盖章" %}</div>
+    <div>
+      <span class="r-badge r-badge--orange">{% trans "待接入" %}</span>
+      <span class="ds-settings__state">{{ approval.form_data.e_seal.text }}</span>
+    </div>
+  </div>
+  {% endif %}
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "申请人" %}</div>
+    <div class="ds-settings__state">{{ approval.applicant.last_name|default:approval.applicant.username }}</div>
+  </div>
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "审批人" %}</div>
+    <div class="ds-settings__state">{{ approval.approver.last_name|default:approval.approver.username }}</div>
+  </div>
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "发起时间" %}</div>
+    <div class="ds-settings__state">{{ approval.created_at|date:"Y-m-d H:i" }}</div>
+  </div>
+</div>
+
+<p class="ds-settings__desc">{% trans "流转记录" %}</p>
+<div class="ds-fields">
+  {% for r in records %}
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">
+      <span class="r-badge r-badge--blue">{% if r.action == 'e_seal' %}{% trans "电子盖章" %}{% elif r.action == 'resubmit' %}{% trans "重新申请" %}{% elif r.action == 'replaced' %}{% trans "已替换" %}{% else %}{% trans r.action %}{% endif %}</span>
+      {{ r.operator.last_name|default:r.operator.username }}
+    </div>
+    <div class="ds-settings__state">
+      {{ r.created_at|date:"m-d H:i" }}{% if r.comment %} · {{ r.comment }}{% endif %}
+    </div>
+  </div>
+  {% empty %}
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "暂无流转记录" %}</div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if cc_users %}
+<p class="ds-settings__desc">{% trans "抄送" %}</p>
+<div class="ds-settings__row">
+  <div>
+    {% for c in cc_users %}
+    <span class="r-badge r-badge--blue me-1">{{ c.last_name|default:c.username }}</span>
+    {% endfor %}
+  </div>
+  <div class="ds-settings__state">{% trans "审批人收到申请与审批完成时，自动抄送其上级。" %}</div>
+</div>
+{% endif %}
+
+{% if is_counter %}
+<p class="ds-settings__desc">{% blocktranslate with count=signers|length %}会签人（{{ count }} 人，全部通过才生效）{% endblocktranslate %}</p>
+<div class="ds-fields">
+  {% for s in signers %}
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">
+      <span class="r-badge {% if s.signed %}r-badge--blue{% else %}r-badge--orange{% endif %}">
+        {% if s.signed %}{% trans "已签" %}{% else %}{% trans "待签" %}{% endif %}
+      </span>
+      {{ s.signer.last_name|default:s.signer.username }}
+    </div>
+    <div class="ds-settings__state">{% if s.comment %}{{ s.comment }}{% else %}—{% endif %}</div>
+  </div>
+  {% empty %}
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "暂无会签人" %}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if can_act %}
+<p class="ds-settings__desc">{% if is_counter %}{% trans "会签操作" %}{% else %}{% trans "审批操作" %}{% endif %}</p>
+<form method="post" novalidate class="ds-settings__form">
+  {% csrf_token %}
+  <div class="ds-fields">
+    <div class="ds-field">
+      <label class="ds-field__label" for="approval-comment">{% trans "意见" %}</label>
+      <input class="r-input" id="approval-comment" type="text" name="comment"
+             placeholder="{% trans '审批意见（可选）' %}">
+    </div>
+  </div>
+  <div class="ds-settings__actions ds-settings__actions--center">
+    {% if is_counter %}
+    <button class="r-btn" type="submit" name="action" value="sign_approve"
+            data-confirm="{% trans '确认会签通过？确认后不可修改。' %}">{% trans "会签通过" %}</button>
+    <button class="r-btn r-btn--ghost" type="submit" name="action" value="sign_reject"
+            data-confirm="{% trans '确认会签驳回？确认后不可修改。' %}">{% trans "会签驳回" %}</button>
+    {% else %}
+    <button class="r-btn" type="submit" name="action" value="approve"
+            data-confirm="{% trans '确认通过该申请？确认后不可修改。' %}">{% trans "通过" %}</button>
+    <button class="r-btn r-btn--ghost" type="submit" name="action" value="reject"
+            data-confirm="{% trans '确认驳回该申请？确认后不可修改。' %}">{% trans "驳回" %}</button>
+    {% endif %}
+  </div>
+  <p class="ds-settings__desc" style="text-align:center;">{% trans "审批操作需二次确认；确认后状态不可修改。" %}</p>
+</form>
+{% elif not status_pending %}
+<p class="ds-settings__desc" style="text-align:center;">{% trans "该申请已处理，不可修改。" %}</p>
+{% endif %}

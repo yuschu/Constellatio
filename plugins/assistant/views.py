@@ -98,6 +98,15 @@ def home(request):
     color_mode = _resolve_color_mode(request)
     panel = _resolve_panel(request)
     sub = _resolve_sub(request, panel)
+    if request.method == 'POST' and (panel, sub) == ('attendance', 'rules'):
+        # 设置弹层里的规则表单 action 为空 → POST 回到面板 URL（/）：
+        # 保存逻辑与业务页共用 save_rules()，成功 PRG 回面板并带 saved=1，
+        # 校验失败则把带错误的表单交给正文就地渲染（不跳到业务页）。
+        from plugins.attendance.views import save_rules
+        rules_form, rules_response = save_rules(request)
+        if rules_response is not None:
+            return rules_response
+        request.ds_rules_form = rules_form
     primary_menus, common_menus = _split_menus(request, panel)
     context = {
         'color_mode': color_mode,
@@ -168,8 +177,11 @@ def _panel_context(request, panel, sub=''):
         context['rules_entry_url'] = '/?panel=attendance&sub=rules'
         context['rules_back_url'] = '/?panel=attendance'
         if request.user.has_perm('attendance_rule_manage'):
-            # 弹层正文要表单实例；无权限时连规则数值都不下发
-            context.update(rules_context(request))
+            # 弹层正文要表单实例；无权限时连规则数值都不下发。
+            # POST 校验失败的表单由 home() 挂在 request 上，这里原样交回正文，
+            # 弹层保持打开并显示字段错误。
+            context.update(rules_context(
+                request, form=getattr(request, 'ds_rules_form', None)))
             context['rules_next'] = '/?panel=attendance&sub=rules'
             context['rules_open'] = sub == 'rules'
         return context

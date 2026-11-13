@@ -2,38 +2,6 @@
 {% load i18n %}
 {% block title %}{% if readers_view %}{% trans "已读人员" %}{% else %}{% trans "公告中心" %}{% endif %} · Constellatio{% endblock %}
 {% block content %}
-{% if readers_view %}
-
-<div class="d-flex align-items-center gap-3 flex-wrap mb-4">
-  <a href="{% url 'notice:notice_list' %}" class="r-offset-hover">← {% trans "返回列表" %}</a>
-  <h2 class="mb-0">{% trans "已读人员" %}</h2>
-</div>
-<div class="r-card">
-  <p class="text-muted mb-3">{{ readers_view.title }}</p>
-  <table class="r-table">
-    <thead>
-      <tr>
-        <th scope="col">{% trans "姓名" %}</th>
-        <th scope="col">{% trans "账号" %}</th>
-        <th scope="col">{% trans "已读时间" %}</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for r in readers %}
-      <tr>
-        <td>{{ r.user.last_name|default:r.user.username }}</td>
-        <td>{{ r.user.username }}</td>
-        <td>{{ r.read_at|date:"Y-m-d H:i" }}</td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="3" class="text-muted">{% trans "暂无已读人员" %}</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-
-{% else %}
-
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
   <h2 class="mb-0">{% trans "公告中心" %}</h2>
   {% if notice_create_url %}
@@ -67,9 +35,13 @@
 
 {% include 'includes/pagination.html' %}
 
-{% endif %}
 {% if notice_create_url %}
 {% trans "发布公告" as sp_notice_create_title %}
 {% include "includes/ds_settings_modal.html" with sp_id="ds-notice-new" sp_title=sp_notice_create_title sp_body="notice/_notice_create_body.html" sp_query="view=new" sp_url=notice_create_url sp_base=notice_list_url sp_open=notice_form_open %}
+{% endif %}
+
+{% if readers_view %}
+{% trans "已读人员" as sp_readers_title %}
+{% include "includes/ds_settings_modal.html" with sp_id="ds-notice-readers" sp_title=sp_readers_title sp_body="notice/_notice_readers_body.html" sp_query="" sp_url="" sp_base="" sp_open=readers_open sp_static=True %}
 {% endif %}
 {% endblock %}

@@ -1,0 +1,66 @@
+{% load i18n %}
+{% comment %}
+「用户资料」设置页正文（组织架构页上的弹层）。
+按 DSH 设置行的排法：左标题 / 右值，0.5px 分隔行；操作在底部居中。
+{% endcomment %}
+<p class="ds-settings__desc">{% trans "与组织关系树同权限口径：可看全员，只读。" %}</p>
+
+<div class="ds-fields">
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "姓名" %}</div>
+    <div class="ds-settings__state">{{ target.last_name|default:"—" }}</div>
+  </div>
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "账号" %}</div>
+    <div class="ds-settings__state">{{ target.username }}</div>
+  </div>
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "部门" %}</div>
+    <div class="ds-settings__state">{{ target.department.name|default:"—" }}</div>
+  </div>
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "直属上级" %}</div>
+    <div>
+      {% if target.leader %}
+      <a href="{% url 'structure:user_detail' target.leader.pk %}" class="ds-settings__link">{{ target.leader.last_name|default:target.leader.username }}</a>
+      {% else %}<span class="ds-settings__state">—</span>{% endif %}
+    </div>
+  </div>
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "状态" %}</div>
+    <div>
+      {% if not target.is_active %}
+      <span class="r-badge r-badge--pink">{% trans "停用" %}</span>
+      {% elif target.permission_frozen %}
+      <span class="r-badge r-badge--orange">{% trans "权限冻结" %}</span>
+      {% else %}
+      <span class="r-badge r-badge--green">{% trans "在职" %}</span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "角色" %}</div>
+    <div>
+      {% for role in target.roles.all %}<span class="r-badge me-1">{{ role.name }}</span>{% empty %}<span class="ds-settings__state">—</span>{% endfor %}
+    </div>
+  </div>
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "邮箱" %}</div>
+    <div class="ds-settings__state">{{ target.email|default:"—" }}</div>
+  </div>
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "创建时间" %}</div>
+    <div class="ds-settings__state">{{ target.created_at|date:"Y-m-d H:i" }}</div>
+  </div>
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "直接下属" %}</div>
+    <div class="ds-settings__state">{{ target.direct_reports.count }}</div>
+  </div>
+</div>
+
+{% if can_manage %}
+<div class="ds-settings__actions ds-settings__actions--center">
+  <a href="{% url 'user:user_edit' target.pk %}" class="r-btn">{% trans "用户管理" %}</a>
+  <button class="r-btn r-btn--ghost" type="button" data-ds-modal-close>{% trans "关闭" %}</button>
+</div>
+{% endif %}

@@ -144,23 +144,45 @@ def department_list(request):
 # ---------------------------------------------------------------------------
 # 用户
 # ---------------------------------------------------------------------------
-def _render_user_list(request, form=None, form_open=False):
-    """用户列表的唯一渲染入口（列表 + 「新建用户」设置弹层）。
+def _render_user_list(request, form=None, form_open=False, edit_user=None):
+    """用户列表的唯一渲染入口（列表 + 用户表单设置弹层）。
 
-    v2.1.3：新建改 DSH 设置弹层形态（遮罩 + 800×800 面板）。列表页里的入口是
-    `?view=new` 打开弹层，校验失败也回到这里（form_open=True），一次渲染完；
-    独立深链 /users/new/ 用同一块面板的无遮罩版本（user_create_page.html）。
+    v2.1.3：新建 / 编辑都是 DSH 设置弹层形态（遮罩 + 800×800 面板），正文同一份
+    `user/_user_form_body.html`，两种模式只差标题与提交文案：
+    - create：`?view=new`；
+    - edit：`?view=edit&id=<pk>`，行内「编辑」跳到这个 URL 打开弹层。
+    弹层里的表单 action 为空 → POST 回列表页，`user_list` 按 `?view=` 分派到
+    创建 / 编辑逻辑；校验失败也回到这里（form_open=True），一次渲染完。
     本页只有一个分区，所以面板带 ds-settings--single：不渲染左侧 188px
     分区列，内容与按钮居中。
     """
     users = paginate(
         request, User.objects.select_related('department').prefetch_related('roles').order_by('id'))
     list_url = reverse('user:user_list')
+    if edit_user is not None:
+        mode = 'edit'
+        form_title = _('编辑用户：%(name)s') % {
+            'name': edit_user.last_name or edit_user.username}
+        form_query = f'view=edit&id={edit_user.pk}'
+        submit_label = _('保存')
+        default_form = UserForm(instance=edit_user)
+    else:
+        mode = 'create'
+        form_title = _('新建用户')
+        form_query = 'view=new'
+        submit_label = _('创建')
+        default_form = UserForm(operator=request.user)
     return render(request, 'user/user_list.html', {
         'page_obj': users,
-        'form': form if form is not None else UserForm(operator=request.user),
+        'form': form if form is not None else default_form,
         'user_form_open': form_open,
+        'user_form_mode': mode,
+        'user_form_title': form_title,
+        'user_form_query': form_query,
+        'user_form_url': f'{list_url}?{form_query}',
+        'user_form_submit': submit_label,
         'user_create_url': f'{list_url}?view=new',
+        'user_edit_url': f'{list_url}?view=edit&id=',
         'user_list_url': list_url,
     })
 
@@ -168,69 +190,114 @@ def _render_user_list(request, form=None, form_open=False):
 @require_perm('user_manage')
 def user_list(request):
     # v1.7.6：用户列表分页（排序在分页之前定死）
-    return _render_user_list(
-        request, form_open=request.method == 'GET' and request.GET.get('view') == 'new')
+    view = request.GET.get('view')
+    if request.method == 'POST':
+        # 弹层表单 POST 回本页：按 ?view= 分派，错误就地渲染回弹层。
+        if view == 'edit':
+            return _save_user_edit(request, request.GET.get('id'), host='list')
+        return _save_user_create(request, host='list')
+    if view == 'edit':
+        target = get_object_or_404(User, pk=request.GET.get('id'))
+        if _guard_superuser(request, target):
+            return redirect('user:user_list')
+        return _render_user_list(request, form_open=True, edit_user=target)
+    return _render_user_list(request, form_open=view == 'new')
+
+
+def _save_user_create(request, host='page'):
+    """创建用户的校验与落库；`host` 决定校验失败回到列表弹层还是独立深链页。"""
+    data = _clean_multi(_clean_multi(request.POST, 'roles'), 'user_permissions')
+    form = UserForm(data, operator=request.user)
+    if form.is_valid():
+        user = form.save()
+        user_created.send(sender=user.__class__, user_id=user.pk)
+        return redirect('user:user_list')
+    if host == 'list':
+        # 校验失败留在设置弹层里，把错误挂回对应字段
+        return _render_user_list(request, form, form_open=True)
+    return render(request, 'user/user_create_page.html', {
+        'form': form,
+        'user_form_submit': _('创建'),
+        'user_form_mode': 'create',
+        'user_list_back': reverse('user:user_list'),
+    })
 
 
 @require_perm('user_manage')
 def user_create(request):
     if request.method == 'POST':
-        data = _clean_multi(_clean_multi(request.POST, 'roles'), 'user_permissions')
-        form = UserForm(data, operator=request.user)
-        if form.is_valid():
-            user = form.save()
-            user_created.send(sender=user.__class__, user_id=user.pk)
-            return redirect('user:user_list')
-        # 校验失败留在设置弹层里，把错误挂回对应字段
-        return _render_user_list(request, form, form_open=True)
+        return _save_user_create(request, host='page')
     return render(request, 'user/user_create_page.html', {
         'form': UserForm(operator=request.user),
+        'user_form_submit': _('创建'),
+        'user_form_mode': 'create',
+        'user_list_back': reverse('user:user_list'),
+    })
+
+
+def _save_user_edit(request, user_id, host='page'):
+    """编辑用户的校验与落库（口径同 `_save_user_create` 的 host 分派）。"""
+    user = get_object_or_404(User, pk=user_id)
+    if _guard_superuser(request, user):
+        return redirect('user:user_list')
+    data = _clean_multi(_clean_multi(request.POST, 'roles'), 'user_permissions')
+    form = UserForm(data, instance=user, operator=request.user)
+    if form.is_valid():
+        # v1.7.1（P0-11）：普通管理员不能借编辑页改 is_active 绕过「禁用需会签」，
+        # 状态变更必须走 user_status（超管直接生效，其余人先冻结再发起会签）。
+        if 'is_active' in form.changed_data and not request.user.is_superuser:
+            form.add_error(
+                'is_active',
+                _('启用 / 禁用请使用状态操作：普通管理员禁用需会签审批'))
+        else:
+            pwd_changed = bool(form.cleaned_data.get('password'))
+            status_changed = 'is_active' in form.changed_data
+            form.save()
+            if pwd_changed:
+                from plugin_host.signals import password_changed
+                password_changed.send(sender=user.__class__, user_id=user.pk,
+                                      operator_id=request.user.pk)
+            if status_changed:
+                # 与 user_status 口径一致：禁用同时冻结权限，并留痕
+                user.refresh_from_db()
+                if not user.is_active:
+                    user.permission_frozen = True
+                    user.save(update_fields=['permission_frozen', 'updated_at'])
+                    user_disabled.send(sender=User, user_id=user.pk,
+                                       operator_id=request.user.pk)
+                user_status_changed.send(
+                    sender=User, user_id=user.pk,
+                    status='enabled' if user.is_active else 'disabled',
+                    operator_id=request.user.pk)
+            user_updated.send(sender=user.__class__, user_id=user.pk)
+            return redirect('user:user_list')
+    if host == 'list':
+        return _render_user_list(request, form, form_open=True, edit_user=user)
+    return render(request, 'user/user_edit_page.html', {
+        'form': form,
+        'user_form_submit': _('保存'),
+        'user_form_mode': 'edit',
+        'user_form_title': _('编辑用户：%(name)s') % {
+            'name': user.last_name or user.username},
         'user_list_back': reverse('user:user_list'),
     })
 
 
 @require_perm('user_manage')
 def user_edit(request, user_id):
+    if request.method == 'POST':
+        return _save_user_edit(request, user_id, host='page')
     user = get_object_or_404(User, pk=user_id)
     if _guard_superuser(request, user):
         return redirect('user:user_list')
-    if request.method == 'POST':
-        data = _clean_multi(_clean_multi(request.POST, 'roles'), 'user_permissions')
-        form = UserForm(data, instance=user, operator=request.user)
-        if form.is_valid():
-            # v1.7.1（P0-11）：普通管理员不能借编辑页改 is_active 绕过「禁用需会签」，
-            # 状态变更必须走 user_status（超管直接生效，其余人先冻结再发起会签）。
-            if 'is_active' in form.changed_data and not request.user.is_superuser:
-                form.add_error(
-                    'is_active',
-                    _('启用 / 禁用请使用状态操作：普通管理员禁用需会签审批'))
-            else:
-                pwd_changed = bool(form.cleaned_data.get('password'))
-                status_changed = 'is_active' in form.changed_data
-                form.save()
-                if pwd_changed:
-                    from plugin_host.signals import password_changed
-                    password_changed.send(sender=user.__class__, user_id=user.pk,
-                                          operator_id=request.user.pk)
-                if status_changed:
-                    # 与 user_status 口径一致：禁用同时冻结权限，并留痕
-                    user.refresh_from_db()
-                    if not user.is_active:
-                        user.permission_frozen = True
-                        user.save(update_fields=['permission_frozen', 'updated_at'])
-                        user_disabled.send(sender=User, user_id=user.pk,
-                                           operator_id=request.user.pk)
-                    user_status_changed.send(
-                        sender=User, user_id=user.pk,
-                        status='enabled' if user.is_active else 'disabled',
-                        operator_id=request.user.pk)
-                user_updated.send(sender=user.__class__, user_id=user.pk)
-                return redirect('user:user_list')
-    else:
-        form = UserForm(instance=user)
-    return render(request, 'user/user_form.html',
-                  {'form': form, 'title': _('编辑用户：%(name)s') % {
-                      'name': user.last_name or user.username}})
+    return render(request, 'user/user_edit_page.html', {
+        'form': UserForm(instance=user),
+        'user_form_submit': _('保存'),
+        'user_form_mode': 'edit',
+        'user_form_title': _('编辑用户：%(name)s') % {
+            'name': user.last_name or user.username},
+        'user_list_back': reverse('user:user_list'),
+    })
 
 
 @require_perm('user_manage')
@@ -250,50 +317,107 @@ def user_status(request, user_id):
 # ---------------------------------------------------------------------------
 # 角色
 # ---------------------------------------------------------------------------
-def _render_role_list(request, form=None, form_open=False):
-    """角色列表的唯一渲染入口（列表 + 「新建角色」设置弹层，口径同用户列表）。"""
+def _render_role_list(request, form=None, form_open=False, edit_role=None):
+    """角色列表的唯一渲染入口（列表 + 角色表单设置弹层，口径同用户列表）。"""
     list_url = reverse('user:role_list')
+    if edit_role is not None:
+        mode = 'edit'
+        form_title = _('编辑角色：%(name)s') % {'name': edit_role.name}
+        form_query = f'view=edit&id={edit_role.pk}'
+        submit_label = _('保存')
+        default_form = RoleForm(instance=edit_role, operator=request.user)
+    else:
+        mode = 'create'
+        form_title = _('新建角色')
+        form_query = 'view=new'
+        submit_label = _('创建')
+        default_form = RoleForm(operator=request.user)
     return render(request, 'user/role_list.html', {
         'roles': Role.objects.prefetch_related('permissions').order_by('id'),
-        'form': form if form is not None else RoleForm(operator=request.user),
+        'form': form if form is not None else default_form,
         'role_form_open': form_open,
+        'role_form_mode': mode,
+        'role_form_title': form_title,
+        'role_form_query': form_query,
+        'role_form_url': f'{list_url}?{form_query}',
+        'role_form_submit': submit_label,
         'role_create_url': f'{list_url}?view=new',
+        'role_edit_url': f'{list_url}?view=edit&id=',
         'role_list_url': list_url,
     })
 
 
 @require_perm('user_manage')
 def role_list(request):
-    return _render_role_list(
-        request, form_open=request.method == 'GET' and request.GET.get('view') == 'new')
+    view = request.GET.get('view')
+    if request.method == 'POST':
+        if view == 'edit':
+            return _save_role_edit(request, request.GET.get('id'), host='list')
+        return _save_role_create(request, host='list')
+    if view == 'edit':
+        return _render_role_list(
+            request, form_open=True,
+            edit_role=get_object_or_404(Role, pk=request.GET.get('id')))
+    return _render_role_list(request, form_open=view == 'new')
+
+
+def _save_role_create(request, host='page'):
+    form = RoleForm(_clean_multi(request.POST, 'permissions'), operator=request.user)
+    if form.is_valid():
+        form.save()
+        return redirect('user:role_list')
+    if host == 'list':
+        return _render_role_list(request, form, form_open=True)
+    return render(request, 'user/role_create_page.html', {
+        'form': form,
+        'role_form_submit': _('创建'),
+        'role_form_mode': 'create',
+        'role_list_back': reverse('user:role_list'),
+    })
 
 
 @require_perm('user_manage')
 def role_create(request):
     if request.method == 'POST':
-        form = RoleForm(_clean_multi(request.POST, 'permissions'), operator=request.user)
-        if form.is_valid():
-            form.save()
-            return redirect('user:role_list')
-        return _render_role_list(request, form, form_open=True)
+        return _save_role_create(request, host='page')
     return render(request, 'user/role_create_page.html', {
         'form': RoleForm(operator=request.user),
+        'role_form_submit': _('创建'),
+        'role_form_mode': 'create',
+        'role_list_back': reverse('user:role_list'),
+    })
+
+
+def _save_role_edit(request, role_id, host='page'):
+    role = get_object_or_404(Role, pk=role_id)
+    form = RoleForm(_clean_multi(request.POST, 'permissions'),
+                    instance=role, operator=request.user)
+    if form.is_valid():
+        form.save()
+        return redirect('user:role_list')
+    if host == 'list':
+        return _render_role_list(request, form, form_open=True, edit_role=role)
+    return render(request, 'user/role_edit_page.html', {
+        'form': form,
+        'role_form_submit': _('保存'),
+        'role_form_mode': 'edit',
+        'role_form_title': _('编辑角色：%(name)s') % {'name': role.name},
         'role_list_back': reverse('user:role_list'),
     })
 
 
 @require_perm('user_manage')
 def role_edit(request, role_id):
-    role = get_object_or_404(Role, pk=role_id)
     if request.method == 'POST':
-        form = RoleForm(_clean_multi(request.POST, 'permissions'),
-                        instance=role, operator=request.user)
-        if form.is_valid():
-            form.save()
-            return redirect('user:role_list')
-    else:
-        form = RoleForm(instance=role, operator=request.user)
-    return render(request, 'user/role_form.html', {'form': form, 'title': _('编辑角色：%(name)s') % {'name': role.name}})
+        return _save_role_edit(request, role_id, host='page')
+    role = get_object_or_404(Role, pk=role_id)
+    return render(request, 'user/role_edit_page.html', {
+        'form': RoleForm(instance=role, operator=request.user),
+        'role_form_submit': _('保存'),
+        'role_form_mode': 'edit',
+        'role_form_title': _('编辑角色：%(name)s') % {'name': role.name},
+        'role_list_back': reverse('user:role_list'),
+    })
 
 
 
@@ -315,10 +439,39 @@ def _permission_profile_context(user):
     }
 
 
+def _profile_context(request, view='', edit_form=None, password_form=None):
+    """个人中心的一种上下文：主页正文 + 三个子设置弹层（编辑资料 / 权限 / 密码）。
+
+    v2.1.3：个人中心与它的三个子页都改成设置面板形态。主页是 inline 面板，
+    三个子页从主页里以弹层打开（`?view=edit|perms|password`），提交失败时把
+    绑定错误的表单交回这里，弹层保持打开并显示字段错误。
+    """
+    context = _permission_profile_context(request.user)
+    context.update({
+        'profile_view': view,
+        'profile_edit_form': edit_form if edit_form is not None else ProfileForm(
+            instance=request.user),
+        'profile_password_form': password_form if password_form is not None else PasswordForm(
+            user=request.user),
+        'profile_edit_url': reverse('user:profile_edit'),
+        'profile_perms_url': reverse('user:profile_permissions'),
+        'profile_password_url': reverse('user:profile_password'),
+        'profile_url': reverse('user:profile'),
+        # 弹层开合对应的查询参数（地址栏是唯一真源）
+        'profile_edit_open': view == 'edit',
+        'profile_perms_open': view == 'perms',
+        'profile_password_open': view == 'password',
+    })
+    return context
+
+
 @login_required
 def profile(request):
-    """个人中心：资料摘要 + 权限入口 + 修改密码入口。"""
-    return render(request, 'user/profile.html', _permission_profile_context(request.user))
+    """个人中心：资料摘要 + 权限入口 + 修改密码入口（设置面板形态）。"""
+    view = request.GET.get('view') or ''
+    if view not in ('edit', 'perms', 'password'):
+        view = ''
+    return render(request, 'user/profile.html', _profile_context(request, view))
 
 
 @login_required
@@ -330,16 +483,17 @@ def profile_edit(request):
             form.save()
             user_updated.send(sender=request.user.__class__, user_id=request.user.pk)
             return redirect('user:profile')
-    else:
-        form = ProfileForm(instance=request.user)
-    return render(request, 'user/profile_edit.html', {'form': form})
+        # 校验失败：回到个人中心并让「编辑资料」弹层保持打开（错误就地显示）
+        return render(request, 'user/profile.html',
+                      _profile_context(request, 'edit', edit_form=form))
+    return render(request, 'user/profile_edit.html', _profile_context(request))
 
 
 @login_required
 def profile_permissions(request):
     """查看自己的角色、直接权限、有效权限、等级与全员基线权限。"""
     return render(request, 'user/profile_permissions.html',
-                  _permission_profile_context(request.user))
+                  _profile_context(request))
 
 
 @login_required
@@ -354,6 +508,6 @@ def profile_password(request):
             password_changed.send(sender=request.user.__class__,
                                   user_id=request.user.pk, operator_id=request.user.pk)
             return redirect('user:profile')
-    else:
-        form = PasswordForm(user=request.user)
-    return render(request, 'user/profile_password.html', {'form': form})
+        return render(request, 'user/profile.html',
+                      _profile_context(request, 'password', password_form=form))
+    return render(request, 'user/profile_password.html', _profile_context(request))

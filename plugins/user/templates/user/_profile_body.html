@@ -1,0 +1,43 @@
+{% load i18n %}
+{% comment %}
+「个人中心」设置页正文：账号信息按 DSH 的设置行（`ds-settings__row`：
+左标题 / 右值、0.5px 分隔行）排，下面是三个账号操作。
+三个子页（编辑资料 / 查看权限 / 修改密码）都是盖在这块面板上的弹层。
+{% endcomment %}
+<div class="ds-fields">
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "用户名" %}</div>
+    <div class="ds-settings__state">{{ request.user.username }}</div>
+  </div>
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "姓名" %}</div>
+    <div class="ds-settings__state">{{ request.user.last_name|default:'—' }}</div>
+  </div>
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "电子邮件地址" %}</div>
+    <div class="ds-settings__state">{{ request.user.email|default:'—' }}</div>
+  </div>
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "所属部门" %}</div>
+    <div class="ds-settings__state">{{ request.user.department.name|default:'—' }}</div>
+  </div>
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "权限等级" %}</div>
+    <div>
+      <span class="r-badge r-badge--blue">{{ user_level_label }}</span>
+      {% if is_frozen %}<span class="r-badge r-badge--orange">{% trans "权限已冻结" %}</span>{% endif %}
+    </div>
+  </div>
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "角色" %}</div>
+    <div>
+      {% for role in roles %}<span class="r-badge me-1">{{ role.name }}</span>{% empty %}<span class="ds-settings__state">—</span>{% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="ds-settings__actions ds-settings__actions--center">
+  <a class="r-btn" href="{{ profile_edit_url }}" data-ds-modal-open="ds-profile-edit">{% trans "编辑资料" %}</a>
+  <a class="r-btn r-btn--ghost" href="{{ profile_perms_url }}" data-ds-modal-open="ds-profile-perms">{% trans "查看权限" %}</a>
+  <a class="r-btn r-btn--ghost" href="{{ profile_password_url }}" data-ds-modal-open="ds-profile-password">{% trans "修改密码" %}</a>
+</div>

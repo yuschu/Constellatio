@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{{ role_form_title }} · Constellatio{% endblock %}
+{% block content %}
+{% comment %}
+「编辑角色」独立深链页：与列表弹层同一份正文（_role_form_body.html），
+外面是无遮罩的 inline 面板，右上角是返回角色列表的箭头。
+列表页行内「编辑」跳到 /roles/?view=edit&id=<pk>，渲染出来的就是弹层版。
+{% endcomment %}
+<div class="ds-settings ds-settings--inline ds-settings--single">
+  {% include "includes/ds_settings_panel.html" with sp_title=role_form_title sp_body="user/_role_form_body.html" sp_modal=False sp_back=role_list_back %}
+</div>
+{% endblock %}

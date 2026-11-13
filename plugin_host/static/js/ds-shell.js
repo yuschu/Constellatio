@@ -458,6 +458,9 @@
        面板正文被换掉后由 home-panels.js 调一次 window.DSSubpage.sync()。 */
     function sync() {
       Array.prototype.forEach.call(modals(), function (modal) {
+        // 自带地址页的弹层（如「已读人员」）由服务端决定开合，地址栏里没有对应参数，
+        // 不参与这里的同步；关闭仍走 ✕ / 遮罩 / Escape。
+        if (modal.hasAttribute('data-ds-subpage-static')) return;
         var shouldOpen = searchHas(modal.getAttribute('data-ds-subpage-query'));
         if (shouldOpen && modal.hasAttribute('hidden')) openModal(modal, null);
         else if (!shouldOpen && !modal.hasAttribute('hidden')) closeModal(modal);

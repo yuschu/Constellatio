@@ -1,0 +1,38 @@
+{% load i18n %}
+{% comment %}
+「已读人员」设置页正文（公告中心弹层与独立地址共用同一份）。
+按 DSH 设置行的排法：标题 + 说明在上，名单在下面的分隔表里。
+{% endcomment %}
+<p class="ds-settings__desc">{{ readers_view.title }}</p>
+
+<div class="ds-fields">
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "已读人数" %}</div>
+    <div class="ds-settings__state">{{ readers|length }}</div>
+  </div>
+</div>
+
+{% if readers %}
+<div class="table-responsive">
+  <table class="r-table r-table--roomy align-middle">
+    <thead>
+      <tr>
+        <th scope="col">{% trans "姓名" %}</th>
+        <th scope="col">{% trans "账号" %}</th>
+        <th scope="col">{% trans "已读时间" %}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in readers %}
+      <tr>
+        <td>{{ r.user.last_name|default:r.user.username }}</td>
+        <td>{{ r.user.username }}</td>
+        <td>{{ r.read_at|date:"Y-m-d H:i" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="ds-settings__state">{% trans "暂无已读人员" %}</p>
+{% endif %}

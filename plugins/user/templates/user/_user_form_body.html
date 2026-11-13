@@ -1,8 +1,13 @@
 {% load i18n %}
 {% comment %}
-「新建角色」设置页正文（角色列表弹层与独立深链页共用）。
+用户表单正文（新建 / 编辑共用；列表页弹层与独立深链页共用）。
+字段行沿用设置页的 SettingsValueField 口径：标签 13/20 secondary、控件 34、
+说明 12/18 tertiary、相邻 0.5px 分隔；操作按钮居中。
+提交文案由宿主给（`user_form_submit`：创建 / 保存），两种模式不复制正文。
 {% endcomment %}
-<p class="ds-settings__desc">{% trans "角色是权限的集合；新建后可在角色列表里继续调整权限，或分配给具体用户。" %}</p>
+<p class="ds-settings__desc">
+  {% if user_form_mode == 'edit' %}{% trans "修改账号信息、部门与角色；启用 / 禁用请回列表用状态操作（普通管理员需会签）。" %}{% else %}{% trans "账号、部门与角色决定该用户可见的功能；创建后可在列表里继续编辑或冻结权限。" %}{% endif %}
+</p>
 
 <form method="post" novalidate class="ds-settings__form">
   {% csrf_token %}
@@ -25,7 +30,7 @@
   </div>
 
   <div class="ds-settings__actions ds-settings__actions--center">
-    <button class="r-btn" type="submit">{% trans "创建" %}</button>
+    <button class="r-btn" type="submit">{{ user_form_submit|default:_("保存") }}</button>
     <button class="r-btn r-btn--ghost" type="button" data-ds-modal-close>{% trans "取消" %}</button>
   </div>
 </form>

@@ -20,6 +20,11 @@ from .template import DEPARTMENTS, ROLE_PERMISSIONS, ROLES, USERS, dept_tree
 @require_perm('structure_view')
 def structure_overview(request):
     """当前架构：真实部门树 + 真实角色 + 用户关系树 + 责任人清单 + 最近应用。"""
+    return render(request, 'structure/overview.html', _overview_context(request))
+
+
+def _overview_context(request):
+    """组织架构页的上下文（v2.1.3 抽出）：概览与「用户资料」弹层共用一份。"""
     Role = dj_apps.get_model('user', 'Role')
 
     dept_tree_data = build_department_tree()
@@ -73,7 +78,7 @@ def structure_overview(request):
             'template_url': f'{overview_url}?view=template',
             'overview_url': overview_url,
         })
-    return render(request, 'structure/overview.html', ctx)
+    return ctx
 
 
 def _template_context(request):
@@ -120,16 +125,23 @@ def structure_user_detail(request, user_id):
     """角色成员 → 用户资料（只读，v1.5.12）。
 
     与组织关系树同权限口径（structure_view 可看全员，不做行级隔离）。
+
+    v2.1.3：不再是另一套整页 —— 渲染的是组织架构页本身，资料放进叠在它上面的
+    设置弹层（服务端直接渲染成打开态）。地址仍为 /structure/user/<id>/，
+    所以侧栏、面包屑、返回都不用另写一套。
     """
     User = dj_apps.get_model('user', 'User')
     target = get_object_or_404(
         User.objects.select_related('department', 'leader').prefetch_related('roles'),
         pk=user_id)
-    return render(request, 'structure/user_detail.html', {
+    ctx = _overview_context(request)
+    ctx.update({
         'target': target,
         'is_self': target.pk == request.user.pk,
         'can_manage': request.user.has_perm('user_manage'),
+        'user_detail_open': True,
     })
+    return render(request, 'structure/overview.html', ctx)
 
 
 @require_perm('structure_manage')

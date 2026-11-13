@@ -2,30 +2,12 @@
 {% load i18n %}
 {% block title %}{% trans "操作记录" %} · Constellatio{% endblock %}
 {% block content %}
-<div class="d-flex align-items-center gap-3 mb-4">
-  <a href="{% url 'blockchain:blockchain_list' %}" class="r-offset-hover">← {% trans "返回" %}</a>
-  <h2 class="mb-0">{% trans "操作记录" %} #{{ record.id }}</h2>
-</div>
-
-<div class="r-card mb-4">
-  {% if verify_ok %}
-    <span class="r-badge">{% trans "链完整性：通过（未被篡改）" %}</span>
-  {% else %}
-    <span class="r-badge r-badge--orange">{% blocktranslate with id=broken_id %}链完整性：异常（第 {{ id }} 条被篡改）{% endblocktranslate %}</span>
-  {% endif %}
-</div>
-
-<div class="r-card">
-  <table class="r-table">
-    <tr><th>ID</th><td>{{ record.id }}</td></tr>
-    <tr><th>{% trans "插件" %}</th><td>{{ record.plugin_title }}</td></tr>
-    <tr><th>{% trans "动作" %}</th><td>{{ record.action_label }}</td></tr>
-    <tr><th>{% trans "目标" %}</th><td>{% if record.target_type %}{{ record.target_type }}#{{ record.target_id }}{% else %}—{% endif %}</td></tr>
-    <tr><th>{% trans "操作人" %}</th><td>{% if record.operator %}{{ record.operator.last_name|default:record.operator.username }}{% else %}—{% endif %}</td></tr>
-    <tr><th>{% trans "内容哈希" %}</th><td style="word-break:break-all; font-family:monospace;">{{ record.payload_hash }}</td></tr>
-    <tr><th>{% trans "前链哈希" %}</th><td style="word-break:break-all; font-family:monospace;">{{ record.prev_hash }}</td></tr>
-    <tr><th>{% trans "记录哈希" %}</th><td style="word-break:break-all; font-family:monospace;">{{ record.record_hash }}</td></tr>
-    <tr><th>{% trans "时间" %}</th><td>{{ record.created_at|date:"Y-m-d H:i:s" }}</td></tr>
-  </table>
+{% blocktranslate with id=record.id asvar sp_title_text %}操作记录 #{{ id }}{% endblocktranslate %}
+{% comment %}
+单条留痕详情：不再是另一套整页 —— 换成和设置页同一块面板（inline，无遮罩、单分区、
+内容居中），宽度用 wide（哈希串要横向空间），右上角是返回留痕链的箭头。
+{% endcomment %}
+<div class="ds-settings ds-settings--inline ds-settings--single">
+  {% include "includes/ds_settings_panel.html" with sp_title=sp_title_text sp_body="blockchain/_record_body.html" sp_modal=False sp_back=back_url sp_stack="wide" %}
 </div>
 {% endblock %}

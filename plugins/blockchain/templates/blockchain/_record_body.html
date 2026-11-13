@@ -1,0 +1,57 @@
+{% load i18n %}
+{% comment %}
+单条留痕正文（设置面板形态）：校验状态一行 + 字段按设置行排（左标题 / 右值）。
+哈希串用等宽字体并允许断行，避免 720 宽度下被撑开。
+{% endcomment %}
+<div class="ds-fields">
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "链完整性" %}</div>
+    <div>
+      {% if verify_ok %}
+      <span class="r-badge r-badge--green">{% trans "通过（未被篡改）" %}</span>
+      {% else %}
+      <span class="r-badge r-badge--orange">{% blocktranslate with id=broken_id %}异常（第 {{ id }} 条被篡改）{% endblocktranslate %}</span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">ID</div>
+    <div class="ds-settings__state">{{ record.id }}</div>
+  </div>
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "插件" %}</div>
+    <div class="ds-settings__state">{{ record.plugin_title }}</div>
+  </div>
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "动作" %}</div>
+    <div class="ds-settings__state">{{ record.action_label }}</div>
+  </div>
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "目标" %}</div>
+    <div class="ds-settings__state">{% if record.target_type %}{{ record.target_type }}#{{ record.target_id }}{% else %}—{% endif %}</div>
+  </div>
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "操作人" %}</div>
+    <div class="ds-settings__state">{% if record.operator %}{{ record.operator.last_name|default:record.operator.username }}{% else %}—{% endif %}</div>
+  </div>
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "内容哈希" %}</div>
+    <div class="ds-settings__state" style="word-break:break-all; font-family:monospace; text-align:right;">{{ record.payload_hash }}</div>
+  </div>
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "前链哈希" %}</div>
+    <div class="ds-settings__state" style="word-break:break-all; font-family:monospace; text-align:right;">{{ record.prev_hash }}</div>
+  </div>
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "记录哈希" %}</div>
+    <div class="ds-settings__state" style="word-break:break-all; font-family:monospace; text-align:right;">{{ record.record_hash }}</div>
+  </div>
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-title">{% trans "时间" %}</div>
+    <div class="ds-settings__state">{{ record.created_at|date:"Y-m-d H:i:s" }}</div>
+  </div>
+</div>
+
+<div class="ds-settings__actions ds-settings__actions--center">
+  <a class="r-btn r-btn--ghost" href="{{ back_url }}">{% trans "返回留痕链" %}</a>
+</div>

@@ -4,7 +4,7 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
   <h2 class="mb-0">{% trans "角色管理" %}</h2>
-  <a href="{{ role_create_url }}" class="r-btn" data-ds-modal-open="ds-role-create">＋ {% trans "新建角色" %}</a>
+  <a href="{{ role_create_url }}" class="r-btn" data-ds-modal-open="ds-role-form">＋ {% trans "新建角色" %}</a>
 </div>
 <div class="r-card">
   <div class="table-responsive">
@@ -39,7 +39,7 @@
             </div>
           </td>
           <td>{{ r.users.count }}</td>
-          <td class="text-nowrap"><a href="{% url 'user:role_edit' r.id %}" class="r-btn">{% trans "编辑" %}</a></td>
+          <td class="text-nowrap"><a href="{{ role_edit_url }}{{ r.id }}" class="r-btn">{% trans "编辑" %}</a></td>
         </tr>
         {% empty %}
         <tr><td colspan="6" class="text-muted">{% trans "暂无角色" %}</td></tr>
@@ -49,6 +49,5 @@
   </div>
 </div>
 
-{% trans "新建角色" as sp_role_create_title %}
-{% include "includes/ds_settings_modal.html" with sp_id="ds-role-create" sp_title=sp_role_create_title sp_body="user/_role_create_body.html" sp_query="view=new" sp_url=role_create_url sp_base=role_list_url sp_open=role_form_open %}
+{% include "includes/ds_settings_modal.html" with sp_id="ds-role-form" sp_title=role_form_title sp_body="user/_role_form_body.html" sp_query=role_form_query sp_url=role_form_url sp_base=role_list_url sp_open=role_form_open %}
 {% endblock %}

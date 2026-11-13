@@ -231,4 +231,7 @@
 {% trans "模板架构" as sp_template_title %}
 {% include "includes/ds_settings_modal.html" with sp_id="ds-structure-template" sp_title=sp_template_title sp_body="structure/_template_body.html" sp_query="view=template" sp_url=template_url sp_base=overview_url sp_open=template_open sp_stack="wide" dept_tree=tmpl_dept_tree role_rows=tmpl_role_rows dept_count=tmpl_dept_count user_count=tmpl_user_count users_by_dept=tmpl_users_by_dept can_apply=tmpl_can_apply last_records=tmpl_last_records %}
 {% endif %}
+{% if target %}
+{% include "includes/ds_settings_modal.html" with sp_id="ds-structure-user" sp_title=target.last_name|default:target.username sp_body="structure/_user_detail_body.html" sp_query="" sp_url="" sp_base="" sp_open=user_detail_open sp_static=True %}
+{% endif %}
 {% endblock %}

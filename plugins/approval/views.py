@@ -152,6 +152,10 @@ def _create_context(request, form=None, type_key=None, source=None, chip_prefix=
 
 @require_perm('approval_view')
 def approval_list(request):
+    # 弹层里的表单 action 为空 → POST 回到本页，这里分派给 approval_create：
+    # 校验失败时它渲染回列表（弹层保持打开），成功则 PRG。
+    if request.method == 'POST':
+        return approval_create(request)
     ctx = _approval_list_context(request)
     if request.user.has_perm('approval_view'):
         list_url = reverse('approval:approval_list')
@@ -391,6 +395,7 @@ def approval_detail(request, approval_id):
         'form_rows': form_rows,
         'cc_users': approval.cc_users.all(),
         'status_pending': approval.status == Approval.Status.PENDING,
+        'back_url': reverse('approval:approval_list'),
     })
 
 
