@@ -1231,7 +1231,7 @@ input:focus-visible{outline:1px solid state-business;outline-offset:2px}
 
 **门禁**：全量 **531 tests OK**（新增 `test_disabled_plugin_panel_falls_back_to_chat`、`test_dashboard_links_drop_with_disabled_plugins`），ruff 通过。
 
-**容器**：重建后 MD5 对齐 `plugins/assistant/views.py d9329511e675e40b49e9a92b2a0daade`、`plugin_host/templates/home_dashboard.html 876b63fcdd0a73b05b78574636539dbc`。容器 8000 上按同一手法直改开关复验：停 `attendance` → `/?panel=attendance`、`/?panel=attendance&sub=rules` 都是 `data-active-panel="chat"`、无 `at-head`，`/plugins/attendance/` 404；停 `approval` → `/dashboard/` 与 `/` 均无 `/plugins/approval/` 链接，深链 404。两处开关均已复原（删行 → 回静态默认）。截图 `.tmp-test/screens-v14/off-panel-attendance.png`、`off-home.png`。
+**容器**：重建后 MD5 对齐 `plugins/assistant/views.py d9329511e675e40b49e9a92b2a0daade`、`plugin_host/templates/home_dashboard.html 876b63fcdd0a73b05b78574636539dbc`。容器 8000 上按同一手法直改开关复验：停 `attendance` → `/?panel=attendance`、`/?panel=attendance&sub=rules` 都是 `data-active-panel="chat"`、无 `at-head`，`/plugins/attendance/` 404；停 `approval` → `/dashboard/` 与 `/` 均无 `/plugins/approval/` 链接，深链 404。两处开关均已复原（删行 → 回静态默认）。截图 `.tmp-test/screens-v14/`：`attendance-off-panel.png`（停考勤后 `?panel=attendance` 与 `/` 一模一样，都是对话态、侧栏只剩 插件/看板/更多）、`approval-off-dashboard.png`（停审批+组织架构后的看板：侧栏没有审批三条与组织架构、流程快捷发起只剩签到详情、单据构成归零）。
 
 **没跟着藏的（记账）**：看板「插件分布」那张卡的预览行仍会列出停用插件的**历史留痕条数**（`workbench.build_dashboard` 的 pie 是 `BlockchainRecord.values('plugin')` 分组，只按 `blockchain` 自身启停判定）。那是统计口径不是入口、点点不进去，本版不动；要改就把 pie 也按 `enabled_names` 过滤，但那会让停用插件的留痕记录在统计里「凭空消失」，数据口径得单独拍板。
 
