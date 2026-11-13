@@ -538,6 +538,60 @@ v2.0.0 起 `/` 已被 assistant 接管成对话首页，于是这条「工作台
 
 **门禁**：`check` 0 issue、`ruff` 全绿、全量 **497 项 OK**。`tests_assistant_home.test_sidebar_caps_entries_and_hides_rest_in_drawer` 的锚点从 `as-more__list` 改到 `data-as-more-trigger` / `id="as-more-menu"`（结构变更，断言仍要求「更多」承载业务菜单）。
 
+## 9.11 「更多」菜单按 EntryMenuContent 重做（常用入口 + 浏览/创建插件）
+
+上一轮把「更多」的外形换成了 `PanelMoreMenu`，但菜单内容还是把「其余业务菜单」一股脑塞进去（13 项）。
+这一轮按 DSH 的 `EntryMenuContent` 重做内容，并把用户定的语义落地：**常用入口 + 浏览更多插件 + 创建你的插件**。
+
+### 源码真值（逐条来自文件，不取样不推断）
+
+| 来源 | 事实 |
+|---|---|
+| `dsh-client-ui-entry-customization/lib/client.js:33-72` `EntryMenuContent` | 折叠面板行是 `MenuItemButton`（只有 label；`active` 时右侧 `IconCheckOutlineRegular(16)`）；「浏览更多插件」= `MenuItemButton` + `IconPluginPinwheelOutlineRegular(16)`，`separatorBefore: moreEntries.length > 0`；「创建你的插件」= `MenuItemButton` + `IconPlusOutlineRegular(16)`，`separatorBefore: !browsable && moreEntries.length > 0` |
+| 同文件 `:77-91` locale zh | `install: "浏览更多插件"`、`create: "创建你的插件"`、`createPrompt.sidebar: "创建一个带左侧栏入口的 DSH 插件。"` |
+| 同文件 `:195-213` `apply` | `browsePlugins()` → `pluginNavigation.openList()`；`createPlugin()` → `uiWorkspace.startSession(undefined, { agentPreset: "cordis", prompt: t("createPrompt.sidebar"), whenDraftExists: "append" })` |
+| en 文案 | `"Browse other plugins"` / `"Create your plugin"` |
+| `dsh-client-ui-sidebar/README.md:44`（中文 `README.zh.md` 同款） | 「**The default More menu only offers plugin browsing and creation, without panel rows or pin controls.**」 |
+| 全包 grep `inject("sidebar.panellist.actions")` | 只有 `dsh-client-ui-entry-customization` **一个**注册者 → DSH 的「更多」里**不存在「收起侧边栏」条目** |
+| `dsh-client-ui-sidebar/lib/client.js:240-286` `PanelMoreMenu` | anchor `button.panelRow`（`aria-haspopup="menu"` / `aria-expanded`），图标 `IconAppsAddOutlineRegular`，`size = wide ? 16 : 18`；浮层 `Menu`（`portal: true` / `autoFocus`），`className moreAnchor` / `listClassName moreMenu` |
+| `dsh-web-frontend/dist/assets/index-lh_YM6sT.css` 菜单行 | `._item`：`min-height:34px; padding:6px 8px; gap:6px; border-radius:var(--dsw-radius-md); font-size:13px; line-height:20px; color:label-primary`；hover `interactive-bg-hover`；`._itemIcon` `14×14`（`color: menu-icon`）；`._itemLabel` `flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap`；`._check` `14×14; flex:none; color:label-primary`；`._separator` `height:.5px; margin:3px 8px; background:border-l2` |
+| 图标 sprite（`index-BgUyXZcc.js`） | `plugin-pinwheel-outline` 四条 arc path、`plus-outline` = `M8 2V14` + `M2 8H14`、`check-outline` = `M2.25 8.5L5.49732 11.7473C5.90519 12.1552 6.57263 12.1344 6.95426 11.7018L13.75 4`；regular 描边 `1` |
+| `dsh-client-ui-sidebar` locale | `panels.more`: zh `更多` / en `More` |
+
+### 本项目落地
+
+| 落点 | 做法 |
+|---|---|
+| `plugins/assistant/views.py` | 新增 `COMMON_MENU_URLS`（考勤 `/plugins/attendance/` → 待我审批 `/plugins/approval/pending/` → 抄送我的 `/plugins/approval/cc/` → 审批中心 `/plugins/approval/` → 公告中心 `/plugins/notice/` → 消息中心 `/plugins/notify/`）、`CREATE_PLUGIN_PROMPT`；`_split_menus` 改为返回 `(primary, common)`；context 增加 `common_menus` / `create_plugin_url` / `draft_prompt` |
+| 模板 | 更多菜单 = `common_menus` 循环（`span.ds-menu__label` + active 时 `span.ds-menu__check` 内 check SVG）→ `div.ds-menu__sep[role=separator]` →「浏览更多插件」（pinwheel SVG，`/plugins/workspace/`）→「创建你的插件」（plus SVG，`{{ create_plugin_url }}`）；两处 `textarea` 改为 `>{{ draft_prompt }}</textarea>` 承接预填 |
+| 两份 CSS（`assistant.css` / `corporate-clean.css`） | `.ds-menu__item` 40/8-10/14px → DSH 真值 **34 / 6px 8px / gap 6 / 13px / line-height 20**；`.ds-menu__icon` 16 → **14**；新增 `.ds-menu__label`（ellipsis）、`.ds-menu__check`（14×14 / label-primary）、`.ds-menu__sep`（`0.5px / margin 3px 8px / border-l2`） |
+| `locale/en/LC_MESSAGES/django.po` | 追加 `更多→More`、`浏览更多插件→Browse other plugins`、`创建你的插件→Create your plugin`；`tools/compile_mo.py` 重编，`django.mo` 35,303 B（不进版本库） |
+| 测试 | `tests_assistant_home` 的 `more_menus` 断言改为 `common_menus`，并新增两条动作文案断言 |
+| 折叠补充 | toggle 的 `:focus-visible` 从 `box-shadow` 换成 DSH 的 `outline: 2px solid #4176e6; outline-offset:-2px`（dark `#7aaaff` = `deepseek-400`）；折叠态补 `border-radius: radius-md` + `color: label-primary`（`dsh .collapsed .iconButton`）；两份 CSS 同步 |
+
+### 设计取舍（为什么不是逐字照搬）
+
+1. **常用 6 项来自 `get_menus` 按 URL 白名单挑**：DSH 的这些行来自 `panellist.actions` 槽（各面板自己注册），本项目没有那个槽，等价的来源是插件注册的 `PluginMeta.menus`，用 URL 白名单保证顺序与「考勤紧跟看板」的既有口径。
+2. **「创建你的插件」用 `/?prompt=` 预填**：DSH 的 `createPlugin()` 走 `uiWorkspace.startSession(prompt)` 起新会话；本项目的等价动作是带 prompt 回首页并填进输入框（`whenDraftExists: "append"` 在本版没有草稿机制，预填即止）。
+3. **「更多」里不放「收起侧边栏」**：DSH 的 `sidebar.panellist.actions` 只有 entry-customization 一个注册者，README 也明确写了默认更多菜单只有浏览与创建两条；本项目照此执行，折叠开关只保留在 `logoRow` 的那一个 toggle 上（不重复进菜单）。
+
+### 真机实测（1440×900，本地 `:8011`）
+
+| 项 | 浅色 | 深色 |
+|---|---|---|
+| 菜单行 | 8 行（考勤 / 待我审批 / 抄送我的 / 审批中心 / 公告中心 / 消息中心 / 浏览更多插件 / 创建你的插件），每行 **34px** | 同 |
+| 动作行图标 | **14×14**（pinwheel / plus 各 1） | 同 |
+| 分隔线 | `0.5px`、`margin 3px 8px`、`rgba(0,0,0,0.1)`、y=479 | `0.5px`、`margin 3px 8px`、`rgba(255,255,255,0.12)` |
+| 浮层 | `(8,268)` `288×287`、`radius 16`、`padding 4` | 同 |
+| check | 无（首页 active 为 `/`，6 项常用均非当前页） | 同 |
+
+### 折叠排查结论
+
+- 单击 toggle **同步生效**：`collapsed=true`、`animating=true`、`aria-label` 变「打开侧边栏」，400ms 后 `settled=true / w=56`；再点一次回 `collapsed=null / w=280`。
+- 业务页 `:8011` 实测：`280 → 56`，行宽 `271 → 36`（居中 `x10 w36`），行间 gap `12`（36 + 12 = 48 步进），折叠态 `nav` `overflow-y:auto`。
+- 折叠态 toggle：`(10,18) 36×36`，与 `dsh .collapsed{padding:18px 10px 6px}` + `.collapsed .iconButton{36×36}` 一致。
+- 菜单里不再有任何「收起/折叠」条目 —— 两条动作行之外只有 6 条业务入口（上一轮的 13 项混排已去掉）。
+
 ---
 
 *本文不含实现代码；确认后按阶段逐个交付，每阶段单独提交与验收。*
