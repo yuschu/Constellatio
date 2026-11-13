@@ -757,11 +757,36 @@ OA 口径映射（DSH 是「按会话自身各请求时间归属」，本项目�
 
 浏览器一度拿到「新模板类名 + 空面板正文 + 无主题表」的页面，服务端 test client 却完全正常。根因是 `:8011` 上还挂着**本轮改动之前**启动的 `runserver --noreload`（PID 早于 views.py 的修改时间）：模板在 DEBUG 下每次请求重读，Python 模块不会重载，于是出现「新模板 + 旧视图上下文」的混合态——`panel` 变量根本不存在，`{% if panel != 'chat' %}` 为真、三个 include 全不匹配。杀掉旧进程重启后一切正常。教训：**改 `views.py` / `apps.py` 必须重启进程或重建容器；模板热更新会掩盖这个差异。**
 
+### 9.13.8 v2.1.1：业务页与考勤面板的原语回流（提交 `050760b`）
+
+**取证方式**：不靠截图采样，直接解析 DSH 产物 `dsh-web-frontend/dist/assets/index-lh_YM6sT.css`（单行 minified，88k 字符），按 `input/field/table/row/button/card/badge/tag/list/header` 分组导出规则文本（`.tmp-test/dump_dsh_css.py`、`dump_dsh_css2.py`、`scan_btn.py` → `dsh_css_dump.txt`、`dsh_css_dump2.txt`）。原语模块在 `index-BgUyXZcc.js` 里以 `const FU=Object.freeze({Button:vi, Checkbox:tR, ...})` 导出，`dsh-client-ui-settings-shell` 等包只是调用 `@deepseek-ai/dsh-client-ui-primitives`；该包不在 `_npx` 缓存里，字面量只能从提取出的 CSS 规则取。
+
+| 原语 | 字面量（DSH 源码） | 落到本项目 |
+|---|---|---|
+| Button `._button_1ulci_2` | inline-flex / gap 4 / radius-md / 14-22 / padding 0 14 / 透明底；`._md` height **36**；`._sm` height **28** / 12-18 / padding 0 10 / radius-sm；`._primary` 实心；`._outline` = `inset 0 0 0 .5px border-l3` | `.r-btn` 36、`.r-btn--sm` 28、`.r-table .r-btn` 28；行内非语义色按钮改 outline |
+| Input `._input_181ew_115` | height **34** / padding 0 12 / border **.5px** border-l4 / radius-md / bg-layer-3 / 13-1.5；focus-visible 只换 border-color(state-business) | `.r-input/.r-select/.r-textarea` 同值；textarea 96 高 padding 8/12 |
+| Field `._field_181ew_3` | column / gap **6** / padding **12px 0**；相邻 field 上边 `.5px border-l2` | `.at-field` gap 6；`.at-kv__row` padding 10 0 + 相邻分隔 |
+| Table `._tableScroll` | th/td padding **10px 16px**；th 下边 `.5px border-l3`、td 下边 `.5px border-l2` | `.r-table th,td` `height:auto` + 同值 |
+| Tag `._tag_brmue_4` | radius **999** / padding **1px 8px** / **11-17** / 500；tones 用 **10~12% color-mix** | `.r-badge` 同值，`--green/--orange/--blue/--pink` 改 color-mix |
+| IconButton `._iconButton_3oazc_539` | 28×28 / padding 6 / svg 15 / radius-sm | 返回主页按钮沿用（9.13.4） |
+| `._heading_121p8_19` / `._compactList` / `lc-card` | 分组头 11-16-500 tertiary；紧凑行 min-height 24；card padding 14px 16px、title 14/20/600 + 下分隔 | 卡片 `padding:14px 16px`、`.r-card` 去投影、`.at-card__title` 14/600 + `.5px` 分隔 |
+
+token 映射：`label-primary-foreground → --ds-on-primary`、`bg-module-platform → --ds-bg-layer-3`、`state-business-primary → --ds-state-business`（本项目 token 里没有前两个同名变量）。
+
+**模板改动**：`attendance/_panel.html` 的「本月统计」由 `<table class="r-table">` 换成 `<dl class="at-kv">` 两行（标签左、值右对齐，行间 0.5px 分隔），与 DSH 的 field 行一致；其余业务模板未改类名。
+
+**表单排布**（CSS-only，写在 `.ds-main__body` 作用域内）：label 13/20 secondary + `text-transform:none !important`（模板里是 inline `.75rem` + uppercase，只能 `!important` 压）、help 12/18 tertiary、错误 12/18 error、`.mb-3` 间距 14、checkbox 16 + `accent-color` 品牌色、字段列 select 满宽。
+
+**几何实测**（CDP，`.tmp-test/tableprobe.mjs`）：卡片 `padding 14px 16px`；`th` 41 高 `padding 10px 16px` 13/20；表行 `41`（纯文本行）/`49`（含 28 高按钮的行）；行内 `.r-btn` 28 高、padding 0 10、12-18。
+
+**门禁与真机**：全量 `venv/run_tests_shim.py` **501 tests OK**；本地 `:8011` 与容器 `:8000` 各出浅/深两态图（`?panel=attendance`、`/plugins/user/users/`、`/plugins/user/users/new/`、`/plugins/approval/`、`/plugins/user/roles/`）；容器重建后按 MD5 对齐：`corporate-clean.css` 本地/容器均 `c4c358de0b24e8474dfcaa26ccfee6eb`、`attendance/_panel.html` 均 `6e3b6641a50a8242b846f0227ce6e7ba`。容器考勤面板有数据（2 天 / 2 次迟到），图表柱正常绘制。
+
 ### 9.13.7 仍未对齐 / 待用户拍板
 
 1. 面板态不放 `as-header`（纯 `.as-panelview`，标题由各面板自己的 `.lc-ov-head` / `.at-head` 承担）。
 2. 三个业务 URL 保留为深链，只从侧栏移除（若要去掉入口而非 URL，需再定）。
 3. 双柱口径（提交 vs 已办结）、热力口径（人天签到）、看板「插件启用 / 未读消息」对普通账号的语义，仍按上一轮实现未验收。
+4. 业务页表单卡片的宽度还是模板 inline 的 `max-width:560px`（DSH settings 表面是 760），且部分表单模板仍有 inline `.75rem + uppercase`，目前靠 §29 的 `!important` 压制——是否逐个模板清理 inline 样式待定。
 
 ---
 
