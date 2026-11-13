@@ -246,6 +246,14 @@ textarea {
   background: var(--as-interactive-hover-solid);
 }
 
+/* v2.2.1：助手插件停用 → 入口留在原位但不可点（文字降为三级色、默认光标、无 hover） */
+.as-new.is-disabled,
+.as-new.is-disabled:hover {
+  background: var(--as-elevated-fill);
+  color: var(--as-label-tertiary);
+  cursor: not-allowed;
+}
+
 /* newSessionContent：width 100cqw + 居中 + gap 6 */
 .as-new__content {
   display: flex;
@@ -938,7 +946,18 @@ html[data-rail-settled="true"] .as-panel__title {
   display: none;
 }
 
-html[data-rail-settled="true"] .as-region {
+/* v2.2.1：收起态不再整块 display:none 掉 region。
+ * DSH 的 regionArea 在 collapsed 下只是把外边距归零、依旧 flex:1，
+ * 底部 footArea 靠它撑到底；这里隐藏块会连站位一起消失，账号按钮就飘到面板下方。
+ */
+html[data-rail-collapsed="true"] .as-region {
+  margin-left: 0;
+  margin-right: 0;
+  padding-left: 0;
+}
+
+html[data-rail-settled="true"] .as-section-head,
+html[data-rail-settled="true"] .as-tree {
   display: none;
 }
 

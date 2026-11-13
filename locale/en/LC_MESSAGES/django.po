@@ -1732,3 +1732,9 @@ msgstr "No matching shortcuts"
 
 msgid "快捷键为固定绑定，不可自定义"
 msgstr "Shortcuts are fixed and cannot be customised"
+
+msgid "AI 助手插件已停用"
+msgstr "AI assistant plugin is disabled"
+
+msgid "助手已停用"
+msgstr "Assistant disabled"

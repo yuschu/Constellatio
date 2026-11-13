@@ -1405,3 +1405,35 @@ select.zGbnIq_input{cursor:pointer;max-width:240px}
 - 容器重建后 8 个改动文件 MD5 与本地一致；容器里真实的停用部门（ID 1 财务部）行内按钮 = `["启用"]`、`enableForms: 1`，截图 `.tmp-test/screens-v17/container/dept-list-enable.png`。
 
 **仍未做（按原样保留）**：停用部门的「物理删除」按钮仍不显示——硬删要先经部门删除会签，是否允许对已停用部门直接发起，属于口径问题，等确认再动。
+### 9.13.29 收起态头像贴底 + 助手停用只锁两处交互（v2.2.1 / 2026-11-13）
+
+用户两条诉求：① 侧栏收起（rail collapsed）后账号头像要贴在底部；② 停用「AI 助手」插件后，**只**关闭「新会话」入口（禁点）与对话输入区（禁输），其余入口（看板、侧栏、面板）一律不得移除。
+
+**① 收起态头像贴底**
+
+- 根因：`assistant.css` 里 `html[data-rail-settled="true"] .as-region { display: none; }` 把 `.as-region`（唯一 `flex:1` 的占位块）整块删掉，`.as-foot` 失去撑到底的弹簧，于是和「+ 新会话」叠在侧栏中段。实测收起后 `.as-foot` / `.ds-account` / `.ds-account__trigger` 全是 `x=10,y=306,w=36,h=36`（900 高侧栏）。
+- 对照 DSH 源码 `@deepseek-ai/dsh-client-ui-sidebar/lib/client.js`：collapsed 下 `.regionArea` 只是 `margin-left:0;margin-right:0;padding-left:0`，**仍 flex:1**；`.footArea{flex-direction:column;flex:none}`，靠 regionArea 撑到底。我们的 `display:none` 是自造偏差。
+- 改法：删掉那条 `display:none`；改 `html[data-rail-collapsed="true"] .as-region { margin-left:0; margin-right:0; padding-left:0; }`（跟 DSH 字面量一致），内容改由 `html[data-rail-settled="true"] .as-section-head, .as-tree { display:none; }` 隐藏——region 继续当弹簧，但不显示「会话 / 还没有会话」。
+- 实测（本地 8011 与容器 8000 同值）：点击 toggle 后 `rail w=56 h=900`、`foot y=858 h=36`（底边 894 = 900 − 6px 内边距）、`avatar y=864`；展开态 `foot y=850 h=44`（底边同为 894）。截图 `.tmp-test/screens-v18/rail-collapsed-home.png`、`.tmp-test/screens-v18/container/rail-collapsed-home.png`。
+
+**② 助手停用降级（不再整页回落看板）**
+
+- 旧行为：`get_home_provider(user)` 只收 `plugin_enabled(key)` 的 provider，无 provider 时 `plugin_host.views.index` 直接 `dashboard(request)` 返回整页看板——停用助手等于把首页换掉。
+- 改法：`get_home_provider(user=None, include_disabled=False)` 加形参；`index()` 先取启用 provider，取不到再 `include_disabled=True` 取一次并置 `request.ds_home_degraded = True`，仍渲染助手外壳；`plugins/assistant/views.py::home` 据此算 `assistant_enabled = not ds_home_degraded`、`chat_enabled = assistant_enabled and _model_configured()` 注入上下文。
+- 模板（`home_chat.html`）：`assistant_enabled` 为假时「+ 新会话」渲染成 `<span class="as-new is-disabled" aria-disabled="true">`（无 href、不可点），两处 composer 的 `data-locked` / `textarea disabled` 统一按 `chat_enabled`，模型标签三态「助手已停用 / 未配置模型 / 模型服务」。CSS 加 `.as-new.is-disabled{background:var(--as-elevated-fill);color:var(--as-label-tertiary);cursor:not-allowed}`。
+- 真机（本地 8011 与容器 8000，临时 `PluginSwitch('assistant')=False`，测完复原）：`newSessionTag=SPAN`、`class="as-new is-disabled"`、`aria-disabled="true"`、`href=null`、`textareaDisabled=true`、`composerLabel="助手已停用"`、`hasShell=true`、`isDashboard=false`；真点「新会话」`before=/ after=/` 不动；`/?panel=dashboard` 下 `isDashboard=true` 且面板正常。截图 `.tmp-test/screens-v18/assistant-off-expanded.png`、`assistant-disabled-dark-dashboard.png`、`container/assistant-off-expanded.png`、`container/assistant-off-dashboard.png`。
+
+**看板入口的归属（顺带修的耦合）**
+
+- 事实：`plugins/assistant/apps.py` 的 `PluginMeta.menus` 里挂着「看板」(`/dashboard/`, order 3)，所以停用 assistant 时看板入口随插件一起消失。
+- 改法：assistant 的 `menus` 清空；容器注册 builtin `core`（`plugin_host/apps.py`，`version='2.2.1'`、`title=_('容器')`、菜单「看板 /dashboard/ order 3」）。新增 `registry.get_container_menus(user)` 只取「builtin 且不在静态 `OA_PLUGINS`」的插件菜单，由 `context_processors.menus()` 与 `get_menus()` 结果合并后再按 order 排序——`OA_PLUGINS` 里的内置插件（组织架构等）仍按开关走，停用后不会从这里把菜单漏回来；显式传 `plugins` 的 `get_menus` 调用方不受影响。
+- 实测：停用 assistant 后 `primary_menus` 仍为 `['/plugins/attendance/','/dashboard/']`，`/?panel=dashboard` 可正常打开看板。
+
+**门禁**
+
+- 全量 **546 tests OK**、`ruff check plugins plugin_host` 全过。
+- 新增/改写用例：`test_returns_none_when_provider_plugin_disabled`（补 `include_disabled=True` 断言）、`test_disabled_plugin_keeps_shell_but_locks_new_session_and_input`、`test_collapsed_rail_keeps_foot_pinned_to_bottom`（读 CSS 断言 region 不再被 `display:none`）、`test_menu_order_plugin_dashboard_attendance`（改按「插件菜单 + 容器菜单」合并口径量）、`plugins.workspace` 的 builtin 集合加 `core`。
+- 翻译：`django.po` 加 `AI 助手插件已停用 / AI assistant plugin is disabled`、`助手已停用 / Assistant disabled`，`tools/compile_mo.py` 重编译；`.mo` MD5 `f412a1c876a9b901e04d933531cc3a9d`。
+- 容器重建后 10 个改动文件 MD5 与本地一致（`/app/staticfiles/assistant/css/assistant.css` 副本同值 `f71f6ce2bf3467590f3f2efa73226cb2`）。
+
+**仍未做（按原样保留）**：`更多` 里的「创建你的插件」实质也是起一个新会话（`/?prompt=…`），本轮只按用户口径锁了「新会话」；停用后 `/plugins/assistant/` 仍由 `PluginRouteGuardMiddleware` 404（首页 `/` 可用），是否符合「只关两块」待确认。

@@ -33,6 +33,10 @@ class HomeProviderTests(TestCase):
     def test_returns_none_when_provider_plugin_disabled(self):
         PluginSwitch.objects.create(app_key='assistant', enabled=False)
         self.assertIsNone(get_home_provider(self.user))
+        # v2.2.1：首页降级要用到停用插件的实现，此时必须能取到
+        self.assertIs(
+            get_home_provider(self.user, include_disabled=True),
+            assistant_views.home)
 
     def test_returns_provider_when_plugin_enabled(self):
         self.assertIs(get_home_provider(self.user), assistant_views.home)
@@ -98,13 +102,48 @@ class AssistantHomePageTests(TestCase):
         self.assertContains(response, '流程快捷发起')
         self.assertNotContains(response, 'as-shell')
 
-    def test_home_falls_back_to_dashboard_when_plugin_disabled(self):
+    def test_disabled_plugin_keeps_shell_but_locks_new_session_and_input(self):
+        """v2.2.1：停用 AI 助手只关两块交互，不整页换回看板。
+
+        用户口径：收起「新会话」入口（禁止点击）与对话输入（禁止输入），
+        侧栏 / 面板（尤其看板）不能被一并摘掉。
+        """
         PluginSwitch.objects.create(app_key='assistant', enabled=False)
         self.client.force_login(self.user)
         response = self.client.get('/')
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, '核心数据看板')
-        self.assertNotContains(response, 'as-shell')
+        self.assertFalse(response.context['assistant_enabled'])
+        self.assertFalse(response.context['chat_enabled'])
+
+        # 外壳还在，没落回整页看板
+        self.assertContains(response, 'as-shell')
+        self.assertNotContains(response, '核心数据看板')
+        # 新会话入口留在原位但不可点：不再是指向 / 的链接
+        self.assertContains(response, 'class="as-new is-disabled"')
+        self.assertContains(response, 'aria-disabled="true"')
+        self.assertNotContains(response, 'href="/" class="as-new"')
+        # 对话输入区禁用 + 状态标签说明原因
+        self.assertContains(response, '助手已停用')
+        self.assertEqual(
+            response.content.decode().count('data-locked="1"'), 1)
+        # 看板入口仍在（registered 在容器 core，不随助手插件停用消失）
+        self.assertEqual(
+            [menu['url'] for menu in response.context['primary_menus']],
+            ['/plugins/attendance/', '/dashboard/'])
+
+    def test_collapsed_rail_keeps_foot_pinned_to_bottom(self):
+        """收起态账号按钮必须留在底部。
+
+        DSH 的 regionArea 在 collapsed 下只把外边距归零，仍保持 flex:1 ——
+        footArea 靠它撑到底。把整块 display:none 掉，站位一起消失，
+        账号按钮就飘到面板下方（实测收起后 foot 落在 y=306 / 900 高的侧栏）。
+        """
+        css = (
+            Path(settings.BASE_DIR)
+            / 'plugins/assistant/static/assistant/css/assistant.css'
+        ).read_text(encoding='utf-8')
+        self.assertNotIn('.as-region {\n  display: none;', css)
+        self.assertIn('html[data-rail-collapsed="true"] .as-region', css)
 
     def test_dashboard_entry_comes_from_plugin_menus(self):
         """v2.1.0：看板这一格改为在首页内切换，href 指向 `/?panel=dashboard`。

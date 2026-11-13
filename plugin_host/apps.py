@@ -29,6 +29,25 @@ class PluginHostConfig(AppConfig):
                 builtin=True,   # v2.2.0：系统底座，插件页不外显、界面不可停用
             ))
 
+        # v2.2.1：看板（/dashboard/）是容器自己的视图，入口不该挂在 assistant 插件上。
+        # 原先写在 assistant 的 PluginMeta.menus 里，停用 AI 助手就把看板入口一起摘掉了；
+        # 挪到 builtin 的 core：内置底座无开关，菜单始终在场。
+        register(PluginMeta(
+            name='core',
+            version='2.2.1',
+            title=_('容器'),
+            menus=[
+                {'label': _('看板'), 'icon': '▦', 'url': '/dashboard/',
+                 'perm': None, 'order': 3},
+            ],
+            permissions=[],
+            urls=None,
+            signals=[],
+            templates=None,
+            app=None,
+            builtin=True,
+        ))
+
         # 注册表完整性校验改为 Django 系统检查（discover.check_registry）：
         # 此处只导入模块完成注册，不直接调用——ready() 时业务插件尚未全部注册。
         from . import discover  # noqa: F401

@@ -90,16 +90,19 @@ def plugin_enabled(key):
     return True if static is None else static
 
 
-def get_home_provider(user=None):
-    """返回第一个「已启用且声明了 home_provider」的插件实现；没有则返回 None。
+def get_home_provider(user=None, include_disabled=False):
+    """返回第一个声明了 home_provider 的插件实现；没有则返回 None。
 
+    默认只取「已启用」的插件；`include_disabled=True` 时连停用的也取——
+    v2.2.1 起首页要能在助手插件停用后继续渲染外壳（只关新会话与输入区），
+    整页回落看板会把侧栏入口一起换掉，比「关了还能用」更破坏使用现场。
     多个插件同时声明时取 PLUGIN_REGISTRY 注册顺序的第一个并打 warning：
     「谁的首页生效」必须确定，不能随插件加载顺序漂移。
     user 预留给后续按权限过滤首页实现，本版不参与判定。
     """
     providers = []
     for key, meta in PLUGIN_REGISTRY.items():
-        if meta.home_provider and plugin_enabled(key):
+        if meta.home_provider and (include_disabled or plugin_enabled(key)):
             providers.append((key, meta.home_provider))
     if not providers:
         return None
@@ -204,14 +207,40 @@ def get_menus(user, plugins=None):
     menus = []
     allowed = _user_perm_codenames(user)
     for name, meta in (get_enabled_plugins() if plugins is None else plugins):
-        for menu in meta.menus:
-            perm = menu.get('perm')
-            if perm and allowed is not None \
-                    and _perm_codename(perm) not in allowed:
-                continue
-            menus.append({**menu, 'plugin': name})
+        _collect_menus(menus, name, meta, allowed)
     # v2.0.6：侧栏顺序由菜单自带 order 决定（缺省 100，保持插件注册序）。
     # 让「插件」能钉在「助手」之后，而不必改动 OA_PLUGINS 的加载顺序——
     # 插件注册顺序是启动契约，不该被界面排序反过来绑架。
     menus.sort(key=lambda m: m.get('order', 100))
     return menus
+
+
+def get_container_menus(user):
+    """容器自带的内置菜单（builtin 且不在 OA_PLUGINS）。
+
+    v2.2.1：看板入口从 assistant 的 PluginMeta 挪到容器的 core，
+    目的是「停用 AI 助手」不再连带摘掉看板。这类插件不进 OA_PLUGINS，
+    也不受 DB 开关管，所以单独出一份、由外壳在渲染菜单时并进去。
+    注意只取「静态配置之外」的内置插件：OA_PLUGINS 里的内置插件（组织架构等）
+    仍按开关走，否则停用的内置插件会从这里把菜单漏回来。
+    """
+    menus = []
+    allowed = _user_perm_codenames(user)
+    static_keys = {
+        item['app'].rsplit('.', 1)[-1]
+        for item in (getattr(settings, 'OA_PLUGINS', None) or [])
+    }
+    for name, meta in PLUGIN_REGISTRY.items():
+        if meta.builtin and name not in static_keys:
+            _collect_menus(menus, name, meta, allowed)
+    return menus
+
+
+def _collect_menus(menus, name, meta, allowed):
+    """把单个插件的菜单按 RBAC 过滤后并入 menus（贡献者姓名记在 plugin 字段）。"""
+    for menu in meta.menus:
+        perm = menu.get('perm')
+        if perm and allowed is not None \
+                and _perm_codename(perm) not in allowed:
+            continue
+        menus.append({**menu, 'plugin': name})

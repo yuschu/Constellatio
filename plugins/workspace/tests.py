@@ -64,6 +64,7 @@ class PluginSwitchTests(TestCase):
     def test_builtin_plugins_hidden_from_list_and_toggle(self):
         """v2.2.0：内置插件（语言 / 认证 / 账号 / 组织架构 / 插件页 / 图表）不外显。
 
+        v2.2.1 加 core：容器自己的菜单来源（看板入口），同样是内置底座。
         UI 上既看不到卡片，POST 开关也不落库；命令行 `plugin_switch` 仍是兜底出口。
         """
 
@@ -73,7 +74,8 @@ class PluginSwitchTests(TestCase):
 
         builtin = {key for key, meta in PLUGIN_REGISTRY.items() if meta.builtin}
         self.assertEqual(
-            builtin, {'auth', 'user', 'structure', 'workspace', 'language', 'charts'})
+            builtin,
+            {'auth', 'user', 'structure', 'workspace', 'language', 'charts', 'core'})
 
         rows = {row['key'] for row in switch_list_context()['rows']}
         self.assertFalse(rows & builtin)

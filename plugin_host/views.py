@@ -92,8 +92,15 @@ def index(request):
 
     v2.0.0：首页接管第一次成为插件能力（PluginMeta.home_provider）；
     模型未配置不影响接管——对话页自己降级输入区，绝不白屏。
+    v2.2.1：接管插件停用时不再整页换回看板。停用「AI 助手」只该关掉
+    「新会话」与对话输入两块（由 home() 按 request.ds_home_degraded 判定），
+    侧栏与面板入口原样保留——整页回落会连入口一起换掉，现场就断了。
     """
     provider = get_home_provider(request.user)
+    if provider is None:
+        provider = get_home_provider(request.user, include_disabled=True)
+        if provider is not None:
+            request.ds_home_degraded = True
     if provider is not None:
         return provider(request)
     return dashboard(request)

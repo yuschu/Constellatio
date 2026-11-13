@@ -6,7 +6,7 @@ from django.conf import settings
 from django.db.utils import OperationalError, ProgrammingError
 
 from .charts import get_active_chart
-from .registry import get_enabled_plugins, get_menus
+from .registry import get_container_menus, get_enabled_plugins, get_menus
 from .theming import discover_themes
 
 logger = logging.getLogger(__name__)
@@ -71,7 +71,13 @@ def menus(request):
     plugins = get_enabled_plugins()
     enabled = {name for name, _ in plugins}
     if request.user.is_authenticated:
-        menu_items = _mark_active(get_menus(request.user, plugins), request.path)
+        # v2.2.1：容器自带的内置菜单（看板）与插件菜单合并后再排序——
+        # 停用 AI 助手不该把看板入口一起摘掉，而看板的来源已从 assistant 挪到 core。
+        menu_items = _mark_active(
+            sorted(
+                get_menus(request.user, plugins) + get_container_menus(request.user),
+                key=lambda m: m.get('order', 100)),
+            request.path)
     else:
         menu_items = []
     # v2.1.0：业务页侧栏不再展示首页已承载的面板入口（考勤 / 插件 / 看板），

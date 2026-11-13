@@ -30,6 +30,7 @@
       </button>
     </div>
 
+    {% if assistant_enabled %}
     <a href="/" class="as-new">
       <span class="as-new__content">
         <svg class="as-new__ico" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
@@ -38,6 +39,18 @@
         <span class="as-new__label">{% trans "新会话" %}</span>
       </span>
     </a>
+    {% else %}
+    {# v2.2.1：助手插件停用 → 入口留在原位但不可点（不是把它摘掉，也不是跳 404） #}
+    <span class="as-new is-disabled" aria-disabled="true"
+          title="{% trans 'AI 助手插件已停用' %}">
+      <span class="as-new__content">
+        <svg class="as-new__ico" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+          <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" fill="none"/>
+        </svg>
+        <span class="as-new__label">{% trans "新会话" %}</span>
+      </span>
+    </span>
+    {% endif %}
 
     {# 面板入口：primary_menus（考勤/插件/看板，来自 PRIMARY_MENU_URLS）+ 更多抽屉 #}
     <nav class="as-panels" aria-label="{% trans '功能入口' %}">
@@ -276,12 +289,12 @@
           <div class="as-composer">
             <div class="as-card" data-ds-card>
               <label class="as-sr-only" for="as-input">{% trans "输入消息" %}</label>
-              <textarea id="as-input" class="as-input" rows="1" data-ds-input data-locked="{% if not model_configured %}1{% else %}0{% endif %}"
+              <textarea id="as-input" class="as-input" rows="1" data-ds-input data-locked="{% if not chat_enabled %}1{% else %}0{% endif %}"
                         placeholder="{% trans '描述你要处理的事，/ 调用指令' %}"
-                        {% if not model_configured %}disabled{% endif %}>{{ draft_prompt }}</textarea>
+                        {% if not chat_enabled %}disabled{% endif %}>{{ draft_prompt }}</textarea>
               <div class="as-bar">
                 <button type="button" class="as-add" aria-label="{% trans '附加文件' %}"
-                        {% if not model_configured %}disabled{% endif %}>
+                        {% if not chat_enabled %}disabled{% endif %}>
                   <svg class="as-ico" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
                     <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" fill="none"/>
                   </svg>
@@ -303,10 +316,10 @@
                 </div>
                 <div class="as-trailing">
                   <span class="as-trigger as-trigger--model" aria-hidden="true">
-                    <span class="as-trigger__label">{% if model_configured %}{% trans "模型服务" %}{% else %}{% trans "未配置模型" %}{% endif %}</span>
+                    <span class="as-trigger__label">{% if not assistant_enabled %}{% trans "助手已停用" %}{% elif not model_configured %}{% trans "未配置模型" %}{% else %}{% trans "模型服务" %}{% endif %}</span>
                   </span>
                   <button type="button" class="as-send" data-ds-send aria-label="{% trans '发送' %}"
-                          {% if not model_configured %}disabled{% endif %}>
+                          {% if not chat_enabled %}disabled{% endif %}>
                     <svg class="as-ico" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
                       <path d="M8 13V3.6M3.8 7.8L8 3.6l4.2 4.2"
                             stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
@@ -325,12 +338,12 @@
     <div class="as-composer as-composer--docked">
       <div class="as-card" data-ds-card>
         <label class="as-sr-only" for="as-input">{% trans "输入消息" %}</label>
-        <textarea id="as-input" class="as-input" rows="1" data-ds-input data-locked="{% if not model_configured %}1{% else %}0{% endif %}"
+        <textarea id="as-input" class="as-input" rows="1" data-ds-input data-locked="{% if not chat_enabled %}1{% else %}0{% endif %}"
                   placeholder="{% trans '描述你要处理的事，/ 调用指令' %}"
-                  {% if not model_configured %}disabled{% endif %}>{{ draft_prompt }}</textarea>
+                  {% if not chat_enabled %}disabled{% endif %}>{{ draft_prompt }}</textarea>
         <div class="as-bar">
           <button type="button" class="as-add" aria-label="{% trans '附加文件' %}"
-                  {% if not model_configured %}disabled{% endif %}>
+                  {% if not chat_enabled %}disabled{% endif %}>
             <svg class="as-ico" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
               <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" fill="none"/>
             </svg>
@@ -352,10 +365,10 @@
           </div>
           <div class="as-trailing">
             <span class="as-trigger as-trigger--model" aria-hidden="true">
-              <span class="as-trigger__label">{% if model_configured %}{% trans "模型服务" %}{% else %}{% trans "未配置模型" %}{% endif %}</span>
+              <span class="as-trigger__label">{% if not assistant_enabled %}{% trans "助手已停用" %}{% elif not model_configured %}{% trans "未配置模型" %}{% else %}{% trans "模型服务" %}{% endif %}</span>
             </span>
             <button type="button" class="as-send" data-ds-send aria-label="{% trans '发送' %}"
-                    {% if not model_configured %}disabled{% endif %}>
+                    {% if not chat_enabled %}disabled{% endif %}>
               <svg class="as-ico" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
                 <path d="M8 13V3.6M3.8 7.8L8 3.6l4.2 4.2"
                       stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>

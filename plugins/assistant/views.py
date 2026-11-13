@@ -109,6 +109,10 @@ def home(request):
     color_mode = _resolve_color_mode(request)
     panel = _resolve_panel(request)
     sub = _resolve_sub(request, panel)
+    # v2.2.1：插件停用后宿主仍走这里（index 设 ds_home_degraded），
+    # 只关「新会话」入口与对话输入，侧栏 / 面板 / 看板入口都留着。
+    assistant_enabled = not getattr(request, 'ds_home_degraded', False)
+    chat_enabled = assistant_enabled and _model_configured()
     if request.method == 'POST' and (panel, sub) == ('attendance', 'rules'):
         # 设置弹层里的规则表单 action 为空 → POST 回到面板 URL（/）：
         # 保存逻辑与业务页共用 save_rules()，成功 PRG 回面板并带 saved=1，
@@ -129,6 +133,8 @@ def home(request):
     context = {
         'color_mode': color_mode,
         'model_configured': _model_configured(),
+        'assistant_enabled': assistant_enabled,
+        'chat_enabled': chat_enabled,
         'chat_messages': [],
         'primary_menus': primary_menus,
         'common_menus': common_menus,
