@@ -60,6 +60,28 @@ class CspHeaderTests(TestCase):
         second = re.search(r"'nonce-([^']+)'", self.client.get('/dashboard/').headers[HEADER]).group(1)
         self.assertNotEqual(first, second)
 
+    def test_panel_nonce_meta_matches_header(self):
+        """v2.2.6：首页/业务页都暴露当前 nonce，供 home-panels.js 重跑面板脚本。
+
+        无刷新换面板时 fetch 回来的片段带的是另一次响应的 nonce，而且
+        `getAttribute('nonce')` 被浏览器隐藏成空串，直接搬过去必被 CSP 拦掉。
+        """
+        self.client.force_login(self.admin)
+        for url in ('/', '/?panel=workspace', '/dashboard/'):
+            response = self.client.get(url)
+            html = response.content.decode()
+            header_nonce = re.search(r"'nonce-([^']+)'", response.headers[HEADER]).group(1)
+            meta = re.search(r'<meta name="csp-nonce" content="([^"]+)">', html)
+            self.assertIsNotNone(meta, f'{url} 缺 csp-nonce meta')
+            self.assertEqual(meta.group(1), header_nonce, url)
+
+    def test_home_panels_reuses_current_nonce(self):
+        """面板脚本重跑必须改用当前文档的 nonce，而不是照搬片段里的空 nonce。"""
+        js = (Path(settings.BASE_DIR) / 'plugin_host/static/js/home-panels.js').read_text(encoding='utf-8')
+        self.assertIn('meta[name="csp-nonce"]', js)
+        self.assertIn('script.nonce = cspNonce', js)
+        self.assertIn("attr.name === 'nonce'", js)
+
     def test_static_response_has_no_policy(self):
         """`/static/` 不发 CSP（对 JSON/JS/图片无意义）。
 

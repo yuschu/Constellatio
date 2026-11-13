@@ -1592,3 +1592,29 @@ body{--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l1);--dsh-scrollbar-thum
 **仍待定的口径**
 
 - 卡片右上「在班 N」当前仍是「今日已签到人数」（含已签退的人），与「已签退 M」并列时会出现 `在班 4 · 已签退 2` 这种看起来重复的读法。是否拆成「在班 = 已签到 - 已签退」需要一个明确口径，本轮没有擅自改数字。
+
+### 9.13.34 插件页状态点不切换 = 面板内联脚本被 CSP 拦掉（v2.2.6 / 2026-11-13）
+
+**现象与复现**
+
+- 用户报「插件关闭后绿色状态点没切换」。直接整页打开 `/plugins/workspace/`、以及在容器 `:8000` 上点开关，状态点都会正常转灰（`dotClass` 去掉 `is-on`、`dotBg` 由 `rgb(34,197,94)` 变 `rgba(0,0,0,0.16)`、复选框 `checked=false`），因此一开始无法复现。
+- 按真实路径复现成功：首页对话态点侧栏「插件」→ `home-panels.js` fetch `/?panel=workspace` 无刷新换面板 → 再点开关，**复选框变 off、状态点仍绿、URL 不变、没有发出 POST**。
+- 证据（`.tmp-test/plugin-csp-probe.mjs`）：换面板后 `securitypolicyviolation` 记录 `script-src-elem`，面板里那个 `<script>` 的 `nonceProp` 为空。根因是 CSP 的 nonce 每响应一个：fetch 回来的片段带的是**另一次响应**的 nonce，而且 `getAttribute('nonce')` 在浏览器里被隐藏成空串；`runScripts()` 把属性原样搬过去，新 script 等于没有 nonce，被当前页的 CSP 拦掉——`_panel.html` 里「change → `form.submit()`」的监听根本没挂上，于是只有复选框在本地翻转。
+
+**改动**
+
+1. `plugin_host/static/js/home-panels.js::runScripts`：跳过 `nonce` 属性，改用当前文档 `<meta name="csp-nonce">` 的值赋给 `script.nonce`，让搬进来的脚本用当前页的 nonce 重新授权。
+2. `themes/corporate-clean/templates/base.html`、`plugins/assistant/templates/assistant/home_chat.html`：`<head>` 新增 `<meta name="csp-nonce" content="{{ request.csp_nonce }}">`（业务页与首页对话态各一份）。
+3. 修的是**所有**面板内联脚本，不止插件开关：此前凡依赖 `runScripts()` 重跑的脚本都可能静默失效。
+
+**门禁**
+
+- `plugin_host/tests_csp.py` 新增两条：`test_panel_nonce_meta_matches_header`（`/`、`/?panel=workspace`、`/dashboard/` 的 meta nonce 与响应头 `nonce-…` 相等）、`test_home_panels_reuses_current_nonce`（JS 读 meta、赋 `script.nonce`、跳过 `nonce` 属性）。
+- 全量 **558 tests OK**（556 + 2），`ruff check plugins plugin_host` 全过，`manage.py check` 干净；`node --check home-panels.js` 通过。
+
+**实测**
+
+- 本地 `:8011` 按真实路径复测：换面板后 `dotClass` 由 `ds-plugin__dot is-on` 变 `ds-plugin__dot`、`dotBg` `rgb(34,197,94)` → `rgba(0,0,0,0.16)`、`checked=false`、URL 仍 `/?panel=workspace`；CSP 探针 `csp: []`、脚本 `nonceProp` 非空。截图 `.tmp-test/screens-v21/plugin-flow-fixed.png`。
+- 容器重建后 MD5 与本地一致：`home-panels.js 4cdbf78296085c10c88aed209c3388f5`、`base.html 413234853c05f73785df9458c1ba1e88`、`home_chat.html fadac61978164062b881e9e93727c7c9`、`tests_csp.py 14eb572736575fbdcea4972c69fc99bc`，`/app/staticfiles/js/home-panels.js` 同哈希。容器同路径点 `notify`：绿→灰，`checked=false`、URL 不变。截图 `.tmp-test/screens-v21/container/plugin-flow.png`。
+- 测试残留已复原：本地 `PluginSwitch` 清空（回到原本的空表），容器只删掉临时加的 `notify` 行，原有 6 行不变。
+

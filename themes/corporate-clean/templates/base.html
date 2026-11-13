@@ -2,6 +2,7 @@
 <html lang="{{ LANGUAGE_CODE }}" data-color-mode="{{ color_mode }}">
 <head>
   <meta charset="utf-8">
+  <meta name="csp-nonce" content="{{ request.csp_nonce }}">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Constellatio · {% trans "企业办公自动化" %}{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.min.css' %}">

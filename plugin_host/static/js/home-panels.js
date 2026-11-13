@@ -16,15 +16,24 @@
   var body = document.querySelector('[data-panel-body]');
   if (!body) { return; }
 
-  /** 把新片段里的 <script> 重新执行一遍（innerHTML 不会执行脚本）。 */
+  /** 把新片段里的 <script> 重新执行一遍（innerHTML 不会执行脚本）。
+   *
+   * CSP 的 nonce 是每响应一个，fetch 回来的片段带的是那次响应自己的 nonce，
+   * 而且 `getAttribute('nonce')` 会被浏览器隐藏成空串 —— 直接搬过去会被当前页的
+   * `script-src-elem` 拦掉（插件开关的 change 监听就是这么丢的）。所以统一改用
+   * 当前文档 <meta name="csp-nonce"> 里的 nonce 重新授权。
+   */
+  var cspNonce = (document.querySelector('meta[name="csp-nonce"]') || {}).content || '';
   function runScripts(root) {
     var scripts = root.querySelectorAll('script');
     Array.prototype.forEach.call(scripts, function (old) {
       var script = document.createElement('script');
       Array.prototype.forEach.call(old.attributes, function (attr) {
+        if (attr.name === 'nonce') { return; }
         script.setAttribute(attr.name, attr.value);
       });
       script.text = old.text;
+      if (cspNonce) { script.nonce = cspNonce; }
       old.parentNode.replaceChild(script, old);
     });
   }

@@ -2,6 +2,7 @@
 <html lang="{{ LANGUAGE_CODE }}" data-color-mode="{{ color_mode }}">
 <head>
   <meta charset="utf-8">
+  <meta name="csp-nonce" content="{{ request.csp_nonce }}">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% if panel and panel != 'chat' %}{{ panel_title }}{% else %}{% trans "助手" %}{% endif %} · Constellatio</title>
   <link rel="icon" href="data:,">
