@@ -1096,3 +1096,30 @@ input:focus-visible{outline:1px solid state-business;outline-offset:2px}
 **真机实测（本地 8011，admin，六块面板各一张截图 + 计算样式 dump）**：部门修改（`?view=edit&id=3`）、新建用户（`?view=new`）、发布公告、查看模板、活动记录 #3488、考勤规则。六处 `label` 计算值均为 `rgb(15,17,21) / 13px / 500 / 19.5px`；`help` 均为 `rgb(97,102,107) / 12px / 19.2px / padding-top 10px`；只读行为 `12/12` 内距；公告「置顶」与模板「授予管理员权限」的 checkbox 从裸控件变成 `16×16 / margin 0 / accent-color rgb(15,17,21)`。截图落 `.tmp-test/screens-v9/`（未入库）。
 
 **容器实测（`docker compose up -d --build web` 重建后，8000 端口，容器 admin）**：CSS md5 本地/容器一致（`7143fdaa8cf4fc53f6c2900107516317`），`base.html` 一致（`9e8dcb7aefb17e809d1aa70590a287da`），四块面板（部门修改 / 发布公告 / 活动记录 #1456 / 考勤规则）计算样式与本地逐项相同，公告「置顶」复选框在容器里也是 16×16。截图落 `.tmp-test/screens-v9/container/`。
+
+### 9.13.19 二级页改成原地取面板（v2.1.6）
+
+**用户诉求**：「点击编辑等打开二级页还是用的旧版逻辑，移植 dsh 的」。上一节把二级页的**元素**对齐了 DSH，但**导航**还是旧的：行内「修改 / 编辑 / 查看 / 详情 / 已读 N 人」是普通 `<a href>`，一点就整页跳转 —— 侧栏重绘、列表滚动归零、中间白一下。DSH 里点开设置从来不换页，面板是盖在当前页上的一层。
+
+**判定**：这不是样式问题，是导航问题。服务端本来就能按深链（`?view=edit&id=` / `/plugins/blockchain/<pk>/` / `/plugins/notice/<pk>/readers/`）把同一块 `.ds-settings__panel` 渲染出来；既然如此，前端根本不必真的跳页，只要把那块 DOM 取回来盖上去即可。这样深链仍然有效（刷新 / 新窗口直开也成立），但正常点击不再重载。
+
+**实现（`plugin_host/static/js/ds-shell.js` 的 `initSubpages`）**：
+
+1. 行内链接打 `data-ds-panel`（6 处：部门修改、用户编辑、角色编辑、活动记录查看、公告已读人员、审批详情）。document 级 click 委托拦截，只接左键、无修饰键、无 `target`、`href` 不是 `#` 的点击 —— 右键「在新标签打开」等原生行为保留。
+2. `openPanel(url)`：`fetch` 该深链 → `DOMParser` → 抽出 `.ds-settings__panel` → `document.importNode` 塞进**动态 host** `#ds-subpage-host`（`ds-settings ds-settings--subpage ds-settings--single` + overlay + ✕，✕ 的 `aria-label` 抄 `#ds-settings` 的那个）→ 记下打开前的 `path+search` 作为 base → `openModal` 上锁 → `pushState` 成深链。取不到面板或网络失败则退回 `location.assign`，功能不丢。
+3. 关闭：`replaceState` 回 base；`sync()` 末尾再比一次 host 与地址栏，浏览器后退即收起面板。
+4. 面板内表单：host 级 `submit` 拦截 —— 仅 POST、无 `target`、无 `data-ds-allow-native`、host 正打开时生效 → `fetch` POST（`FormData` 带上 submitter，`credentials: same-origin`）→ 拿到 200 且仍是面板就**原地换面板**；只有 `res.redirected || !res.ok` 才 `location.assign`（保存成功回列表、权限拦截等仍走整页）。
+
+**实测暴露的两个真 bug（都是先看到现象再查到的，不是猜）**：
+
+- **公告中心一页两块面板**：列表页同时预渲染了「发布公告」和「已读人员」两块，取回后 `querySelector('.ds-settings__panel')` 抓到的是第一块，点「已读 N 人」标题写着「发布公告」。改成优先取取回页面里 **正在打开态**（`[data-ds-subpage]:not([hidden])`）所属的那块，再退回第一块。
+- **部门编辑面板里没有 `dept_id`**：`_save_department_edit(request, request.POST.get('dept_id'))` 拿到 `None` → `get_object_or_404(pk=None)` → **404**；前端见 `!res.ok` 就 `location.assign`，用户看到的就是「点保存，整页跳一下，还停在原处」。修两处：视图 POST 分派改成 `request.POST.get('dept_id') or request.GET.get('id')`（与用户 / 角色「id 走地址」的口径统一），`_department_form_body.html` 的 edit 态补 `<input type="hidden" name="dept_id" value="{{ edit_dept.pk }}">`。顺带发现原测试**手塞了 `dept_id`**，正好把这个缺口盖住了 —— 所以同一条测试才能一直是绿的。
+- 地址栏不还原：`data-ds-subpage-url` 存的是绝对 URL，原来拿 `pathname+search` 直接比永远不等 → 加 `sameUrl()` 归一比较。
+
+**门禁**：`plugins/user/tests.py` 两条编辑提交测试改成浏览器真实字段（不再手塞 `dept_id`），新增 `test_edit_form_carries_dept_id_hidden_field`；`plugin_host/tests.py` 新增 `SubpageInPlaceTest` —— 6 个列表模板必须带 `data-ds-panel`，`ds-shell.js` 必须保留 host id / `importNode` / `sameUrl` / fetch POST 四件事。全量 **522 tests OK**，ruff 通过。
+
+**真机（本地 8011，1440×900，admin）**：五处开合（部门修改 `?view=edit&id=3`、活动记录 #3489、公告已读人员、用户编辑 `?view=edit&id=7`、角色编辑 `?view=edit&id=3`）全部 `window.__noReload` 存活（页面没重载）、地址栏开时进深链、关时回列表、`body` 遮罩锁随开合进出。部门编辑里清空「部门名称」再 `requestSubmit()`：错误「这个字段是必填项。」出现在**面板里**，marker 依旧存活 —— 提交也不再重载。截图落 `.tmp-test/screens-v10/`。
+
+**容器实测（`docker compose up -d --build web` 重建后，8000 端口，容器 admin）**：同样 5 项开合 + 面板内提交，结果与本地逐条一致（部门修改 `?view=edit&id=1` / 活动记录 #1456 / 公告已读人员 / 用户编辑 id=3 / 角色编辑 id=1，错误文案同样落在面板里）。MD5 本地/容器一致：`ds-shell.js c3ac13bf82e1dfc0fe912b1539f75f94`、`plugins/user/views.py d9efd743b105566a0c1247a0d1bf94eb`、`_department_form_body.html daced60e6a61727aa2c60d31ff0de932`、`department_list.html 993bcd118bbc347d2320e3c07f1b8442`、`notice_list.html b0605c9b1c26f8d3cec70a81b77d1279`。截图落 `.tmp-test/screens-v10/container/`。
+
+**未覆盖**：审批中心的列表在 admin 账号下是空的（没有行可点），`approval_list.html` 的 `data-ds-panel` 只有模板断言；公告「已读人员」是自带地址页的独立弹层（原来靠 `data-ds-subpage-static` 豁免地址栏同步），改成原地开后关闭仍是回 `/plugins/notice/`。

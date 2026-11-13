@@ -170,6 +170,39 @@ class ThemeDiscoveryTest(TestCase):
                       css)
 
 
+class SubpageInPlaceTest(TestCase):
+    """v2.1.6：二级页改成「原地取内容」，与 DSH 点开设置一致。
+
+    判据（可离线核对的部分）：列表里的深链带 `data-ds-panel`；`ds-shell.js` 里
+    有承载面板的 host、取回后换面板、关闭还原地址三件事。真正的「不重新加载」
+    由真机探针验证（marker 存活 + 地址栏往返）。
+    """
+
+    ROW_LINKS = (
+        'plugins/user/templates/user/department_list.html',
+        'plugins/user/templates/user/user_list.html',
+        'plugins/user/templates/user/role_list.html',
+        'plugins/blockchain/templates/blockchain/blockchain_list.html',
+        'plugins/approval/templates/approval/approval_list.html',
+        'plugins/notice/templates/notice/notice_list.html',
+    )
+
+    def test_row_links_are_flagged_for_in_place_open(self):
+        for rel in self.ROW_LINKS:
+            text = (settings.BASE_DIR / rel).read_text(encoding='utf-8')
+            self.assertIn('data-ds-panel', text, rel)
+
+    def test_shell_implements_in_place_panel(self):
+        js = (settings.BASE_DIR / 'plugin_host/static/js/ds-shell.js').read_text(
+            encoding='utf-8')
+        self.assertIn("HOST_ID = 'ds-subpage-host'", js)
+        self.assertIn("closest('[data-ds-panel]')", js)
+        self.assertIn("'.ds-settings__panel'", js)      # 取回的就是同一块面板
+        self.assertIn('document.importNode', js)
+        self.assertIn('function sameUrl', js)            # 关闭时地址栏能还原
+        self.assertIn("fetch(url, { method: 'POST'", js) # 面板内表单原地提交
+
+
 class ThemeRuntimeSwitchTest(TestCase):
     """v1.5.8：功能区主题切换（Cookie → 模板/静态随请求切换）。"""
 

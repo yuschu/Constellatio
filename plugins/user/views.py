@@ -118,7 +118,10 @@ def department_list(request):
         if action == 'create':
             return _save_department_create(request)
         elif action == 'edit':
-            return _save_department_edit(request, request.POST.get('dept_id'))
+            # dept_id 优先取表单隐藏字段；表单没带（或走的是深链页的原地提交）时
+            # 回落到地址里的 ?id=，与用户 / 角色的分派口径一致。
+            return _save_department_edit(
+                request, request.POST.get('dept_id') or request.GET.get('id'))
         elif action == 'soft_delete':
             dept_id = request.POST.get('dept_id')
             dept = get_object_or_404(Department, pk=dept_id)

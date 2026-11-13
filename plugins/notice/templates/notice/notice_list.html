@@ -21,7 +21,7 @@
       · {{ a.created_at|date:"Y-m-d H:i" }}
     </div>
     {% if perms.notice.notice_manage %}
-    <a href="{% url 'notice:notice_readers' a.id %}" class="r-offset-hover text-muted" style="font-size:.8rem;">
+    <a href="{% url 'notice:notice_readers' a.id %}" class="r-offset-hover text-muted" style="font-size:.8rem;" data-ds-panel>
       {% blocktranslate with count=a.read_count %}已读 {{ count }} 人{% endblocktranslate %}
     </a>
     {% endif %}

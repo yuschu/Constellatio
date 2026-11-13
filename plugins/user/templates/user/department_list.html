@@ -36,7 +36,7 @@
           <td class="text-nowrap">
             <div class="d-flex align-items-center gap-2">
               {# v2.1.5：修改走 ?view=edit&id= 深链；不能带 data-ds-modal-open，就地打开的是列表页预渲染的「新建」弹层 #}
-              <a class="r-btn r-btn--ghost r-btn--action"
+              <a class="r-btn r-btn--ghost r-btn--action" data-ds-panel
                  href="{{ dept_edit_url }}{{ d.id }}">{% trans "修改" %}</a>
               {% if d.is_active %}
               <form method="post" action="{% url 'user:department_list' %}" class="m-0">

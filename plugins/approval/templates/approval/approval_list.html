@@ -36,7 +36,7 @@
           </td>
           <td class="text-nowrap">
             <div class="d-flex flex-wrap align-items-center gap-2">
-              <a href="{% url 'approval:approval_detail' a.id %}" class="r-offset-hover">{% trans "详情" %}</a>
+              <a href="{% url 'approval:approval_detail' a.id %}" class="r-offset-hover" data-ds-panel>{% trans "详情" %}</a>
               {% if a.status == 'rejected' %}
               <a href="{% url 'approval:approval_create' %}?reapply={{ a.id }}" class="r-btn r-btn--plain">{% trans "重新申请" %}</a>
               <form method="post" action="{% url 'approval:approval_hide' a.id %}" class="d-inline m-0"

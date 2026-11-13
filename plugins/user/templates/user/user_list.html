@@ -42,7 +42,7 @@
             <span class="text-muted" style="font-size:.75rem;">{% trans "超管（不可操作）" %}</span>
             {% else %}
             <div class="d-flex align-items-center gap-2">
-              <a href="{{ user_edit_url }}{{ u.id }}" class="r-btn r-btn--ghost r-btn--action">{% trans "编辑" %}</a>
+              <a href="{{ user_edit_url }}{{ u.id }}" class="r-btn r-btn--ghost r-btn--action" data-ds-panel>{% trans "编辑" %}</a>
               {% if not u.is_active %}
               <form method="post" action="{% url 'user:user_status' u.id %}" class="m-0">
                 {% csrf_token %}

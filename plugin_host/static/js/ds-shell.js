@@ -393,6 +393,7 @@
      home-panels.js 整块替换后不需要重新绑定。 */
   function initSubpages() {
     var RETURN = typeof WeakMap === 'function' ? new WeakMap() : null;
+    var HOST_ID = 'ds-subpage-host';
 
     function searchHas(query) {
       if (!query) return false;
@@ -404,6 +405,18 @@
       var value = query.slice(eq + 1).split('&')[0];
       var params = new URLSearchParams(window.location.search);
       return params.get(key) === value;
+    }
+
+    /* 深链地址可能是绝对（link.href）也可能是相对（模板里的 sp_url），
+       比较时统一按 pathname + search 归一，否则关闭时永远还原不了地址栏。 */
+    function sameUrl(a, b) {
+      if (!a || !b) return false;
+      if (a === b) return true;
+      try {
+        var ua = new URL(a, window.location.href);
+        var ub = new URL(b, window.location.href);
+        return ua.pathname === ub.pathname && ua.search === ub.search;
+      } catch (e) { return false; }
     }
 
     function modals() {
@@ -424,7 +437,7 @@
       document.body.classList.add('ds-modal-open');
       focusFirst(modal);
       var url = modal.getAttribute('data-ds-subpage-url');
-      if (url && (window.location.pathname + window.location.search) !== url) {
+      if (url && !sameUrl(url, window.location.href)) {
         try { window.history.pushState({ dsSubpage: modal.id }, '', url); }
         catch (e) { /* 不支持 history 的环境退化为原地打开 */ }
       }
@@ -436,7 +449,7 @@
       modal.setAttribute('aria-hidden', 'true');
       var url = modal.getAttribute('data-ds-subpage-url');
       var base = modal.getAttribute('data-ds-subpage-base');
-      if (base && url && (window.location.pathname + window.location.search) === url) {
+      if (base && url && sameUrl(url, window.location.href)) {
         try { window.history.replaceState({}, '', base); } catch (e) { /* 同上 */ }
       }
       var trigger = RETURN ? RETURN.get(modal) : null;
@@ -467,12 +480,157 @@
         if (shouldOpen && modal.hasAttribute('hidden')) openModal(modal, null);
         else if (!shouldOpen && !modal.hasAttribute('hidden')) closeModal(modal);
       });
+      // 取回来的面板（见 openPanel）也跟地址栏对齐：后退到列表地址就收起
+      var host = document.getElementById(HOST_ID);
+      if (host && !host.hasAttribute('hidden')) {
+        var hostUrl = host.getAttribute('data-ds-subpage-url');
+        if (hostUrl && (window.location.pathname + window.location.search) !== hostUrl) {
+          closeModal(host);
+        }
+      }
       syncBodyClass();
+    }
+
+    /* ---------- 原地取内容（DSH 的设置面板就是原地盖一层，不是跳一页）----------
+       列表里的「修改 / 编辑 / 查看 / 已读人员」这些深链，服务端返回的本来就是同一块
+       `.ds-settings__panel`，所以点开时只把这块取回来换进弹层，页面本身不重新加载：
+       侧栏不重绘、滚动不归零、没有白屏。地址栏 pushState 成深链地址（刷新依然可用），
+       关闭时 replaceState 回列表。取不到面板（权限/异常）就退回整页跳转，行为与旧版一致。 */
+    function hostEl() {
+      var host = document.getElementById(HOST_ID);
+      if (host) return host;
+      var closeLabel = 'Close';
+      var modalClose = document.querySelector('#ds-settings .ds-settings__close[aria-label]');
+      if (modalClose) closeLabel = modalClose.getAttribute('aria-label');
+
+      host = document.createElement('div');
+      host.id = HOST_ID;
+      host.className = 'ds-settings ds-settings--subpage ds-settings--single';
+      host.setAttribute('role', 'dialog');
+      host.setAttribute('aria-modal', 'true');
+      host.setAttribute('data-ds-subpage', '');
+      host.setAttribute('data-ds-subpage-static', '');
+      host.setAttribute('hidden', '');
+      host.setAttribute('aria-hidden', 'true');
+      host.setAttribute('data-ds-close-label', closeLabel);
+
+      var overlay = document.createElement('div');
+      overlay.className = 'ds-settings__overlay';
+      overlay.setAttribute('aria-hidden', 'true');
+      overlay.setAttribute('data-ds-modal-close', '');
+      host.appendChild(overlay);
+
+      // 面板里的表单也原地提交：校验失败换回带错误的面板，成功/重定向才整页走
+      host.addEventListener('submit', function (e) {
+        var form = e.target;
+        if (!form || form.tagName !== 'FORM') return;
+        if (host.hasAttribute('hidden')) return;
+        var method = (form.getAttribute('method') || 'get').toLowerCase();
+        if (method !== 'post' || form.hasAttribute('target')) return;
+        if (form.hasAttribute('data-ds-allow-native')) return;
+        e.preventDefault();
+        var url = form.getAttribute('action') || window.location.href;
+        var body = new FormData(form);
+        if (e.submitter && e.submitter.name) {
+          body.append(e.submitter.name, e.submitter.value);
+        }
+        fetch(url, { method: 'POST', body: body, credentials: 'same-origin', redirect: 'follow' })
+          .then(function (res) {
+            if (res.redirected || !res.ok) {
+              window.location.assign(res.url || url);
+              return null;
+            }
+            return res.text().then(function (html) {
+              var panel = panelFrom(html);
+              if (panel) mountPanel(host, panel);
+              else window.location.assign(url);
+            });
+          })
+          .catch(function () { form.submit(); });
+      });
+
+      document.body.appendChild(host);
+      return host;
+    }
+
+    function panelFrom(html) {
+      var doc = new DOMParser().parseFromString(html, 'text/html');
+      if (!doc) return null;
+      /* 一页里可能不止一块面板（公告中心：发布公告弹层 + 已读人员弹层）。
+         取「在取回页面里正处于打开态」的那一块，否则会拿错标题/正文。 */
+      var owner = doc.querySelector('[data-ds-subpage]:not([hidden])') ||
+        doc.querySelector('[data-ds-subpage]');
+      var panel = owner ? owner.querySelector('.ds-settings__panel')
+        : doc.querySelector('.ds-settings__panel');
+      if (!panel) return null;
+      // 深链页右上是「返回箭头」（点了真的跳页）；进了弹层就该是关闭按钮
+      var head = panel.querySelector('.ds-settings__header');
+      var back = panel.querySelector('.ds-settings__back');
+      if (back && back.parentNode) back.parentNode.removeChild(back);
+      if (head && !head.querySelector('[data-ds-modal-close]')) {
+        var label = (document.getElementById(HOST_ID) || {}).getAttribute
+          ? document.getElementById(HOST_ID).getAttribute('data-ds-close-label')
+          : 'Close';
+        var close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'ds-settings__close';
+        close.setAttribute('data-ds-modal-close', '');
+        close.setAttribute('aria-label', label || 'Close');
+        close.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">' +
+          '<path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" fill="none"' +
+          ' stroke-linecap="round"/></svg>';
+        head.appendChild(close);
+      }
+      return panel;
+    }
+
+    function mountPanel(host, panel) {
+      var old = host.querySelector('.ds-settings__panel');
+      if (old) old.parentNode.removeChild(old);
+      host.appendChild(document.importNode(panel, true));
+      var title = host.querySelector('.ds-settings__title');
+      if (title && title.id) host.setAttribute('aria-labelledby', title.id);
+      else if (title) host.setAttribute('aria-label', title.textContent);
+    }
+
+    function openPanel(url, trigger) {
+      var host = hostEl();
+      var base = host.hasAttribute('hidden')
+        ? window.location.pathname + window.location.search
+        : host.getAttribute('data-ds-subpage-base');
+      fetch(url, { credentials: 'same-origin' })
+        .then(function (res) {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.text();
+        })
+        .then(function (html) {
+          var panel = panelFrom(html);
+          if (!panel) throw new Error('no panel');
+          mountPanel(host, panel);
+          host.setAttribute('data-ds-subpage-url', url);
+          host.setAttribute('data-ds-subpage-base', base);
+          openModal(host, trigger || null);
+        })
+        .catch(function () { window.location.assign(url); });
     }
 
     document.addEventListener('click', function (e) {
       var t = e.target;
       if (!t || !t.closest) return;
+
+      // 深链二级页：原地取面板，不跳页（见 openPanel）。修饰键/中键不接管，
+      // 保持「Ctrl+点开新标签」这种浏览器原生行为。
+      var panelLink = t.closest('[data-ds-panel]');
+      if (panelLink) {
+        var href = panelLink.getAttribute('href');
+        if (href && href.charAt(0) !== '#' && !panelLink.hasAttribute('target') &&
+            e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+          e.preventDefault();
+          openPanel(panelLink.href, panelLink);
+          return;
+        }
+      }
+
       var opener = t.closest('[data-ds-modal-open]');
       if (opener) {
         var modal = document.getElementById(opener.getAttribute('data-ds-modal-open'));

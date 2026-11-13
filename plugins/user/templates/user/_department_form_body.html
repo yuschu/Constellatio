@@ -1,8 +1,8 @@
 {% load i18n %}
 {% comment %}
 部门表单正文（新建 / 修改共用）。
-字段行沿用设置页的 SettingsValueField 口径：标签 13/20 secondary、控件 34、
-说明 12/18 tertiary；操作按钮居中。
+字段行按 DSH `_field_181ew` 字面量：标签 13/500/lh1.5 label-primary、控件 34、
+说明 12/lh1.6 label-secondary（padding-top 10）；操作按钮居中。
 提交文案由宿主给（`dept_form_submit`：创建 / 保存修改），两种模式不复制正文。
 隐藏字段 `action` 随模式切换：create / edit；edit 模式再带 `dept_id`。
 {% endcomment %}
@@ -13,6 +13,7 @@
 <form method="post" novalidate class="ds-settings__form">
   {% csrf_token %}
   <input type="hidden" name="action" value="{{ dept_form_mode }}">
+  {% if dept_form_mode == 'edit' %}<input type="hidden" name="dept_id" value="{{ edit_dept.pk }}">{% endif %}
 
   {% for error in form.non_field_errors %}
   <div class="ds-field__error">{{ error }}</div>

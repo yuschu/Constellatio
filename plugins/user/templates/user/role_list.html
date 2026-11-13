@@ -39,7 +39,7 @@
             </div>
           </td>
           <td>{{ r.users.count }}</td>
-          <td class="text-nowrap"><a href="{{ role_edit_url }}{{ r.id }}" class="r-btn">{% trans "编辑" %}</a></td>
+          <td class="text-nowrap"><a href="{{ role_edit_url }}{{ r.id }}" class="r-btn" data-ds-panel>{% trans "编辑" %}</a></td>
         </tr>
         {% empty %}
         <tr><td colspan="6" class="text-muted">{% trans "暂无角色" %}</td></tr>

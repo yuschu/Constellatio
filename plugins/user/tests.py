@@ -415,21 +415,35 @@ class DepartmentFormPageTests(TestCase):
         self.assertNotIn('col-lg-4', html)
 
     def test_edit_post_from_dialog_updates_and_redirects(self):
+        """表单只提交 action=edit + name/parent（与浏览器里那份表单一致）。
+
+        v2.1.6 回调：原来这里手塞了 dept_id，掩盖了「弹层表单里没有 dept_id」
+        的缺口 —— 真实提交时 `get_object_or_404(pk=None)` 直接 404。现在视图在
+        POST 没带 dept_id 时回落到地址里的 ?id=，这条测试才真正代表用户点保存。
+        """
         self.client.force_login(self.admin)
         dept = Department.objects.create(name='旧名部门')
         response = self.client.post(
             reverse('user:department_list') + f'?view=edit&id={dept.pk}',
-            {'action': 'edit', 'dept_id': dept.pk, 'name': '新名部门', 'parent': ''})
+            {'action': 'edit', 'name': '新名部门', 'parent': ''})
         self.assertEqual(response.status_code, 302)
         dept.refresh_from_db()
         self.assertEqual(dept.name, '新名部门')
+
+    def test_edit_form_carries_dept_id_hidden_field(self):
+        """编辑态的面板表单自带 dept_id，不依赖地址栏兜底。"""
+        self.client.force_login(self.admin)
+        dept = Department.objects.create(name='带 id 部门')
+        html = self.client.get(
+            reverse('user:department_list') + f'?view=edit&id={dept.pk}').content.decode()
+        self.assertIn(f'<input type="hidden" name="dept_id" value="{dept.pk}">', html)
 
     def test_edit_invalid_keeps_dialog_open_in_edit_mode(self):
         self.client.force_login(self.admin)
         dept = Department.objects.create(name='保持原名部门')
         response = self.client.post(
             reverse('user:department_list') + f'?view=edit&id={dept.pk}',
-            {'action': 'edit', 'dept_id': dept.pk, 'name': '', 'parent': ''})
+            {'action': 'edit', 'name': '', 'parent': ''})
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'id="ds-dept-form"')
         self.assertContains(response, 'ds-field__error')
