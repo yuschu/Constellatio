@@ -6,8 +6,10 @@
 - 声明了且插件启用 → 返回该 provider。
 """
 
+from pathlib import Path
 from unittest import mock
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.template.loader import render_to_string
 from django.test import RequestFactory, TestCase, override_settings
@@ -54,6 +56,24 @@ class AssistantHomePageTests(TestCase):
         self.assertFalse(response.context['model_configured'])
         # textarea、+ 附件、发送各一个 disabled（「只读」是状态标签，不是按钮）
         self.assertContains(response, 'disabled', count=3)
+
+    def test_rail_collapsed_state_booted_before_first_paint(self):
+        """收起态要赶在首帧前落到 <html> 上。
+
+        ds-shell.js 是 defer，最早也要等解析完才跑，冷导航时会先画 280 再跳 56；
+        因此 head 里必须同步加载 rail-boot.js，且它读的是同一个会话键。
+        """
+        self.client.force_login(self.user)
+        home = self.client.get('/').content.decode()
+        self.assertIn('js/rail-boot.js', home)
+        self.assertLess(home.index('js/rail-boot.js'), home.index('</head>'))
+
+        dashboard = self.client.get('/dashboard/').content.decode()
+        self.assertIn('js/rail-boot.js', dashboard)
+
+        boot = Path(settings.BASE_DIR) / 'plugin_host/static/js/rail-boot.js'
+        self.assertTrue(boot.exists())
+        self.assertIn('constellatio.rail-collapsed', boot.read_text(encoding='utf-8'))
 
     @override_settings(
         ASSISTANT_LLM_BASE_URL='http://127.0.0.1:11434/v1',

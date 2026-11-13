@@ -18,6 +18,20 @@
   var RAIL_ANIM_MS = 300;
   var RAIL_SETTLE_MS = 150;
   var RAIL_WIDE_IN_MS = 200;
+  /* 收起状态的作用域：DSH 把 layoutInfo.sidebar 存在 SPA 内存里，同一会话内翻页不丢；
+     本站是 Django 多页，翻页即重新初始化，因此用 sessionStorage 复刻「同一会话内保持」。
+     关闭标签页即清空，也不写 localStorage —— 不跨天、不跨设备。 */
+  var RAIL_STORE_KEY = 'constellatio.rail-collapsed';
+
+  function readStoredRail() {
+    try { return window.sessionStorage.getItem(RAIL_STORE_KEY) === '1'; }
+    catch (e) { return false; }
+  }
+
+  function writeStoredRail(collapsed) {
+    try { window.sessionStorage.setItem(RAIL_STORE_KEY, collapsed ? '1' : '0'); }
+    catch (e) { /* 隐私模式 / 禁用存储：退化为「刷新即展开」 */ }
+  }
 
   // ---------- 侧栏收起（点击切换）----------
   function initRail() {
@@ -75,6 +89,9 @@
       var label = collapsed ? toggle.dataset.labelOpen : toggle.dataset.labelCollapse;
       if (label) toggle.setAttribute('aria-label', label);
 
+      /* 落状态：翻页后新页面初始化时据此复原（否则每次导航都会「自己弹回」展开） */
+      writeStoredRail(collapsed);
+
       if (collapsed) {
         var menu = document.querySelector('[data-ds-account-menu]');
         var trigger = document.querySelector('[data-ds-account-trigger]');
@@ -91,8 +108,9 @@
       }
     }
 
-    /* 源码默认 layoutInfo.sidebar = 280，且不写 localStorage：刷新即展开 */
-    sync(false, false);
+    /* DSH 的 layoutInfo.sidebar 默认 280，同一会话内由客户端内存保留；
+       本站多页，改由 sessionStorage 复原（见 RAIL_STORE_KEY） */
+    sync(readStoredRail(), false);
 
     toggle.addEventListener('click', function () {
       sync(!isCollapsed(), true);
