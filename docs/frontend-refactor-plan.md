@@ -1122,4 +1122,6 @@ input:focus-visible{outline:1px solid state-business;outline-offset:2px}
 
 **容器实测（`docker compose up -d --build web` 重建后，8000 端口，容器 admin）**：同样 5 项开合 + 面板内提交，结果与本地逐条一致（部门修改 `?view=edit&id=1` / 活动记录 #1456 / 公告已读人员 / 用户编辑 id=3 / 角色编辑 id=1，错误文案同样落在面板里）。MD5 本地/容器一致：`ds-shell.js c3ac13bf82e1dfc0fe912b1539f75f94`、`plugins/user/views.py d9efd743b105566a0c1247a0d1bf94eb`、`_department_form_body.html daced60e6a61727aa2c60d31ff0de932`、`department_list.html 993bcd118bbc347d2320e3c07f1b8442`、`notice_list.html b0605c9b1c26f8d3cec70a81b77d1279`。截图落 `.tmp-test/screens-v10/container/`。
 
-**未覆盖**：审批中心的列表在 admin 账号下是空的（没有行可点），`approval_list.html` 的 `data-ds-panel` 只有模板断言；公告「已读人员」是自带地址页的独立弹层（原来靠 `data-ds-subpage-static` 豁免地址栏同步），改成原地开后关闭仍是回 `/plugins/notice/`。
+**审批详情补验**：审批中心列表在 admin 账号下是空的（没有行可点），改用 `hr_li` 账号跑同一支探针 —— 列表里 2 个 `[data-ds-panel]`，点第一条原地开出「审批详情 #197」（`marker` 存活、地址栏 `/plugins/approval/197/`、无重载），截图 `screens-v10/inplace-approval-detail.png`。
+
+**仍未覆盖**：公告「已读人员」是自带地址页的独立弹层（原来靠 `data-ds-subpage-static` 豁免地址栏同步），改成原地开后关闭仍是回 `/plugins/notice/`。
