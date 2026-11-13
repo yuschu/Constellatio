@@ -320,7 +320,7 @@ token 映射：`settings-card-stroke→border-l3`、`settings-card-fill→bg-lay
 | 项 | 值 |
 |---|---|
 | 首页侧栏 | `助手 / 插件 / 看板 / 更多`，active = 助手 |
-| 业务页侧栏 | `助手 / 插件 / 看板 / 工作台 / 部门 / …`（order 生效） |
+| 业务页侧栏 | `助手 / 插件 / 看板 / 部门 / …`（order 生效；v2.0.9 起删掉重复的「工作台」，见 9.9） |
 | 插件页 | 13 卡、两列 `375px 375px`、卡高 134、`bodyMinH 52`、`padding 12px 14px` |
 | 字号 | 标题 `14/500/20`、页头 `18/600/26` |
 | 搜索 | `height 36`、`padding 0 34 0 36`；输入 `charts` 后可见卡片 1 |
@@ -329,7 +329,7 @@ token 映射：`settings-card-stroke→border-l3`、`settings-card-fill→bg-lay
 
 **门禁**：`check` 0 issue、`ruff` 全绿、全量 **497 项 OK**（新增 1 条顺序锚定用例；`tests_registry._expected_menus` 参考实现同步应用同一排序键，否则等价断言只测到两侧各自的遍历顺序）。
 
-**已知未收敛**：业务页侧栏「看板」与「工作台」疑似同指 `/dashboard/`（既有重复入口，本轮未动）；新增 msgid（「搜索插件名称或标识」「已注册的插件，可运行时启停」「菜单」等）未进 `django.po` —— 环境无 gettext，`.mo` 无法重编，英文界面回落中文原文，与项目现状一致。
+**9.5 时列的两条遗留已在 9.9 收敛**：业务页侧栏「看板」与「工作台」同指 `/dashboard/` 的重复入口已删（只留「看板」）；msgid 也已进 `django.po` 并可编译 —— 项目自带 `tools/compile_mo.py`（纯 python 的 .po→.mo，不需要 gettext），`.mo` 能重编，不再靠「英文界面回落中文」兜底。
 
 ### 9.6 账号入口与账号菜单（v2.0.7）
 
@@ -462,6 +462,39 @@ token 映射：`interactive-bg-hover→interactive-hover`、`bg-skeleton→bg-sk
 | 折叠后 | rail `56`、brand `display: none`、toggle `x10 w36`、行 `x10 w36`、`data-rail-settled=true` | 同 |
 
 `newBtn` 声明 `border: .5px solid` 与源码 `[57]` 一致，`getComputedStyle` 读回 `1px` 是 Chrome 对亚像素边框的取整，未改。
+
+### 9.9 「看板 / 工作台」合并（v2.0.9）
+
+`/dashboard/` 与 `/` 在侧栏各有一个入口，指向同一处业务大盘：
+
+| 入口 | 注册处 | URL |
+|---|---|---|
+| 看板 | `plugins/assistant/apps.py`（order 3） | `/dashboard/` |
+| 工作台 | `plugins/auth/apps.py`（`menus=[{'label': _('工作台'), 'icon': '⌂', 'url': '/'}]`） | `/` |
+
+v2.0.0 起 `/` 已被 assistant 接管成对话首页，于是这条「工作台」既与「助手」同 URL、又与「看板」同指业务大盘，是纯重复。首页侧栏早有去重（`PRIMARY_MENU_URLS` 只取 2 条，`tests_assistant_home` 有断言），**只有业务页平铺全部菜单**，所以重复只在业务页可见。合并按「删重复入口 + 统一名字」两步：
+
+| 改动 | 文件 | 内容 |
+|---|---|---|
+| 删菜单 | `plugins/auth/apps.py` | `menus` 改空列表。auth 是登录/登出插件，本身不需要侧栏入口；`PluginMeta.__init__` 用 `menus or []`，空菜单合法 |
+| 标题统一 | `themes/corporate-clean/templates/home.html`、`themes/risograph/templates/home.html` | `<title>` 与 `<h2>` 的 `{% trans "工作台" %}` 改「看板」（各 2 处），页面标题与侧栏入口同名 |
+| 错误页文案 | `templates/400.html`、`403.html`、`404.html`、`500.html` | 「返回工作台」→「返回首页」。目标 URL 本来就是 `/`（对话首页），旧文案已名不副实 |
+| i18n | `locale/en/LC_MESSAGES/django.po` / `.mo` | 新增 `看板 → Dashboard`、`返回首页 → Back to home`；旧两条（`工作台 → Workspace`、`返回工作台 → Back to workspace`）保留 —— `plugins/language/tests.py` 的 gettext 契约用例仍以 `_('工作台')` 为样本 |
+
+`.mo` 由 `python tools/compile_mo.py` 重编（`compile_all()` 扫 `locale/*/LC_MESSAGES/*.po`），`.mo` 是构建产物、不进版本库。断言随之更新：「英文界面必须是英文」的口径不变，只是文案换了名字 —— `plugins/language/tests.py` 两处、`plugin_host/tests_error_pages.py` 一处的期望值从 `Workspace` / `Back to workspace` 改成 `Dashboard` / `Back to home`，不是放宽。
+
+**真机实测**（1440×900，本地 `:8011` 与容器 `:8000` 各一轮，浅色 / 英文 / 深色）
+
+| 项 | 值 |
+|---|---|
+| 中文 `title` / `h2` | `看板 · Constellatio` / `看板` |
+| 英文 `title` / `h2` | `Dashboard · Constellatio` / `Dashboard`（`.mo` 生效，不再回落中文） |
+| 业务页侧栏 | `助手 / 插件 / 看板(active) / 部门 / 用户 / 角色 / 审批中心 / 待我审批 / 抄送我的 / 公告中心 / 考勤 / 签到详情 / 考勤规则 / 留痕链 / 组织架构 / 消息中心` —— 无「工作台」 |
+| 首页侧栏 | `助手(active) / 插件 / 更多`，同样无「工作台」 |
+
+插件菜单在 `apps.ready()` 注册，改 `apps.py` 必须重启 runserver（`--noreload` 下旧进程会保留菜单）或重建容器 —— 本地复测时踩过一次：首次改完仍见「工作台」，杀掉监听进程重启后消失。
+
+**门禁**：`check` 0 issue、`ruff` 全绿、全量 **497 项 OK**（`e51b7c1` 时的 497 条基线，无新增、无 skip、无放宽）。容器重建后 8 个文件 MD5 与本地逐一相同。
 
 ---
 
