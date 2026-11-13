@@ -1028,3 +1028,13 @@ token 映射：`label-primary-foreground → --ds-on-primary`、`bg-module-platf
 - 覆盖的 11 个 `data-confirm` 点（部门停用/物理删除、用户禁用×2/冻结权限、审批删除、结构模板）无需改模板，机制换掉即生效。
 
 门禁：全量 **515 tests OK**（117s），`tests_csp` 相应改口 —— 脚本里 `window.confirm` 必须为 0、钉住 `ds-modal__*` 与 `#ds-confirm-labels`，并新增 `test_confirm_dialog_labels_are_translatable`；真机探针（`.tmp-test/confirm-probe.mjs`）实测部门/用户两页：弹窗 380×186 居中于 1440×900（x=530,y=357）、`取消` 默认聚焦、取消/关闭/Esc 都不提交；`.tmp-test/confirm-submit.mjs` 在临时部门 `zz_probe` 上走完「点停用 → 确认 → 302 回列表」并核到库里 `is_active=False`（探针部门已删）。容器重建后同套实测通过（`.tmp-test/screens-v7/container/`），CSS/JS 的 MD5 与 collected `staticfiles` 一致。
+
+#### 9.13.16.1 修「修改」点成新建页（回归）
+
+用户报「部门的修改怎么是新建的页面」。原因：行内「修改」链接上带着 `data-ds-modal-open="ds-dept-form"`，`ds-shell.js` 命中这个属性就 `preventDefault()` 并就地打开弹层 —— 而列表页预渲染的那块 `#ds-dept-form` 永远是**新建**表单（空白 + 「创建」按钮 + `data-ds-subpage-query="view=new"`），于是点「修改」看到的就是空白新建页。
+
+修法：修改链接去掉 `data-ds-modal-open`，只留 `href="{{ dept_edit_url }}{{ d.id }}"`，走 `?view=edit&id=` 深链由服务端按 edit 渲染（标题「修改部门：X」、`action=edit`、按钮「保存修改」）；新建入口保持不变（它本来就该就地打开预渲染的新建弹层）。用户 / 角色的「编辑」一直是纯链接，所以只有部门这一处跑偏。
+
+顺手修掉同处一个真 bug：那段说明写成多行 `{# … #}`，而 Django 的 `{# #}` **只支持单行**，多行会原样输出到页面（截图里能看到裸文本）。已压成单行，并加 `assertNotIn('{#', html)` 钉住。
+
+测试：`test_row_edit_link_is_deep_link_not_modal_opener` —— 列表页里带 `?view=edit&amp;id=` 的那个 `<a>` 不许出现 `data-ds-modal-open`、列表页预渲染弹层只能是 `action=create`、渲染结果里不许出现 `{#`。真机探针 `.tmp-test/dept-edit-probe.mjs`：点「修改」后 `?view=edit&id=`、标题「修改部门：总裁办/财务部」、`action=edit`、输入框带原名、按钮「保存修改」；点「新建」仍是「新建部门 / create」。全量 516 tests OK。
