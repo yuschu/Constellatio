@@ -447,6 +447,11 @@
       if (modal.hasAttribute('hidden')) return;
       modal.setAttribute('hidden', '');
       modal.setAttribute('aria-hidden', 'true');
+      /* 叠在设置上的那一层关掉：把底下藏着的设置面板放回来 */
+      if (modal.id === HOST_ID) {
+        var behind = document.getElementById('ds-settings');
+        if (behind) behind.classList.remove('ds-settings--stacked');
+      }
       var url = modal.getAttribute('data-ds-subpage-url');
       var base = modal.getAttribute('data-ds-subpage-base');
       if (base && url && sameUrl(url, window.location.href)) {
@@ -605,6 +610,9 @@
       var settings = document.getElementById('ds-settings');
       var stacked = !!settings && !settings.hasAttribute('hidden');
       host.classList.toggle('ds-settings--subpage--stack', stacked);
+      /* 叠层时把底下那块设置面板先藏起来（遮罩留着当暗底）：二级页面板按内容收
+         高度，矮面板浮在一张 800 的面板里，四周全是空白。 */
+      if (settings) settings.classList.toggle('ds-settings--stacked', stacked);
       var base = host.hasAttribute('hidden')
         ? window.location.pathname + window.location.search
         : host.getAttribute('data-ds-subpage-base');

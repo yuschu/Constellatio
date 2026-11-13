@@ -4262,6 +4262,34 @@ html:not([data-color-mode="dark"]) .lc-ov-session {
   padding-top: var(--ds-space-2);
 }
 
+/* ---- 二级页面板高度跟着内容走（v2.1.6）----
+   用户口径：二级页别留一大片空白，尽量一页放完、不滚动（「最下面是按钮的」那种）。
+   DSH 的 800 是**设置主面板**的字面量（那里有分区列、内容恒定长）；二级页只是单个
+   分区的一块表单/一段只读信息，按内容收高度更贴近使用。超出一屏才在 options 里滚。
+   叠在设置上的那层也一样收高度：底下的设置面板先藏起来（遮罩留作暗底），不然矮
+   面板浮在一张 800 的面板里，四周又是一片空白。 */
+.ds-settings--inline .ds-settings__panel,
+.ds-settings--subpage .ds-settings__panel {
+  height: auto;
+  max-height: calc(100vh - 48px);
+}
+
+#ds-settings.ds-settings--stacked .ds-settings__panel {
+  visibility: hidden;
+}
+
+/* 内容真的塞不进一屏时（编辑用户、已读人员这类长清单），最下面那排按钮停在面板
+   底部：滚内容也始终看得见「保存」。短面板没有溢出，这条不生效。options 的 20px
+   下内边距也在滚动区里，按钮条贴底时会露出一条内容，用同色阴影铺掉。 */
+.ds-settings--single .ds-settings__actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  padding-top: var(--ds-space-3);
+  background: var(--ds-bg-layer-1);
+  box-shadow: 0 var(--ds-space-5) 0 0 var(--ds-bg-layer-1);
+}
+
 /* ==========================================================================
    31. 业务页内容列：不铺满，紧凑居中（v2.1.5）
    --------------------------------------------------------------------------

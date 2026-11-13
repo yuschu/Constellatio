@@ -1155,3 +1155,35 @@ input:focus-visible{outline:1px solid state-business;outline-offset:2px}
 **容器实测（`docker compose up -d --build web` 重建后，8000 端口，容器 admin）**：同一支探针结果与本地逐条一致（stacked / 透明遮罩 / 两个 800×800 完全重合 / 校验失败不重载 / 关闭回列表且设置仍开）。MD5 本地/容器一致：`base.html 94d0661006a73b6bb9d11da8806028e1`、`home_chat.html 4291ace265daf7df9f70c4e348fe417e`、`_profile_identity_rows.html 21d05545883b6bb58c02eb13412481e6`、`views.py d758210b0b3ae809cb5c414c8843e6ce`、`ds-shell.js 5d9eced342aa76fe8ecd9ecc0a1c2b2d`、`corporate-clean.css 297070282b645096a86bd7ea0141feea`。截图 `.tmp-test/screens-v11/container/`。
 
 **保留**：`/plugins/user/profile/` 个人中心页没删 —— 它是编辑资料等深链的宿主，也是「直接访问」的兜底；只是再没有任何入口跳过去。权限等级 / 角色只在「查看权限」面板里看（设置面板每页都要渲染，实时算 L0–L3 要多跑几条查询，不值当）。
+
+### 9.13.21 二级页面板按内容收高度 + 按钮停底（v2.1.6）
+
+**用户诉求**：「二级页尽量不要有太多空白，尽量放在一页不滚动（最下面是按钮的这种）」。
+
+**病因**：`.ds-settings__panel` 是 DSH 设置主面板的字面量 `height: min(800px, calc(100vh - 48px))`。设置主面板该恒高（左侧有分区列、内容恒长），但二级页只是单个分区的一块表单或一段只读信息 —— 部门改个名字 375 的内容被撑成 800，下面 400 多像素全是空白；反过来长表单又只能在这个 800 里滚。
+
+**改法（三条，都在第 33 节之后）**：
+1. `--inline` 与 `--subpage` 的 `.ds-settings__panel` 改成 `height: auto; max-height: calc(100vh - 48px)`。`grid-template-rows: auto minmax(0, 1fr)` 下 `1fr` 会塌到内容高度，内容超一屏时仍由 `.ds-settings__options`（`overflow-y: auto`）接管滚动 —— 高度跟内容走，兜底仍是一屏。
+2. 叠在设置上那层（`--subpage--stack`）也收高度，但**底下的设置面板先藏起来**：`openPanel` 给 `#ds-settings` 加 `ds-settings--stacked`，CSS `#ds-settings.ds-settings--stacked .ds-settings__panel { visibility: hidden }`，`closeModal` 关 host 时移除。遮罩留在原处当暗底，于是「设置里开一层」看起来是一张普通面板，而不是矮面板浮在一张 800 的板子里、四周一圈空白。
+3. 内容真的塞不进一屏时（编辑用户、已读人员、考勤规则），`.ds-settings--actions` 在滚动区里 `position: sticky; bottom: 0` 停住：滚内容也始终看得见「保存」。options 有 20px 下内边距也属于滚动区，按钮条贴底会露出一条内容，用 `box-shadow: 0 20px 0 0 var(--ds-bg-layer-1)` 铺掉（阴影不占布局，短面板不受影响）。
+
+**实测（1440×900，本地 8011）**——量的是面板高 / 内容 scrollHeight vs clientHeight / 最后一个按钮是否在面板内：
+
+| 面板 | 高 | 内容/可视 | 是否滚动 | 按钮可见 |
+|---|---|---|---|---|
+| 修改部门：总裁办 | 387 | 333 / 333 | 否 | 是 |
+| 编辑角色：总经理 | 485 | 431 / 431 | 否 | 是 |
+| 活动记录 #3490 | 599 | 545 / 545 | 否 | 是 |
+| 编辑资料（独立页） | 354 | 298 / 298 | 否 | 是 |
+| 修改密码 | 439 | 383 / 383 | 否 | 是 |
+| 我的权限 | 469 | 413 / 413 | 否 | — |
+| 编辑资料（叠在设置里） | 352 | 298 / 298 | 否 | 是 |
+| 编辑用户：张总 | 852 | 1281 / 798 | 是（长表单） | 是（停底） |
+| 已读人员 | 852 | 1458 / 798 | 是（长清单） | — |
+| 考勤规则 | 852 | 842 / 796 | 是（差 46px） | 是（停底） |
+
+- 叠层：`settings-behind` 读到 `visibility: hidden` + `class="ds-settings ds-settings--stacked"`，关闭后回到 `visible`、`class="ds-settings"`、host 隐藏 —— 设置面板原样回来。
+- 考勤规则在一屏 900 的窗口里还差 46px（1080 高就整页放得下）；没有去压缩 `_field_181ew` 的 12px 内边距（那是源码字面量），只让按钮停底保证「保存」始终在。
+- 截图 `.tmp-test/screens-v12/`：`sized-dept-edit.png`、`sized-user-edit.png`、`sized-attendance-rules.png`、`sized-stacked-profile-edit.png` 等。
+
+**门禁**：全量 **526 tests OK**、`plugin_host` 207 OK、ruff 通过。**容器**：`docker compose up -d --build web` 重建后同一支探针逐条一致（数值同上），MD5 对齐 `corporate-clean.css 8e004261a056003e930d3108c314b0ce`、`ds-shell.js ac642b39c9f00f612fb6499e35e7f524`，截图 `.tmp-test/screens-v12/container/`。
