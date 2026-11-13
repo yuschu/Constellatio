@@ -18,13 +18,13 @@ class ErrorPageRenderTests(TestCase):
 
     @override_settings(DEBUG=False, ALLOWED_HOSTS=['*'])
     def test_404_renders_branded_page(self):
-        """不存在的路径 → 404 品牌页（错误码 + 说明 + 返回工作台），不是 Django 默认页。"""
+        """不存在的路径 → 404 品牌页（错误码 + 说明 + 返回首页），不是 Django 默认页。"""
         response = self.client.get('/no-such-page-for-test/')
         self.assertEqual(response.status_code, 404)
         body = response.content.decode()
         self.assertIn('Constellatio', body)
         self.assertIn('404', body)
-        self.assertIn('返回工作台', body)
+        self.assertIn('返回首页', body)
         self.assertNotIn('Using the URLconf defined in', body)
 
     def test_500_renders_branded_page_without_stack(self):
@@ -34,7 +34,7 @@ class ErrorPageRenderTests(TestCase):
         body = response.content.decode()
         self.assertIn('Constellatio', body)
         self.assertIn('500', body)
-        self.assertIn('返回工作台', body)
+        self.assertIn('返回首页', body)
         for leak in ('Traceback', 'RuntimeError', 'django/', 'File "'):
             self.assertNotIn(leak, body)
 
@@ -63,4 +63,4 @@ class ErrorPageRenderTests(TestCase):
         with translation.override('en'):
             body = defaults.server_error(self.factory.get('/boom/')).content.decode()
         self.assertIn('Server error', body)
-        self.assertIn('Back to workspace', body)
+        self.assertIn('Back to home', body)

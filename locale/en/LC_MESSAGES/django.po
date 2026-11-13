@@ -52,6 +52,9 @@ msgstr "Log in"
 msgid "用户名或密码错误"
 msgstr "Invalid username or password"
 
+msgid "看板"
+msgstr "Dashboard"
+
 msgid "工作台"
 msgstr "Workspace"
 
@@ -1635,6 +1638,9 @@ msgstr "This page could not be found"
 
 msgid "链接可能已失效，或页面已被移动。"
 msgstr "The link may be broken, or the page may have moved."
+
+msgid "返回首页"
+msgstr "Back to home"
 
 msgid "返回工作台"
 msgstr "Back to workspace"

@@ -8,7 +8,7 @@
   {# 固定文案：绝不从异常取 message、绝不用 |safe（v1.7.5 定的边界，v1.7.9 不改） #}
   <p class="r-muted mb-4">{% trans "你没有访问这个页面的权限。" %}</p>
   <div class="d-flex gap-2 justify-content-center">
-    <a href="{% url 'index' %}" class="r-btn">{% trans "返回工作台" %}</a>
+    <a href="{% url 'index' %}" class="r-btn">{% trans "返回首页" %}</a>
     <button type="button" class="r-btn r-btn-ghost" data-history-back data-fallback="{% url 'index' %}">{% trans "返回上一页" %}</button>
   </div>
 </div>

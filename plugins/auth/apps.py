@@ -14,7 +14,9 @@ class AuthConfig(AppConfig):
             name='auth',
             version='0.1.0',
             title=_('认证'),
-            menus=[{'label': _('工作台'), 'icon': '⌂', 'url': '/'}],
+            # v2.0.9：/ 已由 assistant 的「助手」入口承担；原「工作台」与
+            # 「看板」（/dashboard/）指向同一处业务大盘，合并后只保留「看板」。
+            menus=[],
             permissions=['auth_login'],
             urls='plugins.auth.urls',
             signals=[],

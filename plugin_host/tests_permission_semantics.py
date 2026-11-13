@@ -37,7 +37,7 @@ class PermissionSemanticsTests(TestCase):
         response = self.client.get(PROTECTED)
         self.assertEqual(response.status_code, 403)
         self.assertContains(response, '权限不足', status_code=403)
-        self.assertContains(response, '返回工作台', status_code=403)
+        self.assertContains(response, '返回首页', status_code=403)
 
     def test_403_page_does_not_echo_exception_message(self):
         """页面只显示固定文案：异常 message 不进入 HTML（防泄漏内部细节）。"""
