@@ -111,3 +111,27 @@ def notifications(request):
         logger.warning('站内信未读数不可用，降级为 0', exc_info=True)
         count = 0
     return {'notify_unread': count}
+
+# v2.1.5：静态资源版本戳。
+# 容器重建后 CSS 仍是同名文件，浏览器对同 URL 的缓存不会失效 ——
+# 页面上给静态链接带 ?v=<mtime>，重建后 URL 变化即强制重新拉取。
+_ASSETS_VERSION = None
+_ASSET_STAMP_FILES = (
+    'themes/corporate-clean/static/themes/corporate-clean/css/corporate-clean.css',
+    'plugin_host/static/js/ds-shell.js',
+    'themes/corporate-clean/static/themes/corporate-clean/js/home.js',
+)
+
+
+def assets(request):
+    """注入静态资源版本戳（v2.1.5），模板里写成 ?v={{ assets_version }}。"""
+    global _ASSETS_VERSION
+    if _ASSETS_VERSION is None:
+        stamp = 0
+        for rel in _ASSET_STAMP_FILES:
+            try:
+                stamp = max(stamp, int((settings.BASE_DIR / rel).stat().st_mtime))
+            except OSError:
+                continue
+        _ASSETS_VERSION = str(stamp)
+    return {'assets_version': _ASSETS_VERSION}

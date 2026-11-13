@@ -128,6 +128,7 @@ TEMPLATES = [
                 'plugin_host.context_processors.notifications',
                 # v2.0：全站深浅模式（首页与业务页共用同一个 Cookie）
                 'plugin_host.context_processors.color_mode',
+                'plugin_host.context_processors.assets',
             ],
         },
     },

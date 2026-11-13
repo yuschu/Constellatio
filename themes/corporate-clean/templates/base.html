@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Constellatio · {% trans "企业办公自动化" %}{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.min.css' %}">
-  <link rel="stylesheet" href="{% static 'themes/corporate-clean/css/corporate-clean.css' %}">
+  <link rel="stylesheet" href="{% static 'themes/corporate-clean/css/corporate-clean.css' %}?v={{ assets_version }}">
   {% block extra_css %}{% endblock %}
 </head>
 <body class="r-body">
@@ -241,7 +241,7 @@
   </div>
 
   <script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
-  <script src="{% static 'js/ds-shell.js' %}" defer></script>
+  <script src="{% static 'js/ds-shell.js' %}?v={{ assets_version }}" defer></script>
   <script src="{% static 'js/confirm.js' %}" defer></script>
   <script nonce="{{ request.csp_nonce }}">
     (function () {
