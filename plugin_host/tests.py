@@ -61,6 +61,26 @@ class ThemeDiscoveryTest(TestCase):
                       '.r-nav', '--r-ink', '.r-loader'):
             self.assertIn(token, css)
 
+    def test_scrollbar_ported_from_dsh(self):
+        """v2.2.4：滚动条照 DSH 的 scrollbar.css 移植（宽度/描边/圆角/hover/分支）。"""
+        theme = get_theme(settings.BASE_DIR, 'corporate-clean')
+        css = (theme.static / 'themes/corporate-clean/css/corporate-clean.css').read_text(
+            encoding='utf-8')
+        self.assertIn('--ds-scrollbar-width: 5px', css)
+        self.assertIn('@supports not selector(::-webkit-scrollbar)', css)
+        self.assertIn('scrollbar-color: var(--ds-scrollbar) transparent', css)
+        thumb = re.search(r'::-webkit-scrollbar-thumb\s*\{(.*?)\}', css, re.S)
+        self.assertIsNotNone(thumb, '缺少 ::-webkit-scrollbar-thumb 规则')
+        body = thumb.group(1)
+        self.assertIn('background: var(--ds-scrollbar)', body)
+        self.assertIn('background-clip: content-box', body)
+        self.assertIn('border-radius: 999px', body)
+        self.assertIn('::-webkit-scrollbar-thumb:hover', css)
+        self.assertIn('--ds-scrollbar-l2: #545557', css)
+        self.assertIn('--ds-scrollbar-hover-l2: #65676b', css)
+        self.assertRegex(
+            css, r'\.ds-rail__nav\s*\{[^}]*--ds-scrollbar:\s*transparent')
+
     def test_loader_in_base(self):
         source = get_template('base.html').template.source
         self.assertIn('r-loader', source)

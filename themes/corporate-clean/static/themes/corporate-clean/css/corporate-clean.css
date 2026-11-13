@@ -153,6 +153,8 @@
   /* 滚动条 */
   --ds-scrollbar: #e5e5e5;
   --ds-scrollbar-hover: #d4d4d4;
+  --ds-scrollbar-l2: #e5e5e5;
+  --ds-scrollbar-hover-l2: #d4d4d4;
 }
 
 /* ============================================================
@@ -229,6 +231,8 @@
 
   --ds-scrollbar: #3c3c3d;
   --ds-scrollbar-hover: #545557;
+  --ds-scrollbar-l2: #545557;
+  --ds-scrollbar-hover-l2: #65676b;
 }
 
 /* ============================================================
@@ -334,10 +338,74 @@ a:hover {
   text-underline-offset: 2px;
 }
 
-/* 滚动条跟随主题 */
-* {
-  scrollbar-color: var(--ds-scrollbar) transparent;
-  scrollbar-width: thin;
+/* 滚动条：照 DSH `ui-theme` 的 scrollbar.css 原样移植（2026-11-13 从 DSH 安装包
+   `dsh-web-frontend` 的 inline `scrollbar.css` 取字面量，不是估的）。
+   默认 5px 宽、0 描边、0 track margin、999 圆角、content-box 裁边，hover 换
+   scrollbar-hover；Firefox 走 @supports 里的 thin + scrollbar-color 那条路，
+   WebKit 走 ::-webkit-scrollbar 伪元素，两条互斥。 */
+:root {
+  --ds-scrollbar-width: 5px;
+  --ds-scrollbar-thumb-border: 0px;
+  --ds-scrollbar-track-margin: 0px;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  body,
+  body * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--ds-scrollbar) transparent;
+  }
+}
+
+::-webkit-scrollbar {
+  width: var(--ds-scrollbar-width);
+  height: var(--ds-scrollbar-width);
+}
+
+::-webkit-scrollbar-track {
+  margin-block: var(--ds-scrollbar-track-margin);
+  background: none;
+}
+
+::-webkit-scrollbar-thumb {
+  border: var(--ds-scrollbar-thumb-border) solid transparent;
+  corner-shape: round;
+  background: var(--ds-scrollbar);
+  background-clip: content-box;
+  border-radius: 999px;
+}
+
+@media (hover: hover) {
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--ds-scrollbar-hover);
+  }
+}
+
+::-webkit-scrollbar-corner {
+  background: none;
+}
+
+/* DSH 把抬升面（菜单 / 面板 / 对话框）的 thumb 重新绑到 l2 一档，深色下更亮，
+   否则深色面板里的滚动条和底色糊在一起。我们对应的抬升面就是设置面板、
+   模态、账号菜单和快捷键面板。 */
+.ds-settings__panel,
+.ds-modal__dialog,
+.ds-menu,
+.ds-shortcuts {
+  --ds-scrollbar: var(--ds-scrollbar-l2);
+  --ds-scrollbar-hover: var(--ds-scrollbar-hover-l2);
+}
+
+/* DSH 侧栏的写法：指针不在侧栏时 thumb 绑 transparent（槽位保留、看不见），
+   移进侧栏才显出来。纯变量重绑，不用 JS。 */
+.ds-rail__nav {
+  --ds-scrollbar: transparent;
+  --ds-scrollbar-hover: transparent;
+}
+
+.ds-rail__nav:hover {
+  --ds-scrollbar: var(--ds-scrollbar-l2);
+  --ds-scrollbar-hover: var(--ds-scrollbar-hover-l2);
 }
 
 /* ============================================================

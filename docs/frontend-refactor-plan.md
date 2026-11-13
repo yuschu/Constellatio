@@ -1522,3 +1522,43 @@ select.zGbnIq_input{cursor:pointer;max-width:240px}
 - 全量 **555 tests OK**（552 + 3），`ruff check plugins plugin_host` 全过，`manage.py check` 干净。
 - 容器重建后 7 个改动文件 MD5 与本地一致：`plugins/user/views.py 981ec1c9…`、`plugins/user/tests.py 489efd6f…`、`_user_detail_body.html b443d92d…`、`overview.html 5344f321…`、`plugins/structure/tests.py 869d2715…`、`plugin_host/static/js/ds-shell.js c075b450…`、`corporate-clean.css 13431fb2…`（`/app/staticfiles/` 的 js/css 副本同值）。
 - 截图：`.tmp-test/screens-v20/`（`template-modal`（复现）、`template-modal-fixed`、`template-modal-dark`、`user-detail`、`user-panel-edit`、`after-close`、`user-list-edit`、`attendance-rules`）与 `.tmp-test/screens-v20/container/`。
+
+
+### 9.13.32 全站滚动条移植 DSH（v2.2.4 / 2026-11-13）
+
+**诉求与做法**
+
+- 用户要求「所有滚动条改成 DSH 的，移植过来」，并明确「照 DSH 源码，别自造」。因此没有自己画一套，而是把 DSH 的 `scrollbar.css` 原文规则整段搬进来。
+- 单源取证：DSH 桌面版装在 `S:\DeepSeek Harness`，前端打在 `resources\app.asar`；asar 里 `dsh/node_modules/@deepseek-ai/dsh-web-frontend/dist/assets/index-lh_YM6sT.css` 与内联源码 `packages/client/ui-theme/src/styles/scrollbar.css`（asar 原始字节 offset ≈51,671,088）逐字一致。原文：
+
+```css
+body{--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l1);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l1);--dsh-scrollbar-thumb-border:0px;--dsh-scrollbar-track-margin:0px;--dsh-scrollbar-width:5px}
+@supports not selector(::-webkit-scrollbar){body,body *{scrollbar-width:thin;scrollbar-color:var(--dsh-scrollbar-thumb) transparent}}
+::-webkit-scrollbar{width:var(--dsh-scrollbar-width);height:var(--dsh-scrollbar-width)}
+::-webkit-scrollbar-track{margin-block:var(--dsh-scrollbar-track-margin);background:0 0}
+::-webkit-scrollbar-thumb{border:var(--dsh-scrollbar-thumb-border) solid transparent;corner-shape:round;background:var(--dsh-scrollbar-thumb);background-clip:content-box;border-radius:999px}
+@media (hover:hover){::-webkit-scrollbar-thumb:hover{background-color:var(--dsh-scrollbar-thumb-hover)}}
+::-webkit-scrollbar-corner{background:0 0}
+```
+
+**落到本项目的改动**（`themes/corporate-clean/static/themes/corporate-clean/css/corporate-clean.css`）
+
+1. 删掉原来只有一行 `* { scrollbar-color: …; scrollbar-width: thin }` 的写法（Chrome 下既不圆角、也不贴 token）。换成 DSH 同构的变量层：`:root{--ds-scrollbar-width:5px;--ds-scrollbar-thumb-border:0px;--ds-scrollbar-track-margin:0px}`，加 `@supports not selector(::-webkit-scrollbar)` 的 Firefox 分支，再写 `::-webkit-scrollbar` / `-track` / `-thumb` / `:hover` / `-corner` 五段。
+2. 颜色 token 沿用项目已采的 DSH 值：浅 `#e5e5e5` / hover `#d4d4d4`，深 `#3c3c3d` / hover `#545557`；按 DSH 抬升面再补一档 `--ds-scrollbar-l2`（浅 `#e5e5e5`、深 `#545557`）与 `--ds-scrollbar-hover-l2`（浅 `#d4d4d4`、深 `#65676b`）。
+3. 抬升面（设置面板 / 弹层对话框 / 菜单 / 快捷键卡）把 thumb 重绑到 l2 一档，对应 DSH 的「菜单、弹出、对话框用 l2」。侧栏 `.ds-rail__nav` 平时 thumb 绑 `transparent`，指针移入才显色，对应 DSH `ui-sidebar` 的写法。
+4. 没有采用 DSH 另外两处局部口径：任务管理页 `pageScroll` 的 9px 宽轨 + 2px 描边、菜单 `MenuView` 的 6px + 2px + track margin 12。它们不是默认值；全站保持 DSH `body` 的 5px 口径，避免同一站内出现两种粗细。
+
+**实测（本地 8011 + 容器 8000）**
+
+- 坑：默认 headless Chrome 用 overlay 滚动条，`clientWidth` 与面板同宽（800）、截图里根本不画自定义 thumb，看起来像「没生效」。另起一个禁用 overlay 的实例（`--disable-features=OverlayScrollbar,FluentOverlayScrollbar`）后 `clientWidth=795`，5px 真的占位，截图里能看到圆角 pill。
+- 计算样式：`::-webkit-scrollbar` 宽 `5px`、thumb `border-radius: 999px`、`background-clip: content-box`、`corner-shape: round`。Chrome 下 `CSS.supports('selector(::-webkit-scrollbar)')=true`、`scrollbar-width/scrollbar-color` 均为 `auto` —— 证明只走 webkit 分支，Firefox 分支没有误伤 Chrome。
+- 逐像素：浅色常态 `(229,229,229)=#e5e5e5`，thumb 悬停 `(212,212,212)=#d4d4d4`；深色常态 `(84,85,87)=#545557`，悬停 `(101,103,107)=#65676b`（设置面板抬升面）。
+- 侧栏（viewport 1440×520，nav `ch=362 sh=378`）：指针不在侧栏时 `--ds-scrollbar=transparent`，移入后 `#e5e5e5`。
+- 全站覆盖不靠逐处改：全局规则作用到 `.ds-rail__nav`、`.ds-settings__options`、`.ds-settings__cells`、`.lc-ov-tile-body`、`.ds-modal__content`、`.ds-shortcuts__list`、`.ds-field select[multiple]`、`r-card--sidebar`，以及模板内联的部门树 / `.role-scroll`、助手插件的 `overflow-y:auto` 区域；看板卡片扫描到 `.lc-ov-tile-body` 的 thumb 也是 5px / 999px。
+
+**门禁与一致性**
+
+- 新增 `plugin_host/tests.py::test_scrollbar_ported_from_dsh`：断言 5px 宽、`@supports` 分支、`scrollbar-color: var(--ds-scrollbar) transparent`、thumb 的 `background-clip: content-box` / `border-radius: 999px`、hover 规则、深色 l2 两档 token、侧栏 `transparent`。注意该文件里 `test_css_literals_match_dsh_shortcuts_module` 用 `re.search` 取 `.ds-shortcuts__panel {` 的第一处匹配，因此抬升面重绑只能写 `.ds-shortcuts` 根节点，不能写 `__panel`（否则会劫持那条断言）。
+- 全量 **556 tests OK**（555 + 1），`ruff check plugins plugin_host` 全过，`manage.py check` 干净。
+- 容器重建后 CSS 三处 MD5 一致 `bf9dc8bd9d891e68086ea0e5fc9c21d3`：本地源文件、`/app/themes/.../corporate-clean.css`、`/app/staticfiles/themes/.../corporate-clean.css`；容器 `/` 返回 200，模板弹层复测同为 5px / 795 / 深浅两套颜色。
+- 截图：`.tmp-test/screens-v21/`（`sb-classic-light|dark` 与裁切图、`sb-hover-light|dark`、`sb-scroll-light|dark`、`sb-rail-rest|hover`）与 `.tmp-test/screens-v21/container/`（`sb-light`、`sb-dark`）。
