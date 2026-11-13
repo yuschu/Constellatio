@@ -1618,3 +1618,32 @@ body{--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l1);--dsh-scrollbar-thum
 - 容器重建后 MD5 与本地一致：`home-panels.js 4cdbf78296085c10c88aed209c3388f5`、`base.html 413234853c05f73785df9458c1ba1e88`、`home_chat.html fadac61978164062b881e9e93727c7c9`、`tests_csp.py 14eb572736575fbdcea4972c69fc99bc`，`/app/staticfiles/js/home-panels.js` 同哈希。容器同路径点 `notify`：绿→灰，`checked=false`、URL 不变。截图 `.tmp-test/screens-v21/container/plugin-flow.png`。
 - 测试残留已复原：本地 `PluginSwitch` 清空（回到原本的空表），容器只删掉临时加的 `notify` 行，原有 6 行不变。
 
+
+### 9.13.35 收起态「新会话」按钮与面板行对齐（v2.2.7 / 2026-11-13）
+
+**现象**
+
+- 侧栏收起后，「新会话」按钮和旁边的面板按钮看起来不是一套：图标明显小一圈，鼠标移上去也没有面板行那样的浅色底。
+
+**DSH 取证（不是估的）**
+
+- 折叠态节点：`dsh-client-ui-sidebar/lib/client.js` 的 `SidebarRoot`。`newSession` 的图标在 `wide ? IconNewChatOutlineMedium : IconNewChatOutlineRegular`，尺寸 `wide ? 14 : (windowsTitlebar ? 16 : 18)`；面板行 glyph 折叠态同样是 18（`renderSlot` size = wide ? 16 : 18）。
+- 对应 CSS 原文（`wtg9ga_` 前缀）：`.wtg9ga_collapsed .wtg9ga_newSession{background:0 0;border-color:#0000;…;width:36px;height:36px;padding:0}`，紧随其后还有一条 `@media (hover:hover){.wtg9ga_collapsed .wtg9ga_newSession:hover{background-color:var(--dsw-alias-interactive-bg-hover)}}`；`.wtg9ga_panelRow:hover` 用的是同一个 token。
+- 这两条缺一不可：折叠规则里的 `background:0 0` 特异性高于 `.newSession:hover`，没有后面那条同选择器级别的覆盖，hover 底色会被一起吃掉。
+
+**改动**（`plugins/assistant/static/assistant/css/assistant.css`）
+
+1. 新增 `html[data-rail-settled="true"] .as-new__ico { width:18px; height:18px }`：折叠态图标由原先写死的 14 提到 18，与 `.as-panel__glyph .as-ico` 同档；展开态仍是 14。
+2. 新增 `@media (hover:hover){ html[data-rail-settled="true"] .as-new:not(.is-disabled):hover { background-color: var(--as-interactive-hover) } }`：折叠态 hover 与面板行同值；`:not(.is-disabled)` 保证助手停用时的不可点样式不被这条覆盖。
+3. 尺寸本身原本就对（36×36 / radius 12 / margin 0 0 12），未动。
+
+**门禁**
+
+- `plugin_host/tests.py` 新增 `test_rail_new_session_matches_panel_rows`：钉住折叠态 18px、折叠态 hover token、以及面板 glyph 的 18px 规则。
+- 全量 **559 tests OK**（558 + 1），`ruff check plugins plugin_host` 全过，`manage.py check` 干净。
+
+**实测**
+
+- 本地 `:8011`，admin，收起态几何（CDP `rail-new-vs-panel.mjs`）：新会话 / 面板行 / 更多三者都是 `36×36`、`radius 12px`、图标 `18×18`、默认底色 `rgba(0,0,0,0)`；hover 时新会话与面板行同为 `rgba(38,49,72,0.06)`，移开后都回到透明。截图 `.tmp-test/screens-v21/rail-new-after.png`。
+- 容器重建后 `assistant.css 0d99f61904057903722d9ca7fca37943`（源文件、`/app/plugins/...`、`/app/staticfiles/assistant/css/assistant.css` 三处一致）、`tests.py ea9efe31c0dfd12c05b34541f1f34416` 与本地同哈希；容器同脚本复测，四项数值与本地一致。截图 `.tmp-test/screens-v21/container/rail-new-after.png`。
+

@@ -120,6 +120,22 @@ class ThemeDiscoveryTest(TestCase):
         self.assertIn('position: sticky', rail.group(1))
         self.assertIn('--ds-rail-w: 280px', css)
 
+    def test_rail_new_session_matches_panel_rows(self):
+        """v2.2.7：收起态新会话按钮与面板行同档。
+
+        DSH SidebarRoot 的 newSession 在 wide=false 时渲染 18px（展开才是 14），
+        collapsed 下还有一条与 panelRow 同值的 :hover 底色；缺任一条都会让
+        新会话按钮比旁边按钮小一圈 / hover 没有反馈。
+        """
+        css = (settings.BASE_DIR / 'plugins/assistant/static/assistant/css/assistant.css').read_text(
+            encoding='utf-8')
+        self.assertIn(
+            'html[data-rail-settled="true"] .as-new__ico {\n  width: 18px;\n  height: 18px;\n}', css)
+        self.assertIn(
+            'html[data-rail-settled="true"] .as-new:not(.is-disabled):hover {\n'
+            '    background-color: var(--as-interactive-hover);\n  }', css)
+        self.assertIn('html[data-rail-settled="true"] .as-panel__glyph .as-ico', css)
+
     def test_top_nav_replaced_by_rail(self):
         """v2.0：顶部横向导航由 DSH 侧栏取代；.r-nav 只保留兼容规则。"""
         for key in discover_themes(settings.BASE_DIR):
