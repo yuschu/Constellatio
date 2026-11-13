@@ -189,7 +189,7 @@ class PluginHostConfig(AppConfig):
 
 ### 2.3 统一外壳（主题插件提供）
 
-> 外壳由**主题插件**提供（当前 `OA_THEME`，默认 `themes/corporate-clean/templates/`；Risograph 备选），容器不持有任何外壳模板：
+> 外壳由**外观插件**提供（`themes/corporate-clean/templates/`；v2.2.0 起仓库只带这一个内置外观，含浅色/深色两态，Risograph 已移除），容器不持有任何外壳模板：
 
 ```
 themes/<key>/templates/
@@ -610,15 +610,15 @@ class BlockchainRecord(models.Model):
 {% endif %}
 ```
 
-### 5.1 主题：Corporate Clean（默认）+ Risograph（备选）
+### 5.1 外观：内置浅色/深色 + 外观包接口（v2.2.0）
 
-- 主题 = `themes/<key>/` + `theme.json`；`OA_THEME` 选择当前主题（默认 `corporate-clean`），改后重启生效
-- 发现与解析：`plugin_host/theming.py` 扫描清单，把当前主题的 `templates/` 写入 `TEMPLATES.DIRS`、`static/` 写入 `STATICFILES_DIRS`
-- 组件契约：`.r-btn` / `.r-card` / `.r-input` / `.r-table` / `.r-nav` / `.r-badge` / `.r-lang` / `.r-loader` 与 `--r-*` 变量；两套主题都必须实现，插件模板不按主题分支
-- Corporate Clean：蓝灰配色、8/12px 圆角、shadow-sm、150/200ms、focus ring + offset；详见 `docs/plugin-dev-theme.md`
-- Risograph：有限色板、硬边套印、等宽字体、100ms；作为备选保留
-- 登录页含 SSO（禁用占位）/ 忘记密码（占位页）入口；base/login 含首屏 `.r-loader`
-- 主题不再挂 `INSTALLED_APPS`；新增主题不需要改 Python 注册表
+- 内置外观只有一套 `themes/corporate-clean/`，深浅两态由 `html[data-color-mode="light|dark"]` 切 token；设置里「外观」一行就是浅色/深色开关，全站生效
+- 老主题 Risograph 已移除（目录、模板、CSS 全部删除）；`oa_theme=risograph` 的旧 Cookie 自动回退内置外观
+- 外观包接口保留：外观 = `themes/<key>/` + `theme.json`；`discover_themes()` 扫清单，`OA_THEME` 选择启动默认，每个已发现外观的 `static/` 都进 `STATICFILES_DIRS`
+- 设置里「外观包」行只在 `themes|length > 1` 时渲染（`theme/switch/` 视图保留，非法 key 一律忽略，GET 405、外链 `next` 拦回 `/`）——单外观时它就是「默认外观即深浅」
+- 组件契约：`.r-btn` / `.r-card` / `.r-input` / `.r-table` / `.r-nav` / `.r-badge` / `.r-lang` / `.r-loader` 与 `--r-*` 变量；插件模板不按外观分支
+- 视觉基线：DSH 字面量（第 32–36 节，第 36 节即快捷键参考卡）；登录页含 SSO（已接入）/ 忘记密码（占位页）入口，base/login 含首屏 `.r-loader`
+- 外观不挂 `INSTALLED_APPS`；新增外观不需要改 Python 注册表
 
 ### 5.2 多语言（v1.4 / v1.5.1 全站补全）
 

@@ -1,7 +1,0 @@
-{
-  "name": "Risograph",
-  "version": "1.0.0",
-  "description": "Risograph 印刷风：有限色板、硬边套印阴影、等宽字体、瞬时动效",
-  "templates": "templates",
-  "static": "static"
-}

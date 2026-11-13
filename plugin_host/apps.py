@@ -26,6 +26,7 @@ class PluginHostConfig(AppConfig):
                 signals=[],
                 templates=None,
                 app=None,
+                builtin=True,   # v2.2.0：系统底座，插件页不外显、界面不可停用
             ))
 
         # 注册表完整性校验改为 Django 系统检查（discover.check_registry）：

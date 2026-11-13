@@ -5,7 +5,8 @@
 - 启动时校验 OA_THEME（未知主题直接失败）；
 - v1.5.8：支持运行时切换——`ThemeMiddleware` 按 Cookie 选择当前主题，
   `ThemeLoader` 按当前主题解析 templates（默认 OA_THEME，请求内由 Cookie 覆盖）；
-- 两套主题的 static 都进 STATICFILES_DIRS，切换后 CSS 可用。
+- 每个已发现外观的 static 都进 STATICFILES_DIRS，切换后 CSS 可用；
+  v2.2.0 起仓库只带一个内置外观（corporate-clean，含深浅两态），外观包接口保留。
 """
 
 import contextvars

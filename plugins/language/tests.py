@@ -81,11 +81,14 @@ class LanguageSwitchViewTest(LanguageTestMixin, TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.cookies['django_language'].value, 'en')
 
-    def test_language_is_not_required_plugin(self):
-        """v1.5.7：语言插件不再是系统必需，可被管理员停用。"""
-        from plugins.workspace.views import PROTECTED
+    def test_language_is_builtin_plugin(self):
+        """v2.2.0：语言随系统内置——插件页不外显、界面不可停用（CLI 仍可兜底）。"""
+        from plugin_host.registry import PLUGIN_REGISTRY
+        from plugins.workspace.views import PROTECTED, switch_list_context
         self.assertNotIn('language', PROTECTED)
         self.assertEqual(PROTECTED, {'workspace'})
+        self.assertTrue(PLUGIN_REGISTRY['language'].builtin)
+        self.assertNotIn('language', {row['key'] for row in switch_list_context()['rows']})
 
 
 class LanguagePluginDisableTest(LanguageTestMixin, TestCase):
@@ -122,12 +125,13 @@ class LanguagePluginDisableTest(LanguageTestMixin, TestCase):
         self.assertEqual(resp.status_code, 404)
 
     def test_disabled_plugin_toggleable_from_switch_page(self):
+        """v2.2.0：语言是内置插件，插件页的开关不再落库（命令行仍是兜底出口）。"""
         from plugins.workspace.models import PluginSwitch
         admin = get_user_model().objects.create_superuser('langadmin', '', 'pw')
         self.client.force_login(admin)
         resp = self.client.post('/plugins/workspace/language/toggle/', {'enabled': '0'})
         self.assertEqual(resp.status_code, 302)
-        self.assertFalse(PluginSwitch.objects.get(app_key='language').enabled)
+        self.assertFalse(PluginSwitch.objects.filter(app_key='language').exists())
 
 
 class TranslationCatalogTest(LanguageTestMixin, TestCase):

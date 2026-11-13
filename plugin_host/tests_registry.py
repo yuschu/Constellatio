@@ -166,13 +166,16 @@ class PluginCountTests(TestCase):
         PluginSwitch.objects.create(app_key='charts', enabled=False)
         self.assertFalse(plugin_enabled('charts'))
 
-    def test_counts_cover_registry_including_provider(self):
+    def test_counts_cover_visible_plugins_only(self):
+        """v2.2.0：计数与插件页同口径——只算非内置插件。"""
         enabled, total = plugin_counts()
-        self.assertEqual(total, len(PLUGIN_REGISTRY))
-        self.assertIn('charts', PLUGIN_REGISTRY)
+        visible = [key for key, meta in PLUGIN_REGISTRY.items() if not meta.builtin]
+        self.assertEqual(total, len(visible))
+        self.assertNotIn('charts', visible)          # 图表引擎是内置底座
+        self.assertIn('notice', visible)
         self.assertEqual(
             enabled,
-            sum(1 for key in PLUGIN_REGISTRY if plugin_enabled(key)))
+            sum(1 for key in visible if plugin_enabled(key)))
 
         from plugins.workspace.models import PluginSwitch
         PluginSwitch.objects.create(app_key='notice', enabled=False)

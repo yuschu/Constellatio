@@ -178,7 +178,7 @@
         <div class="ds-settings__row">
           <div>
             <div class="ds-settings__row-title">{% trans "外观" %}</div>
-            <div class="ds-settings__row-desc">{% trans "浅色与深色跟随同一个开关，全站生效" %}</div>
+            <div class="ds-settings__row-desc">{% trans "内置浅色与深色，全站生效；更多外观装包后自动出现" %}</div>
           </div>
           <form method="post" action="{% url 'color_mode_switch' %}" class="ds-settings__seg">
             {% csrf_token %}
@@ -188,10 +188,11 @@
           </form>
         </div>
 
+        {% if themes|length > 1 %}{% comment %}外观包接口：themes/ 下每多一个 theme.json 就多一个可选项；只剩内置默认时不渲染这一行{% endcomment %}
         <div class="ds-settings__row">
           <div>
-            <div class="ds-settings__row-title">{% trans "主题" %}</div>
-            <div class="ds-settings__row-desc">{% trans "两套主题共用同一份设计语言" %}</div>
+            <div class="ds-settings__row-title">{% trans "外观包" %}</div>
+            <div class="ds-settings__row-desc">{% trans "把外观包放进 themes/ 即可在此切换" %}</div>
           </div>
           <form method="post" action="{% url 'theme_switch' %}" class="ds-settings__seg">
             {% csrf_token %}
@@ -200,6 +201,17 @@
             <button type="submit" name="theme" value="{{ key }}" class="ds-settings__opt{% if key == current_theme %} is-active{% endif %}">{{ name }}</button>
             {% endfor %}
           </form>
+        </div>
+        {% endif %}
+
+        <div class="ds-settings__row">
+          <div>
+            <div class="ds-settings__row-title">{% trans "快捷键" %}</div>
+            <div class="ds-settings__row-desc">{% trans "快速操作与输入框操作一览" %}</div>
+          </div>
+          <button type="button" class="ds-settings__keybtn" data-ds-shortcuts-open>
+            <kbd class="ds-kbd">Ctrl</kbd><kbd class="ds-kbd">/</kbd>
+          </button>
         </div>
 
         <p class="ds-settings__version">Constellatio · {% trans "万物皆可插件" %}</p>
@@ -249,8 +261,12 @@
        data-confirm="{% trans '确认' %}"
        data-close="{% trans '关闭' %}"></div>
 
+  {# v2.2.0：快捷键参考弹层（Ctrl+/ 打开；设置面板「快捷键」行也开这同一张卡） #}
+  {% include "includes/ds_shortcuts.html" %}
+
   <script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
   <script src="{% static 'js/ds-shell.js' %}?v={{ assets_version }}" defer></script>
+  <script src="{% static 'js/shortcuts.js' %}?v={{ assets_version }}" defer></script>
   <script src="{% static 'js/confirm.js' %}?v={{ assets_version }}" defer></script>
   <script nonce="{{ request.csp_nonce }}">
     (function () {

@@ -18,4 +18,5 @@ class LanguageConfig(AppConfig):
             signals=[],
             templates=None,
             app=self,
+            builtin=True,   # v2.2.0：语言随系统内置（设置里的「语言」行），插件页不外显
         ))

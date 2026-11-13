@@ -14,9 +14,9 @@
 
 * 🧩 **万物皆可插件**：插件容器 + 全插件化业务（auth / user / approval / notice / attendance / blockchain / workspace / structure / language）
 
-* 🔌 基础设施可插拔：数据库（MySQL↔sqlite）、主题 UI（Corporate Clean / Risograph）、模板引擎、图表引擎、认证后端
+* 🔌 基础设施可插拔：数据库（MySQL↔sqlite）、外观（内置浅色/深色 + `themes/` 外观包）、模板引擎、图表引擎、认证后端
 
-* 🎨 主题插件化：`themes/<key>/theme.json` + `OA_THEME`，重启生效；登录页 SSO（已接入）/ 忘记密码入口 + 首屏加载动画
+* 🎨 外观收口：内置外观即浅色/深色（设置里一个开关，全站生效）；再要更多外观就放 `themes/<key>/theme.json` 装包，自动出现在「外观包」行；登录页 SSO（已接入）/ 忘记密码入口 + 首屏加载动画
 
 * 🔑 企业 SSO：HMAC 签名 Ticket 网关登录（自动建号 / 防重放 / 登录页入口 / `sso_ticket` 命令），与账号密码登录并存
 
@@ -86,7 +86,7 @@
 
 ## 🛠 技术栈
 
-Python 3.13・Django 5.2 LTS・MySQL 8.0（可切 sqlite）・Corporate Clean 企业简洁风（默认）/ Risograph（备选）・ECharts 5・Gunicorn・WhiteNoise・Docker Compose
+Python 3.13・Django 5.2 LTS・MySQL 8.0（可切 sqlite）・内置外观（浅色 / 深色，`themes/corporate-clean`）・ECharts 5・Gunicorn・WhiteNoise・Docker Compose
 
 ## 🚀 快速开始
 
@@ -148,9 +148,8 @@ Constellatio/
 │   ├── workspace/        # 运行时插件开关
 │   ├── structure/        # 职能制组织架构模板
 │   └── language/         # 中英文切换
-├── themes/               # 主题插件层（可插拔，theme.json 发现）
-│   ├── corporate-clean/  # 企业简洁风（默认）
-│   └── risograph/        # Risograph 印刷风（备选）
+├── themes/               # 外观层（可插拔，theme.json 发现）
+│   └── corporate-clean/  # 内置唯一外观：浅色 + 深色两态（Risograph 已于 v2.2.0 移除）
 ├── locale/               # 翻译目录（.po 与 .mo 都入库；改 .po 后跑 tools/compile_mo.py）
 ├── tools/                # 纯 Python .mo 编译器
 └── docs/                 # 项目文档

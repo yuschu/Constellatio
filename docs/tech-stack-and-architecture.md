@@ -2,7 +2,7 @@
 
 > 项目：《基于 Django 的企业办公自动化系统的设计与实现》
 > 设计思想：**万物皆可插件**——容器内核唯一固定，从基础设施到业务模块全部可插拔、可替换
-> 文档版本：v1.9 · 2026-10-22（v1.5 主题插件化：Corporate Clean 默认 + Risograph 备选）
+> 文档版本：v1.9 · 2026-10-22（外观口径已按 v2.2.0 更新：内置浅色/深色 + 外观包接口）
 
 ---
 
@@ -15,7 +15,7 @@
 | **数据库引擎** | **MySQL 8.0** | 默认 | Django 原生支持 mysql / sqlite / postgres / oracle **后端切换**；每插件可挂独立数据源（database router） |
 | ORM | Django ORM | 随框架 | 每插件自带 models + migrations，各自建表 |
 | **模板引擎** | Django 模板 | 默认 | `TEMPLATES` 配置可切 Jinja2 / 多引擎共存 |
-| **主题 UI** | **Corporate Clean 企业简洁风**（Bootstrap 栅格） | 默认主题 `themes/corporate-clean`；Risograph 备选 | 主题即插件：`themes/<key>/theme.json` + 改 `OA_THEME` + 重启即换 |
+| **外观 UI** | **内置外观（浅色 / 深色）**（Bootstrap 栅格） | 唯一内置外观 `themes/corporate-clean`；外观即插件 | 换外观 = `themes/<key>/theme.json`（自动出现在设置「外观包」行）；`OA_THEME` 仍可作启动默认 |
 | **图表引擎** | **ECharts** | 默认图表插件 | 统一 chart 接口，可换 Chart.js / D3 / 原生 SVG |
 | **认证后端** | Django auth（session） | 默认 | `AUTHENTICATION_BACKENDS` 可插拔：加 LDAP / OAuth 插件；v1.7.0 已提供企业 SSO（HMAC Ticket 网关，`plugins/sso`）与账号密码并存 |
 | **消息提醒** | 站内信（Django ORM） | `plugins/notify` | 订阅审批/公告信号写站内信；可停用降级 |
@@ -33,7 +33,7 @@
 ├─────────────────────────────────────────────────────────┤
 │ 基础设施插件层（官方原生可插拔机制）                         │
 │  DB 后端(mysql/sqlite/pg) │ 模板引擎(Django/Jinja2)       │
-│  主题 UI(Corporate Clean/Risograph) │ 图表引擎(ECharts/Chart.js) │
+│  外观 UI(内置浅色/深色) │ 图表引擎(ECharts/Chart.js) │
 │  认证后端(session/LDAP/OAuth)                             │
 ├─────────────────────────────────────────────────────────┤
 │ 插件容器 plugin_host（唯一固定）                           │
@@ -54,7 +54,7 @@
 2. **基础设施插件层**（Django 官方原生可插拔机制）
    - 数据库后端：`DATABASES` 一行切换 mysql ↔ sqlite ↔ postgres
    - 模板引擎：`TEMPLATES` 配置可切 Django 模板 ↔ Jinja2
-   - 主题 UI：主题即插件（默认 `themes/corporate-clean`，Risograph 备选），换主题 = 新建 `themes/<key>/`（theme.json + 模板基座 + 静态资源）+ 改 `OA_THEME` + 重启
+   - 外观 UI：外观即插件——内置外观只有浅色/深色（设置里一个开关，全站生效）；要更多外观就放 `themes/<key>/`（theme.json + 模板基座 + 静态资源），设置「外观包」行自动出现
    - 图表引擎：统一 `ChartRenderer` 接口，ECharts 为默认实现
    - 认证后端：`AUTHENTICATION_BACKENDS` 列表加一行 = 新增一种登录方式
 3. **业务插件层**（全部可插拔）

@@ -1,0 +1,106 @@
+{% load i18n %}
+{% comment %}
+快捷键参考弹层（v2.2.0，照 DSH `dsh-client-ui-shortcuts`）：
+  - 480×600 卡片、`max-height:calc(100dvh - 108px)`，搜索行固定 60px、列表内部滚动、页脚 52px；
+  - 行高 42、可执行行显示按键徽标（26 高、radius 10、平台灰底），只读固定行用 tertiary 文本；
+  - 搜索按「标签 / 按键组合」的有序子序列匹配，命中即筛掉其余行；
+  - `Mod+/`（Windows 即 Ctrl+/）打开与关闭；设置面板里的「快捷键」行也开这同一张卡。
+
+快速操作行来自当前页面的入口清单：业务页用侧栏菜单（`menus`），对话式首页用
+自己的固定入口 + 「更多」白名单（`quick_actions`）——首页不渲染的入口不能只在这里
+冒出来。两组都已在后端按插件启停与权限过滤，Ctrl+Alt+1…9 直达；
+不属于菜单的固定动作（设置、快捷键本身、关闭弹层、输入框换行）手写在下面。
+{% endcomment %}
+<div class="ds-shortcuts" id="ds-shortcuts" role="dialog" aria-modal="true"
+     aria-labelledby="ds-shortcuts-title" aria-hidden="true" hidden>
+  <div class="ds-shortcuts__overlay" data-ds-shortcuts-close></div>
+  <div class="ds-shortcuts__panel" tabindex="-1">
+    <h2 class="ds-shortcuts__title" id="ds-shortcuts-title">{% trans "快捷键" %}</h2>
+
+    <div class="ds-shortcuts__search">
+      <div class="ds-shortcuts__field">
+        <svg class="ds-shortcuts__search-glyph" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+          <circle cx="7" cy="7" r="4.4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+          <path d="M10.4 10.4l3 3" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        </svg>
+        <input type="search" class="ds-shortcuts__search-input" data-ds-shortcuts-search
+               autocomplete="off" aria-label="{% trans '搜索动作或按键' %}"
+               placeholder="{% trans '搜索动作或按键' %}">
+        <button type="button" class="ds-shortcuts__clear" data-ds-shortcuts-clear
+                aria-label="{% trans '清空搜索' %}" hidden>
+          <svg viewBox="0 0 16 16" width="10" height="10" aria-hidden="true">
+            <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5"
+                  fill="none" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="ds-shortcuts__list" tabindex="0">
+      <p class="ds-shortcuts__group">{% trans "快速操作" %}</p>
+      <ul class="ds-shortcuts__rows">
+        {% for item in quick_actions|default:menus|slice:":9" %}
+        <li class="ds-shortcuts__row" data-ds-shortcut-row
+            data-keys="Ctrl+Alt+{{ forloop.counter }}"
+            data-shortcut-url="{{ item.url }}">
+          <span class="ds-shortcuts__label">{{ item.label }}</span>
+          <span class="ds-shortcuts__binding">
+            <kbd class="ds-shortcuts__key">Ctrl</kbd><kbd class="ds-shortcuts__key">Alt</kbd><kbd class="ds-shortcuts__key">{{ forloop.counter }}</kbd>
+          </span>
+        </li>
+        {% endfor %}
+      </ul>
+
+      <p class="ds-shortcuts__group">{% trans "设置与外观" %}</p>
+      <ul class="ds-shortcuts__rows">
+        <li class="ds-shortcuts__row" data-ds-shortcut-row
+            data-keys="Ctrl+Alt+,"
+            data-shortcut-action="settings">
+          <span class="ds-shortcuts__label">{% trans "打开设置" %}</span>
+          <span class="ds-shortcuts__binding">
+            <kbd class="ds-shortcuts__key">Ctrl</kbd><kbd class="ds-shortcuts__key">Alt</kbd><kbd class="ds-shortcuts__key">,</kbd>
+          </span>
+        </li>
+        <li class="ds-shortcuts__row" data-ds-shortcut-row
+            data-keys="Ctrl+/"
+            data-shortcut-action="shortcuts">
+          <span class="ds-shortcuts__label">{% trans "快捷键参考" %}</span>
+          <span class="ds-shortcuts__binding">
+            <kbd class="ds-shortcuts__key">Ctrl</kbd><kbd class="ds-shortcuts__key">/</kbd>
+          </span>
+        </li>
+        <li class="ds-shortcuts__row" data-ds-shortcut-row
+            data-keys="Esc"
+            data-shortcut-action="close">
+          <span class="ds-shortcuts__label">{% trans "关闭当前弹层" %}</span>
+          <span class="ds-shortcuts__binding">
+            <kbd class="ds-shortcuts__key">Esc</kbd>
+          </span>
+        </li>
+      </ul>
+
+      <p class="ds-shortcuts__group">{% trans "输入框" %}</p>
+      <ul class="ds-shortcuts__rows">
+        <li class="ds-shortcuts__row ds-shortcuts__row--fixed">
+          <span class="ds-shortcuts__label">{% trans "发送消息" %}</span>
+          <span class="ds-shortcuts__binding">
+            <kbd class="ds-shortcuts__key ds-shortcuts__key--fixed">Enter</kbd>
+          </span>
+        </li>
+        <li class="ds-shortcuts__row ds-shortcuts__row--fixed">
+          <span class="ds-shortcuts__label">{% trans "换行（输入框随内容增高至 336px）" %}</span>
+          <span class="ds-shortcuts__binding">
+            <kbd class="ds-shortcuts__key ds-shortcuts__key--fixed">Shift</kbd><kbd class="ds-shortcuts__key ds-shortcuts__key--fixed">Enter</kbd>
+          </span>
+        </li>
+      </ul>
+
+      <p class="ds-shortcuts__empty" data-ds-shortcuts-empty hidden>{% trans "没有匹配的快捷键" %}</p>
+    </div>
+
+    <div class="ds-shortcuts__footer">
+      <span class="ds-shortcuts__note">{% trans "快捷键为固定绑定，不可自定义" %}</span>
+      <button type="button" class="ds-shortcuts__done" data-ds-shortcuts-close>{% trans "关闭" %}</button>
+    </div>
+  </div>
+</div>

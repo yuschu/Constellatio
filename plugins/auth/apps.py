@@ -22,4 +22,5 @@ class AuthConfig(AppConfig):
             signals=[],
             templates='auth',
             app=self,
+            builtin=True,   # v2.2.0：系统底座，插件页不外显
         ))

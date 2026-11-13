@@ -1114,15 +1114,6 @@ msgstr "Switch"
 msgid "应用"
 msgstr "Apply"
 
-msgid "停用后登录 / 登出入口关闭，已登录会话仍可用；可用 manage.py plugin_switch on auth 恢复"
-msgstr "Disabling closes the login / logout entry; signed-in sessions keep working. Restore with: manage.py plugin_switch on auth"
-
-msgid "停用后账号、部门、角色管理入口关闭，已有会话与登录仍可用"
-msgstr "Disabling closes account, department and role management; sessions and login keep working"
-
-msgid "停用后组织架构与关系树入口关闭，组织数据不受影响"
-msgstr "Disabling closes the organization and reporting-tree entry; organization data is unaffected"
-
 msgid "主题"
 msgstr "Theme"
 
@@ -1680,3 +1671,61 @@ msgstr "Browse other plugins"
 
 msgid "创建你的插件"
 msgstr "Create your plugin"
+
+
+msgid "外观"
+msgstr "Appearance"
+
+msgid "内置浅色与深色，全站生效；更多外观装包后自动出现"
+msgstr "Built-in light and dark, applied site-wide; more appearances appear once installed"
+
+msgid "外观包"
+msgstr "Appearance packs"
+
+msgid "把外观包放进 themes/ 即可在此切换"
+msgstr "Drop an appearance pack into themes/ to switch between them here"
+
+msgid "快捷键"
+msgstr "Keyboard shortcuts"
+
+msgid "快速操作与输入框操作一览"
+msgstr "Quick actions and input-field shortcuts at a glance"
+
+msgid "业务插件的运行时启停；外观、语言与系统底座随系统内置，不在本清单内"
+msgstr "Runtime toggles for business plugins; appearance, language and system foundations ship built in and are not listed here"
+
+msgid "搜索动作或按键"
+msgstr "Search actions or keys"
+
+msgid "清空搜索"
+msgstr "Clear search"
+
+msgid "快速操作"
+msgstr "Quick actions"
+
+msgid "设置与外观"
+msgstr "Settings and appearance"
+
+msgid "打开设置"
+msgstr "Open settings"
+
+msgid "快捷键参考"
+msgstr "Keyboard shortcuts"
+
+msgid "关闭当前弹层"
+msgstr "Close the current overlay"
+
+msgid "输入框"
+msgstr "Message input"
+
+msgid "发送消息"
+msgstr "Send message"
+
+msgid "换行（输入框随内容增高至 336px）"
+msgstr "Line break (the input grows with the content up to 336px)"
+
+msgid "没有匹配的快捷键"
+msgstr "No matching shortcuts"
+
+msgid "快捷键为固定绑定，不可自定义"
+msgstr "Shortcuts are fixed and cannot be customised"

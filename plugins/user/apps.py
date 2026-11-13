@@ -29,6 +29,7 @@ class UserConfig(AppConfig):
                      'dept_deleted', 'dept_disabled', 'dept_updated', 'password_changed'],
             templates='user',
             app=self,
+            builtin=True,   # v2.2.0：账号与组织底座，插件页不外显
         ))
 
         # 跨插件零 import：订阅 approval 会签通过回调，执行物理删除 / 禁用

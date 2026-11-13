@@ -6,7 +6,7 @@
 
   <header class="ds-plugins__head">
     <h2 class="ds-plugins__heading">{% trans "插件" %}</h2>
-    <p class="ds-plugins__intro">{% trans "本部署内置的插件；运行时启停即时生效" %}</p>
+    <p class="ds-plugins__intro">{% trans "业务插件的运行时启停；外观、语言与系统底座随系统内置，不在本清单内" %}</p>
   </header>
 
   <div class="ds-plugins__search">
@@ -51,11 +51,7 @@
           </span>
         </div>
 
-        {% if row.warning %}
-        <p class="ds-plugin__desc ds-plugin__desc--warn">{{ row.warning }}</p>
-        {% else %}
         <p class="ds-plugin__desc">{% trans "已注册的插件，可运行时启停" %}</p>
-        {% endif %}
 
         <div class="ds-plugin__meta">
           <span class="ds-plugin__identity">{{ row.key }}</span>

@@ -41,14 +41,14 @@
 | workspace | 插件开关 | 运行时启用 / 停用，停用即 404 + 菜单隐藏（v1.1） |
 | structure | 组织架构模板 | 20 部门 / 31 角色 / 31 用户幂等应用（v1.3） |
 | language | 中英切换 | 默认中文 + 会话 Cookie + 全站 UI 文案中英切换（v1.5.1） |
-| theme | 主题插件 | Corporate Clean 默认 / Risograph 备选，`OA_THEME` 切换（v1.5） |
+| theme | 外观插件 | 内置外观 = 浅色 / 深色（全站一个开关）；更多外观放 `themes/<key>/theme.json` 即成为「外观包」（v2.2.0 收口） |
 | sso | 企业单点登录 | HMAC 签名 Ticket 网关登录、自动建号、防重放、登录页入口（v1.7.0） |
 | notify | 消息提醒 | 站内信：审批待办 / 结果、公告发布、顶栏未读、消息中心、工作台卡片（v1.7.0） |
 
 ## 四、技术栈
 
 - Python 3.13 / Django 5.2 LTS / MySQL 8.0
-- Django 模板 + Corporate Clean 企业简洁风（默认）/ Risograph（备选）+ ECharts 5
+- Django 模板 + 内置外观（浅色 / 深色，`themes/corporate-clean`）+ ECharts 5
 - Gunicorn + WhiteNoise + Docker Compose（跨平台一键部署）
 
 ## 五、快速开始
@@ -113,9 +113,8 @@ Constellatio/
 │   ├── language/               # 中英切换（v1.4）
 │   ├── sso/                    # 企业 SSO 签名 Ticket 登录（v1.7.0）
 │   └── notify/                 # 站内消息提醒（v1.7.0）
-├── themes/                     # 主题插件层（可插拔，theme.json 发现）
-│   ├── corporate-clean/        # 企业简洁风（默认）
-│   └── risograph/              # Risograph 印刷风（备选）
+├── themes/                     # 外观层（可插拔，theme.json 发现）
+│   └── corporate-clean/        # 内置唯一外观：浅色 + 深色两态（Risograph 已于 v2.2.0 移除）
 └── docs/                       # 文档
     ├── tech-stack-and-architecture.md
     ├── constraints-and-acceptance.md
@@ -192,4 +191,5 @@ OA_PLUGINS = [
 - [x] v1.5.3 个人中心（资料 / 权限 / 改密）、用户编辑权限范围、登录回填用户名、公告对所有登录用户可见（76 项测试全绿）—— 2026-10-22
 - [x] v1.5.4 权限等级 L0–L3、全员基线（考勤/公告）、角色模板权限、插件准入统一守卫、管理岗签到详情（102 项测试全绿）—— 2026-10-22
 - [x] v1.5.5 审批六类动态表单 + 直属上级抄送、签到状态/类型/时间筛选与补卡、工作台双视图、侧栏高亮、密码权限（138 项测试全绿）—— 2026-10-22
+- [x] v2.2.0 前端全面移植 DSH 收尾：内置插件不外显（auth/user/structure/workspace/language/charts）、外观收口成浅色/深色（Risograph 移除、外观包接口保留）、快捷键层（Ctrl+/ 参考卡 + Ctrl+Alt+数字 快速操作）—— 2026-11-13：`docs/frontend-refactor-plan.md` §9.13.27
 - [ ] 测试报告

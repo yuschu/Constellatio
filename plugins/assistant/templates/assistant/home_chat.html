@@ -421,7 +421,7 @@
       <div class="ds-settings__row">
         <div>
           <div class="ds-settings__row-title">{% trans "外观" %}</div>
-          <div class="ds-settings__row-desc">{% trans "浅色与深色跟随同一个开关，全站生效" %}</div>
+          <div class="ds-settings__row-desc">{% trans "内置浅色与深色，全站生效；更多外观装包后自动出现" %}</div>
         </div>
         <form method="post" action="{% url 'color_mode_switch' %}" class="ds-settings__seg">
           {% csrf_token %}
@@ -431,10 +431,11 @@
         </form>
       </div>
 
+      {% if themes|length > 1 %}
       <div class="ds-settings__row">
         <div>
-          <div class="ds-settings__row-title">{% trans "主题" %}</div>
-          <div class="ds-settings__row-desc">{% trans "两套主题共用同一份设计语言" %}</div>
+          <div class="ds-settings__row-title">{% trans "外观包" %}</div>
+          <div class="ds-settings__row-desc">{% trans "把外观包放进 themes/ 即可在此切换" %}</div>
         </div>
         <form method="post" action="{% url 'theme_switch' %}" class="ds-settings__seg">
           {% csrf_token %}
@@ -444,6 +445,7 @@
           {% endfor %}
         </form>
       </div>
+      {% endif %}
 
       <div class="ds-settings__row">
         <div>
@@ -458,11 +460,11 @@
       <div class="ds-settings__row">
         <div>
           <div class="ds-settings__row-title">{% trans "快捷键" %}</div>
-          <div class="ds-settings__row-desc">{% trans "Enter 发送，Shift + Enter 换行，输入框随内容自增高至 336px" %}</div>
+          <div class="ds-settings__row-desc">{% trans "快速操作与输入框操作一览" %}</div>
         </div>
-        <div class="ds-settings__seg">
-          <span class="ds-settings__opt is-active">Enter</span>
-        </div>
+        <button type="button" class="ds-settings__keybtn" data-ds-shortcuts-open>
+          <kbd class="ds-kbd">Ctrl</kbd><kbd class="ds-kbd">/</kbd>
+        </button>
       </div>
 
       <p class="ds-settings__version">Constellatio · {% trans "万物皆可插件" %}</p>
@@ -504,6 +506,9 @@
   </div>
 </div>
 
+{% include "includes/ds_shortcuts.html" %}
+
 <script src="{% static 'js/ds-shell.js' %}?v={{ assets_version }}" defer></script>
+<script src="{% static 'js/shortcuts.js' %}?v={{ assets_version }}" defer></script>
 </body>
 </html>

@@ -23,4 +23,5 @@ class WorkspaceConfig(AppConfig):
             signals=['plugin_toggled'],
             templates='workspace',
             app=self,
+            builtin=True,   # v2.2.0：插件页自身不进自己的清单
         ))

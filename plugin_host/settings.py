@@ -254,7 +254,7 @@ from plugin_host.charts import discover_charts  # noqa: E402
 from plugin_host.theming import discover_themes, get_theme  # noqa: E402  (依赖 BASE_DIR)
 
 _active_theme = get_theme(BASE_DIR, OA_THEME)   # 启动即校验 OA_THEME
-# 两套主题的静态资源都收集，运行时切换后 CSS 可用（路径按 themes/<key>/ 命名空间隔离）
+# 每个已发现外观的静态资源都收集，运行时切换后 CSS 可用（路径按 themes/<key>/ 命名空间隔离）
 STATICFILES_DIRS = [
     str(theme.static) for _, theme in sorted(discover_themes(BASE_DIR).items())
 ]

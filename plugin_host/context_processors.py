@@ -119,6 +119,7 @@ _ASSETS_VERSION = None
 _ASSET_STAMP_FILES = (
     'themes/corporate-clean/static/themes/corporate-clean/css/corporate-clean.css',
     'plugin_host/static/js/ds-shell.js',
+    'plugin_host/static/js/shortcuts.js',
     'plugin_host/static/js/confirm.js',
     'plugin_host/static/js/dashboard-range.js',
     'themes/corporate-clean/static/themes/corporate-clean/js/home.js',

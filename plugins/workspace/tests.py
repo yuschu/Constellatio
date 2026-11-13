@@ -55,39 +55,63 @@ class PluginSwitchTests(TestCase):
         self.assertEqual(received[-1]['app_key'], 'notice')
 
     def test_only_workspace_is_protected(self):
-        """v1.5.7：禁停清单只剩 workspace；auth / user / structure / language 可停用。"""
+        """v2.2.0：禁停清单只剩 workspace；系统底座改用 builtin，界面既不可见也不可停。"""
         from .views import PROTECTED
         self.assertEqual(PROTECTED, {'workspace'})
         self._toggle(self.admin, 'workspace', False)
         self.assertFalse(PluginSwitch.objects.filter(app_key='workspace').exists())
-        for key in ('auth', 'user', 'structure', 'language'):
+
+    def test_builtin_plugins_hidden_from_list_and_toggle(self):
+        """v2.2.0：内置插件（语言 / 认证 / 账号 / 组织架构 / 插件页 / 图表）不外显。
+
+        UI 上既看不到卡片，POST 开关也不落库；命令行 `plugin_switch` 仍是兜底出口。
+        """
+
+        from plugin_host.registry import PLUGIN_REGISTRY
+
+        from .views import switch_list_context
+
+        builtin = {key for key, meta in PLUGIN_REGISTRY.items() if meta.builtin}
+        self.assertEqual(
+            builtin, {'auth', 'user', 'structure', 'workspace', 'language', 'charts'})
+
+        rows = {row['key'] for row in switch_list_context()['rows']}
+        self.assertFalse(rows & builtin)
+        self.assertEqual(
+            rows, {'approval', 'notice', 'attendance', 'blockchain',
+                   'assistant', 'notify', 'sso'})
+
+        for key in sorted(builtin - {'workspace'}):
             PluginSwitch.objects.filter(app_key=key).delete()
             self._toggle(self.admin, key, False)
-            self.assertFalse(PluginSwitch.objects.get(app_key=key).enabled)
-            self.assertNotIn(key, [name for name, _ in get_enabled_plugins()])
+            self.assertFalse(PluginSwitch.objects.filter(app_key=key).exists())
 
     def test_disable_auth_closes_login_but_keeps_session(self):
-        """停用 auth：登录页 404，已登录会话的工作台仍可用。"""
-        self._toggle(self.admin, 'auth', False)
+        """停用 auth（命令行 / 直接写库）：登录页 404，已登录会话的工作台仍可用。"""
+        PluginSwitch.objects.create(app_key='auth', enabled=False)
+        self.client.force_login(self.admin)
         self.assertEqual(self.client.get('/plugins/auth/login/').status_code, 404)
         self.assertEqual(self.client.get('/').status_code, 200)
 
     def test_switch_ui_uses_toggle_switch(self):
-        """v1.5.7：停用/启用按钮改为开关；受保护插件为禁用开关 + 系统必需。"""
+        """开关 UI：业务插件是 checkbox 开关；内置插件整行都不出现。"""
         self.client.force_login(self.admin)
         resp = self.client.get(reverse('workspace:switch_list'))
         self.assertContains(resp, 'role="switch"')
         self.assertContains(resp, 'data-plugin-switch')
-        self.assertContains(resp, '系统必需')
         self.assertContains(resp, reverse('workspace:switch_toggle', args=['notice']))
+        # v2.2.0：没有「系统必需」这种占位卡片了
+        self.assertNotContains(resp, '系统必需')
 
-    def test_switch_list_warns_on_critical_plugins(self):
-        """风险提示：auth 行显示停用后果与命令行恢复方式。"""
+    def test_switch_list_hides_builtin_plugins(self):
+        """内置插件不再出现在清单里，也不再提示「停用后果 / 命令行恢复」。"""
         self.client.force_login(self.admin)
         self.client.cookies['django_language'] = 'zh-hans'
         resp = self.client.get(reverse('workspace:switch_list'))
-        self.assertContains(resp, '登录 / 登出入口关闭')
-        self.assertContains(resp, 'plugin_switch on auth')
+        for key in ('auth', 'user', 'structure', 'language', 'workspace', 'charts'):
+            self.assertNotContains(resp, f'data-plugin-key="{key}"')
+        self.assertNotContains(resp, 'plugin_switch on auth')
+        self.assertContains(resp, '业务插件的运行时启停')
 
     def test_cli_switch_roundtrip(self):
         """兜底命令：off auth 写库，on auth 恢复（不依赖 HTTP）。"""
@@ -128,23 +152,23 @@ class PluginSwitchTests(TestCase):
         self.assertContains(resp, '403', status_code=403)
 
     def test_switch_list_localized_plugin_titles(self):
-        """插件名称随语言切换：中文显示中文名，英文显示英文名。"""
+        """插件名称随语言切换：清单只剩业务插件，内置插件两种语言都不出现。"""
         self.client.force_login(self.admin)
         self.client.cookies['django_language'] = 'zh-hans'
         resp = self.client.get(reverse('workspace:switch_list'))
-        self.assertContains(resp, '认证')
-        self.assertContains(resp, '用户与组织')
-        self.assertContains(resp, '插件')
+        self.assertContains(resp, '审批中心')
+        self.assertContains(resp, '公告通知')
+        self.assertNotContains(resp, '用户与组织')
         self.client.cookies['django_language'] = 'en'
         resp = self.client.get(reverse('workspace:switch_list'))
-        self.assertContains(resp, 'Authentication')
-        self.assertContains(resp, 'Users &amp; organization')
-        self.assertContains(resp, 'Plugins')
-        self.assertNotContains(resp, '用户与组织')
+        self.assertContains(resp, 'Approval')
+        self.assertContains(resp, 'Notices')
+        self.assertNotContains(resp, 'Users &amp; organization')
+        self.assertNotContains(resp, '认证')
 
 
 class ChartPluginSwitchTests(TestCase):
-    """v1.6.1：图表引擎作为 Provider 插件进入开关体系。"""
+    """v1.6.1 / v2.2.0：图表引擎是内置 Provider 插件——清单不外显，命令行仍可停。"""
 
     @classmethod
     def setUpTestData(cls):
@@ -153,23 +177,18 @@ class ChartPluginSwitchTests(TestCase):
     def setUp(self):
         self.client.force_login(self.admin)
 
-    def test_switch_list_shows_chart_engine(self):
+    def test_switch_list_hides_chart_engine(self):
         resp = self.client.get(reverse('workspace:switch_list'))
-        self.assertContains(resp, '图表引擎')
-        self.assertContains(resp, reverse('workspace:switch_toggle', args=['charts']))
-        self.assertContains(resp, '降级为表格')
+        self.assertNotContains(resp, '图表引擎')
+        self.assertNotContains(resp, reverse('workspace:switch_toggle', args=['charts']))
 
     def test_toggle_chart_disables_and_restores_provider(self):
         from plugin_host.charts import get_active_chart
 
-        self.client.post(
-            reverse('workspace:switch_toggle', args=['charts']), {'enabled': '0'})
-        self.assertFalse(PluginSwitch.objects.get(app_key='charts').enabled)
+        PluginSwitch.objects.create(app_key='charts', enabled=False)
         self.assertIsNone(get_active_chart())
 
-        self.client.post(
-            reverse('workspace:switch_toggle', args=['charts']), {'enabled': '1'})
-        self.assertTrue(PluginSwitch.objects.get(app_key='charts').enabled)
+        PluginSwitch.objects.filter(app_key='charts').delete()
         self.assertIsNotNone(get_active_chart())
 
     def test_cli_lists_and_toggles_chart_provider(self):

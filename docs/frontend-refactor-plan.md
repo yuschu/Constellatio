@@ -1341,3 +1341,50 @@ select.zGbnIq_input{cursor:pointer;max-width:240px}
 全量 538 tests OK（基线 536 +2）、`ruff check plugins plugin_host` 全过。
 
 **容器**：`docker compose up -d --build web` 重建，`corporate-clean.css 4660a3ce4ae54a5bff0e708c143c1498`、`plugin_host/tests.py 685700f758495f32e7407a8962a404d9` 本地与容器逐一对齐；`/app/staticfiles/.../corporate-clean.css` 里 chevron path 命中 3 次（collectstatic 的副件也换新，说明线上走的是新规则）。容器 8000 同一支探针复跑，5 页面 × 深浅两态数值与本地完全一致（签到 343×34、筛选 171×34、活动记录 94×34、首页面板 227×34，`appearance:none` + `calc(100% - 12px) 50%` + 12×12），截图在 `.tmp-test/screens-v16/container/`。`GET /plugins/auth/login/?next=/` 200。
+
+### 9.13.27 外观收口 + 快捷键层 + 内置插件口径（v2.2.0）
+
+**四项诉求一次落地**：① 增加快速操作的快捷键；② 主题插件改名「外观」；③ 老主题 Risograph 移除、默认外观即深浅（内置插件不再在插件页显示，装包后自动出现「外观包」）；④ 语言插件改内置，系统必须插件一律不外显。
+
+**A. 内置插件口径（诉求 ④）**
+
+- `PluginMeta` 新增 `builtin=False`；`plugin_counts()` 只统计 `not meta.builtin` 的可见插件（卡片计数与注册表同源）。
+- `builtin=True` 打在 6 个：`plugin_host/apps.py`（charts）、`plugins/auth`、`plugins/user`、`plugins/structure`、`plugins/workspace`、`plugins/language`。
+- `switch_list_context()` 跳过 builtin，rows 只留 `key/meta/enabled/protected`；`switch_toggle()` 先用注册表 + `_is_switchable(key, meta)`（`key not in PROTECTED and not meta.builtin`）拦截——builtin 的 POST 不落库，只在 302 回列表。
+- `_panel.html` 的 intro 改为「业务插件的运行时启停；外观、语言与系统底座随系统内置，不在本清单内」，`{% if row.warning %}` 分支删除。
+- 结果集：内置 = `auth / user / structure / workspace / language / charts`（6）；插件页可见 = `approval / notice / attendance / blockchain / assistant / notify / sso`（7）。两个集合都被测试钉住（`plugins/workspace/tests.py::test_builtin_plugins_hidden_from_list_and_toggle`、`plugins/language/tests.py::test_language_is_builtin_plugin`）。
+
+**B. 外观收口（诉求 ②③）**
+
+- `git rm -r themes/risograph`（6 个文件，已 staged）：目录、`risograph.css`、`base/home/login` 三份模板、`theme.json` 全删。
+- 设置 general 面板：原「主题」行删除；「外观」行 desc 改「内置浅色与深色，全站生效；更多外观装包后自动出现」，右侧仍是浅色 / 深色开关；新增 `{% if themes|length > 1 %}` 的「外观包」行——单外观不渲染，表单仍指 `theme_switch`，接口保留；「快捷键」行改成 `button.ds-settings__keybtn` + 两枚 `<kbd class="ds-kbd">`（`Ctrl` / `/`），点击开同一张参考卡。
+- `theme_switch` 视图与 `/theme/switch/` URL 保留为外观包预留接口：非法 key 忽略、GET 405、外链 `next` 拦回 `/`；`oa_theme=risograph` 的旧 Cookie 自动回退内置外观。
+
+**C. 快捷键层（诉求 ①）**
+
+- 新增 `plugin_host/templates/includes/ds_shortcuts.html`：`#ds-shortcuts` 弹层（overlay + panel、`role=dialog aria-modal`）→ 搜索行（图标 + `input[type=search]` + 圆形清空）→ 内部滚动列表（「快速操作」= `quick_actions|default:menus|slice:":9"`，每行 `data-keys="Ctrl+Alt+{{ forloop.counter }}"` + `data-shortcut-url`；「设置与外观」3 行 settings / shortcuts / close；「输入框」2 行 `--fixed`：Enter 发送、Shift+Enter 换行）→ 页脚（「快捷键为固定绑定，不可自定义」+ 关闭）。
+- 新增 `plugin_host/static/js/shortcuts.js`（ES5 IIFE，defer + `?v={{ assets_version }}`）：`Ctrl+/` 开 / 关（开时清空搜索并聚焦）；`Ctrl+Alt+1..9` 命中 `data-keys` 即 `location.assign`；`Ctrl+Alt+,` 走 `data-shortcut-action="settings"` → `[data-ds-settings-open].click()`；Esc 关卡并 `stopPropagation()`；`event.repeat` / `isComposing` 吞掉；搜索按 label+keys 的有序子序列过滤，分组标题随行隐藏；开合维护 `body.ds-modal-open`，关时回焦。
+- 快速操作与首页真正的入口同源：`plugins/assistant/views.py::home()` 构造 `quick_actions`（primary 用 `panel_url`、common 用业务 url），partial 用 `quick_actions|default:menus`——否则首页会冒出「签到详情」，`plugin_host/tests_rbac.py::test_manager_menu_shows_report` 直接红。
+- CSS 第 36 节（文件末尾；字面量取自 `dsh-client-ui-shortcuts/lib/client.js` 的 CSS module，原文导出 `.tmp-test/dsh_shortcuts_css.txt`，7963 字符）：panel 480×600 / radius 24 / `translateY(30px)` 入场、search `flex: 0 0 60px`、row `min-height: 42px`、binding 26px + radius 10、footer 52px、group `margin: 18px 8px 4px`。
+
+**两个实测抓到的真 bug（不是猜的）**
+
+1. 命中行只 `preventDefault`、没有 `stopPropagation`，事件继续冒泡到 `ds-shell.js`（L332-341 也处理 `Ctrl+Alt+,` 并 toggle 设置）→「打开设置」被立刻关回去。修法：处理成功后补 `event.stopPropagation()`，注释写清原因。
+2. Bootstrap 的 `kbd` 元素规则（深底白字）赢过只有 `font: inherit` 的 `.ds-shortcuts__key`，徽标整块变黑。修法：`.ds-shortcuts__key` 重置 `padding: 0 / color: inherit / background: none / border: 0`，`.ds-kbd` 补 `border: 0`；补测试 `ShortcutLayerTest::test_key_chip_resets_bootstrap_kbd` 钉住（截图对照，不是只看代码）。
+
+**翻译链**：`.tmp-test/po_update_220.py` 块级编辑 `locale/en/LC_MESSAGES/django.po`（删 3 条失效 msgid、追加 19 条英文 msgstr：外观 / 外观包 / 快捷键 / 快速操作 / 设置与外观 / 打开设置 / 快捷键参考 / 关闭当前弹层 / 输入框 / 发送消息 / 换行（336px）/ 没有匹配的快捷键 / 快捷键为固定绑定… / 搜索动作或按键 / 清空搜索 / 业务插件的运行时启停… 等），`tools/compile_mo.py` 重编译 `.mo`（`.mo` 入库，`MoInRepoTest` 逐字节比对）；`git diff --numstat` = **58+/9−**。
+
+**实测（本地 8011 + headless Chrome 9227，admin，1440×900）**
+
+- 设置面板 general 行标题 = `["语言","外观","快捷键"]`，无「主题」行、无 theme_switch 表单（`hasThemeForm: false`）。
+- 弹层 480×600（居中 x=480, y=180）、search 60、footer 52、row 42、badge 26、`border-radius: 24px`、列表可滚（scrollHeight − clientHeight = 238）、14 行（9 菜单 + 3 + 2）、3 个分组。
+- 搜索「设置」→ 3 行 / 2 组，清空恢复；Esc（弹层与设置同开）→ 弹层关、设置仍开（`settingsOpen: true`）；`Ctrl+Alt+2` → `/dashboard/`；`Ctrl+Alt+,` → `settingsOpen: true`（修 bug 1 之后）。
+- 深浅两态截图 `.tmp-test/screens-v17/shortcuts-{settings,open,filtered}-{light,dark}.png`（键帽为灰底圆角块、文字 secondary；无「主题」行）。
+
+**缓存陷阱（真踩，写下来免得下轮再被伪造）**：`assets_version` 在进程启动时固定，改 JS / CSS 后 `?v=` 不再变，浏览器交的仍是旧文件——「`Ctrl+Alt+,` 打开设置后又被关」第二轮就是这么伪造出来的。任何 JS / CSS 探针必须 `Network.setCacheDisabled(true)` + `clearBrowserCache`，否则结论失真。
+
+**容器**：`docker compose up -d --build web` 重建（`SECRET_KEY` / `GUNICORN_WORKERS=3` / `OA_THEME=corporate-clean` 三个 env 带全），13 个改动文件 MD5 与本地逐一**全部 OK**：`registry.py a231eb36daf872e7570f062665a98229`、`workspace/views.py 417cbf96d924d1302e916cb0188df5f3`、`assistant/views.py 860b3c2c40d79540c0afb712c2467a81`、`base.html 8e219256e8c11138f2d8b5fbffa9b669`、`home_chat.html c2741ade11b3746a8dfe2d561c3ffe47`、`ds_shortcuts.html 768dbd3a1d9d170eae60c65101f8ea19`、`shortcuts.js aac46c4b4c00f8a301b0fdee30e6b4b8`、`corporate-clean.css 99a39a371221a6999ef57bedb837f5f5`、`django.po 68cb25003b31e41d633ace8ee802e90f`、`django.mo 01d676a0645101cf597293e124e22f56`；`/app/staticfiles/themes/corporate-clean/css/corporate-clean.css` 与 `/app/staticfiles/js/shortcuts.js` 两个 collectstatic 副件同 MD5（线上走的是新规则 / 新脚本）；`/app/themes` 只剩 `corporate-clean`。
+
+- 容器 8000 用同一支探针（容器 admin SID）复跑：面板 480×600（x=480, y=180）、search 60、footer 52、rows 14、badge 26、浅色徽标 `rgb(245,246,247)` / 深色 `rgb(53,54,56)`、搜索「设置」3 行 2 组、Esc 只关弹层、`Ctrl+Alt+2` → `/dashboard/`、`Ctrl+Alt+,` → `settingsOpen: true`；深浅截图在 `.tmp-test/screens-v17/container/`。
+- 容器插件页 `data-plugin-key` 集合 = `approval / assistant / attendance / blockchain / notice / notify / sso`（7 个），页面内无 `theme/switch` 表单、「内置浅色与深色…」文案命中；`GET /plugins/auth/login/?next=/` 200。
+

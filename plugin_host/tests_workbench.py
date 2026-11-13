@@ -89,11 +89,13 @@ class WorkbenchGuardTests(TestCase):
         self.assertIn('plugins', data['cards'])
 
     def test_plugin_counts_match_registry_and_card(self):
+        """v2.2.0：KPI 与插件页同一口径（只算非内置插件）——卡上数字不能自相矛盾。"""
         enabled, total = plugin_counts()
-        self.assertEqual(total, len(PLUGIN_REGISTRY))
+        visible = [key for key, meta in PLUGIN_REGISTRY.items() if not meta.builtin]
+        self.assertEqual(total, len(visible))
         self.assertEqual(
             enabled,
-            sum(1 for key in PLUGIN_REGISTRY if plugin_enabled(key)))
+            sum(1 for key in visible if plugin_enabled(key)))
         card = self._build()['cards']['plugins']
         self.assertEqual(card['total'], total)
         self.assertEqual(card['enabled'], enabled)

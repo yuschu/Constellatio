@@ -4697,3 +4697,330 @@ html[data-color-mode="dark"] select.r-input:not([multiple]),
 html[data-color-mode="dark"] select.r-select:not([multiple]) {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%23ADB2B8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
+/* ============================================================
+   36. 快捷键参考弹层（v2.2.0）
+   ------------------------------------------------------------
+   字面量出处：dsh-client-ui-shortcuts/lib/client.js 的
+   `const css = ".nhfO0a_..."`（CSS module，前缀 nhfO0a_），逐条对应：
+     .nhfO0a_dialog      border-radius 24 / width min(480px,100%) /
+                         height 600 / max-height calc(100dvh - 108px) /
+                         padding 0 / translateY(30px) /
+                         box-shadow 0 0 1px #0003,0 0 4px #00000005,0 12px 32px #00000014
+     .nhfO0a_searchRow   flex 0 0 60px / padding 14px 20px 10px
+     .nhfO0a_searchField border .5px border-l2 / bg markdown-code-block /
+                         radius 12 / height 36 / padding 8px 14px / gap 8
+     .nhfO0a_search      13px/18px，placeholder 用 label-tertiary
+     .nhfO0a_list        flex 1 / min-height 0 / padding 0 16px 18px / overflow-y auto
+     .nhfO0a_footer      border-top .5px border-l2 / min-height 52 /
+                         padding 0 24px / 12px/18px
+     .nhfO0a_group       label-tertiary / margin 18px 8px 4px / 12px/18px
+     .nhfO0a_row         radius-md / min-height 42 / padding 8 / 13px/18px /
+                         hover → interactive-bg-hover
+     .nhfO0a_keyBadge    height 26 / radius 10 / padding 0 12 /
+                         bg bg-module-platform / 字用 label-secondary
+     .nhfO0a_fixedKeyBadge height 26 / label-tertiary（不描边、不 hover）
+
+   token 映射（与既有 token 表一致）：
+     border-l2 → --ds-border-l2；label-tertiary → --ds-label-tertiary；
+     label-secondary → --ds-label-secondary；bg-module-platform → --ds-bg-layer-3；
+     markdown-code-block → --ds-bg-layer-3；interactive-bg-hover → --ds-interactive-hover。
+
+   与 DSH 的差异（明确不抄的）：
+     1. DSH 每一行的「整组组合键」装在一个灰块里（.keyBadge 本身是整体），
+        我们把组合键按 kbd 逐键拆开、外面套同一个灰块容器——结构不同、观感一致，
+        因为我们的组合键里带数字（Ctrl+Alt+1），逐键拆开在中文语境下更易读。
+     2. 没有「编辑 / 录制 / 恢复默认 / 覆盖条数」那一整套（DSH 要写
+        localStorage `dsh.keybindings.v1`、桌面端写 userData/keybindings.json）。
+        我们的快捷键是固定绑定，页脚因此只放「固定绑定」说明 + 关闭。
+     3. 层级 1002：DSH 只有设置面板一层（1000），我们在设置面板之上再叠一层参考卡。
+   ============================================================ */
+
+.ds-shortcuts {
+  position: fixed;
+  inset: 0;
+  z-index: 1002;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ds-shortcuts[hidden] {
+  display: none;
+}
+
+.ds-shortcuts__overlay {
+  position: absolute;
+  inset: 0;
+  background: var(--ds-bg-mask);
+}
+
+.ds-shortcuts__panel {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: min(480px, calc(100% - 32px));
+  height: 600px;
+  max-height: calc(100dvh - 108px);
+  padding: 0;
+  overflow: hidden;
+  background: var(--ds-bg-layer-1);
+  border-radius: 24px;
+  box-shadow: 0 0 1px #0003, 0 0 4px #00000005, 0 12px 32px #00000014;
+  transform: translateY(30px);
+  outline: none;
+}
+
+/* DSH 卡片上没有可见标题（顶部就是搜索行）：标题只为 aria-labelledby 存在 */
+.ds-shortcuts__title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.ds-shortcuts__search {
+  box-sizing: border-box;
+  flex: 0 0 60px;
+  display: flex;
+  align-items: center;
+  padding: 14px 20px 10px;
+}
+
+.ds-shortcuts__field {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 36px;
+  padding: 8px 14px;
+  background: var(--ds-bg-layer-3);
+  border: var(--ds-hairline) solid var(--ds-border-l2);
+  border-radius: 12px;
+}
+
+.ds-shortcuts__search-glyph {
+  flex: none;
+  color: var(--ds-label-caption);
+}
+
+.ds-shortcuts__search-input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  color: var(--ds-label-primary);
+  font: inherit;
+  font-size: 13px;
+  line-height: 18px;
+  background: none;
+  border: 0;
+  outline: none;
+}
+
+.ds-shortcuts__search-input::placeholder {
+  color: var(--ds-label-tertiary);
+  opacity: 1;
+}
+
+.ds-shortcuts__search-input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}
+
+.ds-shortcuts__clear {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  color: var(--ds-label-secondary);
+  cursor: pointer;
+  background: none;
+  border: var(--ds-hairline) solid var(--ds-label-tertiary);
+  border-radius: 50%;
+}
+
+.ds-shortcuts__clear[hidden] {
+  display: none;
+}
+
+.ds-shortcuts__clear:hover {
+  background: var(--ds-interactive-hover);
+}
+
+.ds-shortcuts__list {
+  flex: 1;
+  min-height: 0;
+  padding: 0 16px 18px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.ds-shortcuts__group {
+  margin: 18px 8px 4px;
+  color: var(--ds-label-tertiary);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+}
+
+.ds-shortcuts__group[hidden] {
+  display: none;
+}
+
+.ds-shortcuts__rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ds-shortcuts__row {
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 42px;
+  padding: 8px;
+  color: var(--ds-label-primary);
+  font-size: 13px;
+  line-height: 18px;
+  border-radius: var(--ds-radius-md);
+}
+
+.ds-shortcuts__row[hidden] {
+  display: none;
+}
+
+.ds-shortcuts__row:not(.ds-shortcuts__row--fixed):hover {
+  background: var(--ds-interactive-hover);
+}
+
+.ds-shortcuts__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds-shortcuts__binding {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  height: 26px;
+  padding: 0 12px;
+  color: var(--ds-label-secondary);
+  font-size: 13px;
+  line-height: 18px;
+  background: var(--ds-bg-layer-3);
+  border-radius: 10px;
+}
+
+.ds-shortcuts__key {
+  padding: 0;
+  color: inherit;
+  background: none;
+  border: 0;
+  font: inherit;
+}
+
+.ds-shortcuts__key + .ds-shortcuts__key::before {
+  margin: 0 3px;
+  color: var(--ds-label-tertiary);
+  content: "+";
+}
+
+/* 只读固定项：不描边、不 hover、tertiary 文本（DSH fixedKeyBadge） */
+.ds-shortcuts__row--fixed .ds-shortcuts__binding {
+  height: 26px;
+  padding: 0;
+  color: var(--ds-label-tertiary);
+  background: none;
+}
+
+.ds-shortcuts__empty {
+  margin: 18px 8px;
+  color: var(--ds-label-tertiary);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.ds-shortcuts__empty[hidden] {
+  display: none;
+}
+
+.ds-shortcuts__footer {
+  box-sizing: border-box;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 0 24px;
+  font-size: 12px;
+  line-height: 18px;
+  border-top: var(--ds-hairline) solid var(--ds-border-l2);
+}
+
+.ds-shortcuts__note {
+  color: var(--ds-label-tertiary);
+}
+
+.ds-shortcuts__done {
+  height: 28px;
+  padding: 0 14px;
+  color: var(--ds-label-primary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  background: none;
+  border: var(--ds-hairline) solid var(--ds-border-l4);
+  border-radius: var(--ds-radius-sm);
+}
+
+.ds-shortcuts__done:hover {
+  background: var(--ds-interactive-hover);
+}
+
+/* 设置面板里「快捷键」行右侧的入口：一组小键帽，点了开同一张卡 */
+.ds-settings__keybtn {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  cursor: pointer;
+  background: none;
+  border: 0;
+}
+
+.ds-settings__keybtn:hover .ds-kbd {
+  background: var(--ds-interactive-hover-solid);
+}
+
+.ds-kbd {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 8px;
+  color: var(--ds-label-secondary);
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  background: var(--ds-bg-layer-3);
+  border: 0;
+  border-radius: 8px;
+}

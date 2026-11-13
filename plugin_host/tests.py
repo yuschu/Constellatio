@@ -16,14 +16,15 @@ from plugin_host.theming import discover_themes, get_theme
 
 class ThemeDiscoveryTest(TestCase):
     def test_themes_discovered(self):
+        """v2.2.0：只剩内置默认外观（含深浅两态）；老主题 Risograph 已移除。"""
         themes = discover_themes(settings.BASE_DIR)
-        self.assertEqual(set(themes), {'corporate-clean', 'risograph'})
+        self.assertEqual(set(themes), {'corporate-clean'})
 
     def test_default_theme(self):
         self.assertEqual(settings.OA_THEME, 'corporate-clean')
 
     def test_active_theme_dirs(self):
-        """v1.5.8：两套主题的静态目录都进 STATICFILES_DIRS；v1.6 起图表 Provider 静态目录同收。"""
+        """v1.5.8：外观目录进 STATICFILES_DIRS；v1.6 起图表 Provider 静态目录同收。"""
         themes = discover_themes(settings.BASE_DIR)
         charts = discover_charts(settings.BASE_DIR)
         static_dirs = {Path(p).resolve() for p in settings.STATICFILES_DIRS}
@@ -76,15 +77,14 @@ class ThemeDiscoveryTest(TestCase):
         self.assertNotIn('linear-gradient', body)
         self.assertNotIn('#ffffff', body)
 
-    def test_risograph_hero_keeps_original_colors(self):
-        """v1.6.3：Risograph 不改 hero 配色（其首页用纸色卡片，无 r-hero 规则）。"""
-        theme = get_theme(settings.BASE_DIR, 'risograph')
-        css = (theme.static / 'themes/risograph/css/risograph.css').read_text(
-            encoding='utf-8')
-        self.assertNotIn('.r-hero', css)
+    def test_risograph_theme_removed(self):
+        """v2.2.0：老主题 Risograph 整个目录移除（外观收口成内置默认 + 深浅）。"""
+        self.assertFalse((settings.BASE_DIR / 'themes' / 'risograph').exists())
+        with self.assertRaises(ImproperlyConfigured):
+            get_theme(settings.BASE_DIR, 'risograph')
 
-    def test_shell_is_dsh_in_both_themes(self):
-        """v2.0：两套主题统一 DSH 外壳，Risograph 复用同一份 CSS。"""
+    def test_shell_is_dsh_in_every_theme(self):
+        """v2.0：所有外观统一 DSH 外壳（v2.2.0 只剩内置默认这一套）。"""
         for key in discover_themes(settings.BASE_DIR):
             with self.subTest(theme=key):
                 base = (settings.BASE_DIR / 'themes' / key / 'templates' / 'base.html').read_text(
@@ -99,10 +99,6 @@ class ThemeDiscoveryTest(TestCase):
         self.assertIsNotNone(rail, '缺少 .ds-rail 规则')
         self.assertIn('position: sticky', rail.group(1))
         self.assertIn('--ds-rail-w: 280px', css)
-
-        riso = (settings.BASE_DIR / 'themes/risograph/static/themes'
-                '/risograph/css/risograph.css').read_text(encoding='utf-8')
-        self.assertIn('themes/corporate-clean/css/corporate-clean.css', riso)
 
     def test_top_nav_replaced_by_rail(self):
         """v2.0：顶部横向导航由 DSH 侧栏取代；.r-nav 只保留兼容规则。"""
@@ -265,40 +261,45 @@ class SubpageInPlaceTest(TestCase):
 
 
 class ThemeRuntimeSwitchTest(TestCase):
-    """v1.5.8：功能区主题切换（Cookie → 模板/静态随请求切换）。"""
+    """v1.5.8 / v2.2.0：外观收口成「内置默认（含深浅）」+ 外观包接口。
+
+    只剩一个外观包时设置里不渲染「外观包」行；`theme/switch/` 视图保留给未来的
+    外观包（放进 themes/<key>/theme.json 即被发现），但非法 key 一律忽略。
+    """
 
     @classmethod
     def setUpTestData(cls):
         cls.user = get_user_model().objects.create_user('themeswitcher', password='pw')
 
-    def test_default_theme_and_switch_entry(self):
+    def test_default_theme_has_no_pack_switcher(self):
         self.client.force_login(self.user)
+        self.client.cookies['django_language'] = 'zh-hans'
         resp = self.client.get('/dashboard/')
         self.assertContains(resp, 'themes/corporate-clean/css/corporate-clean.css')
-        self.assertContains(resp, 'theme/switch/')     # 功能区主题切换入口
-        self.assertContains(resp, 'Risograph')          # 可选项
+        self.assertContains(resp, '外观')
+        # 单一内置外观：不渲染外观包切换，也不再出现「主题」这一行
+        self.assertNotContains(resp, '外观包')
+        self.assertNotContains(resp, '两套主题共用同一份设计语言')
 
-    def test_cookie_switches_theme(self):
+    def test_cookie_switch_to_removed_theme_falls_back(self):
         self.client.force_login(self.user)
         self.client.cookies['oa_theme'] = 'risograph'
         resp = self.client.get('/dashboard/')
-        self.assertContains(resp, 'themes/risograph/css/risograph.css')
-        self.assertNotContains(resp, 'themes/corporate-clean/css/')
+        self.assertContains(resp, 'themes/corporate-clean/css/corporate-clean.css')
 
-    def test_switch_view_sets_cookie_and_redirects(self):
+    def test_switch_view_sets_cookie_for_known_theme(self):
         self.client.force_login(self.user)
         resp = self.client.post('/theme/switch/',
-                                {'theme': 'risograph', 'next': '/plugins/notice/'})
+                                {'theme': 'corporate-clean', 'next': '/plugins/notice/'})
         self.assertEqual(resp.status_code, 302)
         self.assertEqual(resp['Location'], '/plugins/notice/')
         cookie = resp.cookies['oa_theme']
-        self.assertEqual(cookie.value, 'risograph')
+        self.assertEqual(cookie.value, 'corporate-clean')
         self.assertEqual(int(cookie['max-age']), settings.THEME_COOKIE_AGE)
-        self.assertContains(self.client.get('/dashboard/'), 'themes/risograph/css/risograph.css')
 
     def test_invalid_theme_ignored_and_cookie_fallback(self):
         self.client.force_login(self.user)
-        resp = self.client.post('/theme/switch/', {'theme': 'missing'})
+        resp = self.client.post('/theme/switch/', {'theme': 'risograph'})
         self.assertEqual(resp.status_code, 302)
         self.assertNotIn('oa_theme', resp.cookies)
         self.client.cookies['oa_theme'] = 'missing'
@@ -308,5 +309,90 @@ class ThemeRuntimeSwitchTest(TestCase):
         self.client.force_login(self.user)
         self.assertEqual(self.client.get('/theme/switch/').status_code, 405)
         resp = self.client.post('/theme/switch/',
-                                {'theme': 'risograph', 'next': 'https://evil.example/'})
+                                {'theme': 'corporate-clean', 'next': 'https://evil.example/'})
         self.assertEqual(resp['Location'], '/')
+
+
+class ShortcutLayerTest(TestCase):
+    """v2.2.0：快捷键层（Ctrl+/ 参考弹层 + Ctrl+Alt+数字 快速操作）。"""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = get_user_model().objects.create_superuser('shortcutuser', '', 'pw')
+
+    def setUp(self):
+        self.client.force_login(self.user)
+        self.client.cookies['django_language'] = 'zh-hans'
+
+    def test_reference_dialog_rendered(self):
+        """参考卡挂在所有页面上：搜索行、行结构、打开器、脚本都在。"""
+        resp = self.client.get('/dashboard/')
+        self.assertContains(resp, 'id="ds-shortcuts"')
+        self.assertContains(resp, 'data-ds-shortcuts-search')
+        self.assertContains(resp, 'data-ds-shortcuts-close')
+        self.assertContains(resp, 'js/shortcuts.js')
+        self.assertContains(resp, 'data-ds-shortcuts-open')
+
+    def test_quick_actions_come_from_sidebar_menus(self):
+        """快速操作行由侧栏菜单生成（已按插件启停与权限过滤），按键按序号递增。"""
+        resp = self.client.get('/dashboard/')
+        html = resp.content.decode()
+        self.assertIn('data-keys="Ctrl+Alt+1"', html)
+        self.assertIn('data-shortcut-url="/dashboard/"', html)
+        rows = html.count('data-ds-shortcut-row')
+        self.assertGreaterEqual(rows, 3)
+        self.assertLessEqual(rows, 9 + 3)   # 菜单最多 9 行 + 设置/参考/关闭 3 行
+
+    def test_settings_row_opens_the_same_dialog(self):
+        """设置面板里的「快捷键」行是一个按钮，和 Ctrl+/ 开的是同一张卡。"""
+        resp = self.client.get('/dashboard/')
+        self.assertContains(resp, 'ds-settings__keybtn')
+        self.assertContains(resp, '快速操作与输入框操作一览')
+
+    def test_css_literals_match_dsh_shortcuts_module(self):
+        """第 36 节的字面量逐项对得上 dsh-client-ui-shortcuts 的 CSS module。"""
+        css = (settings.BASE_DIR / 'themes/corporate-clean/static/themes'
+               '/corporate-clean/css/corporate-clean.css').read_text(encoding='utf-8')
+        block = re.search(r'\.ds-shortcuts__panel\s*\{(.*?)\}', css, re.S)
+        self.assertIsNotNone(block, '缺少 .ds-shortcuts__panel 规则')
+        body = block.group(1)
+        self.assertIn('height: 600px', body)
+        self.assertIn('max-height: calc(100dvh - 108px)', body)
+        self.assertIn('border-radius: 24px', body)
+        self.assertIn('translateY(30px)', body)
+
+        search = re.search(r'\.ds-shortcuts__search\s*\{(.*?)\}', css, re.S).group(1)
+        self.assertIn('flex: 0 0 60px', search)
+        self.assertIn('padding: 14px 20px 10px', search)
+
+        row = re.search(r'\.ds-shortcuts__row\s*\{(.*?)\}', css, re.S).group(1)
+        self.assertIn('min-height: 42px', row)
+        self.assertIn('padding: 8px', row)
+
+        footer = re.search(r'\.ds-shortcuts__footer\s*\{(.*?)\}', css, re.S).group(1)
+        self.assertIn('min-height: 52px', footer)
+        self.assertIn('padding: 0 24px', footer)
+
+        group = re.search(r'\.ds-shortcuts__group\s*\{(.*?)\}', css, re.S).group(1)
+        self.assertIn('margin: 18px 8px 4px', group)
+
+        badge = re.search(r'\.ds-shortcuts__binding\s*\{(.*?)\}', css, re.S).group(1)
+        self.assertIn('height: 26px', badge)
+        self.assertIn('border-radius: 10px', badge)
+        self.assertIn('padding: 0 12px', badge)
+
+    def test_key_chip_resets_bootstrap_kbd(self):
+        """键帽不能继承 Bootstrap 的 kbd 底色（深底白字会把灰色药丸画成黑块）。
+
+        这一条是实测抓到的：截图里徽标整块变黑，元素级 kbd 规则赢过了只有 font:inherit
+        的 .ds-shortcuts__key。重置 padding/color/background/border 是唯一正解。
+        """
+        css = (settings.BASE_DIR / 'themes/corporate-clean/static/themes'
+               '/corporate-clean/css/corporate-clean.css').read_text(encoding='utf-8')
+        key = re.search(r'\.ds-shortcuts__key\s*\{(.*?)\}', css, re.S).group(1)
+        self.assertIn('padding: 0', key)
+        self.assertIn('color: inherit', key)
+        self.assertIn('background: none', key)
+        self.assertIn('border: 0', key)
+        kbd = ''.join(re.findall(r'\.ds-kbd\s*\{(.*?)\}', css, re.S))
+        self.assertIn('border: 0', kbd)

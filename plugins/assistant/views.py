@@ -119,12 +119,20 @@ def home(request):
             return rules_response
         request.ds_rules_form = rules_form
     primary_menus, common_menus = _split_menus(request, panel)
+    # v2.2.0：快捷键「快速操作」与首页真正渲染出来的入口同源——固定入口指向面板
+    # URL，「更多」白名单保持业务 URL；首页本来不显示的菜单不能只在快捷键卡里冒头。
+    quick_actions = [
+        {'url': menu['panel_url'], 'label': menu['label']} for menu in primary_menus
+    ] + [
+        {'url': menu['url'], 'label': menu['label']} for menu in common_menus
+    ]
     context = {
         'color_mode': color_mode,
         'model_configured': _model_configured(),
         'chat_messages': [],
         'primary_menus': primary_menus,
         'common_menus': common_menus,
+        'quick_actions': quick_actions,
         'create_plugin_url': '/?prompt=' + quote(CREATE_PLUGIN_PROMPT),
         'draft_prompt': request.GET.get('prompt', ''),
         'panel': panel,

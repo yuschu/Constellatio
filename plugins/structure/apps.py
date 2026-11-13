@@ -21,4 +21,5 @@ class StructureConfig(AppConfig):
             signals=['structure_applied'],
             templates='structure',
             app=self,
+            builtin=True,   # v2.2.0：组织架构底座，插件页不外显
         ))

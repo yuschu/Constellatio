@@ -21,7 +21,7 @@ class PluginMeta:
 
     def __init__(self, name, version, title=None, menus=None, permissions=None,
                  urls=None, signals=None, templates=None, app=None,
-                 home_provider=None):
+                 home_provider=None, builtin=False):
         self.name = name
         self.version = version
         self.title = title or name          # 展示名（可 gettext_lazy）
@@ -32,6 +32,10 @@ class PluginMeta:
         self.templates = templates          # 模板目录名
         self.app = app                      # Django AppConfig 实例
         self.home_provider = home_provider  # 可调用对象：request -> HttpResponse；None = 不接管首页
+        # v2.2.0：内置插件——随系统提供（语言、认证、账号、组织架构、插件页自身、图表引擎）。
+        # 不进插件页清单、界面不可停用（`manage.py plugin_switch` 仍可兜底），
+        # 计数也不含它们：插件页说的是「可装可停的业务插件」，不是系统底座。
+        self.builtin = bool(builtin)
 
 
 def register(meta: PluginMeta):
@@ -107,11 +111,17 @@ def get_home_provider(user=None):
 
 
 def plugin_counts():
-    """(已启用插件数, 已注册插件总数)：工作台与首页统一口径。"""
+    """(已启用插件数, 插件总数)：工作台与首页统一口径，只算**非内置**插件。
+
+    v2.2.0 起内置插件（语言 / 认证 / 账号 / 组织架构 / 插件页自身 / 图表引擎）
+    不进插件页清单，计数跟着走——否则会出现「页面上 7 张卡，KPI 说 13 个插件」
+    这种自相矛盾的数字。
+    """
     switches = get_plugin_switches()
-    total = len(PLUGIN_REGISTRY)
+    visible = [key for key, meta in PLUGIN_REGISTRY.items() if not meta.builtin]
+    total = len(visible)
     enabled = 0
-    for key in PLUGIN_REGISTRY:
+    for key in visible:
         if key in switches:
             enabled += 1 if switches[key] else 0
         else:
