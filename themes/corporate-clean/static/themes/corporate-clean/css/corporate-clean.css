@@ -4231,10 +4231,13 @@ html:not([data-color-mode="dark"]) .lc-ov-session {
   justify-content: center;
 }
 
-/* 多选 select 不能被单行控件高度压扁（角色权限是多项选择） */
+/* 多选 select 不能被单行控件高度压扁（角色权限是多项选择）；同时封顶，
+   否则 13 个角色会把设置面板正文撑到折叠线以下、把底部按钮顶出可见区 */
 .ds-field select[multiple] {
   height: auto;
   min-height: 132px;
+  max-height: 132px;
+  overflow-y: auto;
   padding: var(--ds-space-1) var(--ds-space-2);
 }
 
