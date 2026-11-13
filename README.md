@@ -151,7 +151,7 @@ Constellatio/
 ├── themes/               # 主题插件层（可插拔，theme.json 发现）
 │   ├── corporate-clean/  # 企业简洁风（默认）
 │   └── risograph/        # Risograph 印刷风（备选）
-├── locale/               # 翻译目录（.mo 由脚本编译，不入库）
+├── locale/               # 翻译目录（.po 与 .mo 都入库；改 .po 后跑 tools/compile_mo.py）
 ├── tools/                # 纯 Python .mo 编译器
 └── docs/                 # 项目文档
     ├── tech-stack-and-architecture.md    # 技术栈与架构方案

@@ -5,3 +5,5 @@ Dockerfile text eol=lf
 *.sh text eol=lf
 # v1.7.7 收尾：.py 统一 LF（容器内执行 + 避免 autocrlf 造成的“内容没变 diff 全红”）
 *.py text eol=lf
+# 翻译产物是二进制，禁止行尾转换与文本 diff（否则 .mo 被 autocrlf 改坏）
+*.mo binary

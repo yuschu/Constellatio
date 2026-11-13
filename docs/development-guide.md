@@ -626,8 +626,9 @@ class BlockchainRecord(models.Model):
 - 覆盖：v1.5.1 起全站 UI 文案（表头 / 字段 / 状态 / 空态 / confirm / 插件展示名 / 权限选项 / 留痕详情）；用户名与业务数据不翻译
 - 默认中文：`DefaultLanguageMiddleware`（继承 LocaleMiddleware）读 Cookie，无有效 Cookie 时固定 `settings.LANGUAGE_CODE`，不跟随 `Accept-Language`
 - 切换：`POST /plugins/language/switch/`（`lang` + `next`），写会话级 Cookie `django_language`
-- 翻译：源码中文为 msgid，`locale/en/LC_MESSAGES/django.po` 提供英文；`python tools/compile_mo.py` 生成 `.mo`（不入库）
-- 编译：`entrypoint.sh` 启动时执行；本地改完 `.po` 也要先编译再跑 `runserver` / `test`
+- 翻译：源码中文为 msgid，`locale/en/LC_MESSAGES/django.po` 提供英文；`python tools/compile_mo.py` 生成 `.mo`
+- 产物入库（v2.1.10 起）：`.mo` 与 `.po` 一起进版本库（`.gitignore` 不再忽略、`.gitattributes` 标为 `binary`）。理由：早先 `.mo` 只存在本机，clone 后直接 `runserver` 会没有目录、英文界面静默回退中文，测试也测不到「编译产物是否跟上源码」。容器侧不变——`entrypoint.sh` 仍会用 `tools/compile_mo.py` 重编一遍（幂等）
+- 编译时机：改完 `.po` **提交前**跑 `python tools/compile_mo.py`；只想校验用 `python tools/compile_mo.py --check`（有缺失/落后则退出码 1）。`plugins/language/tests.py` 的 `MoInRepoTest` 会把仓库里的 `.mo` 与 `.po` 逐字节比对，忘了重编会红
 - 测试：`python manage.py test plugins.language`
 
 ## 六、数据库开发

@@ -12,8 +12,12 @@ db.sqlite3
 media/
 staticfiles/
 
-# ---- i18n（.mo 由 tools/compile_mo.py 生成，不入库）----
-*.mo
+# ---- i18n（.po 与编译产物 .mo 一起入库）----
+# 早先 .mo 不入库，靠本地文件被 build context 带进镜像；但 clone 下来跑
+# runserver 会没有目录（英文界面回退中文），工具链也不再自证。现在 .mo 入库，
+# 容器 entrypoint 仍会在启动时用 tools/compile_mo.py 重编一遍（幂等），
+# 改了 .po 记得提交前跑 `python tools/compile_mo.py`（--check 可只校验）。
+# 这里故意不写「忽略 .mo」的通配规则；.mo 是二进制，行尾转换见 .gitattributes。
 
 # ---- 环境变量与密钥 ----
 .env

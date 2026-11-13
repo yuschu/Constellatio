@@ -2,6 +2,7 @@
 
 import gettext
 import io
+from pathlib import Path
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -11,7 +12,7 @@ from django.utils import translation
 from django.utils.translation import gettext_lazy as _
 
 from plugin_host.middleware import DefaultLanguageMiddleware
-from tools.compile_mo import build_mo, compile_all, parse_po_text
+from tools.compile_mo import build_mo, check_all, expected_mo_bytes, parse_po_text
 
 
 class LanguageTestMixin:
@@ -130,10 +131,11 @@ class LanguagePluginDisableTest(LanguageTestMixin, TestCase):
 
 
 class TranslationCatalogTest(LanguageTestMixin, TestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        compile_all()
+    """v2.1.10：.mo 已入库，测试直接吃仓库里的成品，不再顺手重编。
+
+    早先这里 `setUpClass` 会调 compile_all() 把 .mo 写回工作区，于是
+    「.mo 是否跟上 .po」永远测不出来；现在改成校验入库文件本身。
+    """
 
     def test_menu_label_translates(self):
         with translation.override('en'):
@@ -179,3 +181,34 @@ msgstr "Ignore"
         self.assertEqual(catalog.gettext('工作台'), 'Workspace')
         self.assertEqual(catalog.gettext('多行'), 'Line one Line two')
         self.assertEqual(catalog.gettext('忽略'), '忽略')
+
+
+class MoInRepoTest(LanguageTestMixin, TestCase):
+    """v2.1.10：.mo 从「本地生成物」变成入库产物，要能被 clone 到就跑起来。"""
+
+    def _root(self):
+        return Path(settings.BASE_DIR)
+
+    def test_mo_exists_for_every_po(self):
+        stale, missing = check_all()
+        self.assertEqual([p.name for p in missing], [], '缺少 .mo：先跑 python tools/compile_mo.py')
+        self.assertEqual([p.name for p in stale], [], '.mo 落后于 .po：先跑 python tools/compile_mo.py')
+
+    def test_mo_bytes_match_po(self):
+        # 入库的就是这份 .po 编译出来的字节，不允许手工/半截更新
+        po = self._root() / 'locale' / 'en' / 'LC_MESSAGES' / 'django.po'
+        mo = po.with_suffix('.mo')
+        self.assertEqual(mo.read_bytes(), expected_mo_bytes(po))
+
+    def test_mo_is_not_gitignored(self):
+        # 规则一旦重新写回忽略行，已入库的文件会变成「我机器上有、别人 clone 没有」；
+        # 只看生效的规则行，注释里提到 .mo 不算。
+        text = (self._root() / '.gitignore').read_text(encoding='utf-8')
+        rules = [ln.strip() for ln in text.splitlines() if ln.strip() and not ln.lstrip().startswith('#')]
+        self.assertNotIn('*.mo', rules)
+
+    def test_committed_mo_loads(self):
+        mo = self._root() / 'locale' / 'en' / 'LC_MESSAGES' / 'django.mo'
+        catalog = gettext.GNUTranslations(io.BytesIO(mo.read_bytes()))
+        self.assertEqual(catalog.gettext('工作台'), 'Workspace')
+        self.assertEqual(catalog.gettext('审批中心'), 'Approvals')

@@ -1,7 +1,8 @@
 """纯 Python .po → .mo 编译器（无 gettext 二进制依赖）。
 
 用法：
-    python tools/compile_mo.py
+    python tools/compile_mo.py            # 编译 locale/*/LC_MESSAGES/*.po
+    python tools/compile_mo.py --check    # 只校验仓库里的 .mo 是否与 .po 同步（CI / 提交前）
 
 规则：
 - 只处理 locale/*/LC_MESSAGES/*.po
@@ -9,6 +10,8 @@
 - 跳过 fuzzy、空 msgstr、obsolete（#~）
 - 不支持 msgctxt / msgid_plural（v1.4 不需要，遇到直接报错）
 - 输出标准 GNU .mo（magic 0x950412de），供 gettext.GNUTranslations 读取
+- 生成的 .mo 随仓库一起提交（容器 entrypoint 启动时仍会重编一遍，幂等）；
+  --check 退出码 1 表示有 .mo 缺失或落后于 .po
 """
 
 from __future__ import annotations
@@ -151,7 +154,48 @@ def compile_all(locale_dir: Path | None = None) -> list[Path]:
     return compiled
 
 
+def _catalogs(locale_dir: Path | None = None) -> list[Path]:
+    root = locale_dir or (Path(__file__).resolve().parent.parent / 'locale')
+    return sorted(root.glob('*/LC_MESSAGES/*.po'))
+
+
+def expected_mo_bytes(po_path: Path) -> bytes:
+    """按 .po 现在的内容算出它应有的 .mo 字节（不落盘）。"""
+    header, entries = parse_po(po_path)
+    return build_mo(header, entries)
+
+
+def check_all(locale_dir: Path | None = None) -> tuple[list[Path], list[Path]]:
+    """校验仓库里的 .mo：返回 (落后的, 缺失的)。"""
+    stale: list[Path] = []
+    missing: list[Path] = []
+    for po in _catalogs(locale_dir):
+        mo = po.with_suffix('.mo')
+        if not mo.exists():
+            missing.append(mo)
+        elif mo.read_bytes() != expected_mo_bytes(po):
+            stale.append(mo)
+    return stale, missing
+
+
+def _project_root() -> Path:
+    return Path(__file__).resolve().parent.parent
+
+
 def main() -> int:
+    root = _project_root()
+
+    if '--check' in sys.argv[1:]:
+        stale, missing = check_all()
+        for mo in missing:
+            print(f'[i18n] 缺失 {mo.relative_to(root)}（先跑 python tools/compile_mo.py）', file=sys.stderr)
+        for mo in stale:
+            print(f'[i18n] 落后 {mo.relative_to(root)}（.po 改过但没重编）', file=sys.stderr)
+        if stale or missing:
+            return 1
+        print(f'[i18n] check ok（{len(_catalogs())} catalog(s) 与 .po 一致）')
+        return 0
+
     try:
         compiled = compile_all()
     except Exception as exc:  # noqa: BLE001
