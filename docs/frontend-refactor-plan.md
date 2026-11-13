@@ -976,6 +976,7 @@ token 映射：`label-primary-foreground → --ds-on-primary`、`bg-module-platf
 **真机（1440×900，`/plugins/attendance/records/`）**：标题行 + 右侧时间范围徽标、6 项筛选（`at-field` 等宽 flex `1 1 10rem`，筛选/重置在 `at-actions` 换行起排）、四张数卡 180 起、月度看板与签到明细/补卡登记三张卡同 20 padding，明细表表头 10/16。模板测试原断言（`<td>迟到者</td>`、`月度看板`、`attendance-chart`、回退表、`本月暂无考勤记录`）全部保留。
 
 **回归**：`plugins.attendance` 73 tests OK（8.9s）；全量 `venv/run_tests_shim.py` **511 tests OK**（117s）；`ruff check plugins plugin_host` All checks passed。
+
 **容器（v2.1.5 重建）**：`docker compose up -d --build web` 两次（第二次带上多选框封顶）；容器 `constellatio-web-1` Up、gunicorn 3 workers（pid 12/13/14）、`138 static files copied`；本地与容器 MD5 对齐 `attendance_records.html` / `corporate-clean.css` / `ds_settings_modal.html` / `ds-shell.js`，收集后的 `/app/staticfiles/themes/corporate-clean/css/corporate-clean.css` 与源同 hash（`d2a2184a82b5ebe9e45dfcc117935e92`）；容器 25 条路由 GET 全 200（`approval/122`、`notice/14/readers`、`blockchain/1456` 用容器库自身对象；`attendance/stats`、`blockchain/stats` 返回 JSON），截图落 `.tmp-test/screens-v4/container/` 6 张。
 
 **多选框封顶**：`.ds-field select[multiple]` 原为 `min-height:132px` 不封顶，13 个角色会把编辑用户弹层的正文撑到折叠线以下；现加 `max-height:132px; overflow-y:auto`，正文列在 `.ds-settings__options` 内滚动，底部按钮仍可滚到（容器截图 `container/user-edit-modal-light.png` 可见角色框 6 行 + 内部滚动）。
