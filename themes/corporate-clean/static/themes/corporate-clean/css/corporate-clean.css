@@ -4254,3 +4254,30 @@ html:not([data-color-mode="dark"]) .lc-ov-session {
 .ds-settings--single .ds-settings__options {
   padding-top: var(--ds-space-2);
 }
+
+/* ==========================================================================
+   31. 业务页内容列：不铺满，紧凑居中（v2.1.5）
+   --------------------------------------------------------------------------
+   取值不是估的，来自 DSH 会话正文列（dsh-client-ui-conversation/lib/client.js
+   ConversationWidthControls 的默认分支，approx 20121 行）：
+
+     const CONTENT_MIN = 640;              // 拖动下限
+     const CONTENT_EDGE_BUDGET = 176;      // 两侧把手 + 安全边距预留
+     function resolveContentWidth(columnWidth, preference) {
+       const max = Math.max(CONTENT_MIN, columnWidth - CONTENT_EDGE_BUDGET);
+       if (preference !== null) return Math.min(Math.max(preference, CONTENT_MIN), max);
+       return Math.max(680, Math.min(columnWidth * .64, 920));   // ← 默认无偏好时
+     }
+
+   即：内容列 = max(680, min(0.64 × 列宽, 920))，水平居中；没有再叠别的内边距。
+   Chrome 下 `max/min` 混用百分比与 px 合法，64% 相对 .ds-main__body 内容盒。
+
+   只作用于 /plugins/* 业务页（base.html 按 request.path 加 --column）：
+   首页（看板 / 对话）保持整屏骨架；设置面板页面（根节点就是 .ds-settings）不参与，
+   它们自己已经按 800×800 / 720 正文列居中，再套一层会被挤。
+   ========================================================================== */
+.ds-main__body--column > :not(.ds-settings) {
+  width: min(920px, 100%);
+  margin-inline: auto;
+}
+

@@ -120,7 +120,7 @@
     </aside>
 
     <main class="ds-main">
-      <div class="ds-main__body">
+      <div class="ds-main__body{% if request.path|slice:':9' == '/plugins/' %} ds-main__body--column{% endif %}">
         {% block content %}{% endblock %}
       </div>
     </main>
