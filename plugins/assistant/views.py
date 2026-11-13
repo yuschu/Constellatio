@@ -22,13 +22,13 @@ from plugin_host.context_processors import (
 )
 
 # 顶部固定入口对应的菜单 URL，元组顺序即侧栏渲染顺序。
-# v2.0.6：加入插件入口（原插件开关页），排在「助手」之后、「看板」之前。
-PRIMARY_MENU_URLS = ('/', '/plugins/workspace/', '/dashboard/')
+# v2.0.7：首项从「助手」改为「考勤」——助手入口就是侧栏顶部的「+ 新会话」，
+# 再把「助手」单列一遍等于两个入口指同一件事；考勤是日常高频业务，占这一格。
+PRIMARY_MENU_URLS = ('/plugins/attendance/', '/plugins/workspace/', '/dashboard/')
 
 # 「更多」菜单里的常用入口，元组顺序即菜单行顺序（DSH 的更多菜单只放轻量导航，
-# 不把全部业务菜单铺进去；完整清单在业务页侧栏）。
+# 不把全部业务菜单铺进去；完整清单在业务页侧栏）。考勤已在顶部固定入口，这里不重复。
 COMMON_MENU_URLS = (
-    '/plugins/attendance/',        # 考勤
     '/plugins/approval/pending/',  # 待我审批
     '/plugins/approval/cc/',       # 抄送我的
     '/plugins/approval/',          # 审批中心

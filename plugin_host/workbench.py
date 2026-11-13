@@ -103,8 +103,170 @@ def _plugin_label(key):
     return str(meta.title) if meta else key
 
 
+def _composition_of(flow_card):
+    """把「流程发起」的五类计数折成环形图段（dsh-context donut.tsx 的弧长算法）。
+
+    viewBox 0 0 42 42、r=15.9155 的整圆周长正好 100，所以百分比可以直接当
+    strokeDasharray 用；多段时每段两端各切 SEG_GAP/2（最多切到段长的 1/4）。
+    """
+    if not flow_card:
+        return {'segments': [], 'total': 0}
+    counts = flow_card.get('counts') or []
+    total = sum(item['count'] for item in counts)
+    segments = []
+    acc = 0.0
+    for index, item in enumerate(counts):
+        if total <= 0 or item['count'] <= 0:
+            continue
+        share = item['count'] * 100 / total
+        segments.append({
+            'key': item['key'],
+            'label': item['label'],
+            'count': item['count'],
+            'share': round(share, 1),
+            'length': round(share, 2),
+            'offset': round(100 - acc + 25, 2),
+            'tone': index + 1,
+        })
+        acc += share
+    if len(segments) > 1:
+        for seg in segments:
+            cut = min(0.25, seg['length'] / 4)
+            seg['length'] = round(seg['length'] - cut * 2, 2)
+            seg['offset'] = round(seg['offset'] - cut, 2)
+    for seg in segments:
+        seg['rest'] = round(100 - seg['length'], 2)
+    return {'segments': segments, 'total': total}
+
+
 def _payload(chart, **kwargs):
     return chart.payload(**kwargs) if chart is not None else None
+
+
+HEAT_WEEKS = 8          # dsh-context 活跃度卡默认 8 周
+USAGE_DAYS = 7          # 近 7 天用量卡固定 7 列
+HEAT_LEVELS = (0.25, 0.5, 0.75)   # 热力分档阈值（dsh-context heatmap.tsx 的 levelOf）
+
+
+def _build_insight(*, user, is_admin, enabled_names, now):
+    """dsh-context「上下文洞察」版式需要的两段时间序列。
+
+    - usage7：近 7 天「提交 / 已办结」双柱。DSH 的用量图按「会话自身各请求的时间」
+      汇总，这里同口径按单据创建日归属，已办结也按创建日归到同一天。
+    - heat：近 8 周每日签到活跃度。管理员按「当天签到人数去重」，员工只看本人记录，
+      单位因此统一成「人天」，对应 DSH 热力图的 sessions 指标。
+
+    降级约定与 build_dashboard 一致：插件停用 / 表未迁移时返回空序列，不抛异常。
+    """
+    today = now.date()
+    span_start = today - timedelta(days=HEAT_WEEKS * 7 - 1)
+    usage_days = [today - timedelta(days=offset)
+                  for offset in range(USAGE_DAYS - 1, -1, -1)]
+
+    Approval = _model('approval', 'Approval')
+    Attendance = _model('attendance', 'Attendance')
+
+    submitted = {}
+    finished = {}
+    if Approval is not None and 'approval' in enabled_names:
+        try:
+            base = Approval.objects.filter(created_at__date__gte=usage_days[0])
+            if not is_admin:
+                base = base.filter(applicant=user)
+            for row in (base.annotate(day=TruncDate('created_at'))
+                            .values('day').annotate(n=Count('id'))):
+                submitted[row['day']] = row['n']
+            for row in (base.filter(status__in=('approved', 'rejected'))
+                            .annotate(day=TruncDate('created_at'))
+                            .values('day').annotate(n=Count('id'))):
+                finished[row['day']] = row['n']
+        except (OperationalError, ProgrammingError):
+            _degraded('insight.approval')
+
+    heat_counts = {}
+    if Attendance is not None and 'attendance' in enabled_names:
+        try:
+            rows = Attendance.objects.filter(
+                date__range=(span_start, today), check_in__isnull=False)
+            if is_admin:
+                for row in (rows.values('date')
+                                .annotate(n=Count('user', distinct=True))):
+                    heat_counts[row['date']] = row['n']
+            else:
+                for row in rows.filter(user=user).values('date'):
+                    heat_counts[row['date']] = 1
+        except (OperationalError, ProgrammingError):
+            _degraded('insight.attendance')
+
+    max_submitted = max([submitted.get(day, 0) for day in usage_days] + [0])
+    max_finished = max([finished.get(day, 0) for day in usage_days] + [0])
+
+    def _height(value, peak):
+        if peak <= 0 or value <= 0:
+            return 0
+        return max(4, round(value * 100 / peak))
+
+    usage7 = [{
+        'key': day.isoformat(),
+        'label': day.strftime('%m-%d'),
+        'submitted': submitted.get(day, 0),
+        'finished': finished.get(day, 0),
+        'submitted_height': _height(submitted.get(day, 0), max_submitted),
+        'finished_height': _height(finished.get(day, 0), max_finished),
+    } for day in usage_days]
+    usage7_ticks = [{
+        'percent': percent,
+        'top': 100 - percent,
+        'submitted_label': round(max_submitted * percent / 100),
+        'finished_label': round(max_finished * percent / 100),
+    } for percent in (0, 25, 50, 75, 100)]
+
+    # 热力网格：列 = 周（周日起），行 = 星期 0..6，最后一列是本周
+    last_sunday = today - timedelta(days=today.isoweekday() % 7)
+    first_sunday = last_sunday - timedelta(days=7 * (HEAT_WEEKS - 1))
+    span_days = [span_start + timedelta(days=offset)
+                 for offset in range((today - span_start).days + 1)]
+    peak = max([heat_counts.get(day, 0) for day in span_days] + [0])
+    heat_cols = []
+    heat_max = 0
+    for week in range(HEAT_WEEKS):
+        sunday = first_sunday + timedelta(days=7 * week)
+        cells = []
+        opens = week == 0 or sunday.month != (sunday + timedelta(days=6)).month
+        month_label = f'{sunday.month} 月' if opens else ''
+        for offset in range(7):
+            day = sunday + timedelta(days=offset)
+            value = heat_counts.get(day, 0)
+            if day > today:
+                cells.append({'key': day.isoformat(), 'future': True,
+                              'level': 0, 'value': 0})
+                continue
+            if value <= 0 or peak <= 0:
+                level = 0
+            else:
+                ratio = value / peak
+                level = 1
+                for step in HEAT_LEVELS:
+                    if ratio > step:
+                        level += 1
+            heat_max = max(heat_max, value)
+            cells.append({'key': day.isoformat(), 'future': False,
+                          'level': level, 'value': value})
+        heat_cols.append({'cells': cells, 'month': month_label})
+    # 星期行标签：DSH 只标一 / 三 / 五，其余留空保证七行对齐
+    weekday_names = {1: '一', 3: '三', 5: '五'}
+    heat_weeks = [{'label': _t(weekday_names[row]) if row in weekday_names else '',
+                   'index': row} for row in range(7)]
+
+    return {
+        'usage7': usage7,
+        'usage7_ticks': usage7_ticks,
+        'usage7_max_submitted': max_submitted,
+        'usage7_max_finished': max_finished,
+        'heat_cols': heat_cols,
+        'heat_max': heat_max,
+        'heat_weeks': heat_weeks,
+    }
 
 
 def build_dashboard(*, user, is_admin, enabled_names, range_key, chart,
@@ -287,6 +449,7 @@ def build_dashboard(*, user, is_admin, enabled_names, range_key, chart,
                 } for item in departments]
                 dept = {
                     'rows': rows,
+                    'max': max((item['headcount'] for item in rows), default=0),
                     'payload': _payload(
                         chart, kind='cartesian',
                         categories=[item.name for item in departments],
@@ -314,6 +477,11 @@ def build_dashboard(*, user, is_admin, enabled_names, range_key, chart,
         'active': key == range_key,
     } for key in RANGE_KEYS]
 
+    # dsh-context 版式（近 7 天双柱 + 8 周热力）用的两段时间序列，与 range 无关
+    insight = _build_insight(
+        user=user, is_admin=is_admin, enabled_names=enabled_names, now=now)
+    insight['composition'] = _composition_of(cards.get('flow'))
+
     return {
         'range_key': range_key,
         'range_label': range_label,
@@ -322,4 +490,5 @@ def build_dashboard(*, user, is_admin, enabled_names, range_key, chart,
         'trend': trend,
         'pie': pie,
         'dept': dept,
+        'insight': insight,
     }

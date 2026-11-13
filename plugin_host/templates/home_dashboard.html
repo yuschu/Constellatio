@@ -1,277 +1,458 @@
 {% load i18n %}
-<div id="workbench">
-  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-    <div class="r-sidebar-title mb-0">{% trans "核心数据看板" %}</div>
-    <div class="d-flex align-items-center gap-2 flex-wrap">
-      <span class="text-muted" style="font-size:.75rem;">{% trans "时间范围" %}</span>
-      {% for item in range_links %}
-        {% if item.active %}
-        <span class="r-badge">{{ item.label }}</span>
-        {% else %}
-        <a class="r-btn r-btn--plain" href="{{ item.url }}">{{ item.label }}</a>
-        {% endif %}
-      {% endfor %}
-    </div>
-  </div>
+{% comment %}
+  看板 · dsh-context「Context Dashboard」版式移植（v2.0.7）
 
-  <div class="row g-4 mb-4">
-    {% if cards.approval and can_approve %}
-    <div class="col-12 col-md-6 col-xl-3">
-      <div class="r-card h-100 d-flex flex-column">
-        <div class="d-flex justify-content-between align-items-start gap-2">
-          <div>
-            <h3 class="r-h3 mb-1">{% trans "待我审批" %}</h3>
-            <p class="text-muted mb-0" style="font-size:.75rem;">{% trans "需要我处理的审批与会签" %}</p>
+  结构照 src/client/components/overviewPanel.tsx 的页面骨架：
+    lc-ov-page > lc-ov-pagecontent
+      lc-ov-pagehead  —— 标题 + 范围分段控件
+      lc-ov-first     —— KPI 栏（3 列 5 张）+ 近 7 天双柱用量卡
+      lc-ov-stats     —— 组成环形 + 分区卡（2 列）
+      lc-ov-tiles     —— 4 列 280px 卡片（活跃度热力 / 分类 tally / 部门 tally / 快捷入口）
+      lc-ov-list      —— 每块都是 list-head + lc-ov-grid 卡片网格
+  数据仍来自 plugin_host.workbench.build_dashboard（cards/trend/pie/dept + insight），
+  不再走 echarts：DSH 的这几张图本来就是纯 DOM（双柱、环形 SVG、热力格），
+  照 DOM 写才能和它逐像素对齐，也顺手去掉了一段内联渲染脚本。
+{% endcomment %}
+<div class="lc-ov-page">
+  <div class="lc-ov-pagecontent">
+
+    <header class="lc-ov-pagehead">
+      <h1 class="lc-ov-pagetitle">{% trans "看板" %}</h1>
+      <span class="lc-ov-settings">{% if is_admin_view %}{% trans "管理员视图" %}{% else %}{% trans "员工视图" %}{% endif %}</span>
+      <div class="lc-ov-headctl">
+        <div class="lc-gran lc-ov-range" role="group" aria-label="{% trans '统计范围' %}">
+          {% for item in range_links %}
+          {% if item.active %}
+          <span class="lc-gran-btn lc-gran-on" aria-current="true">{{ item.label }}</span>
+          {% else %}
+          <a class="lc-gran-btn" href="{{ item.url }}">{{ item.label }}</a>
+          {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+    </header>
+
+    <div class="lc-ov-first">
+      <div class="lc-ov-kpis" role="group" aria-label="{% trans '核心数据看板' %}">
+        {% if can_approve and cards.approval %}
+        <div class="lc-stat lc-ov-kpi">
+          <span class="lc-stat-label">{% trans "待我审批" %}</span>
+          <span class="lc-stat-value">{{ cards.approval.pending }}</span>
+          <span class="lc-stat-sub">{% blocktranslate with done=cards.approval.done total=cards.approval.total %}已完成 {{ done }} / 共 {{ total }}{% endblocktranslate %}</span>
+          {% if cards.approval.alert %}<span class="lc-ov-chip lc-ov-chip--warn">{% trans "待办较多" %}</span>{% endif %}
+        </div>
+        {% endif %}
+        {% if cards.flow %}
+        <div class="lc-stat lc-ov-kpi">
+          <span class="lc-stat-label">{% trans "单据总量" %}</span>
+          <span class="lc-stat-value">{{ cards.flow.total }}</span>
+          <span class="lc-stat-sub">{{ trend.window_label|default:range_label }}</span>
+        </div>
+        {% endif %}
+        {% if cards.attendance %}
+        <div class="lc-stat lc-ov-kpi">
+          <span class="lc-stat-label">{% trans "我的考勤" %}</span>
+          <span class="lc-stat-value">{% blocktranslate with days=cards.attendance.checked_days %}{{ days }} 天{% endblocktranslate %}</span>
+          <span class="lc-stat-sub">{{ cards.attendance.label }}</span>
+        </div>
+        {% endif %}
+        <div class="lc-stat lc-ov-kpi">
+          <span class="lc-stat-label">{% trans "插件启用" %}</span>
+          <span class="lc-stat-value">{{ enabled_count }}</span>
+          <span class="lc-stat-sub">{% blocktranslate with total=plugin_total %}共 {{ total }} 个{% endblocktranslate %}</span>
+        </div>
+        <div class="lc-stat lc-ov-kpi">
+          <span class="lc-stat-label">{% trans "未读消息" %}</span>
+          <span class="lc-stat-value">{{ unread_count }}</span>
+          <span class="lc-stat-sub">{% blocktranslate with n=messages_preview|length %}共 {{ n }} 条{% endblocktranslate %}</span>
+        </div>
+      </div>
+
+      <div class="lc-card lc-ov-usage">
+        <div class="lc-card-title">
+          <span class="lc-card-title-text">{% trans "近 7 天单据量" %}</span>
+          <span class="lc-card-sub">{% trans "蓝：提交　绿：已办结" %}</span>
+        </div>
+        {% if insight.usage7_max_submitted or insight.usage7_max_finished %}
+        <div class="lc-ov-usage-plot" role="group" aria-label="{% trans '近 7 天单据量' %}">
+          <div class="lc-ov-usage-rail lc-ov-usage-rail-l" aria-hidden="true">
+            {% for tick in insight.usage7_ticks %}
+            <span class="lc-ov-usage-tick" style="top:{{ tick.top }}%">{{ tick.submitted_label }}</span>
+            {% endfor %}
           </div>
-          <span class="fs-3">{{ cards.approval.pending }}</span>
-        </div>
-        {% if cards.approval.payload %}
-        <div id="wb-chart-approval" style="width:100%;height:118px;margin-top:.5rem;"
-             role="img" aria-label="{% trans "待我审批完成率" %}"></div>
-        {{ cards.approval.payload|json_script:"wb-data-approval" }}
-        {% endif %}
-        <p class="text-muted mb-0" style="font-size:.75rem;">
-          {{ range_label }}：{% blocktranslate with done=cards.approval.done total=cards.approval.total %}已完成 {{ done }} / {{ total }}{% endblocktranslate %}{% if not cards.approval.payload %}（{{ cards.approval.percent }}%）{% endif %}
-        </p>
-        {% if cards.approval.alert %}<p class="mb-0 mt-1"><span class="r-badge r-badge--orange">{% trans "待办较多" %}</span></p>{% endif %}
-        <div class="d-flex justify-content-center align-items-center mt-auto pt-2">
-          {% if can_approval %}<a href="{% url 'approval:approval_pending' %}" class="r-btn">{% trans "进入待办" %}</a>{% endif %}
-        </div>
-      </div>
-    </div>
-    {% endif %}
-
-    {% if cards.attendance %}
-    <div class="col-12 col-md-6 col-xl-3">
-      <div class="r-card h-100 d-flex flex-column">
-        <div class="d-flex justify-content-between align-items-start gap-2">
-          <div>
-            <h3 class="r-h3 mb-1">{% trans "考勤概况" %}</h3>
-            <p class="text-muted mb-0" style="font-size:.75rem;">{% trans "今日状态与打卡趋势" %}</p>
+          <div class="lc-ov-usage-grid">
+            <div class="lc-ov-usage-cols">
+              {% for tick in insight.usage7_ticks %}
+              <span class="lc-ov-usage-line{% if tick.percent == 0 %} lc-ov-usage-line-0{% endif %}"
+                    style="bottom:{{ tick.percent }}%" aria-hidden="true"></span>
+              {% endfor %}
+              {% for day in insight.usage7 %}
+              <div class="lc-ov-usage-col"
+                   data-lc-tip="{{ day.label }}&#10;{% trans '提交' %} {{ day.submitted }}&#10;{% trans '已办结' %} {{ day.finished }}">
+                <div class="lc-ov-usage-bars">
+                  <span class="lc-ov-usage-bar lc-ov-usage-tokens" style="height:{{ day.submitted_height }}%">
+                    {% if day.submitted %}<span class="lc-ov-usage-value">{{ day.submitted }}</span>{% endif %}
+                  </span>
+                  <span class="lc-ov-usage-bar lc-ov-usage-cost" style="height:{{ day.finished_height }}%"></span>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
           </div>
-          <span class="r-badge {% if cards.attendance.state == 'done' %}r-badge--blue{% else %}r-badge--orange{% endif %}">{{ cards.attendance.label }}</span>
-        </div>
-        {% if cards.attendance.payload %}
-        <div id="wb-chart-attendance" style="width:100%;height:118px;margin-top:.5rem;"
-             role="img" aria-label="{% trans "打卡趋势" %}"></div>
-        {{ cards.attendance.payload|json_script:"wb-data-attendance" }}
-        {% endif %}
-        <p class="text-muted mb-0" style="font-size:.75rem;">
-          {{ range_label }}：{% blocktranslate with days=cards.attendance.checked_days %}打卡 {{ days }} 天{% endblocktranslate %}
-        </p>
-        <div class="d-flex justify-content-center align-items-center mt-auto pt-2">
-          <a href="{% url 'attendance:attendance_dashboard' %}" class="r-btn">{% trans "去打卡" %}</a>
-        </div>
-      </div>
-    </div>
-    {% endif %}
-
-    {% if cards.flow and can_approval %}
-    <div class="col-12 col-md-6 col-xl-3">
-      <div class="r-card h-100 d-flex flex-column">
-        <div class="d-flex justify-content-between align-items-start gap-2">
-          <div>
-            <h3 class="r-h3 mb-1">{% trans "流程发起" %}</h3>
-            <p class="text-muted mb-0" style="font-size:.75rem;">{% trans "按类型单据数量对比" %}</p>
+          <div class="lc-ov-usage-rail lc-ov-usage-rail-r" aria-hidden="true">
+            {% for tick in insight.usage7_ticks %}
+            <span class="lc-ov-usage-tick" style="top:{{ tick.top }}%">{{ tick.finished_label }}</span>
+            {% endfor %}
           </div>
-          <span class="fs-3">{{ cards.flow.total }}</span>
-        </div>
-        {% if cards.flow.payload %}
-        <div id="wb-chart-flow" style="width:100%;height:118px;margin-top:.5rem;"
-             role="img" aria-label="{% trans "流程发起" %}"></div>
-        {{ cards.flow.payload|json_script:"wb-data-flow" }}
-        {% else %}
-        <p class="text-muted mb-0" style="font-size:.75rem;">
-          {% for item in cards.flow.counts %}{{ item.label }} {{ item.count }}{% if not forloop.last %} · {% endif %}{% endfor %}
-        </p>
-        {% endif %}
-        <div class="d-flex justify-content-center align-items-center mt-auto pt-2">
-          <a href="{% url 'approval:approval_list' %}" class="r-btn">{% trans "审批中心" %}</a>
-        </div>
-      </div>
-    </div>
-    {% endif %}
-
-    {% if cards.plugins and 'workspace' in plugins_enabled %}
-    <div class="col-12 col-md-6 col-xl-3">
-      <div class="r-card h-100 d-flex flex-column">
-        <div class="d-flex justify-content-between align-items-start gap-2">
-          <div>
-            <h3 class="r-h3 mb-1">{% trans "插件运行状态" %}</h3>
-            <p class="text-muted mb-0" style="font-size:.75rem;">{% blocktranslate with enabled=cards.plugins.enabled total=cards.plugins.total %}已启用 {{ enabled }} / 共 {{ total }} 个{% endblocktranslate %}</p>
+          <div class="lc-ov-usage-days" aria-hidden="true">
+            {% for day in insight.usage7 %}<span class="lc-ov-usage-day">{{ day.label }}</span>{% endfor %}
           </div>
-          <span class="fs-3">{{ cards.plugins.percent }}%</span>
         </div>
-        {% if cards.plugins.payload %}
-        <div id="wb-chart-plugins" style="width:100%;height:118px;margin-top:.5rem;"
-             role="img" aria-label="{% trans "插件运行状态" %}"></div>
-        {{ cards.plugins.payload|json_script:"wb-data-plugins" }}
+        <div class="lc-ov-usage-key" aria-hidden="true">
+          <span class="lc-ov-usage-swatch lc-ov-usage-tokens"></span>
+          <span class="lc-ov-usage-key-label">{% trans "提交" %}</span>
+          <span class="lc-ov-usage-swatch lc-ov-usage-cost"></span>
+          <span class="lc-ov-usage-key-label">{% trans "已办结" %}</span>
+        </div>
+        {% else %}
+        <div class="lc-empty">{% trans "近 7 天没有单据" %}</div>
         {% endif %}
-        {% if cards.plugins.alert %}<p class="mb-0 mt-1"><span class="r-badge r-badge--orange">{% trans "插件未全部启用" %}</span></p>{% endif %}
-        <div class="d-flex justify-content-center align-items-center mt-auto pt-2">
-          <a href="{% url 'workspace:switch_list' %}" class="r-btn">{% trans "打开插件开关" %}</a>
+      </div>
+    </div>
+
+    <div class="lc-ov-stats">
+      <div class="lc-card">
+        <div class="lc-card-title">
+          <span class="lc-card-title-text">{% trans "单据构成" %}</span>
+          <span class="lc-card-sub">{% blocktranslate with total=insight.composition.total %}窗口内 {{ total }} 单{% endblocktranslate %}</span>
+        </div>
+        <div class="lc-ov-compose">
+          <div class="lc-donut" style="width:118px;height:118px">
+            <svg viewBox="0 0 42 42" width="118" height="118" aria-hidden="true">
+              {% for seg in insight.composition.segments %}
+              <circle class="lc-donut-seg lc-tone-{{ seg.tone }}" cx="21" cy="21" r="15.9155"
+                      stroke-dasharray="{{ seg.length }} {{ seg.rest }}"
+                      stroke-dashoffset="{{ seg.offset }}"/>
+              {% empty %}
+              <circle class="lc-donut-track" cx="21" cy="21" r="15.9155"/>
+              {% endfor %}
+            </svg>
+            <div class="lc-donut-center">
+              <b>{{ insight.composition.total }}</b>
+              <span>{% trans "单" %}</span>
+            </div>
+          </div>
+          <div class="lc-ov-compose-rows">
+            {% for seg in insight.composition.segments %}
+            <div class="lc-ov-tally">
+              <span class="lc-ov-tally-dot lc-tone-{{ seg.tone }}"></span>
+              <span class="lc-ov-tally-name">{{ seg.label }}</span>
+              <span class="lc-ov-tally-count">{{ seg.count }}</span>
+              <span class="lc-ov-tally-pct">{{ seg.share }}%</span>
+            </div>
+            {% empty %}
+            <div class="lc-empty">{% trans "窗口内暂无单据" %}</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="lc-card">
+        {% if dept %}
+        <div class="lc-card-title">
+          <span class="lc-card-title-text">{% trans "部门概况" %}</span>
+          <span class="lc-card-sub">{% trans "人数 / 今日签到 / 待审批" %}</span>
+        </div>
+        <div class="lc-ov-deptlist">
+          {% for row in dept.rows|slice:":6" %}
+          <div class="lc-ov-deptrow">
+            <div class="lc-ov-deptrow-head">
+              <span class="lc-ov-deptrow-name">{{ row.name }}</span>
+              <span class="lc-ov-deptrow-value">{{ row.headcount }}</span>
+            </div>
+            <div class="lc-ov-deptrow-bar" style="width:{% widthratio row.headcount dept.max 100 %}%"></div>
+            <div class="lc-ov-deptrow-meta">
+              <span>{% trans "签到" %} {{ row.checked }}</span>
+              <span>{% trans "待审批" %} {{ row.pending }}</span>
+            </div>
+          </div>
+          {% empty %}
+          <div class="lc-empty">{% trans "暂无部门数据" %}</div>
+          {% endfor %}
+          {% if dept.rows|length > 6 %}
+          <div class="lc-ov-tally-more">{% blocktranslate with n=dept.rows|length %}共 {{ n }} 个部门，全部见「部门签到」{% endblocktranslate %}</div>
+          {% endif %}
+        </div>
+        {% else %}
+        <div class="lc-card-title">
+          <span class="lc-card-title-text">{% trans "公告与消息" %}</span>
+        </div>
+        <div class="lc-ov-pairlist">
+          <div class="lc-ov-pairrow">
+            <span class="lc-ov-pairrow-label">{% trans "公告简报" %}</span>
+            <span class="lc-ov-pairrow-value">{{ notices|length }}</span>
+          </div>
+          <div class="lc-ov-pairrow">
+            <span class="lc-ov-pairrow-label">{% trans "我的消息" %}</span>
+            <span class="lc-ov-pairrow-value">{{ messages_preview|length }}</span>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="lc-ov-tiles">
+      <div class="lc-card lc-ov-tile">
+        <div class="lc-card-title">
+          <span class="lc-card-title-text">{% trans "活跃度" %}</span>
+          <span class="lc-card-sub">{% blocktranslate with n=insight.heat_max %}峰值 {{ n }} 人/天{% endblocktranslate %}</span>
+        </div>
+        <div class="lc-ov-tile-body">
+          <div class="lc-heat-wrap">
+            <div class="lc-heat" role="group" aria-label="{% trans '活跃度' %}">
+              <div class="lc-heat-wds" aria-hidden="true">
+                {% for week in insight.heat_weeks %}
+                <span class="lc-heat-wd">{{ week.label }}</span>
+                {% endfor %}
+              </div>
+              <div class="lc-heat-cols">
+                {% for col in insight.heat_cols %}
+                <div class="lc-heat-col">
+                  {% if col.month %}<span class="lc-heat-mon" aria-hidden="true">{{ col.month }}</span>{% endif %}
+                  {% for day in col.cells %}
+                  {% if day.future %}
+                  <span class="lc-heat-cell lc-heat-future" aria-hidden="true"></span>
+                  {% else %}
+                  <span class="lc-heat-cell lc-heat-{{ day.level }}"
+                        title="{{ day.key }} · {{ day.value }} {% trans '人' %}"></span>
+                  {% endif %}
+                  {% endfor %}
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+            <div class="lc-heat-legend" aria-hidden="true">
+              <span class="lc-heat-key">{% trans "少" %}</span>
+              {% for level in "01234" %}
+              <span class="lc-heat-cell lc-heat-{{ level }}"></span>
+              {% endfor %}
+              <span class="lc-heat-key">{% trans "多" %}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lc-card lc-ov-tile">
+        <div class="lc-card-title">
+          <span class="lc-card-title-text">{% trans "单据类型" %}</span>
+          <span class="lc-card-sub">{% trans "单据数" %}</span>
+        </div>
+        <div class="lc-ov-tile-body">
+          {% if cards.flow %}
+          {% for item in cards.flow.counts %}
+          <div class="lc-ov-tally">
+            <span class="lc-ov-tally-dot lc-tone-{{ forloop.counter }}"></span>
+            <span class="lc-ov-tally-name">{{ item.label }}</span>
+            <span class="lc-ov-tally-count">{{ item.count }}</span>
+            <span class="lc-ov-tally-bar lc-tone-{{ forloop.counter }}"
+                  style="width:{% widthratio item.count cards.flow.total 100 %}%"></span>
+          </div>
+          {% endfor %}
+          {% else %}
+          <div class="lc-empty">{% trans "暂无单据" %}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="lc-card lc-ov-tile">
+        <div class="lc-card-title">
+          <span class="lc-card-title-text">{% trans "部门签到" %}</span>
+        </div>
+        <div class="lc-ov-tile-body">
+          {% if dept %}
+          {% for row in dept.rows %}
+          <div class="lc-ov-tally">
+            <span class="lc-ov-tally-dot lc-ov-tally-dot--muted"></span>
+            <span class="lc-ov-tally-name">{{ row.name }}</span>
+            <span class="lc-ov-tally-count">{{ row.checked }}/{{ row.headcount }}</span>
+            <span class="lc-ov-tally-bar lc-tone-2"
+                  style="width:{% widthratio row.checked row.headcount 100 as pct %}{{ pct }}%"></span>
+          </div>
+          {% empty %}
+          <div class="lc-empty">{% trans "暂无部门数据" %}</div>
+          {% endfor %}
+          {% else %}
+          <div class="lc-empty">{% trans "暂无部门数据" %}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="lc-card lc-ov-tile">
+        <div class="lc-card-title">
+          <span class="lc-card-title-text">{% trans "流程快捷发起" %}</span>
+          <a class="lc-card-link" href="{% url 'approval:approval_list' %}">{% trans "审批中心" %} →</a>
+        </div>
+        <div class="lc-ov-tile-body">
+          {% for s in shortcuts %}
+          <a class="lc-ov-tally lc-ov-tally--link" href="{{ s.url }}">
+            <span class="lc-ov-tally-glyph" aria-hidden="true">{{ s.icon }}</span>
+            <span class="lc-ov-tally-name">{{ s.label }}</span>
+            <span class="lc-ov-tally-count">→</span>
+          </a>
+          {% empty %}
+          <div class="lc-empty">{% trans "暂无可用入口" %}</div>
+          {% endfor %}
         </div>
       </div>
     </div>
-    {% endif %}
-  </div>
 
-  {% if trend and can_approval %}
-  <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
-    <div class="r-sidebar-title mb-0">{% trans "流程趋势大盘" %}</div>
-    <span class="text-muted" style="font-size:.75rem;">{{ trend.window_label }}</span>
-  </div>
-  <div class="r-card mb-4">
-    {% if trend.payload %}
-    <div id="wb-chart-trend" style="width:100%;height:320px;"
-         role="img" aria-label="{% trans "流程趋势大盘" %}"></div>
-    {{ trend.payload|json_script:"wb-data-trend" }}
-    {% else %}
-    <table class="r-table">
-      <thead><tr><th>{% trans "类型" %}</th><th>{% trans "单据数" %}</th></tr></thead>
-      <tbody>
-        {% for item in trend.totals %}<tr><td>{{ item.label }}</td><td>{{ item.count }}</td></tr>{% endfor %}
-      </tbody>
-    </table>
-    {% endif %}
-  </div>
-  {% endif %}
-
-  {% if shortcuts %}
-  <div class="r-sidebar-title">{% trans "流程快捷发起" %}</div>
-  <div class="r-card mb-4">
-    <div class="d-flex flex-wrap gap-2">
-      {% for s in shortcuts %}
-      <a href="{{ s.url }}" class="r-btn r-btn--plain">{{ s.icon }} {{ s.label }}</a>
-      {% endfor %}
-    </div>
-  </div>
-  {% endif %}
-
-  {% if is_admin_view and pie or is_admin_view and dept %}
-  <div class="r-sidebar-title">{% trans "插件运维与组织数据" %}</div>
-  <div class="row g-4 mb-4">
-    {% if pie %}
-    <div class="col-12 col-lg-6">
-      <div class="r-card h-100">
-        <h3 class="r-h3 mb-1">{% trans "插件分布" %}</h3>
-        {% if pie.payload %}
-        <div id="wb-chart-pie" style="width:100%;height:300px;"
-             role="img" aria-label="{% trans "插件分布" %}"></div>
-        {{ pie.payload|json_script:"wb-data-pie" }}
-        {% else %}
-        <p class="text-muted mb-0" style="font-size:.8rem;">{% trans "该时间范围内暂无留痕数据" %}</p>
-        {% endif %}
-        {% if not pie.payload %}
-        <ul class="list-unstyled mt-1 mb-0" style="font-size:.78rem;">
-          {% for row in pie.rows %}<li class="d-flex justify-content-between"><span>{{ row.label }}</span><span>{{ row.value }}</span></li>{% endfor %}
-        </ul>
-        {% endif %}
-        <p class="text-muted mb-0 mt-1" style="font-size:.72rem;">{% trans "万物皆可插件：容器唯一固定，业务与基础设施全部可插拔。" %}</p>
+    {% if is_admin_view %}
+    <section class="lc-ov-list" aria-label="{% trans '插件运维与组织数据' %}">
+      <div class="lc-ov-list-head">
+        <h2 class="lc-ov-list-title">{% trans "插件运维与组织数据" %}</h2>
+        <span class="lc-ov-list-count">{% blocktranslate with total=plugin_total %}{{ total }} 个插件{% endblocktranslate %}</span>
       </div>
-    </div>
-    {% endif %}
-    {% if dept %}
-    <div class="col-12 col-lg-6">
-      <div class="r-card h-100">
-        <h3 class="r-h3 mb-1">{% trans "组织人员" %}</h3>
-        {% if dept.payload %}
-        <div id="wb-chart-dept" style="width:100%;height:300px;"
-             role="img" aria-label="{% trans "组织人员" %}"></div>
-        {{ dept.payload|json_script:"wb-data-dept" }}
-        {% else %}
-        <p class="text-muted mb-0" style="font-size:.8rem;">{% trans "暂无部门数据" %}</p>
+      <div class="lc-ov-grid">
+        {% if cards.plugins %}
+        <div class="lc-ov-session">
+          <div class="lc-ov-session-head">
+            <span class="lc-ov-session-title">{% trans "插件运行状态" %}</span>
+            {% if cards.plugins.alert %}<span class="lc-ov-chip">{% trans "插件未全部启用" %}</span>{% endif %}
+          </div>
+          <div class="lc-ov-session-body">
+            <div class="lc-ov-mini-stats">
+              <div class="lc-ov-mini-stat"><span class="lc-ov-mini-label">{% trans "已启用" %}</span><span class="lc-ov-mini-value">{{ cards.plugins.enabled }}</span></div>
+              <div class="lc-ov-mini-stat"><span class="lc-ov-mini-label">{% trans "全部" %}</span><span class="lc-ov-mini-value">{{ cards.plugins.total }}</span></div>
+              <div class="lc-ov-mini-stat"><span class="lc-ov-mini-label">{% trans "启用率" %}</span><span class="lc-ov-mini-value">{{ cards.plugins.percent }}%</span></div>
+            </div>
+          </div>
+          <div class="lc-ov-session-preview">
+            <span class="lc-ov-session-preview-label">{% trans "开关" %}</span>
+            <a class="lc-ov-session-preview-text" href="{% url 'workspace:switch_list' %}">{% trans "打开插件开关" %} →</a>
+          </div>
+        </div>
+        {% endif %}
+        {% if pie %}
+        <div class="lc-ov-session">
+          <div class="lc-ov-session-head">
+            <span class="lc-ov-session-title">{% trans "插件分布" %}</span>
+            <span class="lc-ov-chip">{% trans "留痕" %}</span>
+          </div>
+          <div class="lc-ov-session-body">
+            <div class="lc-ov-mini-stats">
+              <div class="lc-ov-mini-stat"><span class="lc-ov-mini-label">{% trans "记录数" %}</span><span class="lc-ov-mini-value">{{ pie.total }}</span></div>
+              <div class="lc-ov-mini-stat"><span class="lc-ov-mini-label">{% trans "来源插件" %}</span><span class="lc-ov-mini-value">{{ pie.rows|length }}</span></div>
+            </div>
+          </div>
+          <div class="lc-ov-session-preview">
+            <span class="lc-ov-session-preview-label">{% trans "分布" %}</span>
+            <span class="lc-ov-session-preview-text">
+              {% for row in pie.rows %}{{ row.label }} {{ row.value }}{% if not forloop.last %} · {% endif %}{% endfor %}
+            </span>
+          </div>
+        </div>
+        {% endif %}
+        {% if dept %}
+        <div class="lc-ov-session">
+          <div class="lc-ov-session-head">
+            <span class="lc-ov-session-title">{% trans "部门明细" %}</span>
+          </div>
+          <div class="lc-ov-session-body">
+            <div class="lc-ov-mini-stats">
+              {% for row in dept.rows|slice:":3" %}
+              <div class="lc-ov-mini-stat"><span class="lc-ov-mini-label">{{ row.name }}</span><span class="lc-ov-mini-value">{{ row.checked }}/{{ row.headcount }}</span></div>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="lc-ov-session-preview">
+            <span class="lc-ov-session-preview-label">{% trans "组织" %}</span>
+            <a class="lc-ov-session-preview-text" href="/plugins/structure/">{% trans "查看组织架构" %} →</a>
+          </div>
+        </div>
         {% endif %}
       </div>
-    </div>
+    </section>
     {% endif %}
-  </div>
-  {% if dept %}
-  <div class="r-card mb-4">
-    <h3 class="r-h3 mb-1">{% trans "部门明细" %}</h3>
-    <table class="r-table mt-2">
-      <thead><tr><th>{% trans "部门" %}</th><th>{% trans "人数" %}</th><th>{% trans "今日签到" %}</th><th>{% trans "待审批" %}</th></tr></thead>
-      <tbody>
-        {% for row in dept.rows %}
-        <tr><td>{{ row.name }}</td><td>{{ row.headcount }}</td><td>{{ row.checked }}</td><td>{{ row.pending }}</td></tr>
-        {% empty %}
-        <tr><td colspan="4" class="text-muted">{% trans "暂无部门数据" %}</td></tr>
+
+    {% if shortcuts %}
+    <section class="lc-ov-list">
+      <div class="lc-ov-list-head">
+        <h2 class="lc-ov-list-title">{% trans "业务入口" %}</h2>
+        <span class="lc-ov-list-count">{{ shortcuts|length }}</span>
+      </div>
+      <div class="lc-ov-grid">
+        {% for s in shortcuts %}
+        <a class="lc-ov-session lc-ov-session--link" href="{{ s.url }}">
+          <div class="lc-ov-session-head">
+            <span class="lc-ov-session-title">{{ s.label }}</span>
+            <span class="lc-ov-chip">{{ s.icon }}</span>
+          </div>
+          <div class="lc-ov-session-body">
+            <div class="lc-ov-mini-stats">
+              <div class="lc-ov-mini-stat"><span class="lc-ov-mini-label">{% trans "类型" %}</span><span class="lc-ov-mini-value">{{ s.type }}</span></div>
+            </div>
+          </div>
+          <div class="lc-ov-session-preview">
+            <span class="lc-ov-session-preview-label">{% trans "发起" %}</span>
+            <span class="lc-ov-session-preview-text">{% trans "进入表单" %} →</span>
+          </div>
+        </a>
         {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% endif %}
-  {% endif %}
+      </div>
+    </section>
+    {% endif %}
 
-  {% if 'notice' in plugins_enabled %}
-  <div class="r-sidebar-title">{% trans "公告简报" %}</div>
-  <div class="row g-4 mb-3">
-    {% for notice in notices %}
-    <div class="col-12 col-md-6 col-xl-4">
-      <div class="r-card h-100 d-flex flex-column">
-        <div class="d-flex justify-content-between align-items-start gap-2">
-          <a href="{% url 'notice:notice_list' %}?notice={{ notice.id }}" class="r-offset-hover">{{ notice.title }}</a>
-          {% if notice.is_top %}<span class="r-badge">{% trans "置顶" %}</span>{% endif %}
+    {% if 'notice' in plugins_enabled %}
+    <section class="lc-ov-list">
+      <div class="lc-ov-list-head">
+        <h2 class="lc-ov-list-title">{% trans "公告简报" %}</h2>
+        <span class="lc-ov-list-count">{{ notices|length }}</span>
+        <a class="lc-ov-cover" href="/plugins/notice/">{% trans "查看全部公告" %}</a>
+      </div>
+      <div class="lc-ov-grid">
+        {% for notice in notices %}
+        <a class="lc-ov-session lc-ov-session--link" href="{% url 'notice:notice_list' %}?notice={{ notice.id }}">
+          <div class="lc-ov-session-head">
+            <span class="lc-ov-session-title">{{ notice.title }}</span>
+            {% if notice.is_top %}<span class="lc-ov-chip">{% trans "置顶" %}</span>{% endif %}
+          </div>
+          <div class="lc-ov-session-preview">
+            <span class="lc-ov-session-preview-label">{% trans "发布" %}</span>
+            <span class="lc-ov-session-preview-text">{{ notice.created_at|date:"Y-m-d H:i" }}</span>
+          </div>
+        </a>
+        {% empty %}
+        <div class="lc-ov-session">
+          <div class="lc-ov-session-head"><span class="lc-ov-session-title">{% trans "暂无公告" %}</span></div>
         </div>
-        <p class="text-muted mb-0 mt-2" style="font-size:.75rem;">{{ notice.created_at|date:"Y-m-d H:i" }}</p>
+        {% endfor %}
       </div>
-    </div>
-    {% empty %}
-    <div class="col-12">
-      <div class="r-card"><p class="text-muted mb-0">{% trans "暂无公告" %}</p></div>
-    </div>
-    {% endfor %}
-  </div>
-  <div class="d-flex justify-content-end mb-4">
-    <a href="/plugins/notice/" class="r-btn r-btn--plain">{% trans "查看全部公告" %}</a>
-  </div>
-  {% endif %}
+    </section>
+    {% endif %}
 
-  {% if 'notify' in plugins_enabled and messages_preview %}
-  <div class="d-flex justify-content-between align-items-center gap-2">
-    <div class="r-sidebar-title mb-0">{% trans "我的消息" %}</div>
-    <a href="{% url 'notify:notify_list' %}" class="r-offset-hover" style="font-size:.8rem;">{% trans "消息中心" %} →</a>
-  </div>
-  <div class="r-card">
-    {% for message in messages_preview %}
-    <div class="d-flex justify-content-between align-items-start gap-3 border-bottom py-2" style="font-size:.85rem;">
-      <div>
-        <a href="{% url 'notify:notify_read' message.pk %}" class="{% if not message.is_read %}fw-semibold{% endif %}">{{ message.title }}</a>
-        <div class="text-muted" style="font-size:.72rem;">{{ message.created_at|date:"m-d H:i" }}</div>
+    {% if 'notify' in plugins_enabled and messages_preview %}
+    <section class="lc-ov-list">
+      <div class="lc-ov-list-head">
+        <h2 class="lc-ov-list-title">{% trans "我的消息" %}</h2>
+        <span class="lc-ov-list-count">{{ messages_preview|length }}</span>
+        <a class="lc-ov-cover" href="{% url 'notify:notify_list' %}">{% trans "消息中心" %} →</a>
       </div>
-      {% if not message.is_read %}<span class="r-badge r-badge--orange">{% trans "未读" %}</span>{% endif %}
-    </div>
-    {% endfor %}
+      <div class="lc-ov-grid">
+        {% for message in messages_preview %}
+        <a class="lc-ov-session lc-ov-session--link" href="{% url 'notify:notify_read' message.pk %}">
+          <div class="lc-ov-session-head">
+            <span class="lc-ov-session-title">{{ message.title }}</span>
+            {% if not message.is_read %}<span class="lc-ov-chip lc-ov-chip--warn">{% trans "未读" %}</span>{% endif %}
+          </div>
+          <div class="lc-ov-session-preview">
+            <span class="lc-ov-session-preview-label">{% trans "收到" %}</span>
+            <span class="lc-ov-session-preview-text">{{ message.created_at|date:"m-d H:i" }}</span>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
   </div>
-  {% endif %}
 </div>
-
-{% if chart %}
-<script src="{{ chart.script_url }}"></script>
-<script src="{{ chart.adapter_url }}"></script>
-<script nonce="{{ request.csp_nonce }}">
-(function () {
-  'use strict';
-  if (!window.oaChartRender) { return; }
-  var pairs = [
-    ['wb-chart-approval', 'wb-data-approval'],
-    ['wb-chart-attendance', 'wb-data-attendance'],
-    ['wb-chart-flow', 'wb-data-flow'],
-    ['wb-chart-plugins', 'wb-data-plugins'],
-    ['wb-chart-trend', 'wb-data-trend'],
-    ['wb-chart-pie', 'wb-data-pie'],
-    ['wb-chart-dept', 'wb-data-dept']
-  ];
-  pairs.forEach(function (pair) {
-    var el = document.getElementById(pair[0]);
-    var data = document.getElementById(pair[1]);
-    if (!el || !data) { return; }
-    try {
-      window.oaChartRender(el, JSON.parse(data.textContent));
-    } catch (err) {
-      el.hidden = true;
-    }
-  });
-})();
-</script>
-{% endif %}

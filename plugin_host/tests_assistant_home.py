@@ -109,11 +109,23 @@ class AssistantHomePageTests(TestCase):
         self.assertContains(response, 'href="/dashboard/"')
         self.assertContains(response, '>看板</span>')
 
-    def test_duplicate_home_menu_highlights_only_first(self):
-        """「助手」与旧「工作台」都指向 /，只能亮一个。"""
+    def test_primary_panel_starts_with_attendance(self):
+        """v2.0.7：助手入口就是侧栏顶部的「+ 新会话」，第一格改成考勤。
+
+        助手菜单（指向 /）已下线，所以首页不再有高亮项；考勤在顶部固定入口，
+        不应该在「更多」里再出现一条同名副本。
+        """
         self.client.force_login(self.user)
         response = self.client.get('/')
-        self.assertEqual(response.content.decode().count('as-panel is-active'), 1)
+        # 网格首项必须是考勤；「插件」入口要 workspace_manage，普通账号看不到
+        self.assertEqual(
+            [menu['url'] for menu in response.context['primary_menus']],
+            ['/plugins/attendance/', '/dashboard/'])
+        # 首页没有指向 / 的菜单了，一个面板都不亮
+        self.assertEqual(response.content.decode().count('as-panel is-active'), 0)
+        self.assertNotIn(
+            '/plugins/attendance/',
+            [menu['url'] for menu in response.context['common_menus']])
 
     def test_color_mode_query_sets_cookie_and_attribute(self):
         self.client.force_login(self.user)
@@ -163,7 +175,7 @@ class AssistantHomePageTests(TestCase):
         # DSH EntryMenuContent 的两条固定行（zh 文案原文）
         self.assertIn('浏览更多插件', html)
         self.assertIn('创建你的插件', html)
-        # 顶部固定入口只有两条：助手 / 看板（「新会话」与「功能」由模板固定，不走 menus）
+        # 顶部固定入口两条（普通账号）：考勤 / 看板；「插件」入口要 workspace_manage
         self.assertEqual(len(response.context['primary_menus']), 2)
 
     def test_old_workbench_menu_dropped_after_home_takeover(self):

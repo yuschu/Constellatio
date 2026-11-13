@@ -19,8 +19,8 @@ class AssistantConfig(AppConfig):
             menus=[
                 # v2.0.0：对话式首页 + 原看板独立入口。
                 # 两条都走 PluginMeta.menus，外壳渲染逻辑不为「看板」单开分支。
-                # v2.0.6：order 决定侧栏顺序，助手(1) → 插件(2) → 看板(3)。
-                {'label': _('助手'), 'icon': '✦', 'url': '/', 'perm': None, 'order': 1},
+                # v2.0.7：去掉「助手」这一条——首页的入口就是侧栏顶部的「+ 新会话」，
+                # 再单列一条指回 / 就是重复入口；助手只剩 /dashboard/ 一条业务菜单。
                 {'label': _('看板'), 'icon': '▦', 'url': '/dashboard/', 'perm': None, 'order': 3},
             ],
             permissions=[],

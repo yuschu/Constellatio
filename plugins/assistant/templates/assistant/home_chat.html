@@ -37,15 +37,18 @@
       </span>
     </a>
 
-    {# 面板入口：primary_menus（助手/看板，来自 PluginMeta.menus）+ 功能抽屉 #}
+    {# 面板入口：primary_menus（考勤/插件/看板，来自 PRIMARY_MENU_URLS）+ 更多抽屉 #}
     <nav class="as-panels" aria-label="{% trans '功能入口' %}">
       {% for menu in primary_menus %}
       <a href="{{ menu.url }}" class="as-panel{% if menu.active %} is-active{% endif %}"{% if menu.active %} aria-current="page"{% endif %}>
         <span class="as-panel__glyph" aria-hidden="true">
-          {% if menu.url == '/' %}
-          <svg class="as-ico" viewBox="0 0 16 16" width="16" height="16">
-            <path d="M8 2.2l1.7 4.1 4.1 1.7-4.1 1.7L8 13.8l-1.7-4.1L2.2 8l4.1-1.7z"
-                  stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
+          {% if menu.url == '/plugins/attendance/' %}
+          {# 考勤：日历 + 勾，与业务页「签到」语义一致 #}
+          <svg class="as-ico" viewBox="0 0 16 16" width="16" height="16"
+               fill="none" stroke="currentColor" stroke-width="1">
+            <rect x="2.25" y="3.25" width="11.5" height="10.5" rx="1.5"/>
+            <path d="M2.25 6.5h11.5M5.25 1.6v2.6M10.75 1.6v2.6"/>
+            <path d="M5.6 10.2l1.55 1.55 3.1-3.1"/>
           </svg>
           {% elif menu.url == '/plugins/workspace/' %}
           {# 插件：DSH 用四格模块图标表达「可组合的插件单元」 #}

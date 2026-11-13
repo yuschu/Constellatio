@@ -114,16 +114,19 @@ class MenuPermissionTests(TestCase):
     def test_superuser(self):
         self._assert_equivalent(self.admin)
 
-    def test_menu_order_assistant_plugin_dashboard(self):
-        """侧栏顺序契约：助手 → 插件 → 看板（order 1 / 2 / 3）。
+    def test_menu_order_plugin_dashboard_attendance(self):
+        """侧栏顺序契约：插件 → 看板 → 考勤（order 2 / 3 / 4）。
 
         参考实现与被测实现共用同一排序键，等价断言测不出顺序本身，
         这里单独锚定三条 URL 的相对位置。
+
+        v2.0.11：「助手」菜单（指向 /）下线——首页入口就是侧栏顶部的「+ 新会话」；
+        首页侧栏头部的固定三格顺序改由 `PRIMARY_MENU_URLS` 决定（考勤 / 插件 / 看板），
+        这里报的是业务侧栏 `get_menus` 的注册序。
         """
         urls = [menu['url'] for menu in get_menus(self.admin)]
-        self.assertLess(urls.index('/'), urls.index('/plugins/workspace/'))
+        self.assertNotIn('/', urls)
         self.assertLess(urls.index('/plugins/workspace/'), urls.index('/dashboard/'))
-        # v2.0.10：考勤紧跟看板（order 4），其余菜单保持注册序
         self.assertLess(urls.index('/dashboard/'), urls.index('/plugins/attendance/'))
 
     def test_frozen_user(self):

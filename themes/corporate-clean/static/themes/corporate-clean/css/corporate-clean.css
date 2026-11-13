@@ -2410,3 +2410,1133 @@ html[data-rail-settled="true"] .ds-account {
 .ds-settings__options[hidden] {
   display: none;
 }
+
+/* ============================================================
+   26. 看板 · dsh-context「Context Dashboard」版式（v2.0.7）
+   ------------------------------------------------------------
+   原值来源（bowenliang123/dsh-context，Apache-2.0）：
+     src/client/styles/overview.css  —— 页面壳 / 页头 / KPI / 用量双柱 / 分区卡 / 会话卡
+     src/client/styles/base.css      —— .lc-card / .lc-card-title / .lc-gran / .lc-empty
+     src/client/styles/stats.css     —— .lc-stat / .lc-donut
+     components/overviewUsage.tsx、donut.tsx、heatmap.tsx —— 百分比与分段算法
+   口径：尺寸、间距、字号、透明度、百分比算法全部照抄源码字面量；
+   --dsw-alias-* 换成本项目第 1/2 节已定义的 --ds-* 同名 alias。
+   唯一结构差异：DSH 的 .lc-ov-page 是整屏面板（height:100% + overflow:hidden，
+   内层 .lc-ov-pagescroll 自己滚），本项目看板在文档流里滚动，所以这里放开
+   height/overflow —— 否则长页面会被裁掉。视觉参数一个没改。
+   ============================================================================================ */
+
+:root {
+  /* DSH 用 --color-blue-500 / --color-green-500，本项目的同值是这两个状态色 */
+  --lc-blue: var(--ds-state-business);
+  --lc-green: var(--ds-state-success);
+  --lc-canvas: var(--ds-bg-layer-3);
+  --lc-control-track: var(--ds-bg-layer-3);
+  --lc-list-stripe: var(--ds-bg-layer-3);
+  /* 单据五类的环形 / 圆点 / 条形色阶，对应 .lc-tone-1..5 */
+  --lc-tone-1: var(--ds-state-business);
+  --lc-tone-2: var(--ds-state-success);
+  --lc-tone-3: var(--ds-state-warn);
+  --lc-tone-4: var(--ds-state-done);
+  --lc-tone-5: var(--ds-state-error);
+}
+
+html[data-color-mode="dark"] {
+  --lc-canvas: var(--ds-bg-base);
+  --lc-control-track: var(--ds-bg-layer-2);
+  --lc-list-stripe: var(--ds-bg-layer-2);
+}
+
+/* ---------- 卡片底座（base.css 22–32 行） ---------- */
+.lc-card {
+  background: var(--ds-bg-layer-1);
+  border: 1px solid var(--ds-border-l2);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  box-sizing: border-box;
+}
+
+html:not([data-color-mode="dark"]) .lc-card {
+  border-radius: 12px;
+}
+
+.lc-ov-page .lc-card {
+  padding: 10px 12px;
+  container: lc-card / inline-size;
+}
+
+.lc-card-title {
+  font-weight: 600;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+html:not([data-color-mode="dark"]) .lc-card-title {
+  padding-bottom: 7px;
+  margin-bottom: 9px;
+  border-bottom: 0.5px solid var(--ds-border-l2);
+}
+
+.lc-card-title-text {
+  flex: none;
+  white-space: nowrap;
+}
+
+.lc-card-sub {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ds-label-secondary);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.lc-card-link {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--ds-label-secondary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.lc-card-link:hover {
+  color: var(--ds-label-primary);
+  text-decoration: underline;
+}
+
+.lc-empty {
+  color: var(--ds-label-secondary);
+  padding: 18px 0;
+  text-align: center;
+}
+
+/* ---------- 页面壳（overview.css 1–17 行） ---------- */
+.lc-ov-page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+  box-sizing: border-box;
+  background: var(--lc-canvas);
+  color: var(--ds-label-primary);
+  font-size: 13px;
+  border-radius: var(--ds-radius-md);
+  container: lc-ov / inline-size;
+}
+
+.lc-ov-pagecontent {
+  padding: 0 10px 10px;
+}
+
+.lc-ov-pagehead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 28px;
+  margin-bottom: 24px;
+}
+
+.lc-ov-pagetitle {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: 0 8px 0 0;
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 500;
+}
+
+/* 角色胶囊：和 DSH 的 .lc-ov-settings 同一套几何（999px 胶囊 + bg-layer-2） */
+.lc-ov-settings {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+  border: 1px solid var(--ds-border-l2);
+  background: var(--ds-bg-layer-2);
+  border-radius: 999px;
+  padding: 3px 12px;
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--ds-label-secondary);
+  white-space: nowrap;
+}
+
+.lc-ov-headctl {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ---------- 分段控件（base.css .lc-gran） ---------- */
+.lc-gran {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+  background: var(--lc-control-track);
+  border: 0.5px solid var(--ds-border-l2);
+  border-radius: 6px;
+  padding: 1px;
+}
+
+.lc-ov-range {
+  margin-left: 0;
+}
+
+.lc-gran-btn {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  color: var(--ds-label-secondary);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color var(--ds-dur) var(--ds-ease),
+    color var(--ds-dur) var(--ds-ease);
+}
+
+.lc-gran-btn:hover {
+  background: var(--ds-interactive-hover);
+  color: var(--ds-label-primary);
+}
+
+.lc-gran-on {
+  background: var(--ds-button-primary-fill);
+  color: var(--ds-label-inverted);
+}
+
+/* ---------- KPI（stats.css 1–4 行 + overview.css 21–32 行） ---------- */
+.lc-stat {
+  background: var(--ds-bg-layer-2);
+  border: 1px solid var(--ds-border-l2);
+  border-radius: 8px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lc-stat-label {
+  color: var(--ds-label-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lc-stat-value {
+  color: var(--ds-label-primary);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.lc-stat-sub {
+  color: var(--ds-label-secondary);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lc-ov-first {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.lc-ov-first > .lc-card {
+  margin-bottom: 0;
+}
+
+.lc-ov-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.lc-ov-kpi {
+  align-items: center;
+  padding: 8px;
+}
+
+.lc-ov-kpi .lc-stat-value {
+  font-size: 20px;
+}
+
+/* ---------- 用量双柱（overview.css 34–60 行） ---------- */
+.lc-ov-usage {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.lc-ov-usage-plot {
+  --lc-ov-usage-axis-top-inset: 13px;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 42px;
+  grid-template-rows: minmax(56px, 1fr) auto;
+  gap: 6px;
+}
+
+.lc-ov-usage-rail-l {
+  grid-area: 1 / 1;
+}
+
+.lc-ov-usage-grid {
+  grid-area: 1 / 2;
+  position: relative;
+  min-width: 0;
+  display: flex;
+  padding-top: var(--lc-ov-usage-axis-top-inset);
+}
+
+.lc-ov-usage-rail-r {
+  grid-area: 1 / 3;
+}
+
+.lc-ov-usage-rail {
+  position: relative;
+  width: 42px;
+  margin-top: var(--lc-ov-usage-axis-top-inset);
+  font-size: 9px;
+  line-height: 1.2;
+  color: var(--ds-label-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.lc-ov-usage-rail-l .lc-ov-usage-tick {
+  right: 0;
+}
+
+.lc-ov-usage-rail-r .lc-ov-usage-tick {
+  left: 0;
+}
+
+.lc-ov-usage-tick {
+  position: absolute;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+
+.lc-ov-usage-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: color-mix(in srgb, var(--ds-border-l2) 70%, transparent);
+}
+
+.lc-ov-usage-line-0 {
+  background: var(--ds-border-l2);
+}
+
+.lc-ov-usage-cols {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.lc-ov-usage-col {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.lc-ov-usage-bars {
+  flex: 1 1 auto;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
+}
+
+.lc-ov-usage-bar {
+  position: relative;
+  flex: none;
+  width: 10px;
+  border-radius: 3px 3px 0 0;
+}
+
+.lc-ov-usage-value {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  line-height: 1.2;
+  color: var(--ds-label-secondary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.lc-ov-usage-tokens {
+  background: color-mix(in srgb, var(--lc-blue) 72%, transparent);
+}
+
+.lc-ov-usage-cost {
+  background: color-mix(in srgb, var(--lc-green) 72%, transparent);
+}
+
+.lc-ov-usage-days {
+  grid-area: 2 / 2;
+  display: flex;
+  gap: 6px;
+}
+
+.lc-ov-usage-day {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+  font-size: 9px;
+  line-height: 1.2;
+  color: var(--ds-label-secondary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.lc-ov-usage-key {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  padding-top: 5px;
+}
+
+.lc-ov-usage-swatch {
+  flex: none;
+  width: 10px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.lc-ov-usage-key-label {
+  font-size: 9px;
+  color: var(--ds-label-secondary);
+}
+
+/* ---------- 组成环形（stats.css 23–31 行） ---------- */
+.lc-donut {
+  position: relative;
+  flex: none;
+}
+
+.lc-donut svg {
+  display: block;
+}
+
+.lc-donut-seg {
+  fill: none;
+  stroke-width: 4;
+  stroke: var(--lc-tone, var(--ds-label-secondary));
+  transition: opacity var(--ds-dur) var(--ds-ease);
+}
+
+/* 无数据时的底圆（stats.css .lc-donut-track） */
+.lc-donut-track {
+  fill: none;
+  stroke-width: 4;
+  stroke: color-mix(in srgb, var(--ds-label-secondary) 18%, transparent);
+}
+
+.lc-donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  pointer-events: none;
+  text-align: center;
+  padding: 0 7px;
+  box-sizing: border-box;
+}
+
+.lc-donut-center b {
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  /* donut.tsx：Math.max(11, round(size * 0.13))，size=118 → 15px */
+  font-size: 15px;
+}
+
+.lc-donut-center span {
+  color: var(--ds-label-secondary);
+  white-space: nowrap;
+  /* Math.max(9, round(size * 0.105))，size=118 → 12px */
+  font-size: 12px;
+}
+
+/* ---------- 中间两栏 ---------- */
+.lc-ov-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+  /* DSH 两栏等高（卡片都满）；本项目两张卡数据量差很大（环形可能空、部门可能十行），
+     等高会把空卡拉成一整片白，所以按内容高度对齐 */
+  align-items: start;
+}
+
+.lc-ov-stats > .lc-card {
+  margin-bottom: 0;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.lc-ov-compose {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.lc-ov-compose-rows {
+  flex: 1 1 140px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lc-ov-deptlist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.lc-ov-deptrow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lc-ov-deptrow-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.lc-ov-deptrow-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.lc-ov-deptrow-value {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.lc-ov-deptrow-bar {
+  height: 3px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--lc-blue) 55%, transparent);
+}
+
+.lc-ov-deptrow-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 10px;
+  color: var(--ds-label-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.lc-ov-pairlist {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lc-ov-pairrow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 2px 6px 4px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.lc-ov-pairrow:nth-child(even) {
+  background: var(--lc-list-stripe);
+}
+
+.lc-ov-pairrow-label {
+  color: var(--ds-label-secondary);
+}
+
+.lc-ov-pairrow-value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 分区卡（overview.css 68–79 行） ---------- */
+.lc-ov-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.lc-ov-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  align-items: stretch;
+  margin-bottom: 10px;
+}
+
+.lc-ov-tile {
+  display: flex;
+  flex-direction: column;
+  height: 280px;
+  min-width: 0;
+  min-height: 0;
+  margin-bottom: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.lc-ov-tile-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.lc-ov-tile-body > .lc-empty {
+  margin: auto 0;
+}
+
+/* ---------- 热力图（overview.css 82–108 行） ---------- */
+.lc-heat-wrap {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.lc-heat {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+.lc-heat-wds,
+.lc-heat-col {
+  padding-top: 18px;
+}
+
+.lc-heat-wds {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.lc-heat-wd {
+  flex: none;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  color: var(--ds-label-secondary);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.lc-heat-cols {
+  display: flex;
+  gap: 3px;
+  min-width: 0;
+}
+
+.lc-heat-col {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.lc-heat-mon {
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-size: 9px;
+  line-height: 18px;
+  color: var(--ds-label-secondary);
+  white-space: nowrap;
+}
+
+.lc-heat-cell {
+  width: 20px;
+  height: 20px;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 20%;
+  padding: 0;
+  background: var(--ds-bg-layer-2);
+  cursor: default;
+}
+
+.lc-heat-future {
+  background: transparent;
+}
+
+.lc-heat-0 {
+  background: color-mix(in srgb, var(--ds-label-secondary) 16%, transparent);
+}
+
+.lc-heat-1 {
+  background: color-mix(in srgb, var(--lc-blue) 28%, transparent);
+}
+
+.lc-heat-2 {
+  background: color-mix(in srgb, var(--lc-blue) 50%, transparent);
+}
+
+.lc-heat-3 {
+  background: color-mix(in srgb, var(--lc-blue) 72%, transparent);
+}
+
+.lc-heat-4 {
+  background: color-mix(in srgb, var(--lc-blue) 92%, transparent);
+}
+
+.lc-heat-on {
+  box-shadow: 0 0 0 1.5px var(--lc-blue);
+}
+
+.lc-heat-legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  padding-top: 6px;
+}
+
+.lc-heat-legend .lc-heat-cell {
+  width: 10px;
+  height: 10px;
+}
+
+.lc-heat-key {
+  font-size: 9px;
+  color: var(--ds-label-secondary);
+  margin: 0 2px;
+}
+
+/* ---------- 排行行（overview.css 110–122 行） ---------- */
+.lc-ov-tallies {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lc-ov-tally {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  border-radius: 6px;
+  padding: 2px 6px 4px;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.7;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--ds-dur) var(--ds-ease);
+}
+
+.lc-ov-tally:nth-child(even of .lc-ov-tally) {
+  background: var(--lc-list-stripe);
+}
+
+.lc-ov-tally:hover {
+  background: var(--ds-interactive-hover);
+}
+
+.lc-ov-tally--link {
+  text-decoration: none;
+}
+
+.lc-ov-tally-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  align-self: center;
+  background: var(--lc-tone, var(--ds-label-secondary));
+}
+
+.lc-ov-tally-dot--muted {
+  background: color-mix(in srgb, var(--ds-label-secondary) 35%, transparent);
+}
+
+.lc-ov-tally-glyph {
+  flex: none;
+  width: 14px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--ds-label-secondary);
+}
+
+.lc-ov-tally-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
+  color: var(--ds-label-primary);
+}
+
+.lc-ov-tally-count {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  color: var(--ds-label-primary);
+}
+
+.lc-ov-tally-pct {
+  flex: none;
+  font-size: 11px;
+  color: var(--ds-label-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.lc-ov-tally-bar {
+  position: absolute;
+  left: 6px;
+  bottom: 1px;
+  height: 2px;
+  border-radius: 1px;
+  opacity: 0.45;
+  pointer-events: none;
+  background: var(--lc-tone, var(--lc-blue));
+}
+
+.lc-ov-tally-more {
+  padding-top: 4px;
+  font-size: 11px;
+  color: var(--ds-label-secondary);
+}
+
+/* ---------- 列表头（overview.css 144–156 行） ---------- */
+.lc-ov-list {
+  min-width: 0;
+  margin-bottom: 10px;
+}
+
+.lc-ov-list-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.lc-ov-list-title {
+  font-weight: 600;
+  white-space: nowrap;
+  margin: 0;
+  font-size: 13px;
+}
+
+.lc-ov-list-count {
+  color: var(--ds-label-secondary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  background: var(--ds-bg-layer-2);
+  border-radius: 8px;
+  padding: 1px 7px;
+}
+
+.lc-ov-cover {
+  flex: none;
+  border: 1px solid var(--ds-border-l2);
+  background: var(--ds-bg-layer-2);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--ds-label-primary);
+  text-decoration: none;
+  margin-left: auto;
+}
+
+.lc-ov-cover:hover {
+  background: var(--ds-interactive-hover);
+  border-color: var(--ds-border-l4);
+}
+
+.lc-ov-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  border: 1px solid var(--ds-border-l2);
+  background: transparent;
+  color: var(--ds-label-secondary);
+  border-radius: 999px;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.5;
+  padding: 2px 10px;
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lc-ov-chip--warn {
+  color: var(--ds-state-warn);
+  border-color: color-mix(in srgb, var(--ds-state-warn) 45%, transparent);
+}
+
+/* ---------- 卡片网格 + 入口卡（overview.css 158–187 行） ---------- */
+.lc-ov-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 10px;
+}
+
+.lc-ov-session {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  background: var(--ds-bg-layer-1);
+  border: 1px solid var(--ds-border-l2);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition: border-color var(--ds-dur) var(--ds-ease),
+    background-color var(--ds-dur) var(--ds-ease);
+}
+
+html:not([data-color-mode="dark"]) .lc-ov-session {
+  border-radius: 12px;
+}
+
+.lc-ov-session:hover {
+  border-color: var(--ds-border-l4);
+  background: var(--ds-interactive-hover);
+}
+
+.lc-ov-session--link {
+  text-decoration: none;
+}
+
+.lc-ov-session-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.lc-ov-session-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 600;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
+}
+
+.lc-ov-session-body {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  min-width: 0;
+}
+
+.lc-ov-mini-stats {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.lc-ov-mini-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 11px;
+}
+
+.lc-ov-mini-label {
+  flex: none;
+  color: var(--ds-label-secondary);
+  white-space: nowrap;
+}
+
+.lc-ov-mini-value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.lc-ov-session-preview {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 6px;
+  border-top: 0.5px solid color-mix(in srgb, var(--ds-border-l2) 60%, transparent);
+  min-width: 0;
+}
+
+.lc-ov-session-preview-label {
+  flex: none;
+  color: var(--ds-label-secondary);
+  font-size: 10px;
+}
+
+.lc-ov-session-preview-text {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ds-label-primary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* ---------- 色阶 ---------- */
+.lc-tone-1 {
+  --lc-tone: var(--lc-tone-1);
+}
+
+.lc-tone-2 {
+  --lc-tone: var(--lc-tone-2);
+}
+
+.lc-tone-3 {
+  --lc-tone: var(--lc-tone-3);
+}
+
+.lc-tone-4 {
+  --lc-tone: var(--lc-tone-4);
+}
+
+.lc-tone-5 {
+  --lc-tone: var(--lc-tone-5);
+}
+
+/* ---------- 容器查询（宽度阈值照抄 overview.css） ---------- */
+@container lc-ov (max-width: 932px) {
+  .lc-ov-first {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@container lc-ov (max-width: 700px) {
+  .lc-ov-stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@container lc-ov (max-width: 640px) {
+  .lc-ov-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lc-ov-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container lc-ov (max-width: 560px) {
+  .lc-ov-tiles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@container lc-ov (max-width: 400px) {
+  .lc-ov-usage-day:nth-child(even) {
+    visibility: hidden;
+  }
+
+  .lc-ov-usage-value {
+    visibility: hidden;
+  }
+}
+
+@container lc-ov (width > 640px) and (width <= 1020px) {
+  .lc-heat-wds {
+    display: none;
+  }
+
+  .lc-heat-cols {
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: center;
+  }
+
+  .lc-heat-col {
+    flex: 0 1 20px;
+    min-width: 0;
+  }
+
+  .lc-heat-cell {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+  }
+}

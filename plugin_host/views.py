@@ -129,14 +129,17 @@ def dashboard(request):
         pending_approvals=pending,
         attendance_today=attendance_today,
     )
+    messages_preview = (_recent_notifications(user)
+                        if 'notify' in enabled_names else [])
+    unread_count = sum(1 for item in messages_preview if not item.is_read)
     plugin_enabled_count, plugin_total = plugin_counts()
 
     return render(request, 'home.html', {
         'pending_approvals': pending,
         'attendance_today': attendance_today,
         'notices': _recent_notices() if 'notice' in enabled_names else [],
-        'messages_preview': (_recent_notifications(user)
-                             if 'notify' in enabled_names else []),
+        'messages_preview': messages_preview,
+        'unread_count': unread_count,
         'shortcuts': shortcuts,
         'can_approval': can_approval,
         'can_approve': can_approve,
