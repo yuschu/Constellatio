@@ -801,7 +801,7 @@ token 映射：`label-primary-foreground → --ds-on-primary`、`bg-module-platf
 - 路由：`/?panel=attendance&sub=rules`。`assistant/views.py` 新增 `PANEL_SUBS`（`attendance: ('rules',)`）、`_resolve_sub()`（未登记或**缺 `attendance_rule_manage`** 时退回上一级面板，不出 403，口径同 `_resolve_panel`）、`SUB_TITLES`（标题变「考勤规则」），`_panel_context(request, panel, sub)` 把 `attendance_context` 与 `rules_context` 合并，并注入 `in_home_panel` / `panel_sub` / `rules_entry_url` / `rules_back_url` / `rules_back_aria` / `rules_next`。
 - 正文：新增 `attendance/_rules.html`（crumb「‹ 考勤」+ 标题 + 两行说明 + 6 个字段行 + 保存）。业务页 `attendance/attendance_rules.html` 变成 `{% include %}` 外壳，深链与整页形态都保留。
 - 保存：`attendance_rules` 成功后 `_return_url(request)` 优先（沿用打卡已有的 host 校验），无 `next` 时仍回 `/plugins/attendance/rules/?saved=1`（既有断言不动）。面板表单带 `next=/?panel=attendance&sub=rules`，PRG 回面板并带 `saved=1`。
-- 面板内导航：`home-panels.js` 把拦截面从 `[data-home-panel]` 扩到 `[data-panel-link]`（面板里的「⚙ 考勤规则」与二级页的 crumb 返回都走它），仍是 fetch → 换 `[data-panel-body]` → 重跑 script → `pushState`，`popstate` 逻辑不变。
+- 面板内导航：`home-panels.js` 把拦截面从 `[data-home-panel]` 扩到 `[data-panel-link]`（面板里的「⚙ 考勤规则」与二级页的 crumb 返回都走它），仍是 fetch → 换 `[data-panel-body]` → 重跑 script → `pushState`，`popstate` 逻辑不变。原先「点当前面板就 `preventDefault`」的短路要加一条例外：URL 带 `sub=` 时点侧栏「考勤」必须回上一级面板（实测 `?sub=rules` → 点侧栏 → `/?panel=attendance`，同样无刷新）。
 - 样式冲突：`assistant.css` 的 `body.as-body .as-panelview a` 会把 crumb 染成链接蓝（`--ds-link`），改成 `a:not(.ds-sub__crumb)`（hover 的 underline 同样排除），实测 crumb 恢复 `rgb(129,133,140)` = `label-tertiary`，hover 变 `rgb(15,17,21)` = `label-primary`。
 
 **部门新建 = 部门页二级页**

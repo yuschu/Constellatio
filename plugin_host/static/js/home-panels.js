@@ -94,7 +94,10 @@
     var link = event.target.closest('[data-home-panel]');
     if (link) {
       var key = link.getAttribute('data-home-panel');
-      if (key === body.getAttribute('data-active-panel')) {
+      /* 同一个面板：已在二级页时（URL 带 sub=）仍要回上一级面板，
+         否则点侧栏「考勤」会什么都不发生（v2.1.2）。 */
+      var onSub = /(?:^|[?&])sub=/.test(window.location.search);
+      if (key === body.getAttribute('data-active-panel') && !onSub) {
         event.preventDefault();
         return;
       }
