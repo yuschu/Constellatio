@@ -936,4 +936,39 @@ token 映射：`label-primary-foreground → --ds-on-primary`、`bg-module-platf
 
 ---
 
-*本文不含实现代码；确认后按阶段逐个交付，每阶段单独提交与验收。*
+*本文不含实现代码；确认后按阶段逐个交付，每阶段单独提交与验收。
+### 9.13.12 v2.1.4：「需要切页的」二级页全面收口 + 修弹层提交死按钮（提交 `133c0db`）
+
+**先说一个真 bug（v2.1.3 遗留）**：设置弹层里的表单 `<form method="post">` 没写 `action`，点「创建 / 保存」时 POST 打回**宿主列表页**，而宿主视图当时只有 GET 分支 —— 服务端回 200、0 个字段错误，用户看到的就是「按钮点下去没有任何反应」。
+实测证据（`django.test.Client`）：`POST /plugins/user/users/?view=new`（空数据）→ 200 且 `ds-field__error` 计数 0；同一份数据 POST 深链 `/users/new/` → 1 个字段错误。考勤规则同理（弹层挂在首页上，POST 落到 `/`）。
+
+**修法**：不写 `action`、改成宿主视图接 POST 并就地渲染回弹层。列表页与独立深链页共用一份正文与一份校验逻辑：
+- `plugins/user/views.py`：`_render_user_list(..., edit_user=None)` 升级成「新建 / 编辑」双模式弹层；`user_list` 接 `?view=edit&id=` 与 POST 分派到 `_save_user_create` / `_save_user_edit`（helper 带 `host='list'|'page'`，失败回列表弹层或独立页）。角色同构。
+- 新模板 `user/_user_form_body.html`、`user/_role_form_body.html`（create/edit 共用，按钮文案 `{{ user_form_submit }}`）；`user_edit_page.html` / `role_edit_page.html` 为深链 inline 面板。删 `_user_create_body.html` / `_role_create_body.html` / `user_form.html` / `role_form.html`。
+- 公告：`notice_list` 接 POST 分派到 `notice_create`；审批：`approval_list` 接 POST 分派到 `approval_create`；考勤规则：抽出 `save_rules(request)`，`attendance_rules` 与首页 `home()`（`panel=attendance&sub=rules`）共用，失败把表单挂到 `request.ds_rules_form` 就地回显。
+
+**本轮铺开的二级页（全部设置面板形态，单分区 → 不列 188px 左栏、内容与按钮居中）**
+
+| 页面 | 形态 | 地址口径 |
+|---|---|---|
+| 用户管理 / 角色管理 | 列表页 + 列表页上的弹层（新建 / 编辑同壳） | `?view=new`、`?view=edit&id=N` |
+| 个人中心 | inline 面板 + 面板上三个弹层（编辑资料 / 查看权限 / 修改密码） | `?view=edit`、`?view=perms`、`?view=password` |
+| 公告「已读人员」 | 公告列表 + 弹层（`data-ds-subpage-static`，不跟地址栏同步） | `/notice/<pk>/readers/` |
+| 组织架构「用户资料」 | 组织架构页 + 弹层（`_overview_context` 抽出复用；`user_detail.html` 删除） | `/structure/user/<id>/` |
+| 审批详情 | inline 面板（wide 720；申请信息 / 流转 / 抄送 / 会签 / 操作五段，操作按钮居中） | `/approval/<id>/` |
+| 留痕单条详情 | inline 面板（wide 720，哈希等宽可断行） | `/blockchain/<id>/` |
+| 公告发布 / 审批发起 / 模板架构 / 新建用户 / 新建角色 | 沿用 v2.1.3 | 不变 |
+
+**机制补丁**
+- `searchHas()` 只取第一组键值（`view=edit&id=7` 原先把 `edit&id=7` 整串拿去比值，编辑弹层永远匹配不上、会被 `sync()` 立刻关掉）。
+- `ds_settings_modal.html` 新增 `sp_static`（`data-ds-subpage-static`）：自带地址页的弹层（已读人员、用户资料）由服务端决定开合，`sync()` 跳过它们；✕ / 遮罩 / Escape 关闭照旧。
+
+**真机几何（1440×900，本地 `:8011`，`.tmp-test/screens-v4/`，12 条路由）**
+- 个人中心 / 编辑资料 / 权限 / 密码 / 深链编辑页：面板 `800×800`（x=460, y=32）、正文列 `560`、`actions` `560×36` 且 `justify-content=center`、`navRendered=false`。
+- 审批详情 `#243`：面板 `800×800`、正文列 `720`、16 行设置行、无左栏。
+- 留痕 `#3488`：面板 `800×800`、正文列 `720`、底部按钮居中（`811,682,98,36`）。
+- 用户编辑弹层（`?view=edit&id=7`）：遮罩铺满、面板居中、标题「编辑用户：张总」、`gm_zhang` 回填；组织架构用户资料弹层同样服务端即开。
+
+**回归**：全量 `venv/run_tests_shim.py` **511 tests OK**（116s）、`ruff check plugins plugin_host` 全绿；`plugins/structure/tests.py` 的 `基本信息` 断言随行布局改成 `直属上级`（同一覆盖点）。
+
+**仍未收口（需拍板）**：`attendance:attendance_records`（286 行：6 项筛选 + 4 张统计卡 + 月度看板 + 明细表 + 补卡登记）、`attendance:attendance_stats`、`attendance:attendance_makeup` 三个**数据看板页**。它们没有父列表页，且正文是表格/图表而非设置项：塞进 `720` 正文列会显著压缩表格可读宽度。两种取法：①保持业务页（已按 §9.13.8 用 DSH 原语，仅统一表头/卡片密度）；②也套 `800×800` 面板（形态完全一致，但明细表只能用 720 宽 + 内部滚动）。等确认后再动。*

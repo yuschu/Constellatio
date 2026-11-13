@@ -399,7 +399,9 @@
       var eq = query.indexOf('=');
       if (eq < 0) return false;
       var key = query.slice(0, eq);
-      var value = query.slice(eq + 1);
+      // 只认第一组键值：地址里可能带着别的参数（如 view=edit&id=7），
+      // 不能把 "edit&id=7" 整串拿去比值，否则弹层永远匹配不上。
+      var value = query.slice(eq + 1).split('&')[0];
       var params = new URLSearchParams(window.location.search);
       return params.get(key) === value;
     }
