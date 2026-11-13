@@ -999,3 +999,13 @@ token 映射：`label-primary-foreground → --ds-on-primary`、`bg-module-platf
 - plugins/blockchain/templates/blockchain/blockchain_list.html 回退到 7303c67^ 版本：h2 标题左、共 N 条 徽标右，完整性卡片 + 留痕统计卡片 + 明细表格直排（页宽由业务页 920 列统一收窄）。
 - 顺手一处：时间窗口 标签加 	ext-nowrap——920 列下原来被挤成"时间/窗口"两行。
 - 「查看」单条（/plugins/blockchain/<id>/）保持设置面板形节：ds-settings--inline ds-settings--single + sp_stack="wide" 720 + 返回留痕链。
+
+### 9.13.15 部门「修改」并入设置二级页（v2.1.5）
+
+用户口径：「部门的修改做成二级页」。v2.1.2 只把「新建」做成了弹层，行内「修改」仍是 POST 回列表后在右侧 col-lg-4 展开一张常驻编辑卡片——同一页面里两套表单形态。
+
+- 视图：`_render_department_page(request, form=None, edit_dept=None, error='', form_open=False)` 升级 create/edit 双模式，产出 dept_form_mode / dept_form_title / dept_form_query / dept_form_url / dept_form_submit；department_list 接 `?view=edit&id=<pk>` 与 POST 分派到 `_save_department_create` / `_save_department_edit`（失败就地渲染回弹层，带上 edit 实例与错误）。
+- 模板：新增 user/_department_form.html（共享外壳 includes/ds_settings_modal.html，弹层 id ds-dept-form，sp_query=dept_form_query）与 user/_department_form_body.html（创建/修改共用正文，隐藏 action 随模式切 create/edit）；git rm 掉 _department_new.html / _department_new_body.html；department_list.html 行内「修改」改成 data-ds-modal-open="ds-dept-form" 的链接，右侧常驻编辑卡片整块删除。
+- 测试：DepartmentFormPageTests 断言点搬到 ds-dept-form，并补 3 条（编辑深链开弹层且不渲染 col-lg-4、编辑 POST 成功改名并 302、编辑校验失败保持弹层打开且原名不变）。
+
+门禁：全量 514 tests OK（117s）、ruff All checks passed；容器重建后 `?view=edit&id=` 实拍弹层正常（.tmp-test/screens-v6/container/dept-edit.png）。
