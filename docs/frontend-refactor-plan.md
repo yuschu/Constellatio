@@ -1038,3 +1038,24 @@ token 映射：`label-primary-foreground → --ds-on-primary`、`bg-module-platf
 顺手修掉同处一个真 bug：那段说明写成多行 `{# … #}`，而 Django 的 `{# #}` **只支持单行**，多行会原样输出到页面（截图里能看到裸文本）。已压成单行，并加 `assertNotIn('{#', html)` 钉住。
 
 测试：`test_row_edit_link_is_deep_link_not_modal_opener` —— 列表页里带 `?view=edit&amp;id=` 的那个 `<a>` 不许出现 `data-ds-modal-open`、列表页预渲染弹层只能是 `action=create`、渲染结果里不许出现 `{#`。真机探针 `.tmp-test/dept-edit-probe.mjs`：点「修改」后 `?view=edit&id=`、标题「修改部门：总裁办/财务部」、`action=edit`、输入框带原名、按钮「保存修改」；点「新建」仍是「新建部门 / create」。全量 516 tests OK。
+
+#### 9.13.17 「留痕链」改名「活动记录」（v2.1.6）
+
+用户口径：「留痕链改名为活动记录」。这是**纯命名**改动，内部标识一律不动：插件名仍是 `blockchain`、模型仍是 `blockchain_record`、URL 仍是 `/plugins/blockchain/`、权限仍是 `blockchain_view` / `blockchain_verify`、动作键仍是 `approval_finished` 这类机器键。改的只是人看到的那层字。
+
+改动点（grep 出的全部用户可见文案）：
+- 菜单 label：`plugins/blockchain/apps.py` `menus` 的 `_('留痕链')` → `_('活动记录')`（侧栏、首页「更多」、插件页卡片都吃这一个字符串）。
+- 插件 title：同文件 `PluginMeta(title=_('操作留痕链'))` → `_('活动记录')`（记录列表「插件」列的展示名走它）。
+- 列表页：`blockchain_list.html` 的 `<title>` 与 `<h2>`（原「操作留痕」/「操作留痕链」）→「活动记录」。
+- 详情页：`blockchain_detail.html` 的 `<title>` 与面板标题（`活动记录 #{{ id }}`），`_record_body.html` 底部按钮「返回留痕链」→「返回活动记录」。
+- 统计卡片口径随模块名统一：`留痕统计` → `活动统计`、`暂无留痕记录（业务操作会自动上链）` → `暂无活动记录（…）`、`该时间范围内暂无留痕记录` → `该时间范围内暂无活动记录`、`与留痕记录同源` → `与活动记录同源`，charts 插件开关的说明文案同步（「考勤 / 留痕统计图表」→「考勤 / 活动统计图表」）。链完整性相关的「链完整性」「前链哈希」等仍保留链的表述。
+
+翻译：`locale/en/LC_MESSAGES/django.po` 里 `留痕链` 条目改成 `活动记录 / Activity log`，删掉重复的 `操作留痕链` 条目，新增 `返回活动记录 / Back to activity log` 与 `活动记录 #%(id)s / Activity log #%(id)s`（详情页 blocktranslate）。统计卡片那几条 msgid 一并改名并同步 msgstr（`Activity statistics` 等）。
+
+**一个构建链路上的坑（本轮实测发现，未修）**：`.gitignore` 里有 `*.mo`，仓库只存 `.po`；`Dockerfile` / `entrypoint.sh` 都不跑 `compilemessages`，本机也没有 gettext（`msgfmt` / `msguniq` 均不存在）、venv 里没有 babel / polib。也就是说 **`.mo` 既不在版本库、也不在构建期生成**，容器里的 `django.mo` 是靠 Dockerfile 把工作区（含本地 `.mo`）整体拷进镜像带过去的 —— 换台机器 fresh clone 再 build，英文界面会整体回落成中文。本轮为解决这个问题写了个 50 行的纯 Python PO→MO 编译器 `.tmp-test/po2mo.py`（项目外临时物，未入库）：解析 msgid/msgstr + 续行，按 GNU MO 格式重排写出，再用 `gettext.GNUTranslations` 读回校验。若要根治，应把 `.mo` 纳入构建（镜像里装 gettext 并在 `entrypoint.sh` 跑 `manage.py compilemessages -l en`，或把生成好的 `.mo` 收进版本库）。
+
+门禁：新增 `test_menu_label_and_page_title_are_activity_log`（菜单 label 是「活动记录」且不再是「留痕链」、列表页 h2/title、详情返回按钮、三处都不得再出现「留痕链」）与 `test_activity_log_is_translated`（英文列表 `Activity log`、详情 `Activity log #` 与 `Back to activity log`）；`plugin_host/tests_rbac.py` 的菜单守卫断言同步改成断言首页不含「活动记录」。全量 518 tests OK，ruff 通过。
+
+真机（本地 8011 + 容器 8000 各一遍）：侧栏菜单「活动记录」、`<title>` = `活动记录 · Constellatio`、h2 = 活动记录、统计卡 = 活动统计、列表页全文不含「留痕链」；点「查看」进详情，面板标题「活动记录 #3489」、底部「返回活动记录」；切英文为 `Activity log` / `Activity log #` / `Back to activity log`。容器 `django.mo` md5 与本地一致（`425c80fb…`），`blockchain_detail.html` md5 一致（`c63efa7d…`）。
+
+docs 里的 `留痕链` 未回改：`docs/thesis/**`、`plugin-dev-*.md`、`roadmap.md`、`database-design.md` 等是版本史与交付记录，改写历史叙述会让「当时叫什么」失真；本文档从 9.13.17 起用新名字，历史小节保持原样。

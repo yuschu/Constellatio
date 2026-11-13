@@ -74,7 +74,7 @@ class BlockchainTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, record.record_hash)
         self.assertContains(response, record.prev_hash)
-        self.assertContains(response, '操作记录')
+        self.assertContains(response, '活动记录 #')
 
     def test_menu_label_and_page_title_are_activity_log(self):
         """v2.1.6 改名：菜单 label / 插件 title / 列表页 h2 / 详情返回按钮统一叫「活动记录」。"""
@@ -101,6 +101,11 @@ class BlockchainTest(TestCase):
         self.client.cookies['django_language'] = 'en'
         response = self.client.get('/plugins/blockchain/')
         self.assertContains(response, 'Activity log')
+        record = BlockchainRecord.append(
+            'notice', 'notice_published', 'a:3', operator=self.user)
+        detail = self.client.get(f'/plugins/blockchain/{record.id}/')
+        self.assertContains(detail, 'Activity log #')
+        self.assertContains(detail, 'Back to activity log')
 
     def test_plugin_and_action_labels_follow_language(self):
         self.client.force_login(self.user)

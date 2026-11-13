@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% load i18n %}
-{% block title %}{% trans "操作记录" %} · Constellatio{% endblock %}
+{% block title %}{% trans "活动记录" %} · Constellatio{% endblock %}
 {% block content %}
-{% blocktranslate with id=record.id asvar sp_title_text %}操作记录 #{{ id }}{% endblocktranslate %}
+{% blocktranslate with id=record.id asvar sp_title_text %}活动记录 #{{ id }}{% endblocktranslate %}
 {% comment %}
 单条活动记录详情：不再是另一套整页 —— 换成和设置页同一块面板（inline，无遮罩、单分区、
 内容居中），宽度用 wide（哈希串要横向空间），右上角是返回活动记录的箭头。

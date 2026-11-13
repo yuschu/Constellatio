@@ -106,6 +106,9 @@ msgstr "Attendance"
 msgid "活动记录"
 msgstr "Activity log"
 
+msgid "活动记录 #%(id)s"
+msgstr "Activity log #%(id)s"
+
 msgid "组织架构"
 msgstr "Organization"
 
