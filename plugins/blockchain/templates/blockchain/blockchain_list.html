@@ -2,19 +2,8 @@
 {% load i18n %}
 {% block title %}{% trans "操作留痕" %} · Constellatio{% endblock %}
 {% block content %}
-{% comment %}
-v2.1.3：留痕链的「查看」页改成 DSH 设置页形态（单分区 → 不渲染左侧 188px
-分区列，正文列 720 居中）。本页没有父列表页，所以是无遮罩的 inline 面板
-（右上角没有 ✕，「查看」单条仍跳转 record_detail）。
-{% endcomment %}
-<div class="ds-settings ds-settings--inline ds-settings--single">
-  <div class="ds-settings__panel" tabindex="-1">
-    <h2 class="ds-settings__title">{% trans "操作留痕链" %}</h2>
-    <div class="ds-settings__header"></div>
-    <div class="ds-settings__options" tabindex="0">
-      <div class="ds-settings__stack ds-settings__stack--wide">
-
-<div class="d-flex justify-content-end mb-3">
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">{% trans "操作留痕链" %}</h2>
   <span class="r-badge">{% blocktranslate with count=total %}共 {{ count }} 条{% endblocktranslate %}</span>
 </div>
 <div class="r-card mb-4 position-relative">
@@ -30,7 +19,7 @@ v2.1.3：留痕链的「查看」页改成 DSH 设置页形态（单分区 → �
     <h3 class="fs-5 mb-0">{% trans "留痕统计" %}</h3>
     {% if chart %}
     <div class="d-flex align-items-center gap-2">
-      <label class="form-label mb-0" for="chart_days">{% trans "时间窗口" %}</label>
+      <label class="form-label mb-0 text-nowrap" for="chart_days">{% trans "时间窗口" %}</label>
       <select class="r-input" id="chart_days">
         <option value="7">{% trans "近 7 天" %}</option>
         <option value="30" selected>{% trans "近 30 天" %}</option>
@@ -178,8 +167,4 @@ v2.1.3：留痕链的「查看」页改成 DSH 设置页形态（单分区 → �
 })();
 </script>
 {% endif %}
-      </div>
-    </div>
-  </div>
-</div>
 {% endblock %}
