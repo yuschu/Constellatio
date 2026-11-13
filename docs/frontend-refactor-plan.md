@@ -615,6 +615,85 @@ v2.0.0 起 `/` 已被 assistant 接管成对话首页，于是这条「工作台
 | 冷导航首帧 | 有元素的第一帧就是 `56|true`，不再有 `280` 中间态 |
 | 会话键 | `sessionStorage['constellatio.rail-collapsed']` 随点击在 `1 / 0` 之间切换 |
 
+## 9.12 侧栏「助手」→「考勤」+ 看板移植 dsh-context（v2.0.11）
+
+两处改动：① 侧栏顶部第一格由「助手」换成「考勤」（「+ 新会话」本身就是助手入口，再单列一条指回 `/` 只是重复入口）；② `/dashboard/` 的版式整体换成 [dsh-context](https://github.com/bowenliang123/dsh-context) 的 Context Dashboard（Apache-2.0，源码已克隆到 `.tmp-test/dsh-context`，只取版式与字面量，不引它的构建链）。
+
+### 9.12.1 侧栏第一格：助手 → 考勤
+
+| 落点 | 做法 |
+|---|---|
+| `plugins/assistant/apps.py` | `menus` 只剩「看板」一条（`order 3`），删掉 `{'label': _('助手'), 'icon': '✦', 'url': '/', 'order': 1}`；注释写明「首页入口就是侧栏顶部的『+ 新会话』」 |
+| `plugins/assistant/views.py` | `PRIMARY_MENU_URLS` 首项 `/` → `/plugins/attendance/`（顺序：考勤 → 插件 → 看板）；`COMMON_MENU_URLS` 去掉 `/plugins/attendance/`（考勤已在固定入口，不在「更多」里重复），剩待我审批 / 抄送我的 / 审批中心 / 公告中心 / 消息中心五项 |
+| `plugins/assistant/templates/assistant/home_chat.html` | 图标分支由 `{% if menu.url == '/' %}`（星形）改为 `{% if menu.url == '/plugins/attendance/' %}`（日历 + 勾：`rect rx=1.5` + `M2.25 6.5h11.5` + 两条装订线 + `M5.6 10.2l1.55 1.55 3.1-3.1`），其余 `workspace` / `else` 分支不变 |
+| `plugin_host/tests_assistant_home.py` | `test_duplicate_home_menu_highlights_only_first` → `test_primary_panel_starts_with_attendance`（断言 primary 顺序 = 考勤 → 看板、`as-panel is-active` 计数 0、`common_menus` 不含考勤）；`test_sidebar_caps_entries_and_hides_rest_in_drawer` 的 `len(primary_menus)==2` 保留并改注释（普通账号 2 条：考勤 / 看板；「插件」入口要 `workspace_manage`） |
+| `plugin_host/tests_registry.py` | `test_menu_order_assistant_plugin_dashboard` → `test_menu_order_plugin_dashboard_attendance`（`get_menus` 注册序 = 插件 2 → 看板 3 → 考勤 4，并断言 `/` 已不在菜单里） |
+
+事实口径：普通账号 `primary_menus = ['/plugins/attendance/', '/dashboard/']`（2 条），管理员 3 条 + 「更多」。首页已无指向 `/` 的菜单，`as-panel is-active` 计数为 0。
+
+### 9.12.2 看板：dsh-context 的版式（源码真值）
+
+| 来源 | 事实 |
+|---|---|
+| `src/client/styles/overview.css:1-21` | `lc-ov-page`（整屏面板）→ `pagescroll` → `pagecontent{padding:0 10px 10px}`；`page .lc-card{padding:10px 12px}`；`pagehead{padding-top:28px;margin-bottom:24px}`；`pagetitle{20px/28px/500;margin:0 8px 0 0}` + `settings` 胶囊 + `headctl`；`first{repeat(2,minmax(0,1fr));gap:10px;margin-bottom:10px}` |
+| `:24-26` | `kpis{repeat(3,minmax(0,1fr));gap:8px}`、`kpi{align-items:center;padding:8px}`、`kpi .lc-stat-value{font-size:20px}` |
+| `:35-60` | `usage-plot{--lc-ov-usage-axis-top-inset:13px; grid-template-columns:42px minmax(0,1fr) 42px; grid-template-rows:minmax(56px,1fr) auto; gap:6}`；柱 `width:10px;border-radius:3px 3px 0 0`；左侧 `tokens` 蓝 72%、右侧 `cost` 绿 72%；`@container lc-ov (max-width:400px)` 只留奇数日并隐藏数值 |
+| `:62-79` | `stats{repeat(2,...);gap:10px;margin-bottom:10px}`、`@container (max-width:700px)` 降单列；`tiles{repeat(4,...)}`、`tile{height:280px;overflow:hidden}` + `tile-body{overflow-y:auto}`、`@640 两列`、`@560 单列` |
+| `:82-122` | 热力 `cell 20×20;border-radius:20%`、`lc-heat-0..4` 用 `color-mix` 16/28/50/72/92%、legend `10×10`；`tally` 隔行 stripe + `dot 7px` + `name mono 11px` + `bar 2px/opacity .45` |
+| `src/client/styles/base.css:22-32` | `lc-card{radius 10px;padding 14px 16px}`（浅色 `radius 12px`）；`lc-card-title`，浅色下加 `padding-bottom:7px;margin-bottom:9px;border-bottom:.5px` |
+| `src/client/styles/stats.css:1-31` | `lc-stat{background:bg-layer-2;border:1px solid border-l2;radius 8px;padding:6px}`；`lc-donut-track{stroke:color-mix(neutral-500 18%)}`；中心 `b`/`span` 两级 |
+| `src/client/components/overviewUsage.tsx` | `TICKS=[0,25,50,75,100]`；`heightOf=max(4, round(v/max*100))`；每列两根 `lc-ov-usage-bar`；日期取 `key.slice(5)` |
+| `src/client/components/donut.tsx` | `viewBox 0 0 42 42`、`r=15.9155`（周长 100）、`stroke=4`、`dasharray="${len} ${100-len}"`、`offset=100-acc+25`、`cut=min(0.5/2, len/4)` |
+| `src/client/components/heatmap.tsx` | 8 周 × 7 天、`sundayOfWeek` 回溯 `7*(weeks-1)`、`levelOf` 阈值 0.25/0.5/0.75、周标签只标一/三/五、月标签只在 `wi===0 || 跨月 || 日===01` 显示 |
+| 色板 | `categories.ts` 里**没有** `RING_COLOR`（grep 0 命中），本项目改用主题状态色 `--ds-state-business/success/warn/done/error` 作 5 色阶 |
+
+### 9.12.3 数据契约（后端新增，前端只吃结构）
+
+`plugin_host/workbench.py` 新增两段与 `range` 无关的序列（`build_dashboard` 返回值加 `insight`）：
+
+| 键 | 内容 |
+|---|---|
+| `insight.usage7` | 近 7 天 `submitted / finished / submitted_height / finished_height`，`_height(v, peak) = 0 if v<=0 else max(4, round(v*100/peak))` |
+| `insight.usage7_ticks` | `percent ∈ {0,25,50,75,100}`、`top = 100-percent`，左右 rail 各带自己的 max 刻度 |
+| `insight.heat_cols` | 8 周 × 7 天，列带 `month` 标签，`future` 空格，`level` 按 `ratio<=0.25→1 / <=0.5→2 / <=0.75→3 / else 4`；`heat_weeks` 7 行只标一/三/五 |
+| `insight.composition` | `_composition_of(flow)`：五类计数折环形段，`cut=min(0.25, len/4)`、`length-=2*cut`、`offset-=cut`、每段补 `rest`、段色 `tone=1..5` |
+| `dept.max` | `max(headcount)`，供模板 `widthratio` |
+
+OA 口径映射（DSH 是「按会话自身各请求时间归属」，本项目按单据的 `created_at` 归属）：
+
+| DSH 指标 | 本项目口径 |
+|---|---|
+| 用量双柱（tokens / cost） | 每日「提交」= `Approval.created_at` 计数；「已办结」= 同批创建里 `status in ('approved','rejected')`；员工按 `applicant=user` 过滤 |
+| 活跃度热力（sessions） | 管理员 = `Attendance` 当日 `Count('user', distinct=True)`；员工 = 本人当日有记录记 1（单位人天） |
+| 环形（任务分布） | 五类单据计数（请假 / 报销 / 用章 / 外出 / 加班…），空态画 `lc-donut-track` 底圆 |
+
+全部 `apps.get_model` 取模型 + `except (OperationalError, ProgrammingError)` → `_degraded('insight.approval')` / `_degraded('insight.attendance')`，插件关掉时看板不 500。
+
+### 9.12.4 版式落点
+
+| 落点 | 做法 |
+|---|---|
+| `plugin_host/templates/home_dashboard.html` | 全文重写（约 460 行，**无内联脚本**，原 echarts 段与 7 个 `wb-chart-*` 全删）：`lc-ov-page > lc-ov-pagecontent > lc-ov-pagehead`（h1 + 角色胶囊 + `.lc-gran` 范围切换）→ `.lc-ov-first`（5 张 KPI + 用量双柱卡）→ `.lc-ov-stats`（单据构成环形 + 类型/数量/占比 tally、部门概况 bar）→ `.lc-ov-tiles`（活跃度热力、单据类型、部门签到、流程快捷发起）→ 管理员「插件运维与组织数据」三卡 → 业务入口 / 公告简报 / 我的消息三个 `lc-ov-list` |
+| `plugin_host/views.py` | `messages_preview` 提为变量，新增 `unread_count`（`is_read` 为假的条数）进上下文，供「未读消息」KPI 与消息卡角标 |
+| `themes/*/templates/home.html`（corporate-clean / risograph 各 3 行） | 只留 `{% block content %}{% include "home_dashboard.html" %}{% endblock %}`，去掉 `r-hero` 二层标题（标题 / 角色 / 范围都在 pagehead 里，重复一层就是 DSH 没有的东西） |
+| `themes/corporate-clean/static/.../corporate-clean.css` **第 26 节**（约 +900 行） | 新 token `--lc-blue/--lc-green/--lc-canvas/--lc-control-track/--lc-list-stripe/--lc-tone-1..5`（映射到 `--ds-state-*`）；照抄 DSH 的 `.lc-card` / `.lc-card-title` / `.lc-ov-page`（`container: lc-ov`）/ pagehead / pagetitle / settings 胶囊 / `.lc-gran` / kpis / kpi / usage plot / stats / tiles / 热力全套 / tally / grid / session / donut / 色阶 / 容器查询（932 / 700 / 640 / 560 / 400px 与 `640<w<=1020` 隐藏周标签）；`risograph.css` 仅 `@import` 同一份，不复制 |
+
+### 9.12.5 两处与 DSH 有意不同（都写进 CSS 注释）
+
+1. **`.lc-ov-page` 不锁高**：DSH 是整屏面板（`height:100%;overflow:hidden` + 内层 pagescroll），本项目的看板在文档流里滚，故放开 `height:auto` / 不裁切；视觉参数（padding / gap / 字号 / 圆角 / color-mix 比例）一个没改。
+2. **`.lc-ov-stats` 加 `align-items:start`**：DSH 两栏等高是因为两张卡都满；本项目环形可能空、部门可能十行，等高会把空卡拉成一整片白。部门概况卡另按 `slice:":6"` 只列前 6 个部门，末尾补一行「共 N 个部门，全部见『部门签到』」。
+
+### 9.12.6 门禁 + 真机实测
+
+| 项 | 结果 |
+|---|---|
+| `manage.py test plugin_host.tests_home plugin_host.tests_assistant_home plugin_host.tests_registry` | 53 tests OK |
+| 全量 `venv/run_tests_shim.py` | 498 tests OK |
+| `ruff check plugin_host plugins` | All checks passed |
+| 结构计数（`/dashboard/`，headless Chrome CDP） | `hasPage=true`、`pageW 1118`（侧栏展开）、KPI 5、tiles 4、业务卡 14、环形段 5、热力格 61（56 格 + 5 图例）、双柱 14 根 |
+| 首页侧栏 | `primary = ["考勤","插件","看板","更多"]`，`hasPage=false`（首页本就不是看板） |
+| 深浅两态 | `.tmp-test/screens-dash/dash-light.png`、`dash-dark.png` 均通过：深色画布 `--ds-bg-base`、卡片 `bg-layer-2`、热力阶与浅色同比例 |
+
 ---
 
 *本文不含实现代码；确认后按阶段逐个交付，每阶段单独提交与验收。*
