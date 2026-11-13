@@ -1235,6 +1235,36 @@ input:focus-visible{outline:1px solid state-business;outline-offset:2px}
 
 **没跟着藏的（记账）**：看板「插件分布」那张卡的预览行仍会列出停用插件的**历史留痕条数**（`workbench.build_dashboard` 的 pie 是 `BlockchainRecord.values('plugin')` 分组，只按 `blockchain` 自身启停判定）。那是统计口径不是入口、点点不进去，本版不动；要改就把 pie 也按 `enabled_names` 过滤，但那会让停用插件的留痕记录在统计里「凭空消失」，数据口径得单独拍板。
 
+### 9.13.24 组织架构「当前角色」浮层移植 DSH Modal（v2.1.8）
+
+**用户口径**：「组织架构的当前角色的浮层移植dsh风格」。
+
+**移植前的样子**：`plugins/structure/templates/structure/overview.html` 里那张「当前角色」卡片，点任一行 → 老 Bootstrap 的 `.modal fade`（`#roleModal`，`modal-dialog-centered modal-dialog-scrollable` + `btn-close`），另配一段自己写死的 `#roleModal .modal-dialog{transform:translateY(14px) scale(.96)}` 缩放淡入，成员行是 `d-flex + border-bottom + py-2`，靠 `new bootstrap.Modal(...).show()` 弹。
+
+**移植后的样子**（外壳复用第 32 节那套已经按字面量对齐过的 DSH Modal，只管内容）
+- 壳：`.ds-modal` / `__mask` / `__dialog`（380 宽、`--ds-radius-panel` 圆角、`--ds-bg-layer-2` 底、`calc(100dvh - 48px)` 上限）/ `__content` / `__header` / `__title` 16-500 / `__close` 28×28 / `__footer`。**删掉位移与缩放**——DSH 的 Modal 只有 `ds-modal-enter` 的淡入（`_14mp3_*` 里没有 translate/scale）。
+- 内容：标题 = 角色名，`共 N 人` 一行走 12 / `--ds-label-secondary`，成员清单按 DSH 设置项（`_WvWnq_section` + `settings.general.item`）的节奏：行内 12px、行间 `--ds-hairline` 的 border-l2、**末行不画线**；姓名 13/500 `label-primary`，账号与部门 12 `label-secondary`（1.6 行高，和第 33 节的 help 行同一档）；行是链接，所以给 `--ds-interactive-hover` 的 hover 面，并把 12px 内缩外扩到 24px 容器内边距里，让 hover 面比文字宽一圈。
+- 交互自管（不再依赖 `bootstrap.Modal`，这一页已经没有任何 bootstrap 用法）：Esc / 遮罩 / ✕ / 「关闭」四路都能退，关闭后 `body.ds-modal-open` 解锁、焦点回原来的角色卡；打开时焦点给 dialog。
+
+**踩到一个真 bug（量出来的，不是猜的）**：第一版壳改成 `.ds-modal` 后，弹窗只遮住了正文列。量遮罩矩形 `left=260 width=920`，视口 1440 —— 根因是第 33 节那条业务页 920 紧凑居中规则：
+
+```css
+.ds-main__body--column > :not(.ds-settings) { width: min(920px, 100%); margin-inline: auto; }
+```
+
+它是「直接子元素一律 920 居中」，`position: fixed` 的弹层也是直接子元素，被套成 920 宽 + 左右 auto 外边距，于是 `inset:0` 只覆盖那 920。修法是把弹层排除出去：`> :not(.ds-settings, .ds-modal)`。改完遮罩回到整屏（0..1440），弹窗仍居中。
+
+**实测（本地 8011，admin，1440×900）**
+- 浮层：380 宽、213 高、中心 (720, 450)，也就是视口正中；单成员行高 52；不滚。
+- 造 24 行：面板撑到 **852**（= 100dvh - 48），内容 1357 在 `__content` 内滚，`__footer` 的「关闭」仍停在面板底部可见。
+- 空态：文案回落到 `该角色暂无成员`。
+- 退出三路都对：Esc 关后 `body` 解锁、焦点回 `[data-role-index]`；遮罩点击关；✕/关闭同路。
+- 深色：面板底 `rgb(44, 44, 46)`、关闭按钮反白，与第 32 节确认弹窗一致。
+- 截图 `.tmp-test/screens-v14/role-layer-light.png`（单成员）、`role-layer-long.png`（24 行）、`role-layer-dark.png`、`role-layer-empty.png`、`role-layer-closed.png`。
+
+**测试**：`plugins/structure/tests.py` 里三条 Bootstrap 断言（`modal-dialog-centered`、`#roleModal .modal-dialog`）换成 DSH 断言（`ds-modal__dialog`、`ds-role-members`，并断言不再出现 `modal-dialog-centered` 与 `data-bs-dismiss`）。
+
+
 
 **容器**：`docker compose up -d --build web` 重建，7 个文件 MD5 与本地逐一对齐（`plugins/attendance/apps.py 919dcb73acbbd889ebb0fc15dbc51123`、`plugins/notify/apps.py a3a3a1f1d78c2e0fcffb6d747990618d`、`plugins/assistant/views.py 072ff362754bf585fc30b4806b082138`、`attendance/_panel.html 7113de7a274b68cf992dde6857f94fcf`、`base.html f5b25bb1fe925baf5f63cf2a8b1e7974`、`home_chat.html 5e89ecb38d10bd1f489f0a38f2c4b133`、`ds-shell.js 5a1f7d146380ad337feb0dd66e87aec1`），`GET /plugins/auth/login/?next=/` 200。同一支探针在容器 8000 上复跑，数值与本地逐条一致：业务页侧栏同样 10 项、首页侧栏同样 9 项（考勤 / 插件 / 看板 + 更多六项），考勤 ⚙ 原地开「考勤规则」852 高、关闭回 `/plugins/attendance/`；账号菜单「消息」原地开「消息中心」296 高，点列表那条 → 原地换「审批详情 #106」（663 高），`__noReload` 仍存活，关闭回 `/plugins/user/departments/`。截图 `.tmp-test/screens-v13/container/`。
 

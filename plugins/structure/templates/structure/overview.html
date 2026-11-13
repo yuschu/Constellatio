@@ -88,46 +88,65 @@
   </div>
 </div>
 
-<div class="modal fade" id="roleModal" tabindex="-1" aria-labelledby="roleModalLabel" aria-hidden="true"
+{# v2.1.8：角色成员浮层改成 DSH Modal 原语（样式见 corporate-clean.css 第 32 节），默认隐藏，点角色行才浮出 #}
+<div class="ds-modal" id="roleModal" hidden aria-labelledby="roleModalLabel"
      data-empty="{% trans '该角色暂无成员' %}" data-disabled="{% trans '停用' %}">
-  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="roleModalLabel">{% trans "角色成员" %}</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans '关闭' %}"></button>
+  <div class="ds-modal__mask" data-ds-role-dismiss></div>
+  <div class="ds-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="roleModalLabel" tabindex="-1">
+    <div class="ds-modal__content">
+      <div class="ds-modal__header">
+        <h2 class="ds-modal__title" id="roleModalLabel">{% trans "角色成员" %}</h2>
+        <button type="button" class="ds-modal__close" data-ds-role-dismiss aria-label="{% trans '关闭' %}">✕</button>
       </div>
-      <div class="modal-body">
-        {% blocktranslate asvar member_tpl %}共 {count} 人{% endblocktranslate %}
-        <p class="text-muted mb-2" style="font-size:.8rem;" id="roleModalMeta" data-template="{{ member_tpl }}"></p>
-        <ul class="list-unstyled mb-0" id="roleModalList"></ul>
-      </div>
+      {% blocktranslate asvar member_tpl %}共 {count} 人{% endblocktranslate %}
+      <p class="ds-role-members__meta" id="roleModalMeta" data-template="{{ member_tpl }}"></p>
+      <ul class="ds-role-members" id="roleModalList"></ul>
+    </div>
+    <div class="ds-modal__footer">
+      <button type="button" class="r-btn" data-ds-role-dismiss data-modal-autofocus>{% trans "关闭" %}</button>
     </div>
   </div>
 </div>
-<style>
-  /* v1.5.13：角色弹窗居中 + 浮出（缩放淡入）动画 */
-  #roleModal .modal-dialog {
-    transform: translateY(14px) scale(.96);
-    opacity: 0;
-    transition: transform .18s ease, opacity .18s ease;
-  }
-  #roleModal.show .modal-dialog { transform: none; opacity: 1; }
-  @media (prefers-reduced-motion: reduce) {
-    #roleModal .modal-dialog { transition: none; transform: none; opacity: 1; }
-  }
-</style>
 {{ role_rows|json_script:"role-members" }}
 <script nonce="{{ request.csp_nonce }}">
   document.addEventListener('DOMContentLoaded', function () {
-    if (!window.bootstrap) { return; }
     var dataEl = document.getElementById('role-members');
-    if (!dataEl) { return; }
-    var data = JSON.parse(dataEl.textContent);
     var modalEl = document.getElementById('roleModal');
-    var modal = new bootstrap.Modal(modalEl);
+    if (!dataEl || !modalEl) { return; }
+    var data = JSON.parse(dataEl.textContent);
+    var dialog = modalEl.querySelector('.ds-modal__dialog');
     var title = document.getElementById('roleModalLabel');
     var meta = document.getElementById('roleModalMeta');
     var list = document.getElementById('roleModalList');
+    var lastFocused = null;
+
+    function closeModal() {
+      if (modalEl.hasAttribute('hidden')) { return; }
+      modalEl.setAttribute('hidden', '');
+      document.body.classList.remove('ds-modal-open');
+      if (lastFocused && lastFocused.focus) { lastFocused.focus(); }
+      lastFocused = null;
+    }
+
+    function openModal(btn) {
+      lastFocused = btn;
+      modalEl.removeAttribute('hidden');
+      document.body.classList.add('ds-modal-open');
+      dialog.focus();
+    }
+
+    modalEl.addEventListener('click', function (event) {
+      if (event.target.hasAttribute && event.target.hasAttribute('data-ds-role-dismiss')) {
+        closeModal();
+      }
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && !modalEl.hasAttribute('hidden')) {
+        event.preventDefault();
+        closeModal();
+      }
+    }, true);
 
     document.querySelectorAll('[data-role-index]').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -140,15 +159,22 @@
         list.replaceChildren();
         role.members.forEach(function (member) {
           var row = document.createElement('li');
-          row.className = 'border-bottom';
+          row.className = 'ds-role-members__row';
           var link = document.createElement('a');
-          link.className = 'd-flex justify-content-between align-items-center py-2 r-offset-hover';
-          link.style.fontSize = '.85rem';
+          link.className = 'ds-role-members__link';
           link.href = member.url;
+          var main = document.createElement('span');
+          main.className = 'ds-role-members__main';
           var who = document.createElement('span');
-          who.textContent = member.name + '（' + member.account + '）';
+          who.className = 'ds-role-members__name';
+          who.textContent = member.name;
+          var account = document.createElement('span');
+          account.className = 'ds-role-members__account';
+          account.textContent = member.account;
+          main.appendChild(who);
+          main.appendChild(account);
           var side = document.createElement('span');
-          side.className = 'd-flex align-items-center gap-2 text-muted';
+          side.className = 'ds-role-members__side';
           var dept = document.createElement('span');
           dept.textContent = member.dept || '—';
           side.appendChild(dept);
@@ -158,12 +184,12 @@
             badge.textContent = modalEl.dataset.disabled;
             side.appendChild(badge);
           }
-          link.appendChild(who);
+          link.appendChild(main);
           link.appendChild(side);
           row.appendChild(link);
           list.appendChild(row);
         });
-        modal.show();
+        openModal(btn);
       });
     });
   });

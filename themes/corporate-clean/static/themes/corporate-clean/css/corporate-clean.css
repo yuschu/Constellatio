@@ -4311,7 +4311,7 @@ html:not([data-color-mode="dark"]) .lc-ov-session {
    首页（看板 / 对话）保持整屏骨架；设置面板页面（根节点就是 .ds-settings）不参与，
    它们自己已经按 800×800 / 720 正文列居中，再套一层会被挤。
    ========================================================================== */
-.ds-main__body--column > :not(.ds-settings) {
+.ds-main__body--column > :not(.ds-settings, .ds-modal) {
   width: min(920px, 100%);
   margin-inline: auto;
 }
@@ -4560,4 +4560,95 @@ html:not([data-color-mode="dark"]) .lc-ov-session {
 
 .ds-settings__state {
   line-height: 1.5;
+}
+
+/* ==========================================================================
+   第 34 节：组织架构「当前角色」浮层（v2.1.8）
+   --------------------------------------------------------------------------
+   外壳不再用 Bootstrap 的 .modal，改成第 32 节那套 DSH Modal 原语
+   （.ds-modal / __mask / __dialog 380 / __content / __header / __title /
+   __close / __footer），只是内容换成成员清单。原浮层自带的
+   「translateY(14px) scale(.96) 缩放淡入」也一并去掉——DSH 的 Modal 只有
+   `ds-modal-enter` 的淡入（index-lh_YM6sT.css 的 _14mp3 模块），没有位移与缩放。
+
+   成员行按 DSH 设置项（`_WvWnq_section` + settings.general.item）的节奏：
+   行内 padding 12px、行间 `--ds-hairline` 的 border-l2、末行不画线；
+   姓名 13/500 label-primary，账号与部门 12 label-secondary（后者 1.6 行高，
+   与第 33 节 help 行同一档）；行是链接，所以补一层 DSH 的 interaction hover，
+   并把 12px 内缩外扩到 24px 的容器内边距里，让 hover 面比文字宽一圈。
+   ========================================================================== */
+.ds-role-members {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  margin: 0;
+  padding: 0 24px;
+  list-style: none;
+}
+
+.ds-role-members__meta {
+  margin: 0;
+  padding: 0 24px;
+  color: var(--ds-label-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.ds-role-members__row {
+  border-bottom: var(--ds-hairline) solid var(--ds-border-l2);
+}
+
+.ds-role-members__row:last-child {
+  border-bottom: none;
+}
+
+.ds-role-members__link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-5);
+  margin: 0 -12px;
+  padding: var(--ds-space-4) 12px;
+  border-radius: var(--ds-radius-sm);
+  color: inherit;
+  text-decoration: none;
+  transition: background-color var(--ds-dur-fast) linear;
+}
+
+.ds-role-members__link:hover {
+  background: var(--ds-interactive-hover);
+}
+
+.ds-role-members__main {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ds-role-members__name {
+  overflow: hidden;
+  color: var(--ds-label-primary);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds-role-members__account {
+  flex: none;
+  color: var(--ds-label-caption);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.ds-role-members__side {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  color: var(--ds-label-secondary);
+  font-size: 12px;
+  line-height: 1.6;
 }

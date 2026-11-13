@@ -212,9 +212,12 @@ class StructureApplyTests(TestCase):
         self.assertContains(resp, 'max-height:min(62vh, 34rem)')
         self.assertNotContains(resp, 'max-height:min(60vh, 32rem)')
         self.assertContains(resp, 'align-items-stretch')
-        # v1.5.13：弹窗垂直居中 + 浮出动画
-        self.assertContains(resp, 'modal-dialog-centered')
-        self.assertContains(resp, '#roleModal .modal-dialog')
+        # v2.1.8：角色成员浮层改用 DSH Modal 原语（第 32 节），不再依赖 Bootstrap modal
+        self.assertContains(resp, 'class="ds-modal" id="roleModal"')
+        self.assertContains(resp, 'ds-modal__dialog')
+        self.assertContains(resp, 'ds-role-members')
+        self.assertNotContains(resp, 'modal-dialog-centered')
+        self.assertNotContains(resp, 'data-bs-dismiss')
 
     def test_single_structure_menu(self):
         """v1.5.9：组织架构与应用结构合并为单一菜单入口。"""
