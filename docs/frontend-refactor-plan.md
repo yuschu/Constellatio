@@ -865,13 +865,74 @@ token 映射：`label-primary-foreground → --ds-on-primary`、`bg-module-platf
 
 **坑（重复踩了一次）**：Django `{# … #}` 只能单行；`attendance/_panel.html` 的 div 内多行注释又被原样渲染到页面顶部，截图才发现。多行一律 `{% comment %}`。
 
-### 9.13.7 仍未对齐 / 待用户拍板
+### 9.13.11 v2.1.3：7 个入口铺开 + 单分区不列左栏（提交 `7303c67`）
+
+**用户两条口径**（看图后提出，逐字）
+1. 「新建用户 新建角色 发起审批 发布公告 留痕链的查看 查看模板 消息中心都做成这样的」
+2. 「页面中只有应该选项就没必要在左边列出来，移除然后将内容居中（按钮居中）」
+
+第 2 条的依据：DSH 的 `nav` 是 `settings.section` 投影出来的**分区目录**（`navCell` 40 高、`gap:4`），多分区时它是导航，单分区时它只是「一条重复标题」的空目录。所以单分区页面把 `nav` 那一列从栅格里去掉，`options` 横跨整行。
+
+**共享外壳**（新增两份，全部页面零重复）
+- `plugin_host/templates/includes/ds_settings_panel.html`：面板本体。参数 `sp_title` / `sp_title_id` / `sp_body`（动态 `{% include sp_body %}`）/ `sp_modal` / `sp_back` / `sp_stack`（默认 560，`"wide"` = 720）。`sp_modal=True` 右上渲染 ✕（交给 `ds-shell.js`），`sp_modal=False` 且有 `sp_back` 时渲染返回箭头（深链页没有遮罩，✕ 会被读成关闭），两者都没有则 `header` 为空。
+- `plugin_host/templates/includes/ds_settings_modal.html`：遮罩弹层外壳（`overlay` + 面板，`data-ds-subpage` / `sp_query` / `sp_url` / `sp_base` / `sp_open`，`hidden` 由 `sp_open` 决定）。
+- 标题一律在 `{% block %}` 里 `{% trans "X" as sp_title_text %}`：子模板 `{% extends %}` 之后、block 之外的节点根本不执行，标题变量会是空串（本轮 5 个 inline 页踩过）。
+
+**单分区 CSS**（`corporate-clean.css` 末尾，第 12 节之后）
+
+| 规则 | 值 | 含义 |
+|---|---|---|
+| `.ds-settings--single .ds-settings__panel` | `grid-template-areas:"title header" "options options"`；`grid-template-columns:minmax(0,1fr) auto`；`grid-template-rows:auto minmax(0,1fr)` | 188px 分区列被移除，正文横跨整行（DSH 的 nav 列在这类页面里是空的） |
+| `.ds-settings__stack` | `width:100%; max-width:560px; margin:0 auto` | 正文列 560 居中 |
+| `.ds-settings__stack--wide` | `max-width:720px` | 两列内容（模板清单 / 留痕统计）用 720 |
+| `.ds-settings__actions--center` | `justify-content:center` | 按钮行居中 |
+| `.ds-settings--single .ds-settings__options` | `padding-top:var(--ds-space-2)` | 标题行已由 header 撑到 54，正文顶部只留 8 |
+| `.ds-settings--inline .ds-settings__panel` | `height:min(800px, calc(100vh - 64px))` | 深链页也是同一块面板，高度照 DSH 字面量 800，内容多了在 `options` 里滚 |
+| `.ds-field select[multiple]` | `height:auto; min-height:132px` | 角色权限是多选，不能被单行控件高度压扁 |
+
+**落点（7 个入口 = 5 个表单 + 2 个只读）**
+- 新建用户 / 新建角色：`user/views.py` 抽 `_render_user_list(request, form=None, form_open=False)` 与 `_render_role_list(...)` 作唯一渲染入口；列表页 `＋` 按钮 `data-ds-modal-open` + `?view=new`；新增 `_user_create_body.html` / `_role_create_body.html`（弹层与深链共用），深链页 `user_create_page.html` / `role_create_page.html` 只包 `.ds-settings--inline .ds-settings--single` + 共享外壳；校验失败回列表且 `form_open=True`。
+- 发起审批：`_approval_list_context` + `_create_context(request, form=None, type_key=None, source=None, chip_prefix='?type=')`，chips 带 `href`（弹层里是 `?view=new&type=…`，切类型不丢弹层）；`approval_create` 三分支（重新申请 → 深链页；POST 失败 → 列表 + 弹层 + 字段错误；GET → 深链页）。
+- 发布公告：`_render_notice_list(request, form_data=None, form_open=False)` 单入口；非法 POST 回列表弹层并用 `form_data` 回填（旧实现会丢字）。
+- 查看模板：`structure/views.py` 抽 `_template_context(request)`；组织架构页 `?view=template` 开弹层，因 `role_rows` 键名冲突，弹层上下文用 `tmpl_` 前缀、`overview.html` 里映射回原名；无 `structure_view` 权限时既不渲染入口也不渲染弹层。
+- 留痕链 / 消息中心：这两个没有父列表页，直接是 inline 面板（720），右上不渲染 ✕。
+- 考勤规则 / 部门新建：同步收口到共享外壳（`nav` 列一并移除），`_rules_modal.html` / `_department_new.html` 只剩外壳 include，正文在 `_rules_body.html` / `_department_new_body.html`。
+
+**几何实测**（CDP，`.tmp-test/geom7.mjs`，1440×900，本地 `:8011` 与容器 `:8000` 各跑一遍，结论一致）
+
+| 路由 | 面板 | 栅格列 | `nav` | stack | actions |
+|---|---|---|---|---|---|
+| `/plugins/user/users/?view=new` | 800×800 @ `x=320,y=50` | `748px 52px` | 不渲染 | 560 @ x=440 | `center` |
+| `/plugins/user/roles/?view=new` | 800×800 @ `x=320,y=50` | `748px 52px` | 不渲染 | 560 @ x=440 | `center` |
+| `/plugins/approval/?view=new` | 800×800 @ `x=320,y=50` | `748px 52px` | 不渲染 | 560 @ x=440 | `center` |
+| `/plugins/notice/?view=new` | 800×800 @ `x=320,y=50` | `748px 52px` | 不渲染 | 560 @ x=440 | `center` |
+| `/plugins/structure/?view=template` | 800×800 @ `x=320,y=50` | `748px 52px` | 不渲染 | 720 @ x=360 | `center` |
+| `/plugins/user/users/new/` 等 5 条深链 | 800×800 @ `x=460,y=32`（内容区内居中） | `748px 52px` | 不渲染 | 560 | `center` |
+| `/plugins/blockchain/` `/plugins/notify/` | 800×800 @ `x=460,y=32` | `776px 24px`（无 header 按钮） | 不渲染 | 720 | — |
+
+遮罩实测像素：面板外取点 `(1400,500)` = `rgb(194,194,194)`，即白底叠 `rgba(0,0,0,.24)`，与 `--ds-bg-mask` 一致。
+
+**回归（首轮 5 failures 的根因）**
+- `plugins/notice/views.py` 重构时用 `Substring` 拼接，误删 `notice_readers` / `notice_detail`（`manage.py check` 直接报 `module has no attribute`），已从 `HEAD` 原文补回。
+- `@require_perm('notice_manage')` 被留在插入点上方，挂到了 `_render_notice_list` 上，`notice_create` 失去守卫（测试里表现为「无权限 POST 期望 403 实得 302」），已放回 `notice_create`。
+- `@require_perm('approval_view')` 同样挂到了 `_approval_list_context`，`plugins/approval/` 落进 `LoginGuardSetTests` 的 bare 集合（护栏直接点名 `plugins/approval/`），已放回 `approval_list`。
+- `plugins/approval/views.py` 用了 `reverse` 未 import → 两条路由 500。
+- 审批类型 label 改成「审批类型」会让 `Select approval type` 的英文断言失效，已用回旧 msgid「选择审批类型」。
+- `tests_csp` 的 `data-confirm` 计数点跟着正文搬到 `structure/_template_body.html`。
+
+**断言口径注意**：全站设置弹层 `#ds-settings` 自身就有 `.ds-settings__nav`，所以「无左栏」不能用 `assertNotContains('ds-settings__nav')`，改用 `ds-settings--single` + `ds-settings__stack` + `ds-settings__actions--center` 三个类断言，DOM 侧用探针量 `navRendered`。
+
+**门禁与真机**：全量 `venv/run_tests_shim.py` **511 tests OK**（116s）、`ruff check plugins plugin_host` 全绿；容器 `docker compose up -d --build web`（`SECRET_KEY` / `GUNICORN_WORKERS=3` / `OA_THEME=corporate-clean`）重建后 28 个改动文件 MD5 逐一对齐；容器上 12 条路由 GET 全部 200。深浅两态图：`.tmp-test/screens-v3/*-light.png` / `*-dark.png`（24 张），容器同批在 `.tmp-test/screens-v3/container/`。
+
+
 
 1. 面板态不放 `as-header`（纯 `.as-panelview`，标题由各面板自己的 `.lc-ov-head` / `.at-head` 承担）。
 2. 三个业务 URL 保留为深链，只从侧栏移除（若要去掉入口而非 URL，需再定）。
 3. 双柱口径（提交 vs 已办结）、热力口径（人天签到）、看板「插件启用 / 未读消息」对普通账号的语义，仍按上一轮实现未验收。
-4. 业务页表单卡片的宽度：部门新建二级页已是 DSH 的 **760**，但 `user_form.html` 等仍是模板 inline 的 `max-width:560px`，且部分表单模板还有 inline `.75rem + uppercase`（目前靠 §29 的 `!important` 压制）——是否把其余业务表单逐个清 inline、统一到 760 待定。
-5. 部门「修改」仍是 POST 驱动的右列内联卡（本轮只把「新建」做成二级页）；是否同样改成二级页未定。
+4. 业务页表单卡片的宽度：v2.1.3 起 7 个入口的正文列统一是面板内的 560（两列内容 720），但 `user_form.html` / `role_form.html`（编辑）等仍是模板 inline 的 `max-width:560px`，且部分表单模板还有 inline `.75rem + uppercase`（目前靠 §29 的 `!important` 压制）——是否把这些编辑表单也逐个换到面板、并清 inline 待定。
+5. 部门「修改」仍是 POST 驱动的右列内联卡（v2.1.3 只把「新建」收口到共享外壳）；是否同样改成设置面板未定。
+6. 「留痕链的查看」按整页面板实现（统计 + 表格都在面板里）；若用户本意指单条记录详情，需要改成「列表点查看 → 记录详情弹层」。
+7. 「消息中心」「留痕链」没有父列表页，所以做成 inline 无 ✕ 面板；若希望它们像其余 5 页那样从某个列表/看板弹层打开，需要指明父页。
 
 ---
 
