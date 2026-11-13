@@ -980,3 +980,14 @@ token 映射：`label-primary-foreground → --ds-on-primary`、`bg-module-platf
 **容器（v2.1.5 重建）**：`docker compose up -d --build web` 两次（第二次带上多选框封顶）；容器 `constellatio-web-1` Up、gunicorn 3 workers（pid 12/13/14）、`138 static files copied`；本地与容器 MD5 对齐 `attendance_records.html` / `corporate-clean.css` / `ds_settings_modal.html` / `ds-shell.js`，收集后的 `/app/staticfiles/themes/corporate-clean/css/corporate-clean.css` 与源同 hash（`d2a2184a82b5ebe9e45dfcc117935e92`）；容器 25 条路由 GET 全 200（`approval/122`、`notice/14/readers`、`blockchain/1456` 用容器库自身对象；`attendance/stats`、`blockchain/stats` 返回 JSON），截图落 `.tmp-test/screens-v4/container/` 6 张。
 
 **多选框封顶**：`.ds-field select[multiple]` 原为 `min-height:132px` 不封顶，13 个角色会把编辑用户弹层的正文撑到折叠线以下；现加 `max-height:132px; overflow-y:auto`，正文列在 `.ds-settings__options` 内滚动，底部按钮仍可滚到（容器截图 `container/user-edit-modal-light.png` 可见角色框 6 行 + 内部滚动）。
+### 9.13.13 业务页内容列：不铺满、紧凑居中（v2.1.5）
+
+用户口径：「这些页面不要铺满，紧凑居中」。取值先按 DSH 会话正文列算（dsh-client-ui-conversation/lib/client.js 的 esolveContentWidth：max(680, min(0.64 * 列宽, 920))），实测 64% 落在 722px 时 8 列签到明细与用户表会折行（部门、姓名竖排），退回该公式的**上限 920**：width: min(920px, 100%) + margin-inline: auto。
+
+落点：	hemes/corporate-clean/templates/base.html 的 .ds-main__body 按 equest.path 前 9 字符是否为 /plugins/ 加 --column；CSS 见主题文件第 31 节，选择器 .ds-main__body--column > :not(.ds-settings)。
+- 只收 /plugins/* 业务页；首页（助手 / 看板）保持整屏骨架。
+- 根节点就是 .ds-settings 的设置面板页（审批详情、留痕单条、个人中心、新建/编辑深链页）被排除，它们本来就是 800×800 / 720 正文列居中，再套一层会挤。
+
+真机（1440×900）：用户管理 / 组织机构 / 签到详情等内容列 920（x≈399–1319），表头不折行；审批详情仍是 800 面板（x≈460–1260，未受影响）；首页 / 未变。截图 .tmp-test/screens-v5/（本地 8 张 + container/ 4 张）。
+
+**门禁**：全量 env/run_tests_shim.py 511 tests OK（116s）、uff All checks passed；容器重建后 ase.html / corporate-clean.css MD5 与源一致、staticfiles 收集产物 hash dd1447f3eddcfb01ad31c0b5df73b871、gunicorn 3 workers（pid 12/13/14）。
