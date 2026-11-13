@@ -319,10 +319,11 @@ class ProfileTests(TestCase):
         self.assertContains(response, '当前密码错误')
 
 class DepartmentFormPageTests(TestCase):
-    """v2.1.2：部门新建 = 部门页的二级页，形态是「点开设置的那一页」。
+    """v2.1.2 / v2.1.5：部门新建与修改都是部门页的二级页。
 
-    弹层 `#ds-dept-new` 复用 DSH SettingsPanel（遮罩 + 800×800 + 左 188px 分区列），
-    `?view=new` 打开；列表本体留在弹层底下，不再另开一套页面版式。
+    弹层 `#ds-dept-form` 复用 DSH SettingsPanel（遮罩 + 800×800 面板），
+    `?view=new` / `?view=edit&id=` 打开；列表本体留在弹层底下，不再另开一套版式，
+    也不再展开右侧常驻的「修改部门」卡片。
     """
 
     @classmethod
@@ -334,7 +335,7 @@ class DepartmentFormPageTests(TestCase):
         response = self.client.get(reverse('user:department_list') + '?view=new')
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'ds-settings--subpage')
-        self.assertContains(response, 'id="ds-dept-new"')
+        self.assertContains(response, 'id="ds-dept-form"')
         # 单分区（只有「新建部门」一项）→ 不渲染左侧 188px 分区列，内容与按钮居中
         self.assertContains(response, 'ds-settings--single')
         self.assertContains(response, 'ds-settings__title')
@@ -348,13 +349,13 @@ class DepartmentFormPageTests(TestCase):
     def test_list_keeps_entry_button_but_no_inline_create_card(self):
         self.client.force_login(self.admin)
         response = self.client.get(reverse('user:department_list'))
-        self.assertContains(response, 'data-ds-modal-open="ds-dept-new"')
+        self.assertContains(response, 'data-ds-modal-open="ds-dept-form"')
         self.assertContains(response, '?view=new')
         # 收起态：弹层带 hidden；新建表单只存在于弹层里，不再有随列表常驻的右列卡片
         self.assertContains(response, 'hidden aria-hidden="true"')
         self.assertFalse(response.context['dept_form_open'])
         html = response.content.decode()
-        self.assertLess(html.index('id="ds-dept-new"'), html.index('name="action" value="create"'))
+        self.assertLess(html.index('id="ds-dept-form"'), html.index('name="action" value="create"'))
 
     def test_create_invalid_keeps_dialog_open(self):
         self.client.force_login(self.admin)
@@ -362,7 +363,7 @@ class DepartmentFormPageTests(TestCase):
             'action': 'create', 'name': '', 'parent': '',
         })
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'id="ds-dept-new"')
+        self.assertContains(response, 'id="ds-dept-form"')
         self.assertContains(response, 'ds-field__error')
         self.assertTrue(response.context['dept_form_open'])
         self.assertEqual(Department.objects.count(), 0)
@@ -375,3 +376,44 @@ class DepartmentFormPageTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response['Location'], reverse('user:department_list'))
         self.assertTrue(Department.objects.filter(name='二级页部门').exists())
+
+    def test_edit_link_opens_same_dialog_in_edit_mode(self):
+        """行内「修改」不再是右侧常驻卡片，而是打开同一块弹层（编辑模式）。"""
+        self.client.force_login(self.admin)
+        dept = Department.objects.create(name='待改部门')
+        response = self.client.get(
+            reverse('user:department_list') + f'?view=edit&id={dept.pk}')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="ds-dept-form"')
+        self.assertContains(response, 'name="action" value="edit"')
+        self.assertContains(response, f'name="dept_id" value="{dept.pk}"')
+        self.assertContains(response, '修改部门：待改部门')
+        self.assertContains(response, '保存修改')
+        self.assertTrue(response.context['dept_form_open'])
+        self.assertEqual(response.context['dept_form_mode'], 'edit')
+        # 旧版右列常驻编辑卡片不再渲染
+        html = response.content.decode()
+        self.assertNotIn('col-lg-4', html)
+
+    def test_edit_post_from_dialog_updates_and_redirects(self):
+        self.client.force_login(self.admin)
+        dept = Department.objects.create(name='旧名部门')
+        response = self.client.post(
+            reverse('user:department_list') + f'?view=edit&id={dept.pk}',
+            {'action': 'edit', 'dept_id': dept.pk, 'name': '新名部门', 'parent': ''})
+        self.assertEqual(response.status_code, 302)
+        dept.refresh_from_db()
+        self.assertEqual(dept.name, '新名部门')
+
+    def test_edit_invalid_keeps_dialog_open_in_edit_mode(self):
+        self.client.force_login(self.admin)
+        dept = Department.objects.create(name='保持原名部门')
+        response = self.client.post(
+            reverse('user:department_list') + f'?view=edit&id={dept.pk}',
+            {'action': 'edit', 'dept_id': dept.pk, 'name': '', 'parent': ''})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="ds-dept-form"')
+        self.assertContains(response, 'ds-field__error')
+        self.assertContains(response, 'name="action" value="edit"')
+        self.assertTrue(response.context['dept_form_open'])
+        self.assertEqual(Department.objects.get(pk=dept.pk).name, '保持原名部门')

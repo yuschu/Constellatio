@@ -62,25 +62,44 @@ def _guard_superuser(request, target):
 # ---------------------------------------------------------------------------
 # 部门
 # ---------------------------------------------------------------------------
-def _render_department_page(request, form=None, dept_id=None, error='', form_open=False):
-    """部门页的唯一渲染入口（列表 + 「新建」设置弹层）。
+def _render_department_page(request, form=None, edit_dept=None, error='', form_open=False):
+    """部门页的唯一渲染入口（列表 + 部门表单设置弹层）。
 
     v2.1.2：新建走二级页，形态照 DSH 点开设置的那一页 —— 遮罩 + 800×800 面板
-    （title / header / nav 188px / options），由 user/department_list.html 里的
-    `#ds-dept-new` 弹层承载。`?view=new` 或表单校验失败时 `form_open=True`，
-    页面一次渲染完，弹层只是盖在列表上，不再换模板、不再走第二套版式。
+    （title / options），由 user/department_list.html 里的 `#ds-dept-form` 弹层承载。
+    v2.1.5：修改也并进同一块弹层（`?view=edit&id=<pk>`），正文与新建共用
+    `user/_department_form_body.html`，两种模式只差标题与提交文案；列表行内不再
+    展开右侧常驻的「修改部门」卡片。`?view=new` / `?view=edit` / 校验失败时
+    `form_open=True`，页面一次渲染完，弹层只是盖在列表上。
     """
     departments = paginate(request, Department.objects.all().order_by('id'))
     list_url = reverse('user:department_list')
+    if edit_dept is not None:
+        mode = 'edit'
+        form_title = _('修改部门：%(name)s') % {'name': edit_dept.name}
+        form_query = f'view=edit&id={edit_dept.pk}'
+        submit_label = _('保存修改')
+        default_form = DepartmentForm(instance=edit_dept)
+    else:
+        mode = 'create'
+        form_title = _('新建部门')
+        form_query = 'view=new'
+        submit_label = _('创建')
+        default_form = DepartmentForm()
     return render(request, 'user/department_list.html', {
         'page_obj': departments,
-        'form': form if form is not None else DepartmentForm(),
-        'dept_id': dept_id,
-        'edit_dept': Department.objects.filter(pk=dept_id).first() if dept_id else None,
-        'error': error,
+        'form': form if form is not None else default_form,
+        'edit_dept': edit_dept,
         'dept_form_open': form_open,
+        'dept_form_mode': mode,
+        'dept_form_title': form_title,
+        'dept_form_query': form_query,
+        'dept_form_url': f'{list_url}?{form_query}',
+        'dept_form_submit': submit_label,
         'dept_new_url': f'{list_url}?view=new',
+        'dept_edit_url': f'{list_url}?view=edit&id=',
         'dept_list_url': list_url,
+        'error': error,
     })
 
 
@@ -90,26 +109,16 @@ def department_list(request):
 
     v2.1.2：新建不再占用列表右侧的常驻卡片，改成部门页的二级弹层
     （`?view=new` 打开，形态照 DSH 点开设置的那一页），列表页只留列表。
+    v2.1.5：修改同样走这块弹层（`?view=edit&id=<pk>`）。弹层表单的 action 为空
+    → POST 回本页，按 `?view=` 分派到创建 / 修改；校验失败就地渲染回弹层。
     """
-    if request.method == 'GET' and request.GET.get('view') == 'new':
-        return _render_department_page(request, DepartmentForm(), form_open=True)
+    view = request.GET.get('view')
     if request.method == 'POST':
         action = request.POST.get('action', 'create')
         if action == 'create':
-            form = DepartmentForm(request.POST)
-            if form.is_valid():
-                form.save()
-                return redirect('user:department_list')
-            # 校验失败留在弹层里，把错误挂在对应字段上
-            return _render_department_page(request, form, form_open=True)
+            return _save_department_create(request)
         elif action == 'edit':
-            dept_id = request.POST.get('dept_id')
-            dept = get_object_or_404(Department, pk=dept_id)
-            form = DepartmentForm(request.POST, instance=dept)
-            if form.is_valid():
-                form.save()
-                dept_updated.send(sender=Department, dept_id=dept.pk, operator_id=request.user.pk)
-                return redirect('user:department_list')
+            return _save_department_edit(request, request.POST.get('dept_id'))
         elif action == 'soft_delete':
             dept_id = request.POST.get('dept_id')
             dept = get_object_or_404(Department, pk=dept_id)
@@ -131,14 +140,32 @@ def department_list(request):
                 title=f'部门删除审批：{dept.name}',
                 content=f'申请物理删除部门「{dept.name}」（ID:{dept.pk}），需全部审批人通过后执行。')
             return redirect('user:department_list')
-        else:
-            dept_id = None
-            form = DepartmentForm()
-    else:
-        form = DepartmentForm()
-        dept_id = None
+        return _save_department_create(request)
 
-    return _render_department_page(request, form, dept_id)
+    if view == 'edit':
+        target = get_object_or_404(Department, pk=request.GET.get('id'))
+        return _render_department_page(request, form_open=True, edit_dept=target)
+    return _render_department_page(request, form_open=view == 'new')
+
+
+def _save_department_create(request):
+    """新建部门：校验 → 落库 → 回列表；校验失败渲染回弹层（create 模式）。"""
+    form = DepartmentForm(request.POST)
+    if form.is_valid():
+        form.save()
+        return redirect('user:department_list')
+    return _render_department_page(request, form, form_open=True)
+
+
+def _save_department_edit(request, dept_id):
+    """修改部门：信号在保存后发；校验失败渲染回弹层（edit 模式）。"""
+    dept = get_object_or_404(Department, pk=dept_id)
+    form = DepartmentForm(request.POST, instance=dept)
+    if form.is_valid():
+        form.save()
+        dept_updated.send(sender=Department, dept_id=dept.pk, operator_id=request.user.pk)
+        return redirect('user:department_list')
+    return _render_department_page(request, form, edit_dept=dept, form_open=True)
 
 
 # ---------------------------------------------------------------------------

@@ -1,8 +1,0 @@
-{% load i18n %}
-{% trans "新建部门" as sp_title_text %}
-{% comment %}
-「新建部门」设置弹层：共享外壳 includes/ds_settings_modal.html。
-单分区 → 最外层 ds-settings--single，不渲染左侧分区列，内容与按钮居中。
-`?view=new` 是它的深链；表单仍 POST 到部门列表（action=create）。
-{% endcomment %}
-{% include "includes/ds_settings_modal.html" with sp_id="ds-dept-new" sp_title=sp_title_text sp_body="user/_department_new_body.html" sp_query="view=new" sp_url=dept_new_url sp_base=dept_list_url sp_open=dept_form_open %}
