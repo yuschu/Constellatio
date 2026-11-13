@@ -39,6 +39,11 @@
   --as-sidebar-row-padding: 12px;
   --as-sidebar-label-gap: 6px;
   --as-sidebar-paint-inset: 3px;
+
+  /* 滚动条（DSH ui-theme scrollbar.css 原值：5px / 0 描边 / 0 track margin） */
+  --as-scrollbar-width: 5px;
+  --as-scrollbar-thumb-border: 0px;
+  --as-scrollbar-track-margin: 0px;
 }
 
 /* ---------- 浅色 alias ----------
@@ -72,6 +77,10 @@ html[data-color-mode="light"] {
   --border-elevation: var(--as-border-l2);
   --as-link: #4176e6;
   --as-error: #ec1313;
+  --as-scrollbar-thumb: #e5e5e5;
+  --as-scrollbar-thumb-hover: #d4d4d4;
+  --as-scrollbar-l2: #e5e5e5;
+  --as-scrollbar-hover-l2: #d4d4d4;
 }
 
 /* ---------- 深色 alias ----------
@@ -102,7 +111,59 @@ html[data-color-mode="dark"] {
   --as-button-info-hover: #4176e6;
   --border-elevation: var(--as-border-l2);
   --as-link: #7aaaff;
+  --as-scrollbar-thumb: #3c3c3d;
+  --as-scrollbar-thumb-hover: #545557;
+  --as-scrollbar-l2: #545557;
+  --as-scrollbar-hover-l2: #65676b;
   --as-error: #f25a5a;
+}
+
+/* ============================================================
+   滚动条 —— 直接取 DSH `ui-theme/src/styles/scrollbar.css` 原文。
+   会话页只加载本文件，主题 CSS 的全局滚动条规则不在这里，之前因此
+   落回浏览器原生 15px。此处按 DSH 原值补齐：5px / 0 描边 / 0 margin。
+   ============================================================ */
+@supports not selector(::-webkit-scrollbar) {
+  body,
+  body * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--as-scrollbar-thumb) transparent;
+  }
+}
+
+::-webkit-scrollbar {
+  width: var(--as-scrollbar-width);
+  height: var(--as-scrollbar-width);
+}
+
+::-webkit-scrollbar-track {
+  margin-block: var(--as-scrollbar-track-margin);
+  background: none;
+}
+
+::-webkit-scrollbar-thumb {
+  border: var(--as-scrollbar-thumb-border) solid transparent;
+  corner-shape: round;
+  background: var(--as-scrollbar-thumb);
+  background-clip: content-box;
+  border-radius: 999px;
+}
+
+@media (hover: hover) {
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--as-scrollbar-thumb-hover);
+  }
+}
+
+::-webkit-scrollbar-corner {
+  background: none;
+}
+
+/* DSH 会话卡/侧栏抬升面的 thumb 用 l2（深色下比正文面更亮一档） */
+.as-sidebar,
+.as-composer {
+  --as-scrollbar-thumb: var(--as-scrollbar-l2);
+  --as-scrollbar-thumb-hover: var(--as-scrollbar-hover-l2);
 }
 
 /* ---------- 重置 ---------- */
@@ -392,11 +453,15 @@ div.as-more__menu {
   line-height: 20px;
 }
 
+/* 会话列表：DSH WorkspaceBrowser.list 的会话列表滚动条口径
+   （width 5 / offset 2 / gutter stable；右内边距先扣掉条宽与 offset） */
 .as-tree {
   flex: 1;
   min-height: 0;
+  margin-right: 2px;
+  padding: 0 5px 16px 4px;
   overflow-y: auto;
-  padding: 0 12px 16px 4px;
+  scrollbar-gutter: stable;
 }
 
 .as-tree__hint {
@@ -590,6 +655,8 @@ div.as-more__menu {
   margin-right: 2px;
   overflow-y: auto;
   scrollbar-gutter: stable;
+  /* DSH ConversationRoot.scrollBody::-webkit-scrollbar-track{margin:2px} */
+  --as-scrollbar-track-margin: 2px;
 }
 
 /* Hero：**整体垂直居中** —— 就是把 justify-content 给 scrollBody */
@@ -688,6 +755,8 @@ div.as-more__menu {
   resize: none;
   outline: none;
   overflow-y: auto;
+  /* DSH Composer.scroll::-webkit-scrollbar-track{margin-top:8px} */
+  --as-scrollbar-track-margin: 8px 0;
 }
 
 .as-scroll--hero .as-input {

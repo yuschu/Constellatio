@@ -6,6 +6,7 @@
 - 声明了且插件启用 → 返回该 provider。
 """
 
+import re
 from pathlib import Path
 from unittest import mock
 
@@ -144,6 +145,34 @@ class AssistantHomePageTests(TestCase):
         ).read_text(encoding='utf-8')
         self.assertNotIn('.as-region {\n  display: none;', css)
         self.assertIn('html[data-rail-collapsed="true"] .as-region', css)
+
+    def test_session_page_scrollbar_matches_dsh(self):
+        """会话页只加载 assistant.css，滚动条必须单独按 DSH 原文落一份。
+
+        主题 CSS 的全局 5px 规则到不了这里：实测会话页 `.as-scroll` 的
+        offsetWidth-clientWidth 曾是 15px（浏览器原生条），而 DSH 会话页是
+        5px + 2px track margin（ConversationRoot.scrollBody），会话列表还有
+        width 5 / offset 2 / gutter stable（WorkspaceBrowser.list）。
+        """
+        css = (
+            Path(settings.BASE_DIR)
+            / 'plugins/assistant/static/assistant/css/assistant.css'
+        ).read_text(encoding='utf-8')
+        self.assertIn('--as-scrollbar-width: 5px;', css)
+        self.assertIn('::-webkit-scrollbar {', css)
+        self.assertIn('--as-scrollbar-thumb: #e5e5e5;', css)
+
+        scroll = re.search(r'\.as-scroll \{(.*?)\}', css, re.S)
+        self.assertIsNotNone(scroll)
+        self.assertIn('--as-scrollbar-track-margin: 2px;', css)
+
+        tree = re.search(r'\.as-tree \{(.*?)\}', css, re.S)
+        self.assertIsNotNone(tree)
+        self.assertIn('scrollbar-gutter: stable;', tree.group(1))
+        self.assertIn('margin-right: 2px;', tree.group(1))
+        self.assertIn('padding: 0 5px 16px 4px;', tree.group(1))
+
+        self.assertIn('--as-scrollbar-track-margin: 8px 0;', css)
 
     def test_dashboard_entry_comes_from_plugin_menus(self):
         """v2.1.0：看板这一格改为在首页内切换，href 指向 `/?panel=dashboard`。

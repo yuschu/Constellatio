@@ -1647,3 +1647,38 @@ body{--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l1);--dsh-scrollbar-thum
 - 本地 `:8011`，admin，收起态几何（CDP `rail-new-vs-panel.mjs`）：新会话 / 面板行 / 更多三者都是 `36×36`、`radius 12px`、图标 `18×18`、默认底色 `rgba(0,0,0,0)`；hover 时新会话与面板行同为 `rgba(38,49,72,0.06)`，移开后都回到透明。截图 `.tmp-test/screens-v21/rail-new-after.png`。
 - 容器重建后 `assistant.css 0d99f61904057903722d9ca7fca37943`（源文件、`/app/plugins/...`、`/app/staticfiles/assistant/css/assistant.css` 三处一致）、`tests.py ea9efe31c0dfd12c05b34541f1f34416` 与本地同哈希；容器同脚本复测，四项数值与本地一致。截图 `.tmp-test/screens-v21/container/rail-new-after.png`。
 
+
+### 9.13.36 会话页滚动条按 DSH session 口径补齐（v2.2.8 / 2026-11-13）
+
+**现象与根因**
+
+- 首页 `/`（会话页）只加载 `assistant/css/assistant.css`，不加载 `corporate-clean.css`；v2.2.4 的全站 5px 规则写在后者里，所以会话页从来没吃到。
+- 实测（CDP，禁用 overlay 的 9229）：`.as-scroll` 的 `offsetWidth - clientWidth = 15`，即浏览器原生滚动条；`.as-tree` 同样 15px。用户看到的“不是这种滚动条”，指的就是会话页这一条原生粗条。
+
+**DSH 取证**
+
+- 全局默认仍在 `dsh-client-ui-theme/lib/client.js` 的 inline `scrollbar.css`：`--dsh-scrollbar-width:5px` / `--dsh-scrollbar-thumb-border:0px` / `--dsh-scrollbar-track-margin:0px`，thumb `background-clip:content-box` + `border-radius:999px`，hover 换 `scrollbar-hover`，`@supports not selector(::-webkit-scrollbar)` 走 thin + scrollbar-color。
+- 会话正文：`dsh-client-ui-conversation/lib/client.js` 的 `ConversationRoot.scrollBody` —— `scrollbar-gutter:stable`、`margin-right:2px`、`::-webkit-scrollbar-track{margin:2px}`；这正是会话滚动条比页面条多出的“两端 2px 缩进”。
+- 会话列表：`dsh-client-ui-workspace/lib/client.js` 的 `WorkspaceBrowser` —— `--dsh-session-list-scrollbar-width:5px`、`--dsh-session-list-scrollbar-offset:2px`；`.list` 用 `scrollbar-gutter:stable`、`margin-right:2px`、`padding-right:calc(edge-inset - width - offset)`。
+- 输入框：`Composer.scroll::-webkit-scrollbar-track{margin-top:8px}`。
+- 抬升面：侧栏根与 composer card 把 thumb 重绑到 `scrollbar-bg-l2`（深色更亮一档）。
+
+**改动**（`plugins/assistant/static/assistant/css/assistant.css`）
+
+1. `:root` 加 `--as-scrollbar-width:5px` / `--as-scrollbar-thumb-border:0px` / `--as-scrollbar-track-margin:0px`。
+2. 浅/深两套 alias 补 `--as-scrollbar-thumb(#e5e5e5 / #3c3c3d)`、`--as-scrollbar-thumb-hover(#d4d4d4 / #545557)`、`--as-scrollbar-l2(#e5e5e5 / #545557)`、`--as-scrollbar-hover-l2(#d4d4d4 / #65676b)`。
+3. 原样落 `::-webkit-scrollbar` / `-track` / `-thumb` / `-thumb:hover` / `-corner` 五段规则与 `@supports` 分支。
+4. `.as-sidebar`、`.as-composer` 绑定 l2（同 DSH 侧栏根 / composer card）。
+5. `.as-scroll` 加 `--as-scrollbar-track-margin:2px`；`.as-input` 加 `8px 0`（上 8、下 0）。
+6. `.as-tree` 改为会话列表口径：`scrollbar-gutter:stable`、`margin-right:2px`、`padding:0 5px 16px 4px`（右边距 12px 先扣条宽 5 + offset 2，内容宽度不变）。
+
+**门禁**
+
+- `plugin_host/tests_assistant_home.py` 新增 `test_session_page_scrollbar_matches_dsh`：钉住 5px 变量、webkit 规则、浅色 thumb、会话流 2px、列表 gutter/offset/右内边距、输入框 8px。
+- 全量 **560 tests OK**（559 + 1），ruff 全过，`manage.py check` 干净。
+
+**实测**
+
+- 本地 `:8011` + 容器 `:8000`，admin，9229（禁用 overlay）：`.as-scroll` 与 `.as-tree` 的 `offsetWidth-clientWidth` 均为 **5**，`getComputedStyle(el,'::-webkit-scrollbar').width` 为 `5px`；`.as-tree` `gutter=stable`、`padding-right=5px`、`margin-right=2px`；强制 40 条会话后条正常出现。浅/深两张截图 `.tmp-test/screens-v21/session-scroll-{after,dark}.png`，容器 `.tmp-test/screens-v21/container/session-scroll-after.png`。
+- 容器重建后 `assistant.css 60906ef0a02de64b96029a37602ef851`（源文件 / `/app/plugins/...` / `/app/staticfiles/...` 三处一致）、`tests_assistant_home.py 94f8a729565430e7dac5fc00eadab75b` 与本地同哈希。
+
