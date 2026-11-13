@@ -991,3 +991,11 @@ token 映射：`label-primary-foreground → --ds-on-primary`、`bg-module-platf
 真机（1440×900）：用户管理 / 组织机构 / 签到详情等内容列 920（x≈399–1319），表头不折行；审批详情仍是 800 面板（x≈460–1260，未受影响）；首页 / 未变。截图 .tmp-test/screens-v5/（本地 8 张 + container/ 4 张）。
 
 **门禁**：全量 env/run_tests_shim.py 511 tests OK（116s）、uff All checks passed；容器重建后 ase.html / corporate-clean.css MD5 与源一致、staticfiles 收集产物 hash dd1447f3eddcfb01ad31c0b5df73b871、gunicorn 3 workers（pid 12/13/14）。
+
+### 9.13.14 留痕链列表回退成原版页面（v2.1.5）
+
+用户口径：「留痕链恢复原来的，查看才是用二级页」。v2.1.3 把留痕链列表整页塞进了 inline 设置面板（标题在面板里、正文列 720），列表页本身并不是"需要切页"的入口，包起来只是缩窄。
+
+- plugins/blockchain/templates/blockchain/blockchain_list.html 回退到 7303c67^ 版本：h2 标题左、共 N 条 徽标右，完整性卡片 + 留痕统计卡片 + 明细表格直排（页宽由业务页 920 列统一收窄）。
+- 顺手一处：时间窗口 标签加 	ext-nowrap——920 列下原来被挤成"时间/窗口"两行。
+- 「查看」单条（/plugins/blockchain/<id>/）保持设置面板形节：ds-settings--inline ds-settings--single + sp_stack="wide" 720 + 返回留痕链。
