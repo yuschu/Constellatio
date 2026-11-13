@@ -89,6 +89,15 @@ def index(request):
 @login_required
 def dashboard(request):
     """原工作台看板（v1.5.5 起），v2.0.0 起固定在 /dashboard/ 可达。"""
+    return render(request, 'home.html', dashboard_context(request))
+
+
+def dashboard_context(request):
+    """看板上下文（v2.1.0 抽出）：业务页 /dashboard/ 与首页「看板」面板共用。
+
+    两边必须是同一份口径——首页面板若另算一套，同一张卡在两个入口
+    给出两个数字，是比样式不一致更严重的不一致。
+    """
     user = request.user
     can_approval = user.has_perm('approval_view')
     can_approve = user.has_perm('approval_approve')   # v1.5.15：L3 不显示「待我审批」
@@ -134,7 +143,7 @@ def dashboard(request):
     unread_count = sum(1 for item in messages_preview if not item.is_read)
     plugin_enabled_count, plugin_total = plugin_counts()
 
-    return render(request, 'home.html', {
+    return {
         'pending_approvals': pending,
         'attendance_today': attendance_today,
         'notices': _recent_notices() if 'notice' in enabled_names else [],
@@ -149,7 +158,7 @@ def dashboard(request):
         'enabled_count': plugin_enabled_count,
         'is_admin_view': can_plugin_ops,
         **dashboard_ctx,
-    })
+    }
 
 
 @require_POST

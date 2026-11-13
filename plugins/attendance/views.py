@@ -12,6 +12,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _
 
 from plugin_host.charts import get_active_chart
@@ -36,6 +37,17 @@ def _now():
 @login_required
 def attendance_dashboard(request):
     """考勤看板：今日状态 + 本月出勤/迟到统计 + 本月图表（全员可用）。"""
+    return render(
+        request, 'attendance/attendance_dashboard.html',
+        attendance_context(request))
+
+
+def attendance_context(request):
+    """考勤看板上下文（v2.1.0 抽出）：业务页与首页「考勤」面板共用。
+
+    打卡表单会 POST 到 `attendance:attendance_check`，成功与否都回业务页；
+    首页面板只是同一份正文的另一个落点，所以上下文必须完全一致。
+    """
     today = timezone.localdate()
     now = timezone.localtime()
     record = Attendance.objects.filter(user=request.user, date=today).first()
@@ -60,7 +72,7 @@ def attendance_dashboard(request):
     ]
     rule = AttendanceRule.get_solo()
 
-    return render(request, 'attendance/attendance_dashboard.html', {
+    return {
         'record': record,
         'today': today,
         'now': now,
@@ -75,7 +87,7 @@ def attendance_dashboard(request):
         'rule_end': rule.work_end.strftime('%H:%M'),
         'rule_late': rule.late_threshold().strftime('%H:%M'),
         'rule_early': rule.early_threshold().strftime('%H:%M'),
-    })
+    }
 
 
 @login_required
@@ -96,7 +108,18 @@ def attendance_check(request):
             now=_now())
         attendance_checked.send(
             sender=record.__class__, user_id=request.user.id, date=str(record.date))
-    return redirect('attendance:attendance_dashboard')
+    return redirect(_return_url(request) or 'attendance:attendance_dashboard')
+
+
+def _return_url(request):
+    """打卡后回到哪：v2.1.0 起首页也能承载考勤面板，表单带 `next` 就回那一页。"""
+    next_url = request.POST.get('next') or ''
+    if next_url and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure()):
+        return next_url
+    return None
 
 
 @require_perm('attendance_rule_manage')

@@ -1,0 +1,100 @@
+{% load i18n %}
+{# v2.1.0：插件清单正文抽成 partial——业务页 /plugins/workspace/ 与首页「插件」面板共用同一份。 #}
+{# v2.0.6：按 DSH 插件清单（dsh-client-ui-settings-plugin-inventory）重做—— #}
+{# 页头 18/600 + 说明 13、36 高搜索框、两列卡片（.5px 边框 + radius-xl + 内容区 12/14）。 #}
+<div class="ds-plugins">
+
+  <header class="ds-plugins__head">
+    <h2 class="ds-plugins__heading">{% trans "插件" %}</h2>
+    <p class="ds-plugins__intro">{% trans "本部署内置的插件；运行时启停即时生效" %}</p>
+  </header>
+
+  <div class="ds-plugins__search">
+    <svg class="ds-plugins__search-glyph" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+      <circle cx="7" cy="7" r="4.4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+      <path d="M10.4 10.4l3 3" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    </svg>
+    <input type="search" data-ds-plugin-search autocomplete="off"
+           aria-label="{% trans '搜索插件' %}"
+           placeholder="{% trans '搜索插件名称或标识' %}">
+  </div>
+
+  <p class="ds-plugins__empty" data-ds-plugin-empty hidden>{% trans "没有匹配的插件" %}</p>
+
+  <ul class="ds-plugins__cards">
+    {% for row in rows %}
+    <li class="ds-plugin" data-plugin-card
+        data-plugin-key="{{ row.key }}" data-plugin-title="{{ row.meta.title }}">
+      <div class="ds-plugin__body">
+        <div class="ds-plugin__main">
+          <span class="ds-plugin__title">{{ row.meta.title }}</span>
+          <span class="ds-plugin__trailing">
+            <span class="ds-plugin__dot{% if row.enabled %} is-on{% endif %}" aria-hidden="true"></span>
+            {% if row.protected %}
+            <span class="ds-plugin__fixed" role="switch" aria-checked="true" aria-disabled="true"
+                  aria-label="{% trans '系统必需' %}">{% trans "系统必需" %}</span>
+            {% else %}
+            <form method="post" action="{% url 'workspace:switch_toggle' row.key %}" class="ds-plugin__form">
+              {% csrf_token %}
+              {# 启停后回到当前落点：业务页就是本页，首页面板则回 /?panel=workspace #}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <label class="ds-plugin__switch">
+                <input type="checkbox" role="switch" name="enabled" value="1"
+                       id="switch-{{ row.key }}"
+                       {% if row.enabled %}checked{% endif %}
+                       data-plugin-switch aria-label="{{ row.meta.title }}">
+                <span class="ds-plugin__track" aria-hidden="true"><span class="ds-plugin__thumb"></span></span>
+              </label>
+              <noscript><button class="ds-plugin__apply" type="submit">{% trans "应用" %}</button></noscript>
+            </form>
+            {% endif %}
+          </span>
+        </div>
+
+        {% if row.warning %}
+        <p class="ds-plugin__desc ds-plugin__desc--warn">{{ row.warning }}</p>
+        {% else %}
+        <p class="ds-plugin__desc">{% trans "已注册的插件，可运行时启停" %}</p>
+        {% endif %}
+
+        <div class="ds-plugin__meta">
+          <span class="ds-plugin__identity">{{ row.key }}</span>
+          <span class="ds-plugin__stat">v{{ row.meta.version }}</span>
+          <span class="ds-plugin__stat">{% trans "菜单" %} {{ row.meta.menus|length }}</span>
+          <span class="ds-plugin__stat">{% trans "权限" %} {{ row.meta.permissions|length }}</span>
+        </div>
+      </div>
+    </li>
+    {% empty %}
+    <li class="ds-plugins__empty">{% trans "暂无插件" %}</li>
+    {% endfor %}
+  </ul>
+
+</div>
+<script nonce="{{ request.csp_nonce }}">
+  (function () {
+    // 开关：勾选即提交，保留无 JS 时的「应用」按钮。
+    document.querySelectorAll('input[data-plugin-switch]').forEach(function (el) {
+      el.addEventListener('change', function () { if (el.form) { el.form.submit(); } });
+    });
+
+    // 搜索：按插件标题与标识过滤，纯前端，不发请求。
+    var input = document.querySelector('[data-ds-plugin-search]');
+    var cards = Array.prototype.slice.call(document.querySelectorAll('[data-plugin-card]'));
+    var empty = document.querySelector('[data-ds-plugin-empty]');
+    if (!input) { return; }
+    var apply = function () {
+      var q = (input.value || '').trim().toLowerCase();
+      var shown = 0;
+      cards.forEach(function (card) {
+        var hay = (card.getAttribute('data-plugin-key') + ' ' +
+                   card.getAttribute('data-plugin-title')).toLowerCase();
+        var hit = !q || hay.indexOf(q) !== -1;
+        card.hidden = !hit;
+        if (hit) { shown += 1; }
+      });
+      if (empty) { empty.hidden = shown > 0; }
+    };
+    input.addEventListener('input', apply);
+  })();
+</script>

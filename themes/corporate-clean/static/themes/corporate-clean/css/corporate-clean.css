@@ -3540,3 +3540,143 @@ html:not([data-color-mode="dark"]) .lc-ov-session {
     aspect-ratio: 1;
   }
 }
+/* ============================================================
+   28. 业务页「返回主页」+ 考勤面板布局（v2.1.0）
+   业务页侧栏不再折叠：品牌行右侧那一格从 toggle 换成返回主页
+   （.ds-rail__toggle 的几何照旧，只是当成 <a> 用，链接色要收回去）。
+   考勤正文要在两套外壳里都成立（业务页有 bootstrap、首页没有），
+   所以布局改走 .at-*，不再用栅格类。
+   ============================================================ */
+.ds-rail__home {
+  color: var(--ds-label-secondary);
+  text-decoration: none;
+}
+
+.ds-rail__home:hover {
+  color: var(--ds-label-primary);
+  text-decoration: none;
+}
+
+.ds-rail__home svg {
+  pointer-events: none;
+}
+
+.at-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+}
+
+.at-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+}
+
+.at-head--tight {
+  margin-bottom: var(--ds-space-3);
+}
+
+.at-head__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 26px;
+}
+
+.at-head__aside {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-2);
+}
+
+.at-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: var(--ds-space-4);
+  align-items: start;
+}
+
+.at-grid > .r-card + .r-card {
+  margin-top: 0;
+}
+
+@media (max-width: 900px) {
+  .at-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.at-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--ds-space-2);
+}
+
+/* 卡片是列向 flex，单独的徽标会被拉满整行；左下角起排 */
+.at-card > .r-badge {
+  align-self: flex-start;
+}
+
+.at-card__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+}
+
+.at-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-2);
+}
+
+.at-row__note {
+  color: var(--ds-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.at-note {
+  margin: 0;
+  color: var(--ds-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.at-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--ds-space-2);
+  margin-top: var(--ds-space-2);
+}
+
+.at-field {
+  display: flex;
+  flex: 1 1 10rem;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 8rem;
+}
+
+.at-field > label {
+  color: var(--ds-label-tertiary);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.at-actions {
+  display: flex;
+  gap: var(--ds-space-2);
+}
+
+.at-chart__canvas {
+  width: 100%;
+  height: 300px;
+}

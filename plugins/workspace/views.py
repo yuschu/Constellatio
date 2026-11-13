@@ -1,6 +1,7 @@
 """workspace 插件视图：插件开关列表与运行时启停（v1.5.7 开关式 UI）。"""
 
 from django.shortcuts import redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
@@ -26,6 +27,11 @@ CRITICAL_WARNINGS = {
 @require_perm('workspace_manage')
 def switch_list(request):
     """列出全部已注册插件 + 当前开关状态（DB 优先，回退静态配置）。"""
+    return render(request, 'workspace/switch_list.html', switch_list_context())
+
+
+def switch_list_context():
+    """插件清单上下文（v2.1.0 抽出）：业务页与首页「插件」面板共用。"""
     switches = {s.app_key: s.enabled for s in PluginSwitch.objects.all()}
     rows = []
     for key, meta in PLUGIN_REGISTRY.items():
@@ -36,7 +42,7 @@ def switch_list(request):
             'protected': key in PROTECTED,
             'warning': CRITICAL_WARNINGS.get(key, ''),
         })
-    return render(request, 'workspace/switch_list.html', {'rows': rows})
+    return {'rows': rows}
 
 
 @require_POST
@@ -52,4 +58,15 @@ def switch_toggle(request, app_key):
     plugin_toggled.send(
         sender=switch.__class__, app_key=app_key, enabled=enabled,
         operator_id=request.user.id)
-    return redirect('workspace:switch_list')
+    return redirect(_return_url(request) or 'workspace:switch_list')
+
+
+def _return_url(request):
+    """启停后回到哪：v2.1.0 起首页也能承载插件面板，表单带 `next` 就回那一页。"""
+    next_url = request.POST.get('next') or ''
+    if next_url and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure()):
+        return next_url
+    return None

@@ -1713,3 +1713,48 @@ html[data-rail-settled="true"] .ds-account {
 .ds-settings__options[hidden] {
   display: none;
 }
+
+/* ============================================================
+   27. 主页面板（v2.1.0）
+   侧栏三格点开后在主区内切换，不跳业务页。panel 行本身照 DSH
+   `hHd-Xa_panelActive`：选中 = interactive-bg-hover 底、文字不变色。
+   面板正文是业务页那份 partial，故需主题表在场；主题表的全局 a/h 规则
+   会漏到首页侧栏，这里用 body.as-body 前缀收回来。
+   ============================================================ */
+.as-main--panel {
+  background: var(--as-bg-base);
+}
+
+/* panelBody：主区整体容器，对话态与面板态共用，切换时只换它的内容 */
+.as-panelbody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* 面板视口：撑满主区、纵向滚动；左右 24 / 上 20 与 DSH 主区内容边距同量级 */
+.as-panelview {
+  flex: 1;
+  min-height: 0;
+  padding: 20px 24px 40px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+/* 主题表把手写 a 规则改成全局链接色；侧栏行/菜单行自带色值，别被染成链接蓝 */
+body.as-body .as-sidebar a,
+body.as-body .as-sidebar a:hover {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* 面板内部仍要主题的链接口径（「查看全部公告」「审批中心 →」等） */
+body.as-body .as-panelview a {
+  color: var(--ds-link);
+}
+
+body.as-body .as-panelview a:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

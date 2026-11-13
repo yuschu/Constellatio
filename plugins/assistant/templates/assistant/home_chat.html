@@ -3,10 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% trans "助手" %} · Constellatio</title>
+  <title>{% if panel and panel != 'chat' %}{{ panel_title }}{% else %}{% trans "助手" %}{% endif %} · Constellatio</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="{% static 'assistant/css/assistant.css' %}">
+  {% if panel_theme_css %}<link rel="stylesheet" data-panel-theme href="{% static panel_theme_css %}">{% endif %}
   <script src="{% static 'js/rail-boot.js' %}"></script>
+  <script src="{% static 'js/home-panels.js' %}" defer></script>
 </head>
 <body class="as-body">
 <div class="as-shell">
@@ -40,7 +42,7 @@
     {# 面板入口：primary_menus（考勤/插件/看板，来自 PRIMARY_MENU_URLS）+ 更多抽屉 #}
     <nav class="as-panels" aria-label="{% trans '功能入口' %}">
       {% for menu in primary_menus %}
-      <a href="{{ menu.url }}" class="as-panel{% if menu.active %} is-active{% endif %}"{% if menu.active %} aria-current="page"{% endif %}>
+      <a href="{{ menu.panel_url|default:menu.url }}" data-home-panel="{{ menu.panel_key }}" class="as-panel{% if menu.panel_active %} is-active{% endif %}"{% if menu.panel_active %} aria-current="page"{% endif %}>
         <span class="as-panel__glyph" aria-hidden="true">
           {% if menu.url == '/plugins/attendance/' %}
           {# 考勤：日历 + 勾，与业务页「签到」语义一致 #}
@@ -230,7 +232,23 @@
     </div>
   </aside>
 
-  <main class="as-main">
+  {# 直接渲染模板（测试或其它 provider）时 panel 可能没有值，这里统一兜成对话态 #}
+  {% firstof panel 'chat' as panel_key %}
+  <main class="as-main{% if panel_key != 'chat' %} as-main--panel{% endif %}">
+    {# v2.1.0：主区整体就是「面板」——对话态与三块业务面板共用同一个容器， #}
+    {# 切换时由 home-panels.js 只换这一块，侧栏原地不动（DSH panel 行的行为）。 #}
+    <div class="as-panelbody" data-panel-body data-active-panel="{{ panel_key }}">
+    {% if panel_key != 'chat' %}
+    <div class="as-panelview" data-panel-scroll>
+      {% if panel_key == 'dashboard' %}
+      {% include "home_dashboard.html" %}
+      {% elif panel_key == 'attendance' %}
+      {% include "attendance/_panel.html" %}
+      {% elif panel_key == 'workspace' %}
+      {% include "workspace/_panel.html" %}
+      {% endif %}
+    </div>
+    {% else %}
     <div class="as-header">
       {% if chat_messages %}
       <span class="as-header__title">{% trans "会话" %}</span>
@@ -346,6 +364,8 @@
       </div>
     </div>
     {% endif %}
+    {% endif %}{# /panel：对话态 #}
+    </div>
   </main>
 
 </div>

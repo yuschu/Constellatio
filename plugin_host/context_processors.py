@@ -16,6 +16,15 @@ COLOR_MODE_COOKIE = 'oa_color_mode'
 COLOR_MODES = ('light', 'dark')
 DEFAULT_COLOR_MODE = 'light'
 
+# v2.1.0：主页自己承载的面板入口（顺序即首页侧栏顺序）。
+# 这三条在首页内切换（/?panel=…），业务页侧栏不再重复列一遍——
+# 同一入口出现在两套导航里，用户在业务页永远不知道该点哪一个。
+HOME_PANEL_URLS = (
+    '/plugins/attendance/',   # 考勤
+    '/plugins/workspace/',    # 插件
+    '/dashboard/',            # 看板
+)
+
 
 def color_mode(request):
     """注入当前配色模式；非法或缺失回退浅色。
@@ -65,7 +74,17 @@ def menus(request):
         menu_items = _mark_active(get_menus(request.user, plugins), request.path)
     else:
         menu_items = []
-    return {'menus': menu_items, 'plugins_enabled': enabled}
+    # v2.1.0：业务页侧栏不再展示首页已承载的面板入口（考勤 / 插件 / 看板），
+    # 首页侧栏仍用未过滤的 menus。
+    sidebar_items = [
+        menu for menu in menu_items
+        if (menu.get('url') or '/') not in HOME_PANEL_URLS
+    ]
+    return {
+        'menus': menu_items,
+        'sidebar_menus': sidebar_items,
+        'plugins_enabled': enabled,
+    }
 
 
 def themes(request):

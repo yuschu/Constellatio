@@ -7,7 +7,6 @@
   <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.min.css' %}">
   <link rel="stylesheet" href="{% static 'themes/corporate-clean/css/corporate-clean.css' %}">
   {% block extra_css %}{% endblock %}
-  <script src="{% static 'js/rail-boot.js' %}"></script>
 </head>
 <body class="r-body">
 
@@ -24,21 +23,21 @@
         <a href="/" title="Constellatio">
           <span class="ds-rail__brand-name">Constellatio</span>
         </a>
-        <button type="button" class="ds-rail__toggle" data-ds-rail-toggle
-                aria-keyshortcuts="Control+Alt+B"
-                data-label-collapse="{% trans '收起侧边栏' %}"
-                data-label-open="{% trans '打开侧边栏' %}"
-                aria-label="{% trans '收起侧边栏' %}">
+        {% comment %}v2.1.0：业务页不再折叠侧栏，这一格换成「返回主页」——面板与对话都在首页。{% endcomment %}
+        <a href="/" class="ds-rail__toggle ds-rail__home" title="{% trans '返回主页' %}"
+           aria-label="{% trans '返回主页' %}">
           <svg viewBox="0 0 16 16" width="16" height="16" fill="none" aria-hidden="true">
-            <path d="M13.5 1.5H2.5C1.94772 1.5 1.5 1.94772 1.5 2.5V13.5C1.5 14.0523 1.94772 14.5 2.5 14.5H13.5C14.0523 14.5 14.5 14.0523 14.5 13.5V2.5C14.5 1.94772 14.0523 1.5 13.5 1.5Z" stroke="currentColor" stroke-width="1"/>
-            <path d="M5.5 1.5V14.5" stroke="currentColor" stroke-width="1"/>
+            <path d="M2.6 6.8L8 2.3l5.4 4.5" stroke="currentColor" stroke-width="1.2"
+                  fill="none" stroke-linecap="round"/>
+            <path d="M3.9 7.6V13a.9.9 0 00.9.9h6.4a.9.9 0 00.9-.9V7.6" stroke="currentColor"
+                  stroke-width="1.2" fill="none"/>
           </svg>
-        </button>
+        </a>
       </div>
 
       <div class="ds-rail__section">{% trans "功能" %}</div>
       <nav class="ds-rail__nav" aria-label="{% trans '功能' %}">
-        {% for menu in menus %}
+        {% for menu in sidebar_menus %}
         <a href="{{ menu.url }}" class="ds-rail__row{% if menu.active %} is-active{% endif %}"{% if menu.active %} aria-current="page"{% endif %}>
           <span class="ds-rail__glyph" aria-hidden="true">{{ menu.icon }}</span>
           <span class="ds-rail__label">{{ menu.label }}</span>

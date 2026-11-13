@@ -62,6 +62,7 @@ class AssistantHomePageTests(TestCase):
 
         ds-shell.js 是 defer，最早也要等解析完才跑，冷导航时会先画 280 再跳 56；
         因此 head 里必须同步加载 rail-boot.js，且它读的是同一个会话键。
+        v2.1.0：功能页侧栏不再折叠（那一格换成「返回主页」），只有首页需要它。
         """
         self.client.force_login(self.user)
         home = self.client.get('/').content.decode()
@@ -69,7 +70,9 @@ class AssistantHomePageTests(TestCase):
         self.assertLess(home.index('js/rail-boot.js'), home.index('</head>'))
 
         dashboard = self.client.get('/dashboard/').content.decode()
-        self.assertIn('js/rail-boot.js', dashboard)
+        self.assertNotIn('js/rail-boot.js', dashboard)
+        self.assertIn('class="ds-rail__toggle ds-rail__home"', dashboard)
+        self.assertNotIn('data-ds-rail-toggle', dashboard)
 
         boot = Path(settings.BASE_DIR) / 'plugin_host/static/js/rail-boot.js'
         self.assertTrue(boot.exists())
@@ -104,9 +107,14 @@ class AssistantHomePageTests(TestCase):
         self.assertNotContains(response, 'as-shell')
 
     def test_dashboard_entry_comes_from_plugin_menus(self):
+        """v2.1.0：看板这一格改为在首页内切换，href 指向 `/?panel=dashboard`。
+
+        业务 URL `/dashboard/` 仍然保留为深链，只是侧栏不再直接跳过去。
+        """
         self.client.force_login(self.user)
         response = self.client.get('/')
-        self.assertContains(response, 'href="/dashboard/"')
+        self.assertContains(response, 'href="/?panel=dashboard"')
+        self.assertContains(response, 'data-home-panel="dashboard"')
         self.assertContains(response, '>看板</span>')
 
     def test_primary_panel_starts_with_attendance(self):
@@ -121,11 +129,57 @@ class AssistantHomePageTests(TestCase):
         self.assertEqual(
             [menu['url'] for menu in response.context['primary_menus']],
             ['/plugins/attendance/', '/dashboard/'])
+        # 每一格都带一个消息内切换的落点 URL
+        self.assertEqual(
+            [menu['panel_url'] for menu in response.context['primary_menus']],
+            ['/?panel=attendance', '/?panel=dashboard'])
         # 首页没有指向 / 的菜单了，一个面板都不亮
         self.assertEqual(response.content.decode().count('as-panel is-active'), 0)
         self.assertNotIn(
             '/plugins/attendance/',
             [menu['url'] for menu in response.context['common_menus']])
+
+    def test_panel_query_switches_body_inside_home(self):
+        """`?panel=` 只换主页正文，侧栏外壳（含收起机制）保持不动。"""
+        self.client.force_login(self.user)
+
+        for panel, marker in (
+                ('dashboard', 'lc-ov-page'),
+                ('attendance', 'at-page')):
+            response = self.client.get('/', {'panel': panel})
+            html = response.content.decode()
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, 'data-panel-body')
+            self.assertContains(response, f'data-active-panel="{panel}"')
+            self.assertContains(response, marker)
+            self.assertContains(response, 'as-main--panel')
+            self.assertContains(response, 'class="as-panel is-active"')
+            # 面板态照样是首页外壳（收起脚本、账号菜单都还在）
+            self.assertIn('js/rail-boot.js', html)
+            self.assertNotContains(response, 'ds-rail__home')
+
+        # 插件面板要 workspace_manage：管理员才看得到
+        admin = User.objects.create_superuser('home_admin', '', 'pw')
+        self.client.force_login(admin)
+        response = self.client.get('/', {'panel': 'workspace'})
+        self.assertContains(response, 'data-active-panel="workspace"')
+        self.assertContains(response, 'ds-plugins')
+
+        # chat 态：容器在，active=chat，正文回到对话骨架
+        chat = self.client.get('/').content.decode()
+        self.assertIn('data-active-panel="chat"', chat)
+        self.assertIn('as-hero__title', chat)
+
+    def test_unknown_or_forbidden_panel_falls_back_to_chat(self):
+        """未知 key 与权限不足都回落对话，而不是渲染半个面板。"""
+        self.client.force_login(self.user)
+        response = self.client.get('/', {'panel': 'nope'})
+        self.assertContains(response, 'data-active-panel="chat"')
+
+        # 普通账号没有 workspace_manage，插件面板不该给他
+        response = self.client.get('/', {'panel': 'workspace'})
+        self.assertContains(response, 'data-active-panel="chat"')
+        self.assertTemplateNotUsed(response, 'workspace/_panel.html')
 
     def test_color_mode_query_sets_cookie_and_attribute(self):
         self.client.force_login(self.user)

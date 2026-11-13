@@ -1,0 +1,99 @@
+{% load i18n %}
+{# v2.1.0：考勤看板正文抽成 partial——业务页 /plugins/attendance/ 与首页「考勤」面板共用。 #}
+{# 不再依赖 bootstrap 栅格（首页不加载 bootstrap）：布局走 .at-*（定义在主题 CSS 第 27 节）， #}
+{# 卡片/表格/按钮/徽标仍是主题里的 r-* 组件，两侧同一份观感。 #}
+<div class="at-page">
+
+  <header class="at-head">
+    <h2 class="at-head__title">{% trans "考勤" %}</h2>
+    <div class="at-head__aside">
+      {% if perms.attendance.attendance_rule_manage %}
+      <a href="{% url 'attendance:attendance_rules' %}" class="r-btn r-btn--ghost">⚙ {% trans "考勤规则" %}</a>
+      {% endif %}
+      <span class="r-badge">{{ today|date:"Y-m-d" }}</span>
+    </div>
+  </header>
+
+  <div class="at-grid">
+    <section class="r-card at-card">
+      <h3 class="at-card__title">{% trans "今日状态" %}</h3>
+      {% if record and record.check_in and record.check_out %}
+      <div class="at-row">
+        <span class="r-badge">{% trans record.get_status_display %} · {% trans record.get_sign_type_display %}</span>
+        <span class="at-row__note">{% blocktranslate with check_in=record.check_in|date:"H:i" check_out=record.check_out|date:"H:i" %}签到 {{ check_in }} · 签退 {{ check_out }}{% endblocktranslate %}</span>
+      </div>
+      {% elif record and record.check_in %}
+      <div class="at-row">
+        <span class="r-badge r-badge--blue">{% trans "已签到" %} · {% trans record.get_sign_type_display %}</span>
+        <span class="at-row__note">{% blocktranslate with check_in=record.check_in|date:"H:i" now=now|date:"H:i" %}签到 {{ check_in }} · 当前 {{ now }}{% endblocktranslate %}</span>
+      </div>
+      {% else %}
+      <span class="r-badge r-badge--orange">{% trans "未打卡" %}</span>
+      {% endif %}
+      <p class="at-note">
+        {% blocktranslate with start=rule_start end=rule_end workdays=rule.workdays %}考勤口径：上班 {{ start }} · 下班 {{ end }} · 工作日 {{ workdays }}{% endblocktranslate %}
+      </p>
+      <form method="post" action="{% url 'attendance:attendance_check' %}" class="at-form">
+        {% csrf_token %}
+        {# 打卡后回到当前落点：业务页就是本页，首页面板则回 /?panel=attendance #}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <div class="at-field">
+          <label for="sign_type">{% trans "签到类型" %}</label>
+          <select class="r-input" id="sign_type" name="sign_type">
+            {% for value, label in sign_types %}
+            <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="at-actions">
+          <button class="r-btn r-btn--action" type="submit" name="action" value="in" {% if record and record.check_in %}disabled{% endif %}>{% trans "签到" %}</button>
+          <button class="r-btn r-btn--action" type="submit" name="action" value="out" {% if not record or not record.check_in or record.check_out %}disabled{% endif %}>{% trans "签退" %}</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="r-card at-card">
+      <h3 class="at-card__title">{% blocktranslate with month=today|date:"Y-m" %}本月统计（{{ month }}）{% endblocktranslate %}</h3>
+      <table class="r-table">
+        <tr><th>{% trans "出勤天数" %}</th><td>{% blocktranslate with count=month_days %}{{ count }} 天{% endblocktranslate %}</td></tr>
+        <tr><th>{% trans "迟到次数" %}</th><td>{% blocktranslate with count=month_late late=rule_late %}{{ count }} 次（{{ late }} 前签到为正常）{% endblocktranslate %}</td></tr>
+      </table>
+    </section>
+  </div>
+
+  <section class="r-card at-chart">
+    <div class="at-head at-head--tight">
+      <h3 class="at-card__title at-card__title--flush">{% trans "考勤图表" %}</h3>
+      <span class="r-badge">{{ today|date:"Y-m" }}</span>
+    </div>
+    {% if attendance_chart %}
+    <div id="attendance-dashboard-chart" class="at-chart__canvas"
+         role="img" aria-label="{% trans "考勤图表" %}"></div>
+    {{ attendance_chart|json_script:"attendance-dashboard-data" }}
+    {% else %}
+    <table class="r-table">
+      <thead><tr><th>{% trans "状态" %}</th><th>{% trans "天数" %}</th></tr></thead>
+      <tbody>
+        {% for item in status_totals %}
+        <tr><td>{{ item.label }}</td><td>{{ item.count }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  </section>
+
+</div>
+
+{% if chart and attendance_chart %}
+<script src="{{ chart.script_url }}"></script>
+<script src="{{ chart.adapter_url }}"></script>
+<script nonce="{{ request.csp_nonce }}">
+  (function () {
+    'use strict';
+    var el = document.getElementById('attendance-dashboard-chart');
+    var data = document.getElementById('attendance-dashboard-data');
+    if (!el || !data || !window.oaChartRender) { return; }
+    window.oaChartRender(el, JSON.parse(data.textContent));
+  })();
+</script>
+{% endif %}

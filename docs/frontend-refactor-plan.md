@@ -697,4 +697,70 @@ OA 口径映射（DSH 是「按会话自身各请求时间归属」，本项目�
 
 ---
 
+## 9.13 主页面板内切换 + 业务页侧栏去重 + 折叠换「返回主页」（v2.1.0）
+
+目标：考勤 / 插件 / 看板三格不再跳业务页，改成在主页里换正文；业务页侧栏不再重复这三条入口；业务页侧栏的折叠按钮换成「返回主页」。
+
+### 9.13.1 面板路由（后端）
+
+| 落点 | 行为 |
+|---|---|
+| `/`（无 `panel`） | 对话态，`panel_key = chat` |
+| `/?panel=attendance` | 首页外壳 + 考勤正文 |
+| `/?panel=workspace` | 首页外壳 + 插件正文（需 `workspace_manage` 或超管） |
+| `/?panel=dashboard` | 首页外壳 + 看板正文 |
+| `/plugins/attendance/`、`/plugins/workspace/`、`/dashboard/` | **保留为深链**，主题壳 + 同一份正文 partial |
+
+- `plugins/assistant/views.py`：`PRIMARY_MENU_URLS = HOME_PANEL_URLS`，新增 `PANEL_BY_URL` / `PANEL_TITLES`、`_resolve_panel()`（未知 key、权限不足一律回落 `chat`，不渲染半个面板）、`_panel_context()`（惰性 import 三个上下文构造函数并入首页上下文）、`_split_menus()` 在每条 primary 菜单上补 `panel_key` / `panel_url` / `panel_active` 三个字段，`menu.url` 仍保持原业务 URL。
+- `plugin_host/views.py` 抽出 `dashboard_context(request)`、`plugins/attendance/views.py` 抽出 `attendance_context(request)`、`plugins/workspace/views.py` 抽出 `switch_list_context()`：业务页与首页面板**共用同一口径**，不存在两套数据拼装。
+- `plugin_host/context_processors.py`：`HOME_PANEL_URLS = ('/plugins/attendance/', '/plugins/workspace/', '/dashboard/')`，`menus()` 同时给 `menus`（全量，首页用）与 `sidebar_menus`（过滤掉上述三条，业务页用）。
+- 面板态挂主题表：`panel_theme_css = f'themes/{theme}/css/{theme}.css'`，只在 `panel != chat` 时挂（对话态本来只用 `assistant.css`；实测两者视觉基线一致，见 9.13.5）。
+
+### 9.13.2 正文抽 partial
+
+| 新文件 | 来源 | 关键处理 |
+|---|---|---|
+| `plugins/workspace/templates/workspace/_panel.html` | 原 `switch_list.html` 正文 + 内联脚本 | `switch_list.html` 缩成 3 行 include 壳；表单加 `next` 隐藏域 |
+| `plugins/attendance/templates/attendance/_panel.html` | 原 `attendance_dashboard.html` 正文 | **重写为不依赖 bootstrap**：布局走 `.at-page/.at-head/.at-grid/.at-card/.at-form`，卡片表格按钮仍用主题 `r-*`；图表脚本从 `{% block extra_js %}` 搬进 partial 内部（`chart.script_url` + `chart.adapter_url` + nonce 内联 `oaChartRender`） |
+| `plugin_host/templates/home_dashboard.html` | 上一轮已抽 | 直接被首页 include |
+
+- 打卡与插件启停原先固定 `redirect('attendance:attendance_dashboard')` / `redirect('workspace:switch_list')`，面板态会把用户弹回业务页；现两处都加 `_return_url(request)`（`url_has_allowed_host_and_scheme` 校验 POST `next` 同源，缺省回原业务页），首页面板刷新后仍停在 `/?panel=...`。
+
+### 9.13.3 前端切换（`plugin_host/static/js/home-panels.js`）
+
+拦截 `[data-home-panel]` 点击（尊重 modifier / 中键；点当前面板直接 return）→ `fetch` 目标 URL 取整页 → `DOMParser` 抽 `[data-panel-body]` → 替换 `className` + `innerHTML` → `runScripts()`（把搬进来的 `<script>` 重新执行，考勤图表靠这一步画出来）→ `syncThemeCss()`（按新文档有无 `link[data-panel-theme]` 挂/摘主题表）→ `setSidebarActive()` → `document.title` → 滚动重置 → `history.pushState`；失败 `catch` 回退 `location.href = url`；`popstate` 重新 fetch 当前 URL。
+
+**DSH 真值：面板切换没有过场动画。** 依据是 `dsh-web-frontend/dist/assets/index-lh_YM6sT.css` 的 `@keyframes` 全集——只有 `_dockHintIn_` / `_dockScrimIn_` / `_dsh-context-menu-in|out_` / `_dsh-plugin-detail-skeleton_` / `_dsh-row-shimmer-*` / `_dsh-state-dot-*` / `_dsh-toast-*` / `_indicator-enter_` / `_modalEnter_` / `_reveal-*-dot_` / `_spin_` / `_tooltip-in_`，没有 panel/page 过渡；侧栏自身只有 `hHd-Xa_wide-in`（0% opacity）与 `hHd-Xa_rail-in`。所以本轮实现是**即时替换**，不加淡入淡出——刻意对齐，不是漏做。
+
+`panelActive` 的视觉照 `dsh-client-ui-sidebar/lib/client.js` 的 `PanelRow`：底色 `--dsw-alias-interactive-bg-hover`、文字仍 `label-primary`、行高 36px、3px 透明 border-inline。
+
+### 9.13.4 业务页外壳
+
+- `themes/*/templates/base.html`（两套同构）：删掉 head 的 `rail-boot.js`（业务页没有折叠态了，首帧还原不再需要）；`.ds-rail__toggle` 按钮换成 `<a href="/" class="ds-rail__toggle ds-rail__home" aria-label="返回主页">` + house 图标；侧栏循环 `menus` → `sidebar_menus`。
+- `corporate-clean.css` 第 28 节：`.ds-rail__home` 收回链接色（主题全局 `a` 规则会把它染成链接蓝）、`.at-*` 考勤面板布局（`minmax(0,5fr) minmax(0,7fr)`，<900px 单列，`.at-grid > .r-card + .r-card{margin-top:0}` 抵掉 `.r-card + .r-card` 的上边距，`.at-card > .r-badge{align-self:flex-start}` 防止列向 flex 把徽标拉满整行）。`risograph.css` 只 `@import` corporate，无需改。
+- `assistant.css` 第 27 节：`.as-main--panel` / `.as-panelbody`（flex column / flex 1 / min-height 0）/ `.as-panelview`（flex 1 / overflow-y auto / padding 20px 24px 40px / scrollbar-gutter stable）+ 两条桥接（`body.as-body .as-sidebar a` 收回链接色、`.as-panelview a` 用 `--ds-link`）。
+
+### 9.13.5 门禁 + 真机实测（1440×900，本地 `:8011`）
+
+| 项 | 结果 |
+|---|---|
+| 全量 `venv/run_tests_shim.py` | **501 tests OK**（基线 499 + 本轮 +2） |
+| `ruff check plugin_host plugins` | All checks passed（`tools/*`、旧 migration 的 5 条 I001/F401/B007 为既有基线，非本轮引入） |
+| 服务端冒烟 `.tmp-test/panel_smoke.py` | 7 个落点全 200；`/plugins/approval/` 无 `data-ds-rail-toggle`、无 `rail-boot.js`、侧栏不含 `/dashboard/` |
+| 浏览器切换（CDP，`.tmp-test/flow.mjs`） | 对话态 → 考勤 → 看板 → 后退 → 回对话：`active` 依次 `chat/attendance/dashboard/attendance/chat`，`title` 同步，`themeLink` 面板态 true、对话态 false，`scrollTop` 每次归 0；**`window.__noReloadMark` 全程为 true、`performance.timeOrigin` 不变** —— 三次切换均未重新加载；点「+ 新会话」时 mark 丢失（真实导航，符合设计） |
+| 截图 | `.tmp-test/screens-panel/dashboard.png`、`attendance.png`、`plugins.png`、`dashboard-dark.png`、`chat.png`、`approval.png` |
+| 主题表注入对照 | 对话态强行注入 `corporate-clean.css` 前后截图（`chat-before.png` / `chat-after.png`）视觉基线一致 → 面板态挂表不会造成风格跳变 |
+
+### 9.13.6 排查记录：模板热更新 + `--noreload` 的混合态
+
+浏览器一度拿到「新模板类名 + 空面板正文 + 无主题表」的页面，服务端 test client 却完全正常。根因是 `:8011` 上还挂着**本轮改动之前**启动的 `runserver --noreload`（PID 早于 views.py 的修改时间）：模板在 DEBUG 下每次请求重读，Python 模块不会重载，于是出现「新模板 + 旧视图上下文」的混合态——`panel` 变量根本不存在，`{% if panel != 'chat' %}` 为真、三个 include 全不匹配。杀掉旧进程重启后一切正常。教训：**改 `views.py` / `apps.py` 必须重启进程或重建容器；模板热更新会掩盖这个差异。**
+
+### 9.13.7 仍未对齐 / 待用户拍板
+
+1. 面板态不放 `as-header`（纯 `.as-panelview`，标题由各面板自己的 `.lc-ov-head` / `.at-head` 承担）。
+2. 三个业务 URL 保留为深链，只从侧栏移除（若要去掉入口而非 URL，需再定）。
+3. 双柱口径（提交 vs 已办结）、热力口径（人天签到）、看板「插件启用 / 未读消息」对普通账号的语义，仍按上一轮实现未验收。
+
+---
+
 *本文不含实现代码；确认后按阶段逐个交付，每阶段单独提交与验收。*

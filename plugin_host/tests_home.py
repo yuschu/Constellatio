@@ -241,10 +241,20 @@ class MenuActiveTests(TestCase):
         response = self.client.get('/plugins/notice/')
         self.assertContains(response, 'href="/plugins/notice/" class="ds-rail__row is-active"')
 
-    def test_dashboard_tab_highlighted(self):
+    def test_dashboard_page_has_no_duplicate_rail_entry(self):
+        """v2.1.0：看板已搬进首页（`/?panel=dashboard`），业务页侧栏不再重复列一遍。
+
+        深链 `/dashboard/` 仍然保留，只是侧栏不出现这一行——它属于主页那三格。
+        """
         self.client.force_login(self.staff)
         response = self.client.get('/dashboard/')
-        self.assertContains(response, 'href="/dashboard/" class="ds-rail__row is-active"')
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'href="/dashboard/"')
+        self.assertContains(response, 'class="ds-rail__toggle ds-rail__home"')
+        self.assertContains(response, 'aria-label="返回主页"')
+        # 业务页不再有折叠开关
+        self.assertNotContains(response, 'data-ds-rail-toggle')
+        self.assertNotContains(response, 'js/rail-boot.js')
 
     def test_detail_page_highlights_parent_menu(self):
         approval = Approval.objects.create(
@@ -263,3 +273,6 @@ class MenuActiveTests(TestCase):
             response, 'href="/plugins/attendance/records/" class="ds-rail__row is-active"')
         self.assertNotContains(
             response, 'href="/plugins/attendance/" class="ds-rail__row is-active"')
+        # v2.1.0：功能页侧栏也不再列「考勤」这一行（它只活在首页第一格）
+        self.assertNotContains(response, 'href="/plugins/attendance/"')
+
