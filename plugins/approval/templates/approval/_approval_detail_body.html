@@ -73,7 +73,7 @@
   </div>
 </div>
 
-<p class="ds-settings__desc">{% trans "流转记录" %}</p>
+<p class="ds-settings__desc ds-settings__desc--group">{% trans "流转记录" %}</p>
 <div class="ds-fields">
   {% for r in records %}
   <div class="ds-settings__row">
@@ -93,7 +93,7 @@
 </div>
 
 {% if cc_users %}
-<p class="ds-settings__desc">{% trans "抄送" %}</p>
+<p class="ds-settings__desc ds-settings__desc--group">{% trans "抄送" %}</p>
 <div class="ds-settings__row">
   <div>
     {% for c in cc_users %}
@@ -105,7 +105,7 @@
 {% endif %}
 
 {% if is_counter %}
-<p class="ds-settings__desc">{% blocktranslate with count=signers|length %}会签人（{{ count }} 人，全部通过才生效）{% endblocktranslate %}</p>
+<p class="ds-settings__desc ds-settings__desc--group">{% blocktranslate with count=signers|length %}会签人（{{ count }} 人，全部通过才生效）{% endblocktranslate %}</p>
 <div class="ds-fields">
   {% for s in signers %}
   <div class="ds-settings__row">
@@ -126,7 +126,7 @@
 {% endif %}
 
 {% if can_act %}
-<p class="ds-settings__desc">{% if is_counter %}{% trans "会签操作" %}{% else %}{% trans "审批操作" %}{% endif %}</p>
+<p class="ds-settings__desc ds-settings__desc--group">{% if is_counter %}{% trans "会签操作" %}{% else %}{% trans "审批操作" %}{% endif %}</p>
 <form method="post" novalidate class="ds-settings__form">
   {% csrf_token %}
   <div class="ds-fields">

@@ -4215,6 +4215,11 @@ html:not([data-color-mode="dark"]) .lc-ov-session {
 .ds-settings__back svg {
   transform: translateX(-1px);
 }
+/* 单分区正文里的分组标题（流转记录 / 抄送 / 会签 / 操作）：与上一组留出 24 的间距，
+   否则贴在上一条设置行的 0.5px 分隔线上，看起来像那一行的续行。 */
+.ds-settings__desc--group {
+  margin-top: var(--ds-space-5);
+}
 /* 单分区时 options 顶部留一点呼吸，标题行高 54 已被 header 撑开 */
 .ds-settings--single .ds-settings__options {
   padding-top: var(--ds-space-2);
