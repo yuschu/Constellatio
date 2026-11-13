@@ -688,6 +688,9 @@ msgstr "Department deleted"
 msgid "部门停用"
 msgstr "Department disabled"
 
+msgid "部门启用"
+msgstr "Department enabled"
+
 msgid "部门修改"
 msgstr "Department updated"
 

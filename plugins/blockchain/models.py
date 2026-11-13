@@ -21,6 +21,7 @@ ACTION_LABELS = {
     'plugin_toggled': _('插件开关切换'),
     'dept_deleted': _('部门删除'),
     'dept_disabled': _('部门停用'),
+    'dept_enabled': _('部门启用'),
     'dept_updated': _('部门修改'),
     'user_status_changed': _('用户状态变更'),
     'user_disabled': _('用户禁用'),

@@ -29,6 +29,21 @@ class DepartmentV12Tests(TestCase):
         self.assertFalse(self.dept.is_active)
         self.assertEqual(got[-1]['dept_id'], self.dept.pk)
 
+    def test_disabled_department_can_be_enabled_from_list(self):
+        """停用可逆：列表里的「启用」按钮真的能把 is_active 拉回 True，并留痕。"""
+        got = []
+        bus.dept_enabled.connect(lambda sender, **kw: got.append(kw), weak=False)
+        self.dept.is_active = False
+        self.dept.save(update_fields=['is_active'])
+        self.client.force_login(self.admin)
+        resp = self.client.get(reverse('user:department_list'))
+        self.assertContains(resp, 'name="action" value="enable"', html=False)
+        self.client.post(reverse('user:department_list'),
+                         {'action': 'enable', 'dept_id': self.dept.pk})
+        self.dept.refresh_from_db()
+        self.assertTrue(self.dept.is_active)
+        self.assertEqual(got[-1]['dept_id'], self.dept.pk)
+
     def test_hard_delete_with_members_blocked(self):
         """硬删：有成员时拒绝并提示。"""
         User.objects.create_user('member', '', 'p', department=self.dept)

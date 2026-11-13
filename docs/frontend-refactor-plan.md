@@ -1388,3 +1388,20 @@ select.zGbnIq_input{cursor:pointer;max-width:240px}
 - 容器 8000 用同一支探针（容器 admin SID）复跑：面板 480×600（x=480, y=180）、search 60、footer 52、rows 14、badge 26、浅色徽标 `rgb(245,246,247)` / 深色 `rgb(53,54,56)`、搜索「设置」3 行 2 组、Esc 只关弹层、`Ctrl+Alt+2` → `/dashboard/`、`Ctrl+Alt+,` → `settingsOpen: true`；深浅截图在 `.tmp-test/screens-v17/container/`。
 - 容器插件页 `data-plugin-key` 集合 = `approval / assistant / attendance / blockchain / notice / notify / sso`（7 个），页面内无 `theme/switch` 表单、「内置浅色与深色…」文案命中；`GET /plugins/auth/login/?next=/` 200。
 
+
+### 9.13.28 部门「停用」后可恢复启用（2026-11-13）
+
+**现象**：部门行只有 `{% if d.is_active %}` 里的「停用 / 物理删除」，停用后整个分支不渲染，操作列只剩「修改」——没有任何入口把 `is_active` 拉回来，只能改库。
+
+**改法**
+- 模板：`{% else %}` 分支加一个 `action=enable` 的表单按钮「启用」；恢复是非破坏性动作，不加确认框（停用仍带 `data-confirm`）。
+- 视图：`department_list` 新增 `action == 'enable'` 分支——`is_active=False` 时才写库，`update_fields=['is_active','updated_at']`，随后发 `dept_enabled` 信号。
+- 留痕：`plugin_host/signals.py` 新增 `dept_enabled`；`blockchain` 的 `ACTION_LABELS` 加「部门启用」、`apps.py` 加订阅与 `signals` 清单；`user/apps.py` 的 `signals` 清单同步（14 个）。
+- 翻译：`django.po` 加 `msgid "部门启用" / msgstr "Department enabled"`，`tools/compile_mo.py` 重编译。
+
+**验证**
+- 新增 `plugins/user/tests.py::DepartmentV12Tests::test_disabled_department_can_be_enabled_from_list`：停用部门在列表里必须出现 `name="action" value="enable"`，POST 后 `is_active` 回 True，`dept_enabled` 信号携带 `dept_id`。
+- 全量 **545 tests OK**（基线 544 +1）、`ruff check plugins plugin_host` 全过、`manage.py check` 干净。
+- 容器重建后 8 个改动文件 MD5 与本地一致；容器里真实的停用部门（ID 1 财务部）行内按钮 = `["启用"]`、`enableForms: 1`，截图 `.tmp-test/screens-v17/container/dept-list-enable.png`。
+
+**仍未做（按原样保留）**：停用部门的「物理删除」按钮仍不显示——硬删要先经部门删除会签，是否允许对已停用部门直接发起，属于口径问题，等确认再动。

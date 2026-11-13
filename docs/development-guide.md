@@ -567,7 +567,7 @@ class BlockchainRecord(models.Model):
         return True, None
 ```
 
-- 订阅信号：`apps.py ready()` 中 connect 13 个信号（approval_finished / notice_published / attendance_checked / user_created / user_updated / plugin_toggled / dept_deleted / dept_disabled / dept_updated / user_status_changed / user_disabled / password_changed / structure_applied），回调 `BlockchainRecord.append(...)` —— **只订阅，不反向依赖任何业务插件**
+- 订阅信号：`apps.py ready()` 中 connect 14 个信号（approval_finished / notice_published / attendance_checked / user_created / user_updated / plugin_toggled / dept_deleted / dept_disabled / dept_enabled / dept_updated / user_status_changed / user_disabled / password_changed / structure_applied），回调 `BlockchainRecord.append(...)` —— **只订阅，不反向依赖任何业务插件**
 - 权限：`blockchain_view`（查看留痕）、`blockchain_verify`（链完整性校验）
 - 校验入口：`BlockchainRecord.verify_chain()` → 页面显示"链完整"或"第 N 条被篡改"
 - 详情：列表行尾"查看" → `/plugins/blockchain/<id>/`，展示插件/动作/目标/操作人/三种哈希/时间

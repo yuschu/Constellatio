@@ -24,6 +24,7 @@ user_disable_requested = Signal() # 用户禁用请求，携带 user_id, operato
 counter_signature_approved = Signal()  # 会签全部通过，携带 approval_id, biz_type, biz_id, operator_id
 dept_deleted = Signal()           # 部门物理删除完成，携带 dept_id, dept_name, operator_id
 dept_disabled = Signal()          # 部门软删（停用），携带 dept_id, operator_id
+dept_enabled = Signal()           # 部门恢复启用，携带 dept_id, operator_id
 dept_updated = Signal()           # 部门修改，携带 dept_id, operator_id
 user_status_changed = Signal()    # 用户启用/冻结/解冻，携带 user_id, status, operator_id
 user_disabled = Signal()          # 用户禁用（直接/会签后），携带 user_id, operator_id

@@ -53,6 +53,14 @@
                 {% blocktranslate with name=d.name asvar confirm_hard %}物理删除部门「{{ name }}」？将发起部门删除审批单，全部审批人通过后执行。{% endblocktranslate %}
                 <button class="r-btn r-btn--danger r-btn--action" type="submit" data-confirm="{{ confirm_hard|escapejs }}">{% trans "物理删除" %}</button>
               </form>
+              {% else %}
+              {# 停用可逆：恢复启用不给确认框（非破坏性，立即生效并留痕） #}
+              <form method="post" action="{% url 'user:department_list' %}" class="m-0">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="enable">
+                <input type="hidden" name="dept_id" value="{{ d.id }}">
+                <button class="r-btn r-btn--action" type="submit">{% trans "启用" %}</button>
+              </form>
               {% endif %}
             </div>
           </td>

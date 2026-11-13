@@ -20,6 +20,7 @@ from plugin_host.permissions import require_perm
 from plugin_host.signals import (
     dept_delete_requested,
     dept_disabled,
+    dept_enabled,
     dept_updated,
     password_changed,
     user_created,
@@ -106,7 +107,7 @@ def _render_department_page(request, form=None, edit_dept=None, error='', form_o
 
 @require_perm('user_manage')
 def department_list(request):
-    """部门列表 + 新建 + 修改 + 软删（停用）+ 硬删请求（会签审批）。
+    """部门列表 + 新建 + 修改 + 软删（停用）/ 恢复启用 + 硬删请求（会签审批）。
 
     v2.1.2：新建不再占用列表右侧的常驻卡片，改成部门页的二级弹层
     （`?view=new` 打开，形态照 DSH 点开设置的那一页），列表页只留列表。
@@ -130,6 +131,15 @@ def department_list(request):
                 dept.is_active = False
                 dept.save(update_fields=['is_active', 'updated_at'])
                 dept_disabled.send(sender=Department, dept_id=dept.pk, operator_id=request.user.pk)
+            return redirect('user:department_list')
+        elif action == 'enable':
+            # 停用是可逆的：恢复启用要能从列表直接点到，否则只能靠改库
+            dept_id = request.POST.get('dept_id')
+            dept = get_object_or_404(Department, pk=dept_id)
+            if not dept.is_active:
+                dept.is_active = True
+                dept.save(update_fields=['is_active', 'updated_at'])
+                dept_enabled.send(sender=Department, dept_id=dept.pk, operator_id=request.user.pk)
             return redirect('user:department_list')
         elif action == 'hard_delete':
             dept_id = request.POST.get('dept_id')

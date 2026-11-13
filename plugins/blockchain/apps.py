@@ -68,6 +68,11 @@ class BlockchainConfig(AppConfig):
                 plugin='user', action='dept_disabled',
                 payload=f"dept:{kw['dept_id']}", operator_id=kw.get('operator_id'))
 
+        def _on_dept_enabled(sender, **kw):
+            BlockchainRecord.append(
+                plugin='user', action='dept_enabled',
+                payload=f"dept:{kw['dept_id']}", operator_id=kw.get('operator_id'))
+
         def _on_dept_updated(sender, **kw):
             BlockchainRecord.append(
                 plugin='user', action='dept_updated',
@@ -112,6 +117,8 @@ class BlockchainConfig(AppConfig):
             _safe('dept_deleted', _on_dept_deleted), weak=False)
         bus.dept_disabled.connect(
             _safe('dept_disabled', _on_dept_disabled), weak=False)
+        bus.dept_enabled.connect(
+            _safe('dept_enabled', _on_dept_enabled), weak=False)
         bus.dept_updated.connect(
             _safe('dept_updated', _on_dept_updated), weak=False)
         bus.user_status_changed.connect(
@@ -134,7 +141,7 @@ class BlockchainConfig(AppConfig):
             urls='plugins.blockchain.urls',
             signals=['approval_finished', 'notice_published', 'attendance_checked',
                      'user_created', 'user_updated', 'plugin_toggled',
-                     'dept_deleted', 'dept_disabled', 'dept_updated',
+                     'dept_deleted', 'dept_disabled', 'dept_enabled', 'dept_updated',
                      'user_status_changed', 'user_disabled', 'password_changed',
                      'structure_applied'],
             templates='blockchain',

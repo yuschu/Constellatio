@@ -26,7 +26,8 @@ class UserConfig(AppConfig):
             permissions=['user_manage', 'dept_delete_approve', 'user_disable_approve'],
             urls='plugins.user.urls',
             signals=['user_created', 'user_updated', 'user_status_changed', 'user_disabled',
-                     'dept_deleted', 'dept_disabled', 'dept_updated', 'password_changed'],
+                     'dept_deleted', 'dept_disabled', 'dept_enabled', 'dept_updated',
+                     'password_changed'],
             templates='user',
             app=self,
             builtin=True,   # v2.2.0：账号与组织底座，插件页不外显
