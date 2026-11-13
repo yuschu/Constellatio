@@ -3557,6 +3557,35 @@ html:not([data-color-mode="dark"]) .lc-ov-session {
   text-decoration: none;
 }
 
+/* 品牌行里那条 `.ds-rail__brand a`（flex:1 / height:24 / 18px 字号）会把
+   返回主页按钮也一并命中，把 `.ds-rail__toggle` 的 28×28 挤成 127×24。
+   这里按收起按钮的原始几何收回，尺寸、圆角、hover 全部与它一致。 */
+.ds-rail__brand a.ds-rail__home {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: var(--ds-radius-sm);
+  color: var(--ds-label-secondary);
+  text-decoration: none;
+  corner-shape: var(--ds-corner);
+  transition: background-color var(--ds-dur-fast) linear,
+    color var(--ds-dur-fast) linear;
+}
+
+.ds-rail__brand a.ds-rail__home:hover {
+  background: var(--ds-interactive-hover);
+  color: var(--ds-label-primary);
+  text-decoration: none;
+}
+
+.ds-rail__brand a.ds-rail__home > svg {
+  width: 16px;
+  height: 16px;
+}
+
 .ds-rail__home svg {
   pointer-events: none;
 }
