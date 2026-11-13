@@ -1094,3 +1094,5 @@ input:focus-visible{outline:1px solid state-business;outline-offset:2px}
 **门禁**：`plugin_host/tests.py` 新增 `ThemeDiscoveryTest.test_panel_element_literals_match_dsh` —— 同一选择器在文件里出现多次（第 33 节覆盖旧值），断言取**最后一次**定义，逐条校验 label/help/error/checkbox/只读行/末行不画线，防旧值回潮。全量 tests OK，ruff 通过。
 
 **真机实测（本地 8011，admin，六块面板各一张截图 + 计算样式 dump）**：部门修改（`?view=edit&id=3`）、新建用户（`?view=new`）、发布公告、查看模板、活动记录 #3488、考勤规则。六处 `label` 计算值均为 `rgb(15,17,21) / 13px / 500 / 19.5px`；`help` 均为 `rgb(97,102,107) / 12px / 19.2px / padding-top 10px`；只读行为 `12/12` 内距；公告「置顶」与模板「授予管理员权限」的 checkbox 从裸控件变成 `16×16 / margin 0 / accent-color rgb(15,17,21)`。截图落 `.tmp-test/screens-v9/`（未入库）。
+
+**容器实测（`docker compose up -d --build web` 重建后，8000 端口，容器 admin）**：CSS md5 本地/容器一致（`7143fdaa8cf4fc53f6c2900107516317`），`base.html` 一致（`9e8dcb7aefb17e809d1aa70590a287da`），四块面板（部门修改 / 发布公告 / 活动记录 #1456 / 考勤规则）计算样式与本地逐项相同，公告「置顶」复选框在容器里也是 16×16。截图落 `.tmp-test/screens-v9/container/`。
