@@ -4,7 +4,7 @@
 # 环境变量可写 .env 覆盖（参考 .env.example）
 #
 # 内置模型：首次启动由 ollama-init 拉取 OLLAMA_MODEL（默认 qwen3:4b）到 ollama_data 卷；
-# 官方 registry 失败时自动切 OLLAMA_FALLBACK_MODEL（ModelScope Qwen3-4B GGUF），统一建成同名模型。
+# 官方 registry 失败时自动切 OLLAMA_FALLBACK_MODEL（ModelScope 的非思考版 Qwen3-4B-Instruct-2507 GGUF），统一建成同名模型。
 # 模型已在卷里则直接跳过，不再请求 registry。
 # Docker Hub 不可达时可用 OLLAMA_IMAGE 指向可用镜像源（同一 tag）。
 
@@ -47,7 +47,7 @@ services:
     environment:
       OLLAMA_HOST: http://ollama:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:4b}
-      OLLAMA_FALLBACK_MODEL: ${OLLAMA_FALLBACK_MODEL:-modelscope.cn/Qwen/Qwen3-4B-GGUF:latest}
+      OLLAMA_FALLBACK_MODEL: ${OLLAMA_FALLBACK_MODEL:-modelscope.cn/unsloth/Qwen3-4B-Instruct-2507-GGUF:Q4_K_M}
       OLLAMA_PULL_TIMEOUT: ${OLLAMA_PULL_TIMEOUT:-300}
     entrypoint: ["/bin/sh", "-c"]
     command:

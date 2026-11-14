@@ -16,7 +16,7 @@
 * ⛓ **活动记录**：关键操作 SHA-256 哈希链留痕，单条可查详情，篡改即断链报警；按日 × 来源插件统计
 * 🔑 **企业 SSO**：HMAC 签名 Ticket 网关登录，自动建号 / 防重放，与账号密码登录并存
 * ✉ **消息提醒**：顶栏未读数 + 消息中心；审批待办 / 结果、公告发布自动站内信，可停用降级
-* 🤖 **内置 AI 助手（开发中）**：Compose 自带 Ollama 与 `qwen3:4b`，首次启动自动拉取并预热；官方源失败自动切 ModelScope 回退；只读工具调用、会话落库；配置页可覆盖为网关或更大模型
+* 🤖 **内置 AI 助手（开发中）**：Compose 自带 Ollama 与 `qwen3:4b`，首次启动自动拉取并预热；官方源失败自动切 ModelScope 非思考版回退；只读工具调用、会话落库；配置页可覆盖为网关或更大模型
 * 📦 **私有化部署**：`docker compose up -d` 一键拉起（MySQL 8 + Ollama + Gunicorn + WhiteNoise）；Bootstrap 离线化、生产缺 `SECRET_KEY` 拒绝启动、登出改 POST
 
 ### 业务能力
@@ -53,8 +53,8 @@ cp .env.example .env           # 填 SECRET_KEY；Docker Hub 慢可改 OLLAMA_IM
 docker compose up -d --build
 # 访问 http://localhost:8000
 # 默认超管：admin / Constellatio@2026（可用 .env 覆盖，见 .env.example）
-# 首次启动会拉取并预热内置 qwen3:4b（约 2–3 GB）；官方源失败自动切 ModelScope
-# CPU 推理：官方件单轮约 2–4 分钟，回退件关闭思考后约 3–5 秒；有 GPU 可在配置页改网关或更大模型
+# 首次启动会拉取并预热内置 qwen3:4b（约 2–3 GB）；官方源失败自动切 ModelScope 非思考版回退
+# CPU 推理：官方件单轮约 2–4 分钟，回退件关闭思考后约 3–6 秒；有 GPU 可在配置页改网关或更大模型
 ```
 
 ### 本地开发

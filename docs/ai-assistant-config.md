@@ -7,11 +7,11 @@
 
 `docker compose up -d --build` 会同时拉起 `ollama` 服务；`ollama-init` 在 Ollama 健康后把 `OLLAMA_MODEL`（默认 `qwen3:4b`）拉进 `ollama_data` 卷。Web 默认连 `http://ollama:11434/v1`，所以全新部署不需要再填地址和模型，打开首页就能对话。
 
-- 模型卷约占 2–3 GB；首次启动需要联网拉取，耗时取决于网络。实测空卷冷启动：官方源 5 秒 EOF 失败，切 ModelScope 后以 6.5 MB/s 拉完 2.5 GB，`ollama-init` 全程约 6 分 40 秒。
-- 官方 registry 最多等 `OLLAMA_PULL_TIMEOUT`（默认 300 秒）；超时或失败后自动切 `OLLAMA_FALLBACK_MODEL`，默认 `modelscope.cn/Qwen/Qwen3-4B-GGUF:latest`；拉下来后统一建成 `qwen3:4b`，业务侧模型名不变。设 `OLLAMA_FALLBACK_MODEL=` 可关闭回退，让 init 直接失败。
+- 模型卷约占 2–3 GB；首次启动需要联网拉取，耗时取决于网络。实测空卷默认冷启动（非思考版回退件）：官方源 EOF 失败后自动切 ModelScope，以 6.5 MB/s 拉完 2.5 GB，`ollama-init` 从启动到预热完成 **7 分 13 秒**，Web 随后启动；旧回退件的旧记录为 6 分 40 秒。
+- 官方 registry 最多等 `OLLAMA_PULL_TIMEOUT`（默认 300 秒）；超时或失败后自动切 `OLLAMA_FALLBACK_MODEL`，默认 `modelscope.cn/unsloth/Qwen3-4B-Instruct-2507-GGUF:Q4_K_M`；拉下来后统一建成 `qwen3:4b`，业务侧模型名不变。设 `OLLAMA_FALLBACK_MODEL=` 可关闭回退，让 init 直接失败。
 - 已存在模型时 `ollama-init` 跳过拉取，不再请求 registry；随后仍会做一次最小生成预热。
 - 预热会把 4B 载入 `ollama` 内存（`OLLAMA_KEEP_ALIVE` 默认 30 分钟），Web 等预热结束才启动。CPU 冷加载约 30–45 秒，这一步把等待放在启动阶段，而不是用户第一次提问。
-- 内置 Ollama 默认跑 CPU。`llm.py` 只对 11434 端点发 `reasoning_effort=none`：ModelScope 模板会关闭思考，单轮约 3–5 秒；官方模型模板不认这个字段，仍会思考，单轮约 3 分钟，客户端会把 `</think>` 之前的推理段剥掉，只把答案给用户。Compose 默认 `ASSISTANT_LLM_TIMEOUT=240`，低于 120 秒容易在思考段未结束时被掐断。
+- 内置 Ollama 默认跑 CPU。`llm.py` 只对 11434 端点发 `reasoning_effort=none`：非思考版回退件本身不产思考段，单轮约 3–6 秒；官方模型模板不认这个字段，仍会思考，单轮约 3 分钟，客户端会把 `</think>` 之前的推理段剥掉，只把答案给用户。Compose 默认 `ASSISTANT_LLM_TIMEOUT=240`，低于 120 秒容易在思考段未结束时被掐断。
 - Web 等 `ollama-init` 成功退出后才启动：两条拉取都失败时 Web 不会带病对外服务，看 `docker compose logs ollama-init` 定位，修好网络后重跑 `docker compose up -d`。
 - Docker Hub 不可达时用 `OLLAMA_IMAGE` 指向可用的镜像源（保持同一 tag），例如 `OLLAMA_IMAGE=<镜像站>/ollama/ollama:0.40.11`。
 
@@ -96,6 +96,6 @@
 - 不做模型列表拉取，模型名手工填；
 - 不做多配置档案 / 按用户切换；
 - 内置 Ollama 是独立容器 + 模型卷，不把权重打进 Web 镜像；首次启动仍需联网拉取（官方源失败时走 ModelScope 回退）；
-- 回退件与官方件同为 4B/Q4_K_M，但模板与采样参数不同：回退件关闭思考后 A 阶段 15/20（75%），官方件 19/20（95%）；两者都过 70% 阈值，正式结论仍以官方件为准；
+- 回退件与官方件同为 4B/Q4_K_M，但制版不同：非思考版回退件（Qwen3-4B-Instruct-2507）关闭思考后 A 阶段 18/20（90%），官方件 19/20（95%）；两者都过 70% 阈值，正式结论仍以官方件为准；
 - 探测是单次请求，不代表并发、长上下文或工具调用稳定性；
 - 4B 验收仍以 `docs/ai-assistant-eval.md` 的 20 条固定问句为准，配置页通过不等于验收通过。

@@ -88,14 +88,25 @@ docker exec constellatio-web-1 python manage.py eval_assistant_a --output /tmp/a
 
 同一模型规格用 ModelScope 的 `Qwen3-4B-Q4_K_M.gguf` 导入时，另有一轮 **18/20（90.0%）** 的结果（失败 A06/A10，均为参数层），明细 `.tmp-test/assistant-a-4b.json`。两种制品来源能力一致，验收取本轮官方制品的 19/20 作为正式结论。
 
-### ModelScope 在线回退件（首次启动回退路径）
+### 旧 ModelScope 回退件（Qwen3-4B-GGUF，已被替换）
 
 - 模型：`modelscope.cn/Qwen/Qwen3-4B-GGUF:latest`，拉取后 `ollama create` 成 `qwen3:4b`，`num_ctx=4096`、`num_predict=1536`
 - 结果：**15/20 通过，正确率 75.0%**，仍高于 70% 阈值
 - 失败：A02、A10、A18 首轮未调用工具；A07 多给未要求的 `status=pending`；A09 把 `scope` 给成 `approver`
 - 首轮耗时：0.7–14.1 秒，多数 3–5 秒（`reasoning_effort=none` 已关闭思考）
-- 结论：官方 registry 不可达时，回退件能独立完成 A 阶段验收，但余量只有 5 个百分点；正式结论仍以官方件 19/20 为准
+- 结论：官方 registry 不可达时，旧回退件能独立完成 A 阶段验收，但余量只有 5 个百分点；已被下面的非思考版替换
 - 明细：`.tmp-test/coldtest_eval.json`
+
+### ModelScope 非思考版回退件（当前默认）
+
+- 模型：`modelscope.cn/unsloth/Qwen3-4B-Instruct-2507-GGUF:Q4_K_M`，拉取后 `ollama create` 成 `qwen3:4b`，`num_ctx=4096`、`num_predict=1536`
+- `ollama show`：4B / Q4_K_M，capabilities 含 completion、tools；模型本身不产生 `<think>` 段
+- 首轮不加“不要补默认筛选”规则：**17/20（85.0%）**；失败 A06 多 `status=pending`、A08 缺 `scope=applicant` 且多 `approval_type=expense`、A14 多 `unread_only=True`
+- 在系统提示加第 7 条“只填用户明确说出的筛选条件”后复测：**18/20（90.0%）**；失败 A06 多 `month=2026-11`、A14 多 `unread_only=True`，A08 已修正
+- 首轮耗时：2.2–16.4 秒，多数 3–6 秒
+- 结论：比旧回退件高 3 条，默认回退源切到该制品；正式结论仍以官方件 19/20 为准
+- 默认空卷冷启动栈内复测：**18/20（90.0%）**，失败 A06 多 `status=pending`、A14 多 `unread_only=True`
+- 明细：`.tmp-test/default-fallback-eval.json`（另两轮为 `new-fallback-eval.json` 17/20、`new-fallback-eval-2.json` 18/20）
 
 ### 9B 参考结果（非验收）
 
