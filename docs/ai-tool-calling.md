@@ -190,6 +190,13 @@ def validate_tool_call(tc, user, allowed_names, turn_state):
         declared = spec[k]
         if "enum" in declared and v not in declared["enum"]:
             return False, f"参数 {k} 只能是 {declared['enum']}，你给的是 {v!r}"
+        if declared.get("type") == "integer":
+            if isinstance(v, bool) or not isinstance(v, int):
+                return False, f"参数 {k} 必须是整数"
+            if declared.get("minimum") is not None and v < declared["minimum"]:
+                return False, f"参数 {k} 不能小于 {declared['minimum']}"
+            if declared.get("maximum") is not None and v > declared["maximum"]:
+                return False, f"参数 {k} 不能大于 {declared['maximum']}"
 
     # 5. 值域：日期格式、ID 存在性
     if "month" in args and not re.fullmatch(r"\d{4}-\d{2}", str(args["month"])):
@@ -207,7 +214,7 @@ def validate_tool_call(tc, user, allowed_names, turn_state):
 ```
 
 **两个设计要点**：
-
+- **整数上下限也必须在服务端校验**：`search_approval` / `list_notice` / `query_department` / `search_user` 的 `limit` 都声明了 `minimum=1 / maximum=20`。工具函数虽然会把超限值夹到 1–20，但“模型给 50、服务端悄悄夹到 20”会让参数正确率失真；A 阶段验收集实测 A09 就命中了这个缺口，现已在 `validate_tool_call` 里直接拒绝。
 - **权限判定放最后**，且用哨兵值 `__DENIED__` 区分——权限不足**不该让模型重试**，因为重试也解决不了，而且把"缺哪个权限"写进 messages 等于给模型喂越权提示。
 - **重试要带具体错误**，不要只说"你错了"。小模型靠错误信息自纠的能力有限，但给得越具体成功率越高（尤其 enum 和格式类错误）。
 

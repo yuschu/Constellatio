@@ -1,15 +1,24 @@
 """A 阶段门禁：只读工具、校验层、会话落库与首页对话链路。"""
 
 import json
+from datetime import date
+from io import StringIO
 from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
-from django.test import TestCase, override_settings
+from django.core.management import call_command
+from django.test import SimpleTestCase, TestCase, override_settings
 from django.utils import timezone
 
 from plugins.approval.models import Approval
 from plugins.assistant import llm, services, tools
+from plugins.assistant.eval_cases import build_cases
+from plugins.assistant.eval_harness import (
+    evaluate_message,
+    model_tier,
+    summarise,
+)
 from plugins.assistant.models import Conversation, Message
 from plugins.workspace.models import PluginSwitch
 
@@ -221,3 +230,122 @@ class AssistantChatTests(TestCase):
         self.assertTrue(llm.is_local_base('http://127.0.0.1:11434/v1'))
         self.assertTrue(llm.is_local_base('http://host.docker.internal:11434/v1'))
         self.assertFalse(llm.is_local_base('https://api.openai.com/v1'))
+
+
+def _tool_message(name, args):
+    return {'tool_calls': [{'id': 'call_1', 'function': {
+        'name': name, 'arguments': json.dumps(args, ensure_ascii=False)}}]}
+
+
+class AssistantEvalTests(SimpleTestCase):
+    """验收脚本本身也要有门禁：固定 20 条、评分口径、阈值与 dry-run。"""
+
+    def setUp(self):
+        self.cases = {case['id']: case for case in
+                      build_cases(date(2026, 11, 14))}
+
+    def test_eval_set_has_20_cases_and_covers_all_tools(self):
+        cases = list(self.cases.values())
+        self.assertEqual(len(cases), 20)
+        self.assertEqual(len({case['question'] for case in cases}), 20)
+        self.assertEqual({case['tool'] for case in cases}, set(tools.TOOLS))
+        self.assertTrue(all(not spec['write'] for spec in tools.TOOLS.values()))
+
+    def test_relative_month_cases_follow_injected_today(self):
+        self.assertEqual(
+            self.cases['A03']['expect']['month'], '2026-11')
+        self.assertEqual(
+            self.cases['A04']['expect']['month'], '2026-10')
+        self.assertEqual(
+            self.cases['A13']['expect']['month'], '2026-10')
+
+    def test_eval_accepts_tool_default_scope_and_limit(self):
+        result = evaluate_message(
+            self.cases['A01'], _tool_message(
+                'stats_approval_count', {'month': '2026-11'}))
+        self.assertTrue(result['passed'], result['reason'])
+
+        result = evaluate_message(
+            self.cases['A14'], _tool_message('list_notice', {'limit': 20}))
+        self.assertTrue(result['passed'], result['reason'])
+
+    def test_eval_rejects_wrong_scope_and_wrong_month(self):
+        result = evaluate_message(
+            self.cases['A02'], _tool_message(
+                'stats_approval_count',
+                {'month': '2026-10', 'scope': 'approver'}))
+        self.assertFalse(result['passed'])
+        self.assertIn('scope', result['reason'])
+
+        result = evaluate_message(
+            self.cases['A12'], _tool_message(
+                'stats_attendance', {'month': '2026-10'}))
+        self.assertFalse(result['passed'])
+        self.assertIn('month', result['reason'])
+
+    def test_eval_keyword_uses_contains_not_exact_match(self):
+        result = evaluate_message(
+            self.cases['A17'], _tool_message(
+                'query_department', {'keyword': '技术部'}))
+        self.assertTrue(result['passed'], result['reason'])
+
+        result = evaluate_message(
+            self.cases['A17'], _tool_message(
+                'query_department', {'keyword': '财务部'}))
+        self.assertFalse(result['passed'])
+        self.assertIn('技术', result['reason'])
+
+    def test_eval_rejects_unrequested_filter_but_allows_limit(self):
+        result = evaluate_message(
+            self.cases['A14'], _tool_message(
+                'list_notice', {'unread_only': True}))
+        self.assertFalse(result['passed'])
+        self.assertIn('unread_only', result['reason'])
+
+        result = evaluate_message(
+            self.cases['A18'], _tool_message(
+                'query_department', {'limit': 20}))
+        self.assertTrue(result['passed'], result['reason'])
+
+    def test_eval_requires_exactly_one_tool_call(self):
+        result = evaluate_message(self.cases['A01'], {'content': '0 单'})
+        self.assertFalse(result['passed'])
+        self.assertIn('未调用工具', result['reason'])
+
+        message = _tool_message(
+            'stats_approval_count', {'month': '2026-11'})
+        message['tool_calls'].append(message['tool_calls'][0])
+        result = evaluate_message(self.cases['A01'], message)
+        self.assertFalse(result['passed'])
+        self.assertIn('2 个工具', result['reason'])
+
+    def test_eval_rejects_limit_outside_schema_range(self):
+        result = evaluate_message(
+            self.cases['A11'], _tool_message(
+                'search_approval', {
+                    'scope': 'approver', 'status': 'pending', 'limit': 50,
+                }))
+        self.assertFalse(result['passed'])
+        self.assertIn('不能大于 20', result['reason'])
+
+    def test_summary_uses_70_percent_threshold(self):
+        results = [{'passed': True}] * 14 + [{'passed': False}] * 6
+        summary = summarise(results, 0.70)
+        self.assertEqual(summary['passed'], 14)
+        self.assertTrue(summary['met'])
+
+        results = [{'passed': True}] * 13 + [{'passed': False}] * 7
+        self.assertFalse(summarise(results, 0.70)['met'])
+
+    def test_model_tier_does_not_misread_14b_as_4b(self):
+        self.assertEqual(model_tier('qwen3:4b'), '4b')
+        self.assertEqual(model_tier('qwen3.5:9b'), 'other')
+        self.assertEqual(model_tier('qwen3:14b'), 'other')
+
+    def test_dry_run_prints_20_cases_without_database_or_model(self):
+        output = StringIO()
+        call_command('eval_assistant_a', '--dry-run', stdout=output)
+        text = output.getvalue()
+        self.assertIn('20 条用例结构完整', text)
+        self.assertIn('A20', text)
+        self.assertNotIn('结果：', text)

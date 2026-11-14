@@ -64,6 +64,13 @@ def validate_tool_call(tc, user, allowed_names, turn_state):
         expected = declared.get('type')
         if expected == 'integer' and (isinstance(value, bool) or not isinstance(value, int)):
             return False, f'参数 {key} 必须是整数'
+        if expected == 'integer':
+            minimum = declared.get('minimum')
+            maximum = declared.get('maximum')
+            if minimum is not None and value < minimum:
+                return False, f'参数 {key} 不能小于 {minimum}'
+            if maximum is not None and value > maximum:
+                return False, f'参数 {key} 不能大于 {maximum}'
         if expected == 'boolean' and not isinstance(value, bool):
             return False, f'参数 {key} 必须是布尔值'
         if expected == 'string' and not isinstance(value, str):

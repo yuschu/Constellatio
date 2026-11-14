@@ -3,7 +3,7 @@
 > 基于 Django 的全栈插件化 OA。容器唯一固定：数据库、外观、模板、图表、认证等基础设施，与审批、公告、考勤等业务模块，全部可插拔、可替换。
 
 **当前基线**：`v2.2.13`（2026-11-14）· 564 项测试全绿 · tag `v2.2.13` · Release `v2.2.13 Beta`（「视觉风格重构」）
-**开发中**：AI 助手 A 阶段后端已落地（只读工具 + 会话落库 + 首页 POST/PRG）· 580 项测试全绿 · 未发版
+**开发中**：AI 助手 A 阶段后端已落地（只读工具 + 会话落库 + 首页 POST/PRG）· 20 条固定问句验收集已落地（9B 参考 19/20）· 591 项测试全绿 · 未发版
 
 ## ✨ 特性
 
@@ -35,7 +35,7 @@
 ### 安全与工程
 
 * 🛡 **安全基线**：审批 / 留痕 / 打卡关键写入行锁 + 事务；审批详情与附件按申请人 / 审批人 / 会签人 / 抄送人对象级鉴权；统一 401 / 403 / 404 / 500 语义与 `X-Request-Id`；登录失败限流 + 密码校验器；CSP 10 条指令，`script-src` 只认 nonce，不放开 `unsafe-inline`
-* 🧪 **工程门禁**：依赖精确版本 + `ruff` + `manage.py check` + GitHub Actions 全量测试，当前 580 项全绿；共享缓存走 `DatabaseCache`，登录限流与 SSO 防重放跨 worker 成立
+* 🧪 **工程门禁**：依赖精确版本 + `ruff` + `manage.py check` + GitHub Actions 全量测试，当前 591 项全绿；共享缓存走 `DatabaseCache`，登录限流与 SSO 防重放跨 worker 成立
 
 ## 🛠 技术栈
 
@@ -124,6 +124,7 @@ Constellatio/
 | [docs/frontend-refactor-plan.md](docs/frontend-refactor-plan.md) | v2.2.0–v2.2.13 DSH 化实施记录与验收数据（§9.13.27–41） |
 | [docs/dsh-visual-spec.md](docs/dsh-visual-spec.md) | DSH 实测字面量：颜色 / 间距 / 组件 / 快捷键视觉基线 |
 | [docs/ai-assistant-plan.md](docs/ai-assistant-plan.md) | 对话式首页 A→B→C 阶段方案；A 阶段后端已落地，B/C 待启动 |
+| [docs/ai-assistant-eval.md](docs/ai-assistant-eval.md) | A 阶段 20 条固定问句、评分口径、运行方式与 4B/70% 验收边界 |
 | [docs/ai-tool-calling.md](docs/ai-tool-calling.md) | 本地模型 tool calling 接入规范；A 阶段只读工具与校验层已落地 |
 
 ### 插件开发与历史版本
