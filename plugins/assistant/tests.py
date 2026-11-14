@@ -19,7 +19,7 @@ from plugins.assistant.eval_harness import (
     model_tier,
     summarise,
 )
-from plugins.assistant.models import Conversation, Message
+from plugins.assistant.models import Conversation, LLMSettings, Message
 from plugins.workspace.models import PluginSwitch
 
 User = get_user_model()
@@ -349,3 +349,142 @@ class AssistantEvalTests(SimpleTestCase):
         self.assertIn('20 条用例结构完整', text)
         self.assertIn('A20', text)
         self.assertNotIn('结果：', text)
+
+@override_settings(
+    ASSISTANT_LLM_BASE_URL='http://127.0.0.1:11434/v1',
+    ASSISTANT_LLM_MODEL='qwen3:4b',
+    ASSISTANT_LLM_API_KEY='env-secret')
+class AssistantSettingsTests(TestCase):
+    """配置页：权限、数据库优先、密钥不回显、测试连接不落库。"""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin = User.objects.create_superuser('assistant_admin', '', 'pw')
+        cls.user = User.objects.create_user('assistant_plain', password='pw')
+
+    def setUp(self):
+        self.client.force_login(self.admin)
+
+    def test_settings_page_requires_workspace_manage(self):
+        self.client.force_login(self.user)
+        response = self.client.get('/plugins/assistant/settings/')
+        self.assertEqual(response.status_code, 403)
+
+    def test_get_shows_env_fallback_without_api_key(self):
+        response = self.client.get('/plugins/assistant/settings/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'http://127.0.0.1:11434/v1')
+        self.assertContains(response, 'qwen3:4b')
+        self.assertContains(response, '环境变量')
+        self.assertNotContains(response, 'env-secret')
+
+    def test_save_persists_and_database_wins_over_env(self):
+        response = self.client.post('/plugins/assistant/settings/', {
+            'action': 'save',
+            'base_url': 'http://10.0.0.8:8000/v1',
+            'model': 'qwen3:8b',
+            'api_key': 'db-secret',
+            'timeout_seconds': '45',
+            'max_tokens': '2048',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/plugins/assistant/settings/?saved=1')
+        row = LLMSettings.load()
+        self.assertEqual(row.base_url, 'http://10.0.0.8:8000/v1')
+        self.assertEqual(row.model, 'qwen3:8b')
+        self.assertEqual(row.api_key, 'db-secret')
+        self.assertEqual(row.timeout_seconds, 45)
+        self.assertEqual(row.max_tokens, 2048)
+        cfg = llm.get_config()
+        self.assertEqual(cfg.base_url, 'http://10.0.0.8:8000/v1')
+        self.assertEqual(cfg.model, 'qwen3:8b')
+        self.assertEqual(cfg.timeout, 45.0)
+
+    def test_blank_api_key_keeps_existing_and_clear_removes_it(self):
+        LLMSettings.objects.create(
+            pk=1, base_url='http://127.0.0.1:11434/v1',
+            model='qwen3:4b', api_key='old-secret')
+        response = self.client.post('/plugins/assistant/settings/', {
+            'action': 'save',
+            'base_url': 'http://127.0.0.1:11434/v1',
+            'model': 'qwen3:4b',
+            'api_key': '',
+            'timeout_seconds': '30',
+            'max_tokens': '1024',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(LLMSettings.load().api_key, 'old-secret')
+
+        response = self.client.post('/plugins/assistant/settings/', {
+            'action': 'save',
+            'base_url': 'http://127.0.0.1:11434/v1',
+            'model': 'qwen3:4b',
+            'clear_api_key': 'on',
+            'timeout_seconds': '30',
+            'max_tokens': '1024',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(LLMSettings.load().api_key, '')
+
+    def test_test_connection_does_not_save(self):
+        with mock.patch(
+                'plugins.assistant.views.llm.probe',
+                return_value={
+                    'ok': True, 'latency_ms': 321, 'is_local': True,
+                    'supports_tools': True, 'model': 'qwen3:4b',
+                }) as probe:
+            response = self.client.post('/plugins/assistant/settings/', {
+                'action': 'test',
+                'base_url': 'http://127.0.0.1:11434/v1',
+                'model': 'qwen3:4b',
+                'api_key': '',
+                'timeout_seconds': '30',
+                'max_tokens': '1024',
+            })
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(LLMSettings.objects.exists())
+        self.assertContains(response, '连接成功')
+        self.assertContains(response, '321 ms')
+        probe.assert_called_once()
+        cfg = probe.call_args.args[0]
+        self.assertEqual(cfg.base_url, 'http://127.0.0.1:11434/v1')
+        self.assertEqual(cfg.model, 'qwen3:4b')
+        self.assertEqual(cfg.api_key, 'env-secret')
+
+    def test_public_address_shows_data_flow_warning(self):
+        LLMSettings.objects.create(
+            pk=1, base_url='https://llm.example.com/v1', model='qwen3:4b')
+        response = self.client.get('/plugins/assistant/settings/')
+        self.assertContains(response, '公网地址')
+        self.assertContains(response, '发送到该地址')
+
+    def test_blank_pair_save_clears_database_and_falls_back_to_env(self):
+        LLMSettings.objects.create(
+            pk=1, base_url='http://10.0.0.8:8000/v1',
+            model='qwen3:8b', api_key='db-secret')
+        response = self.client.post('/plugins/assistant/settings/', {
+            'action': 'save',
+            'base_url': '',
+            'model': '',
+            'timeout_seconds': '30',
+            'max_tokens': '1024',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/plugins/assistant/settings/?reset=1')
+        self.assertFalse(LLMSettings.objects.exists())
+        cfg = llm.get_config()
+        self.assertEqual(cfg.base_url, 'http://127.0.0.1:11434/v1')
+        self.assertEqual(cfg.model, 'qwen3:4b')
+        self.assertEqual(cfg.api_key, 'env-secret')
+
+    def test_half_config_is_rejected(self):
+        response = self.client.post('/plugins/assistant/settings/', {
+            'action': 'save',
+            'base_url': 'http://127.0.0.1:11434/v1',
+            'model': '',
+            'timeout_seconds': '30',
+            'max_tokens': '1024',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '填了接口地址就必须填模型名')
+        self.assertFalse(LLMSettings.objects.exists())

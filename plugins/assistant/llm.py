@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from urllib.parse import urlparse
 
 from django.conf import settings
+from django.db.utils import OperationalError, ProgrammingError
 
 
 class AssistantError(Exception):
@@ -52,18 +53,43 @@ class LLMConfig:
         return f'{self.base_url.rstrip("/")}/chat/completions'
 
 
+def _stored_settings():
+    """读取单例配置；迁移尚未应用/表不可用时回退环境变量。"""
+    try:
+        from .models import LLMSettings
+        return LLMSettings.load()
+    except (OperationalError, ProgrammingError):
+        return None
+
+
+def raw_config():
+    """当前生效的五项配置（含 API Key），数据库优先、环境变量兜底。"""
+    row = _stored_settings()
+    return {
+        'base_url': ((row.base_url if row else '') or
+                     getattr(settings, 'ASSISTANT_LLM_BASE_URL', '') or '').strip(),
+        'model': ((row.model if row else '') or
+                  getattr(settings, 'ASSISTANT_LLM_MODEL', '') or '').strip(),
+        'api_key': ((row.api_key if row else '') or
+                    getattr(settings, 'ASSISTANT_LLM_API_KEY', '') or '').strip(),
+        'timeout': float((row.timeout_seconds if row else 0) or
+                         getattr(settings, 'ASSISTANT_LLM_TIMEOUT', 30) or 30),
+        'max_tokens': int((row.max_tokens if row else 0) or
+                          getattr(settings, 'ASSISTANT_LLM_MAX_TOKENS', 1024) or 1024),
+    }
+
+
 def get_config():
-    """从 settings 读取当前配置；未配置时抛 NotConfigured。"""
-    base_url = (getattr(settings, 'ASSISTANT_LLM_BASE_URL', '') or '').strip()
-    model = (getattr(settings, 'ASSISTANT_LLM_MODEL', '') or '').strip()
-    if not base_url or not model:
+    """组装为 LLMConfig；base_url / model 缺一即 NotConfigured。"""
+    values = raw_config()
+    if not values['base_url'] or not values['model']:
         raise NotConfigured('助手尚未配置模型服务')
     return LLMConfig(
-        base_url=base_url,
-        model=model,
-        api_key=(getattr(settings, 'ASSISTANT_LLM_API_KEY', '') or '').strip(),
-        timeout=float(getattr(settings, 'ASSISTANT_LLM_TIMEOUT', 30) or 30),
-        max_tokens=int(getattr(settings, 'ASSISTANT_LLM_MAX_TOKENS', 1024) or 1024),
+        base_url=values['base_url'],
+        model=values['model'],
+        api_key=values['api_key'],
+        timeout=values['timeout'],
+        max_tokens=values['max_tokens'],
     )
 
 

@@ -3,7 +3,7 @@
 > 决策记录（2026-11-12 负责人已拍板）：**按 A→B→C 渐进迭代**、**替换现有首页**、**交付给最终用户使用**、**留出模型选择接口由用户自行配置**。
 > 本文在该前提下给出架构与阶段定义。视觉基线见 `docs/dsh-visual-spec.md`，前端框架选型见 `docs/frontend-refactor-plan.md`。
 >
-> **实施进度（2026-11-14）**：A 阶段后端已落地——`plugins/assistant/models.py`（Conversation/Message）、`llm.py`（标准库 OpenAI 兼容客户端 + 连通性自检）、`tools.py`（6 个只读工具，`write=False` 硬断言）、`services.py`（逐条校验 + 3 轮执行循环 + 会话落库）；首页改为服务端 POST + PRG，支持 `?conversation=` 历史与侧栏最近 20 条；全量 **591 项测试**。20 条固定问句验收集已落成 `manage.py eval_assistant_a`（见 `docs/ai-assistant-eval.md`），含首轮工具/参数严格评分、schema 上下限校验、JSON 明细与 70% 退出码；9B 参考 **19/20（95.0%）**，唯一失败是 A09 多给 `limit=50` 超 schema 上限。**未完成**：4B 档尚未安装，不能按 4B/70% 验收完成表述；配置页、术语表生成、向量检索、手动删除入口未做。B/C 阶段未开始。
+> **实施进度（2026-11-14）**：A 阶段后端已落地——`plugins/assistant/models.py`（Conversation/Message/LLMSettings）、`llm.py`（标准库 OpenAI 兼容客户端 + 连通性自检）、`tools.py`（6 个只读工具，`write=False` 硬断言）、`services.py`（逐条校验 + 3 轮执行循环 + 会话落库）；首页改为服务端 POST + PRG，支持 `?conversation=` 历史与侧栏最近 20 条；全量 **599 项测试**。20 条固定问句验收集已落成 `manage.py eval_assistant_a`（见 `docs/ai-assistant-eval.md`），含首轮工具/参数严格评分、schema 上下限校验、JSON 明细与 70% 退出码；9B 参考 **19/20（95.0%）**，唯一失败是 A09 多给 `limit=50` 超 schema 上限。模型配置页与连通性自检已落地（数据库优先、环境变量兜底，见 `docs/ai-assistant-config.md`）。**未完成**：4B 档尚未安装，不能按 4B/70% 验收完成表述；术语表生成、向量检索、手动删除入口未做。B/C 阶段未开始。
 
 ## 一、结论先行
 
@@ -133,7 +133,7 @@ def index(request):
 | LM Studio | 图形界面，适合非技术客户 |
 | 公司内部网关 | 任何暴露 OpenAI 兼容路径的服务 |
 
-配置项（全部存数据库，管理员在插件配置页填）：
+配置项（全部存数据库，管理员在插件配置页填；已落地，见 `docs/ai-assistant-config.md`）：
 
 ```
 base_url        例 http://127.0.0.1:11434/v1
@@ -157,7 +157,7 @@ max_tokens      默认 1024
 
 **验收阈值按最低档（4B / 70%）设**。理由：这是"部分客户有 GPU"的必然推论——同一套代码要交付给有 GPU 和没 GPU 两类客户，验收必须覆盖最差环境。达不到 70% 就说明必须抬到 8B，这本身是个干净的决策信号，而不是模糊的"效果不太好"。
 
-**配置页要做连通性自检**：填完 `base_url` + `model` 后点"测试连接"，发一条最短的 chat 请求（如"回复 OK"），显示 ① 是否连通、② 首 token 延迟、③ 是否为本机/内网地址。三项都在配置页可见，用户不用自己猜。
+**配置页要做连通性自检**：填完 `base_url` + `model` 后点“测试连接”，发一条最短的 chat 请求（如“回复 OK”），显示 ① 是否连通、② 首 token 延迟、③ 是否为本机/内网地址。三项都在配置页可见，用户不用自己猜。**已落地**；当前客户端非流式，延迟展示整轮请求耗时，不冒充首 token 延迟。
 
 ### 3.4 看板安置（已定：侧栏槽位 + 独立页）
 

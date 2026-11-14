@@ -29,6 +29,32 @@ class Conversation(AuditModel):
         return self.title or f'#{self.pk}'
 
 
+class LLMSettings(AuditModel):
+    """模型服务配置（单例，pk=1）。
+
+    数据库有值时优先于 `ASSISTANT_LLM_*` 环境变量；环境变量只做首次部署兜底。
+    `api_key` 明文存库（A 阶段未引入加密依赖），页面只显示“已保存”，不回显原文。
+    """
+
+    base_url = models.CharField('接口地址', max_length=300, blank=True, default='')
+    model = models.CharField('模型名', max_length=120, blank=True, default='')
+    api_key = models.CharField('API Key', max_length=500, blank=True, default='')
+    timeout_seconds = models.PositiveSmallIntegerField('超时（秒）', default=30)
+    max_tokens = models.PositiveIntegerField('输出上限', default=1024)
+
+    class Meta:
+        verbose_name = '助手模型配置'
+        verbose_name_plural = '助手模型配置'
+
+    def __str__(self):
+        return self.model or '未配置'
+
+    @classmethod
+    def load(cls):
+        """返回唯一配置行；未创建时返回 None（不在这里建表/写库）。"""
+        return cls.objects.filter(pk=1).first()
+
+
 class Message(AuditModel):
     """对话中的一条消息。role=tool 时 content 为工具结果 JSON。"""
 

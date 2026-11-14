@@ -438,6 +438,18 @@
       </div>
       {% endif %}
 
+      {% if can_manage_model %}
+      <div class="ds-settings__row">
+        <div>
+          <div class="ds-settings__row-title">{% trans "助手模型" %}</div>
+          <div class="ds-settings__row-desc">
+            {% if model_configured %}{% trans "已配置 OpenAI 兼容服务，可测试连接或更换模型" %}{% else %}{% trans "尚未配置模型服务，对话输入暂不可用" %}{% endif %}
+          </div>
+        </div>
+        <a class="r-btn r-btn--sm" href="{% url 'assistant:settings' %}">{% trans "配置" %}</a>
+      </div>
+      {% endif %}
+
       <div class="ds-settings__row">
         <div>
           <div class="ds-settings__row-title">{% trans "外观" %}</div>

@@ -230,6 +230,7 @@ OA_PLUGINS = [
 # 对话式首页的模型服务配置（部署时填写，不在安装包里内置任何模型）
 # ---------------------------------------------------------------------------
 # v2.3.0 A 阶段：OpenAI 兼容客户端只读这几项；base_url + model 都有值才启用输入区。
+# 配置页保存的值存在 assistant_llm_settings（数据库优先），这里只做首次部署/回退兜底。
 # api_key 可空（本地 ollama / llama.cpp 通常不校验）；超时与输出上限按最低档机器给默认值。
 ASSISTANT_LLM_BASE_URL = os.environ.get('ASSISTANT_LLM_BASE_URL', '')
 ASSISTANT_LLM_MODEL = os.environ.get('ASSISTANT_LLM_MODEL', '')

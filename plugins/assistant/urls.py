@@ -12,4 +12,5 @@ app_name = 'assistant'
 
 urlpatterns = [
     path('', views.home, name='home'),
+    path('settings/', views.settings_page, name='settings'),
 ]

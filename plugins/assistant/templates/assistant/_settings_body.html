@@ -1,0 +1,99 @@
+{% comment %}
+「助手模型配置」正文：五项配置 + 数据流向 + 测试连接。
+测试按钮不保存，避免“还没确认通不通就已经把旧配置覆盖掉”。
+{% endcomment %}
+<p class="ds-settings__desc">
+  这里填写的是 OpenAI 兼容服务（ollama / llama.cpp / vLLM / 公司网关均可）。
+  保存后立即对全员生效；不填则沿用部署时的环境变量。
+</p>
+<p class="ds-settings__desc">
+  当前配置来源：<strong>{{ config_source }}</strong>
+  {% if current_base_url %}· 生效地址：<code>{{ current_base_url }}</code>{% endif %}
+</p>
+
+{% if saved %}
+<div class="ds-settings__status"><span class="r-badge r-badge--green">配置已保存</span></div>
+{% endif %}
+{% if reset %}
+<div class="ds-settings__status"><span class="r-badge r-badge--green">已清除数据库配置，恢复部署环境变量</span></div>
+{% endif %}
+
+<div class="ds-settings__status">
+  {% if data_flow == 'local' %}
+  <span class="r-badge r-badge--green">本机 / 内网</span>
+  <span class="ds-settings__desc">对话与工具结果不出当前内网。</span>
+  {% elif data_flow == 'public' %}
+  <span class="r-badge r-badge--orange">公网地址</span>
+  <span class="ds-settings__desc">每轮对话都会把当前用户的业务数据发送到该地址，请确认对方可信。</span>
+  {% else %}
+  <span class="r-badge">未配置地址</span>
+  <span class="ds-settings__desc">填写后这里会显示数据是否只在本机 / 内网流动。</span>
+  {% endif %}
+</div>
+
+<form method="post" novalidate class="ds-settings__form">
+  {% csrf_token %}
+  {% for error in form.non_field_errors %}
+  <div class="ds-field__error">{{ error }}</div>
+  {% endfor %}
+
+  <div class="ds-fields">
+    <div class="ds-field">
+      <label class="ds-field__label" for="{{ form.base_url.id_for_label }}">{{ form.base_url.label }}</label>
+      {{ form.base_url }}
+      <div class="ds-field__help">{{ form.base_url.help_text }}</div>
+      {% for error in form.base_url.errors %}<div class="ds-field__error">{{ error }}</div>{% endfor %}
+    </div>
+    <div class="ds-field">
+      <label class="ds-field__label" for="{{ form.model.id_for_label }}">{{ form.model.label }}</label>
+      {{ form.model }}
+      <div class="ds-field__help">{{ form.model.help_text }}</div>
+      {% for error in form.model.errors %}<div class="ds-field__error">{{ error }}</div>{% endfor %}
+    </div>
+    <div class="ds-field">
+      <label class="ds-field__label" for="{{ form.api_key.id_for_label }}">{{ form.api_key.label }}</label>
+      {{ form.api_key }}
+      <div class="ds-field__help">
+        {% if api_key_set %}已保存一个 API Key；{% endif %}{{ form.api_key.help_text }}
+      </div>
+      <label class="ds-field__checkbox">{{ form.clear_api_key }} {{ form.clear_api_key.label }}</label>
+      {% for error in form.api_key.errors %}<div class="ds-field__error">{{ error }}</div>{% endfor %}
+    </div>
+    <div class="ds-field">
+      <label class="ds-field__label" for="{{ form.timeout_seconds.id_for_label }}">{{ form.timeout_seconds.label }}</label>
+      {{ form.timeout_seconds }}
+      <div class="ds-field__help">{{ form.timeout_seconds.help_text }}</div>
+      {% for error in form.timeout_seconds.errors %}<div class="ds-field__error">{{ error }}</div>{% endfor %}
+    </div>
+    <div class="ds-field">
+      <label class="ds-field__label" for="{{ form.max_tokens.id_for_label }}">{{ form.max_tokens.label }}</label>
+      {{ form.max_tokens }}
+      <div class="ds-field__help">{{ form.max_tokens.help_text }}</div>
+      {% for error in form.max_tokens.errors %}<div class="ds-field__error">{{ error }}</div>{% endfor %}
+    </div>
+  </div>
+
+  {% if probe_error %}
+  <div class="ds-settings__status">
+    <span class="r-badge r-badge--orange">连接失败</span>
+    <span class="ds-settings__desc">{{ probe_error }}</span>
+  </div>
+  {% endif %}
+  {% if probe_result %}
+  <div class="ds-settings__status">
+    <span class="r-badge r-badge--green">连接成功</span>
+    <span class="ds-settings__desc">
+      本次耗时 {{ probe_result.latency_ms }} ms
+      · {% if probe_result.is_local %}本机 / 内网{% else %}公网地址{% endif %}
+      · {% if probe_result.supports_tools %}支持工具调用{% else %}未返回工具调用{% endif %}
+      · 模型 {{ probe_result.model }}
+    </span>
+  </div>
+  {% endif %}
+
+  <div class="ds-settings__actions ds-settings__actions--center">
+    <button class="r-btn" type="submit" name="action" value="save">保存</button>
+    <button class="r-btn r-btn--ghost" type="submit" name="action" value="test">测试连接</button>
+  </div>
+  <p class="ds-settings__desc">「测试连接」只发一条最短请求，不会保存当前输入。</p>
+</form>

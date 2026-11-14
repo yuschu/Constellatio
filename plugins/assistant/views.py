@@ -29,10 +29,12 @@ from plugin_host.context_processors import (
     DEFAULT_COLOR_MODE,
     HOME_PANEL_URLS,
 )
+from plugin_host.permissions import require_perm
 from plugin_host.registry import plugin_enabled
 
-from . import services
-from .models import Conversation, Message
+from . import llm, services
+from .forms import LLMSettingsForm
+from .models import Conversation, LLMSettings, Message
 
 # 顶部固定入口对应的菜单 URL，元组顺序即侧栏渲染顺序（v2.1.0 起与
 # 业务页侧栏的「已由主页承载」清单同源，避免两处各写一套）。
@@ -88,11 +90,8 @@ CREATE_PLUGIN_PROMPT = '创建一个带左侧栏入口的 Constellatio 插件。
 
 
 def _model_configured():
-    """模型服务是否已配置：base_url 与 model 必须同时存在。"""
-    return bool(
-        getattr(settings, 'ASSISTANT_LLM_BASE_URL', '')
-        and getattr(settings, 'ASSISTANT_LLM_MODEL', '')
-    )
+    """模型服务是否已配置：数据库/环境变量里的 base_url 与 model 同时存在。"""
+    return llm.is_configured()
 
 
 def _resolve_color_mode(request):
@@ -184,6 +183,7 @@ def home(request):
         'panel': panel,
         'panel_sub': sub,
         'panel_title': SUB_TITLES.get((panel, sub)) or PANEL_TITLES.get(panel, '助手'),
+        'can_manage_model': request.user.has_perm('workspace_manage'),
     }
     context.update(_panel_context(request, panel, sub))
     if panel != 'chat':
@@ -296,4 +296,82 @@ def _split_menus(request, panel):
         })
     common = [by_url[url] for url in COMMON_MENU_URLS if url in by_url]
     return primary, common
+
+
+@require_perm('workspace_manage')
+def settings_page(request):
+    """模型服务配置：五项入数据库；保存与测试连接分离，测试不落库。"""
+    row = LLMSettings.load()
+    effective = llm.raw_config()
+    saved = request.GET.get('saved') == '1'
+    reset = request.GET.get('reset') == '1'
+    probe_result = None
+    probe_error = ''
+    action = request.POST.get('action') if request.method == 'POST' else ''
+
+    if request.method == 'POST':
+        form = LLMSettingsForm(request.POST)
+        if form.is_valid():
+            values = form.cleaned_data
+            if not values['base_url'] or not values['model']:
+                if action == 'test':
+                    form.add_error(None, '请先填写接口地址和模型名，再测试连接')
+            if not form.errors and action == 'test':
+                api_key = ('' if values['clear_api_key'] else
+                           values['api_key'] or effective['api_key'])
+                try:
+                    probe_result = llm.probe(llm.LLMConfig(
+                        base_url=values['base_url'],
+                        model=values['model'],
+                        api_key=api_key,
+                        timeout=float(values['timeout_seconds']),
+                        max_tokens=values['max_tokens'],
+                    ))
+                except llm.AssistantError as exc:
+                    probe_error = str(exc)
+            elif not form.errors and action == 'save':
+                if not values['base_url']:
+                    # 两项都留空 = 放弃数据库配置，回到部署环境变量。
+                    LLMSettings.objects.filter(pk=1).delete()
+                    return redirect('/plugins/assistant/settings/?reset=1')
+                if values['clear_api_key']:
+                    api_key = ''
+                elif values['api_key']:
+                    api_key = values['api_key']
+                else:
+                    api_key = row.api_key if row else ''
+                obj = row or LLMSettings(pk=1)
+                obj.base_url = values['base_url']
+                obj.model = values['model']
+                obj.api_key = api_key
+                obj.timeout_seconds = values['timeout_seconds']
+                obj.max_tokens = values['max_tokens']
+                obj.save()
+                return redirect('/plugins/assistant/settings/?saved=1')
+    else:
+        form = LLMSettingsForm(initial={
+            'base_url': effective['base_url'],
+            'model': effective['model'],
+            'timeout_seconds': int(effective['timeout']),
+            'max_tokens': effective['max_tokens'],
+        })
+
+    current_base_url = form['base_url'].value() or effective['base_url']
+    current_is_local = (llm.is_local_base(current_base_url)
+                        if current_base_url else None)
+    context = {
+        'form': form,
+        'saved': saved,
+        'reset': reset,
+        'api_key_set': bool(effective['api_key']),
+        'config_source': '数据库' if (row and (row.base_url or row.model)) else '环境变量',
+        'current_base_url': current_base_url,
+        'current_is_local': current_is_local,
+        'data_flow': ('unknown' if current_is_local is None else
+                      'local' if current_is_local else 'public'),
+        'probe_result': probe_result,
+        'probe_error': probe_error,
+        'settings_back_url': '/',
+    }
+    return render(request, 'assistant/settings.html', context)
 
