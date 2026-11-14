@@ -88,6 +88,15 @@ docker exec constellatio-web-1 python manage.py eval_assistant_a --output /tmp/a
 
 同一模型规格用 ModelScope 的 `Qwen3-4B-Q4_K_M.gguf` 导入时，另有一轮 **18/20（90.0%）** 的结果（失败 A06/A10，均为参数层），明细 `.tmp-test/assistant-a-4b.json`。两种制品来源能力一致，验收取本轮官方制品的 19/20 作为正式结论。
 
+### ModelScope 在线回退件（首次启动回退路径）
+
+- 模型：`modelscope.cn/Qwen/Qwen3-4B-GGUF:latest`，拉取后 `ollama create` 成 `qwen3:4b`，`num_ctx=4096`、`num_predict=1536`
+- 结果：**15/20 通过，正确率 75.0%**，仍高于 70% 阈值
+- 失败：A02、A10、A18 首轮未调用工具；A07 多给未要求的 `status=pending`；A09 把 `scope` 给成 `approver`
+- 首轮耗时：0.7–14.1 秒，多数 3–5 秒（`reasoning_effort=none` 已关闭思考）
+- 结论：官方 registry 不可达时，回退件能独立完成 A 阶段验收，但余量只有 5 个百分点；正式结论仍以官方件 19/20 为准
+- 明细：`.tmp-test/coldtest_eval.json`
+
 ### 9B 参考结果（非验收）
 
 - 模型：`qwen3.5:9b`（ollama，本机；**非 4B 档**）

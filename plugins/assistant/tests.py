@@ -366,6 +366,46 @@ class AssistantEvalTests(SimpleTestCase):
         self.assertIn('A20', text)
         self.assertNotIn('结果：', text)
 
+class _FakeResponse:
+    """给 call_llm 的最小上下文管理器替身。"""
+
+    def __init__(self, body):
+        self._body = body
+
+    def read(self):
+        return json.dumps(self._body).encode()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+
+class AssistantLLMPayloadTests(SimpleTestCase):
+    """只对 Ollama 默认端口发 reasoning_effort，避免公网兼容服务不认这个字段。"""
+
+    def _payload(self, base_url):
+        config = llm.LLMConfig(
+            base_url=base_url, model='qwen3:4b', timeout=5, max_tokens=128)
+        body = {'choices': [{'message': {'content': 'ok'}}]}
+        with mock.patch.object(
+                llm.urllib.request, 'urlopen',
+                return_value=_FakeResponse(body)) as opened:
+            llm.call_llm([{'role': 'user', 'content': 'hi'}], config=config)
+        return json.loads(opened.call_args.args[0].data.decode())
+
+    def test_builtin_ollama_disables_thinking(self):
+        payload = self._payload('http://ollama:11434/v1')
+        self.assertEqual(payload['reasoning_effort'], 'none')
+        self.assertTrue(llm.is_ollama_base('http://127.0.0.1:11434/v1'))
+
+    def test_public_compatible_endpoint_keeps_payload_standard(self):
+        payload = self._payload('https://api.openai.com/v1')
+        self.assertNotIn('reasoning_effort', payload)
+        self.assertFalse(llm.is_ollama_base('http://127.0.0.1:8080/v1'))
+
+
 @override_settings(SECRET_KEY='assistant-test-secret-key')
 class AssistantSecretTests(SimpleTestCase):
     """API Key 字段加密：可逆、带认证、旧明文兼容。"""

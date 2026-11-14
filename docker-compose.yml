@@ -4,6 +4,7 @@
 # 环境变量可写 .env 覆盖（参考 .env.example）
 #
 # 内置模型：首次启动由 ollama-init 拉取 OLLAMA_MODEL（默认 qwen3:4b）到 ollama_data 卷；
+# 官方 registry 失败时自动切 OLLAMA_FALLBACK_MODEL（ModelScope Qwen3-4B GGUF），统一建成同名模型。
 # 模型已在卷里则直接跳过，不再请求 registry。
 # Docker Hub 不可达时可用 OLLAMA_IMAGE 指向可用镜像源（同一 tag）。
 
@@ -38,22 +39,38 @@ services:
       start_period: 30s
     restart: unless-stopped
 
-  # 一次性初始化：只负责把内置模型拉进 ollama_data；已存在时秒退，可重复执行。
+  # 一次性初始化：负责把内置模型拉进 ollama_data；已存在时秒退，可重复执行。
+  # 官方 registry 不通时自动切 ModelScope 的 Qwen3-4B GGUF，统一落成 qwen3:4b。
   # 已存在则不发网络请求，离线重启不会被 registry 卡住。
   ollama-init:
     image: ${OLLAMA_IMAGE:-ollama/ollama:0.40.11}
     environment:
       OLLAMA_HOST: http://ollama:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:4b}
+      OLLAMA_FALLBACK_MODEL: ${OLLAMA_FALLBACK_MODEL:-modelscope.cn/Qwen/Qwen3-4B-GGUF:latest}
+      OLLAMA_PULL_TIMEOUT: ${OLLAMA_PULL_TIMEOUT:-300}
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
         set -e
         if ollama list | awk 'NR > 1 {print $1}' | grep -qx "$${OLLAMA_MODEL}"; then
           echo "model $${OLLAMA_MODEL} already present"
+        elif [ -n "$${OLLAMA_FALLBACK_MODEL}" ] && ollama list | awk 'NR > 1 {print $1}' | grep -qx "$${OLLAMA_FALLBACK_MODEL}"; then
+          echo "fallback $${OLLAMA_FALLBACK_MODEL} already present; creating $${OLLAMA_MODEL}"
+          printf 'FROM %s\nPARAMETER num_ctx 4096\nPARAMETER num_predict 1536\n' "$${OLLAMA_FALLBACK_MODEL}" > /tmp/Modelfile
+          ollama create "$${OLLAMA_MODEL}" -f /tmp/Modelfile
         else
           echo "pulling $${OLLAMA_MODEL}"
-          ollama pull "$${OLLAMA_MODEL}"
+          if ! timeout "$${OLLAMA_PULL_TIMEOUT}" ollama pull "$${OLLAMA_MODEL}"; then
+            if [ -z "$${OLLAMA_FALLBACK_MODEL}" ]; then
+              echo "primary pull failed; no fallback configured"
+              exit 1
+            fi
+            echo "primary pull failed; pulling fallback $${OLLAMA_FALLBACK_MODEL}"
+            ollama pull "$${OLLAMA_FALLBACK_MODEL}"
+            printf 'FROM %s\nPARAMETER num_ctx 4096\nPARAMETER num_predict 1536\n' "$${OLLAMA_FALLBACK_MODEL}" > /tmp/Modelfile
+            ollama create "$${OLLAMA_MODEL}" -f /tmp/Modelfile
+          fi
         fi
         echo "warming $${OLLAMA_MODEL}"
         ollama run "$${OLLAMA_MODEL}" "hi" >/dev/null 2>&1 || echo "warmup skipped"

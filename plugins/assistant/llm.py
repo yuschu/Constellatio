@@ -116,6 +116,10 @@ def call_llm(messages, tools=None, tool_choice='auto', config=None):
         'temperature': 0.2,
         'max_tokens': cfg.max_tokens,
     }
+    # 内置 Ollama 的 Qwen3 模板会默认思考；CPU 上思考段可能吃掉整轮超时。
+    # 只对 11434 端口的内置/本机 Ollama 发这个字段，公网 OpenAI 兼容服务不受影响。
+    if is_ollama_base(cfg.base_url):
+        payload['reasoning_effort'] = 'none'
     if tools:
         payload['tools'] = tools
         payload['tool_choice'] = tool_choice
@@ -194,3 +198,15 @@ def is_local_base(base_url):
         return address.is_private or address.is_loopback
     except ValueError:
         return host.endswith('.local')
+
+
+def is_ollama_base(base_url):
+    """是否指向 Ollama 默认端口；只对这种内置端点发送 Ollama 专属参数。"""
+    parsed = urlparse(base_url)
+    if parsed.port != 11434:
+        return False
+    host = (parsed.hostname or '').lower()
+    if host in ('ollama', 'localhost', '127.0.0.1', '::1',
+                'host.docker.internal', 'host.containers.internal'):
+        return True
+    return host.startswith('127.') or host == '0.0.0.0'
