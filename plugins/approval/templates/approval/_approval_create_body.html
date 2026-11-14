@@ -24,6 +24,7 @@
 <form method="post" enctype="multipart/form-data" novalidate class="ds-settings__form">
   {% csrf_token %}
   <input type="hidden" name="approval_type" value="{{ type_key }}">
+  {% if assistant_draft_token %}<input type="hidden" name="draft" value="{{ assistant_draft_token }}">{% endif %}
   {% if reapply_of %}<input type="hidden" name="reapply_of" value="{{ reapply_of.id }}">{% endif %}
 
   {% for error in form.non_field_errors %}

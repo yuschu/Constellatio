@@ -7,7 +7,8 @@
 """
 
 import re
-from datetime import date
+from datetime import date, datetime
+from decimal import Decimal, InvalidOperation
 
 from django.db.models import Count
 from django.utils import timezone
@@ -127,6 +128,103 @@ def stats_attendance(user, month):
               [choice for choice, _label in Attendance.Status.choices]}
     result['days'] = qs.count()
     return result
+
+
+def _draft_datetime(value):
+    """把模型给的 datetime-local 值统一成 YYYY-MM-DDTHH:MM。"""
+    text = str(value or '').strip()
+    for fmt in ('%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M'):
+        try:
+            return datetime.strptime(text, fmt).strftime('%Y-%m-%dT%H:%M')
+        except ValueError:
+            continue
+    raise ValueError('时间格式应为 YYYY-MM-DDTHH:MM')
+
+
+def _draft_date(value):
+    """把模型给的日期统一成 YYYY-MM-DD。"""
+    return date.fromisoformat(str(value or '').strip()).isoformat()
+
+
+def draft_approval(user, approval_type, leave_time=None, submit_time=None,
+                   amount=None, reason=None):
+    """生成请假/报销草稿。只返回待确认数据，不写库、不提交。"""
+    if approval_type not in ('leave', 'expense'):
+        return {
+            'draft': None,
+            'missing': [],
+            'error': '目前只支持 leave（请假）和 expense（报销）',
+        }
+    reason = str(reason or '').strip()
+    if len(reason) > 500:
+        return {'draft': None, 'missing': [], 'error': '事由不能超过 500 字'}
+
+    if approval_type == 'leave':
+        missing = [] if leave_time else ['请假时间']
+        if missing:
+            return {'draft': None, 'missing': missing}
+        try:
+            leave_value = _draft_datetime(leave_time)
+        except ValueError:
+            return {
+                'draft': None, 'missing': [],
+                'error': '请假时间格式应为 YYYY-MM-DDTHH:MM',
+            }
+        initial = {'leave_time': leave_value}
+        if reason:
+            initial['reason'] = reason
+        return {
+            'draft': {
+                'approval_type': 'leave',
+                'type_label': '请假',
+                'initial': initial,
+                'fields': [
+                    {'name': 'leave_time', 'label': '请假时间',
+                     'value': leave_value.replace('T', ' ')},
+                    {'name': 'reason', 'label': '事由',
+                     'value': reason or '未填写'},
+                ],
+            },
+        }
+
+    missing = []
+    if not submit_time:
+        missing.append('提交时间')
+    if amount in (None, ''):
+        missing.append('金额')
+    if missing:
+        return {'draft': None, 'missing': missing}
+    try:
+        submit_value = _draft_date(submit_time)
+    except ValueError:
+        return {
+            'draft': None, 'missing': [],
+            'error': '提交时间格式应为 YYYY-MM-DD',
+        }
+    try:
+        amount_value = Decimal(str(amount)).quantize(Decimal('0.01'))
+        if not amount_value.is_finite() or amount_value < 0:
+            raise InvalidOperation
+    except (InvalidOperation, ValueError, TypeError):
+        return {'draft': None, 'missing': [], 'error': '金额必须是非负数字'}
+    initial = {
+        'submit_time': submit_value,
+        'amount': f'{amount_value:.2f}',
+    }
+    if reason:
+        initial['reason'] = reason
+    return {
+        'draft': {
+            'approval_type': 'expense',
+            'type_label': '报销',
+            'initial': initial,
+            'fields': [
+                {'name': 'submit_time', 'label': '提交时间', 'value': submit_value},
+                {'name': 'amount', 'label': '金额', 'value': f'{amount_value:.2f}'},
+                {'name': 'reason', 'label': '费用事由', 'value': reason or '未填写'},
+            ],
+        },
+    }
 
 
 def list_notice(user, limit=5, unread_only=False):
@@ -266,6 +364,35 @@ _register(
                           'description': '最多返回条数，默认 10'},
             }),
     ['approval_view'], '查询审批单'),
+_register(
+    'draft_approval', draft_approval,
+    _schema('draft_approval',
+            '生成请假或报销草稿。只返回待确认字段，不写库、不提交。用户明确说'
+            '「帮我请假 / 报销 / 起草」时使用；缺时间或金额就返回 missing 追问，'
+            '不要替用户编造。部门与审批人交给审批表单默认值，不要填。',
+            {
+                'approval_type': {
+                    'type': 'string', 'enum': ['leave', 'expense'],
+                    'description': 'leave=请假，expense=报销',
+                },
+                'leave_time': {
+                    'type': 'string',
+                    'description': '请假时间，格式 YYYY-MM-DDTHH:MM，例如 2026-11-15T09:00',
+                },
+                'submit_time': {
+                    'type': 'string',
+                    'description': '报销提交日期，格式 YYYY-MM-DD',
+                },
+                'amount': {
+                    'type': 'number', 'minimum': 0,
+                    'description': '报销金额，只填数字，不带货币符号',
+                },
+                'reason': {
+                    'type': 'string',
+                    'description': '请假事由或费用事由，按用户原话概括，不要扩写',
+                },
+            }),
+    ['approval_view'], '生成审批草稿'),
 _register(
     'stats_approval_count', stats_approval_count,
     _schema('stats_approval_count',

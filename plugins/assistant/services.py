@@ -18,10 +18,12 @@ DENIED = '__DENIED__'
 
 
 def build_system_prompt(user):
-    today = timezone.localdate().isoformat()
+    now = timezone.localtime()
+    today = now.date().isoformat()
     name = getattr(user, 'last_name', '') or getattr(user, 'username', '')
     return (
-        f'你是 Constellatio 的企业助手。当前用户：{name}；今天：{today}。\n'
+        f'你是 Constellatio 的企业助手。当前用户：{name}；今天：{today}；'
+        f'当前时间：{now:%Y-%m-%d %H:%M}。\n'
         '规则：\n'
         '1. 只回答与当前办公系统有关的问题；不确定时明确说不知道，不要编造。\n'
         '2. 需要业务数据时调用提供的只读工具，不要凭记忆编造数字。\n'
@@ -29,8 +31,24 @@ def build_system_prompt(user):
         '4. 工具返回错误就向用户解释，不要反复调用同一个工具。\n'
         '5. 一律使用简体中文回答，语气简洁。\n'
         '6. 不要使用 Markdown 标记（*、#、反引号）；用纯文本短句和换行。\n'
-        '7. 调用工具时只填用户明确说出的筛选条件；用户没提到的月份、状态、类型、未读等参数不要自行补默认值。'
+        '7. 调用工具时只填用户明确说出的筛选条件；用户没提到的月份、状态、类型、未读等参数不要自行补默认值。\n'
+        '8. 用户要发起请假或报销时，先调用 draft_approval 生成草稿；草稿不是提交，'
+        '必须让用户打开审批表单确认。不要替用户编造未说出的时间、金额或事由。'
     )
+
+
+def extract_draft(message):
+    """从助手消息的工具日志里取最后一份有效草稿；没有返回 None。"""
+    for log in reversed(message.tool_calls or []):
+        if log.get('tool') != 'draft_approval' or not log.get('ok'):
+            continue
+        result = log.get('result') or {}
+        draft = result.get('draft')
+        if (isinstance(draft, dict)
+                and draft.get('approval_type') in ('leave', 'expense')
+                and isinstance(draft.get('initial'), dict)):
+            return draft
+    return None
 
 
 def validate_tool_call(tc, user, allowed_names, turn_state):
@@ -67,6 +85,15 @@ def validate_tool_call(tc, user, allowed_names, turn_state):
         if expected == 'integer' and (isinstance(value, bool) or not isinstance(value, int)):
             return False, f'参数 {key} 必须是整数'
         if expected == 'integer':
+            minimum = declared.get('minimum')
+            maximum = declared.get('maximum')
+            if minimum is not None and value < minimum:
+                return False, f'参数 {key} 不能小于 {minimum}'
+            if maximum is not None and value > maximum:
+                return False, f'参数 {key} 不能大于 {maximum}'
+        if expected == 'number':
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                return False, f'参数 {key} 必须是数字'
             minimum = declared.get('minimum')
             maximum = declared.get('maximum')
             if minimum is not None and value < minimum:

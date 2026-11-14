@@ -4,11 +4,13 @@ import json
 from datetime import date
 from io import StringIO
 from unittest import mock
+from urllib.parse import parse_qs, urlparse
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.core.management import call_command
 from django.test import SimpleTestCase, TestCase, override_settings
+from django.urls import reverse
 from django.utils import timezone
 
 from plugins.approval.models import Approval
@@ -21,6 +23,7 @@ from plugins.assistant.eval_harness import (
     summarise,
 )
 from plugins.assistant.models import Conversation, LLMSettings, Message
+from plugins.user.models import Department, Role
 from plugins.workspace.models import PluginSwitch
 
 User = get_user_model()
@@ -264,7 +267,10 @@ class AssistantEvalTests(SimpleTestCase):
         cases = list(self.cases.values())
         self.assertEqual(len(cases), 20)
         self.assertEqual(len({case['question'] for case in cases}), 20)
-        self.assertEqual({case['tool'] for case in cases}, set(tools.TOOLS))
+        # B 阶段新增的 draft_approval 只产草稿，不进入 A 阶段 20 条只读验收集。
+        self.assertEqual(
+            {case['tool'] for case in cases},
+            set(tools.TOOLS) - {'draft_approval'})
         self.assertTrue(all(not spec['write'] for spec in tools.TOOLS.values()))
 
     def test_relative_month_cases_follow_injected_today(self):
@@ -616,3 +622,151 @@ class AssistantSettingsTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '填了接口地址就必须填模型名')
         self.assertFalse(LLMSettings.objects.exists())
+
+
+class ApprovalDraftToolTests(SimpleTestCase):
+    """B 阶段：草稿工具只产数据，不建单；缺字段返回 missing。"""
+
+    def test_leave_draft_fields(self):
+        result = tools.draft_approval(
+            None, 'leave', leave_time='2026-11-15T09:00', reason='家事')
+        self.assertIn('draft', result)
+        draft = result['draft']
+        self.assertEqual(draft['approval_type'], 'leave')
+        self.assertEqual(draft['initial']['leave_time'], '2026-11-15T09:00')
+        self.assertEqual(
+            [field['label'] for field in draft['fields']], ['请假时间', '事由'])
+        self.assertEqual(draft['fields'][0]['value'], '2026-11-15 09:00')
+
+    def test_leave_missing_time_is_not_guessed(self):
+        result = tools.draft_approval(None, 'leave', reason='家事')
+        self.assertIsNone(result['draft'])
+        self.assertEqual(result['missing'], ['请假时间'])
+
+    def test_expense_draft_normalises_amount(self):
+        result = tools.draft_approval(
+            None, 'expense', submit_time='2026-11-15', amount=300, reason='餐费')
+        draft = result['draft']
+        self.assertEqual(draft['initial']['amount'], '300.00')
+        self.assertEqual(draft['initial']['submit_time'], '2026-11-15')
+        self.assertEqual(draft['fields'][1]['value'], '300.00')
+
+    def test_expense_missing_amount_and_date(self):
+        result = tools.draft_approval(None, 'expense', reason='餐费')
+        self.assertIsNone(result['draft'])
+        self.assertEqual(result['missing'], ['提交时间', '金额'])
+
+    def test_only_leave_and_expense_are_supported(self):
+        result = tools.draft_approval(None, 'seal', reason='盖章')
+        self.assertIsNone(result['draft'])
+        self.assertIn('只支持', result['error'])
+
+    def test_amount_must_be_numeric_in_tool_validation(self):
+        args = {
+            'approval_type': 'expense', 'submit_time': '2026-11-15',
+            'amount': '300', 'reason': '餐费',
+        }
+        tc = {'function': {
+            'name': 'draft_approval',
+            'arguments': json.dumps(args, ensure_ascii=False),
+        }}
+        ok, message = services.validate_tool_call(
+            tc, None, {'draft_approval'}, {'calls': {}})
+        self.assertFalse(ok)
+        self.assertIn('必须是数字', message)
+
+
+class AssistantApprovalDraftBridgeTests(TestCase):
+    """助手草稿 → session → 原审批表单；提交仍走 approval_create 的 POST。"""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.dept = Department.objects.create(name='研发部')
+        cls.gm = User.objects.create_user('draft_gm', '', 'pw', last_name='总经理')
+        cls.leader = User.objects.create_user(
+            'draft_lead', '', 'pw', last_name='研发经理', leader=cls.gm)
+        cls.applicant = User.objects.create_user(
+            'draft_app', '', 'pw', last_name='朱研发',
+            department=cls.dept, leader=cls.leader)
+        cls.other = User.objects.create_user('draft_other', '', 'pw')
+        for user, codes in (
+                (cls.applicant, ('approval_view',)),
+                (cls.leader, ('approval_view', 'approval_approve')),
+                (cls.other, ('approval_view',))):
+            role = Role.objects.create(name=f'role-{user.username}')
+            for code in codes:
+                role.permissions.add(Permission.objects.get(codename=code))
+            user.roles.add(role)
+
+    def setUp(self):
+        self.client.force_login(self.applicant)
+        self.conversation = Conversation.objects.create(user=self.applicant)
+        result = tools.draft_approval(
+            self.applicant, 'leave', leave_time='2026-11-15T09:00', reason='家事')
+        self.message = Message.objects.create(
+            conversation=self.conversation, role=Message.Role.ASSISTANT,
+            content='草稿已生成，请确认。',
+            tool_calls=[{
+                'tool': 'draft_approval', 'args': {'approval_type': 'leave'},
+                'ok': True, 'result': result, 'error': '', 'duration_ms': 1,
+            }])
+
+    def _draft_url(self):
+        response = self.client.get(
+            reverse('assistant:approval_draft', args=[self.message.pk]))
+        self.assertEqual(response.status_code, 302)
+        return response.url
+
+    def test_draft_link_redirects_to_prefilled_approval_form(self):
+        url = self._draft_url()
+        parsed = urlparse(url)
+        token = parse_qs(parsed.query)['draft'][0]
+        self.assertEqual(parsed.path, reverse('approval:approval_create'))
+        self.assertIn(token, self.client.session['assistant_approval_drafts'])
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'value="2026-11-15T09:00"')
+        self.assertContains(response, '家事')
+        # token 随表单回传，避免后续把表单 action 改成不带查询串时草稿清不掉。
+        self.assertContains(response, 'name="draft"')
+        self.assertContains(response, f'value="{token}"')
+
+    def test_post_from_prefilled_form_creates_and_clears_draft(self):
+        url = self._draft_url()
+        token = parse_qs(urlparse(url).query)['draft'][0]
+        response = self.client.post(url, {
+            'approval_type': 'leave',
+            'leave_time': '2026-11-15T09:00',
+            'reason': '家事',
+            'department': str(self.dept.pk),
+            'approver': str(self.leader.pk),
+        })
+        self.assertEqual(response.status_code, 302)
+        approval = Approval.objects.get(applicant=self.applicant)
+        self.assertEqual(approval.status, Approval.Status.PENDING)
+        self.assertEqual(approval.form_data['reason'], '家事')
+        self.assertNotIn(token, self.client.session['assistant_approval_drafts'])
+
+    def test_other_user_cannot_open_draft(self):
+        self.client.force_login(self.other)
+        response = self.client.get(
+            reverse('assistant:approval_draft', args=[self.message.pk]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_message_without_draft_is_404(self):
+        plain = Message.objects.create(
+            conversation=self.conversation, role=Message.Role.ASSISTANT,
+            content='没有草稿')
+        response = self.client.get(
+            reverse('assistant:approval_draft', args=[plain.pk]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_home_renders_draft_card(self):
+        response = self.client.get('/', {'conversation': self.conversation.pk})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '草稿')
+        self.assertContains(response, '去审批')
+        self.assertContains(
+            response,
+            reverse('assistant:approval_draft', args=[self.message.pk]))

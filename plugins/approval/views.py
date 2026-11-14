@@ -23,6 +23,10 @@ from .services import approve, reject, sign_approve, sign_reject, submit
 
 User = get_user_model()
 
+# 与 assistant 的 session 交接契约：assistant 只放草稿，不建 Approval；
+# 这里只读草稿预填表单，提交仍走本视图的真实 POST。
+ASSISTANT_DRAFT_SESSION_KEY = 'assistant_approval_drafts'
+
 # v1.7.1（P1-20）：列表统一分页；v1.7.6 改为引用容器常量，避免各插件各写一个数字
 LIST_PAGE_SIZE = DEFAULT_PAGE_SIZE
 
@@ -45,6 +49,25 @@ def _can_act(user, approval):
     if approval.approver_id is None:
         return False
     return user == approval.approver or user.is_superuser
+
+
+def _assistant_draft(request):
+    """取 session 里的助手草稿；token 只在当前用户会话内有效。"""
+    token = request.GET.get('draft') or request.POST.get('draft')
+    if not token:
+        return None, None
+    records = request.session.get(ASSISTANT_DRAFT_SESSION_KEY) or {}
+    if not isinstance(records, dict):
+        return None, None
+    record = records.get(token)
+    if not isinstance(record, dict) or record.get('user_id') != request.user.pk:
+        return None, None
+    draft = record.get('draft')
+    if (not isinstance(draft, dict)
+            or draft.get('approval_type') not in (Approval.Type.LEAVE, Approval.Type.EXPENSE)
+            or not isinstance(draft.get('initial'), dict)):
+        return None, None
+    return token, draft
 
 
 def _departments():
@@ -142,6 +165,9 @@ def _create_context(request, form=None, type_key=None, source=None, chip_prefix=
         'type_key': type_key,
         'users': approvers,
         'reapply_of': source,
+        # 助手草稿的 session token 随表单回传，成功建单后由 approval_create 清掉；
+        # 不是助手来源时为空，不影响原表单。
+        'assistant_draft_token': request.GET.get('draft') or request.POST.get('draft'),
         'type_chips': [
             {'key': key, 'label': Approval.Type(key).label,
              'href': f'{chip_prefix}{key}', 'active': key == type_key}
@@ -217,8 +243,10 @@ def approval_create(request):
         if source is None:
             return redirect('approval:approval_list')
 
+    draft_token, assistant_draft = _assistant_draft(request)
     type_key = (source.approval_type if source else (
         request.GET.get('type') or request.POST.get('approval_type')
+        or (assistant_draft or {}).get('approval_type')
         or Approval.Type.LEAVE))
     if type_key not in forms.FORM_CLASSES:
         type_key = Approval.Type.LEAVE
@@ -231,6 +259,9 @@ def approval_create(request):
         approvers = _fallback_approvers(request.user)
     overtime_choices = _overtime_choices(request.user)
     initial = dict(source.form_data) if source else None
+    if (source is None and assistant_draft
+            and assistant_draft.get('approval_type') == type_key):
+        initial = dict(assistant_draft.get('initial') or {})
     form = forms.form_for_type(
         type_key, request.POST or None, request.FILES or None,
         applicant=request.user,
@@ -302,6 +333,11 @@ def approval_create(request):
                         approval=locked_source, operator=request.user, action='replaced',
                         comment=f'被 #{approval.pk} 替换')
                     return redirect('approval:approval_detail', approval_id=approval.pk)
+            if draft_token:
+                records = request.session.get(ASSISTANT_DRAFT_SESSION_KEY) or {}
+                if isinstance(records, dict):
+                    records.pop(draft_token, None)
+                    request.session[ASSISTANT_DRAFT_SESSION_KEY] = records
             return redirect('approval:approval_list')
 
     if source is not None:

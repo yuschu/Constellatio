@@ -277,7 +277,26 @@
     <div class="as-scroll as-scroll--thread" role="log" aria-live="polite">
       {% for message in chat_messages %}
       <div class="as-row as-row--{{ message.role }}">
-        <div class="as-bubble">{{ message.content|chat_text }}</div>
+        <div class="as-turn">
+          <div class="as-bubble">{{ message.content|chat_text }}</div>
+          {% if message.draft %}
+          <div class="as-draft" data-ds-card>
+            <div class="as-draft__head">
+              <span class="as-draft__tag">{% trans "草稿" %}</span>
+              <span class="as-draft__type">{{ message.draft.type_label }}</span>
+            </div>
+            <dl class="as-draft__fields">
+              {% for field in message.draft.fields %}
+              <div class="as-draft__row">
+                <dt>{{ field.label }}</dt>
+                <dd>{{ field.value }}</dd>
+              </div>
+              {% endfor %}
+            </dl>
+            <a class="as-draft__action" href="{{ message.draft_url }}">{% trans "去审批" %}</a>
+          </div>
+          {% endif %}
+        </div>
       </div>
       {% endfor %}
     </div>

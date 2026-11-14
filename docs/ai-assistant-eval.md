@@ -42,6 +42,8 @@ A 阶段的价值是“查得对”，不是“说得好”。最终措辞受模
 
 覆盖 6 个只读工具：审批统计 4 条、审批明细 7 条、考勤 2 条、公告 3 条、部门 2 条、人员 2 条。
 
+B 阶段新增的 `draft_approval` 不进入这 20 条只读验收集，覆盖率断言显式排除该工具；草稿字段、缺字段不猜、卡片桥接与原表单提交由 `plugins/assistant/tests.py` 的 `ApprovalDraftToolTests` / `AssistantApprovalDraftBridgeTests` 覆盖。
+
 ## 三、评分细则
 
 - **默认值可省略**：`search_approval` 默认 `scope=applicant`、`limit=10`；`stats_approval_count` 默认 `scope=approver`；`list_notice` 默认 `limit=5`、`unread_only=false`。省略默认值视为参数正确。

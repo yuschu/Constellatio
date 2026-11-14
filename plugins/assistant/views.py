@@ -16,12 +16,14 @@ v2.3.0：接入只读工具调用与会话落库；`?conversation=<id>` 打开�
 侧栏列出最近 20 条。模型/工具失败只写一条助手消息，首页不降级。
 """
 
+import secrets
 from urllib.parse import quote
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseBadRequest, HttpResponseNotFound
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.utils.translation import gettext as _
 
 from plugin_host.context_processors import (
@@ -159,6 +161,12 @@ def home(request):
         chat_messages = list(conversation.messages.filter(
             role__in=[Message.Role.USER, Message.Role.ASSISTANT]
         ).order_by('created_at', 'pk'))
+        for message in chat_messages:
+            draft = services.extract_draft(message)
+            if draft:
+                message.draft = draft
+                message.draft_url = reverse(
+                    'assistant:approval_draft', args=[message.pk])
 
     primary_menus, common_menus = _split_menus(request, panel)
     # v2.2.0：快捷键「快速操作」与首页真正渲染出来的入口同源——固定入口指向面板
@@ -297,6 +305,40 @@ def _split_menus(request, panel):
         })
     common = [by_url[url] for url in COMMON_MENU_URLS if url in by_url]
     return primary, common
+
+
+APPROVAL_DRAFT_SESSION_KEY = 'assistant_approval_drafts'
+
+
+@require_perm('approval_view')
+def approval_draft(request, message_id):
+    """把助手消息里的草稿放进 session，跳到原审批表单预填。
+
+    只做一次服务端 session 交接，不创建 Approval；提交仍由 approval_create
+    的真实 POST 完成。
+    """
+    message = Message.objects.filter(
+        pk=message_id,
+        role=Message.Role.ASSISTANT,
+        conversation__user=request.user,
+    ).select_related('conversation').first()
+    if message is None:
+        return HttpResponseNotFound('草稿不存在')
+    draft = services.extract_draft(message)
+    if draft is None:
+        return HttpResponseNotFound('草稿不存在')
+
+    token = secrets.token_urlsafe(16)
+    records = request.session.get(APPROVAL_DRAFT_SESSION_KEY) or {}
+    if not isinstance(records, dict):
+        records = {}
+    # 只保留最近 5 份，避免 session 越用越大。
+    records = dict(list(records.items())[-4:])
+    records[token] = {'user_id': request.user.pk, 'draft': draft}
+    request.session[APPROVAL_DRAFT_SESSION_KEY] = records
+    url = reverse('approval:approval_create')
+    return redirect(
+        f'{url}?type={quote(draft["approval_type"])}&draft={quote(token)}')
 
 
 @require_perm('workspace_manage')
