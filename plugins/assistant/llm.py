@@ -7,6 +7,7 @@
 """
 
 import json
+import re
 import socket
 import time
 import urllib.error
@@ -151,7 +152,25 @@ def call_llm(messages, tools=None, tool_choice='auto', config=None):
         raise BadResponse('模型服务返回格式异常') from exc
     if not isinstance(message, dict):
         raise BadResponse('模型服务返回格式异常')
+    if isinstance(message.get('content'), str):
+        message['content'] = strip_reasoning(message['content'])
     return message
+
+
+def strip_reasoning(content):
+    """去掉 Qwen3 思考段，避免官方 Ollama 模板把推理过程显示给用户。
+
+    ModelScope 模板认 `reasoning_effort=none`，官方 `qwen3:4b` 模板不认，
+    会把 `...思考...</think>答案` 整段塞进 content；这里只保留答案。
+    """
+    if not content:
+        return content
+    content = re.sub(
+        r'<think(?:ing)?\b[^>]*>.*?</think(?:ing)?>', '', content,
+        flags=re.S | re.I)
+    content = re.sub(
+        r'^.*?</think(?:ing)?>', '', content, count=1, flags=re.S | re.I)
+    return content.strip()
 
 
 def probe(config=None):

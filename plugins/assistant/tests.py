@@ -406,6 +406,31 @@ class AssistantLLMPayloadTests(SimpleTestCase):
         self.assertFalse(llm.is_ollama_base('http://127.0.0.1:8080/v1'))
 
 
+class AssistantLLMReasoningTests(SimpleTestCase):
+    """官方 Ollama 模板不认 reasoning_effort，返回前必须剥掉思考段。"""
+
+    def test_strips_thinking_prefix_before_answer(self):
+        content = '用户问的是部门人数。</think>\n\n技术部共有 2 人。'
+        self.assertEqual(llm.strip_reasoning(content), '技术部共有 2 人。')
+
+    def test_strips_complete_thinking_block(self):
+        content = '<think>先查工具</think>技术部共有 2 人。'
+        self.assertEqual(llm.strip_reasoning(content), '技术部共有 2 人。')
+
+    def test_call_llm_returns_clean_content(self):
+        config = llm.LLMConfig(
+            base_url='http://ollama:11434/v1', model='qwen3:4b',
+            timeout=5, max_tokens=128)
+        body = {'choices': [{'message': {
+            'content': '思考过程</think>技术部共有 2 人。'}}]}
+        with mock.patch.object(
+                llm.urllib.request, 'urlopen',
+                return_value=_FakeResponse(body)):
+            message = llm.call_llm(
+                [{'role': 'user', 'content': '技术部有多少人？'}], config=config)
+        self.assertEqual(message['content'], '技术部共有 2 人。')
+
+
 @override_settings(SECRET_KEY='assistant-test-secret-key')
 class AssistantSecretTests(SimpleTestCase):
     """API Key 字段加密：可逆、带认证、旧明文兼容。"""

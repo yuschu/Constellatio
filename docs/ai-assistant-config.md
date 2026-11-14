@@ -11,7 +11,7 @@
 - 官方 registry 最多等 `OLLAMA_PULL_TIMEOUT`（默认 300 秒）；超时或失败后自动切 `OLLAMA_FALLBACK_MODEL`，默认 `modelscope.cn/Qwen/Qwen3-4B-GGUF:latest`；拉下来后统一建成 `qwen3:4b`，业务侧模型名不变。设 `OLLAMA_FALLBACK_MODEL=` 可关闭回退，让 init 直接失败。
 - 已存在模型时 `ollama-init` 跳过拉取，不再请求 registry；随后仍会做一次最小生成预热。
 - 预热会把 4B 载入 `ollama` 内存（`OLLAMA_KEEP_ALIVE` 默认 30 分钟），Web 等预热结束才启动。CPU 冷加载约 30–45 秒，这一步把等待放在启动阶段，而不是用户第一次提问。
-- 内置 Ollama 默认跑 CPU。`llm.py` 只对 11434 端点发 `reasoning_effort=none`：ModelScope 模板会关闭思考，单轮约 3–5 秒；官方模型模板不认这个字段，仍会思考，单轮约 3 分钟。Compose 默认 `ASSISTANT_LLM_TIMEOUT=240`，低于 120 秒容易在思考段未结束时被掐断。
+- 内置 Ollama 默认跑 CPU。`llm.py` 只对 11434 端点发 `reasoning_effort=none`：ModelScope 模板会关闭思考，单轮约 3–5 秒；官方模型模板不认这个字段，仍会思考，单轮约 3 分钟，客户端会把 `</think>` 之前的推理段剥掉，只把答案给用户。Compose 默认 `ASSISTANT_LLM_TIMEOUT=240`，低于 120 秒容易在思考段未结束时被掐断。
 - Web 等 `ollama-init` 成功退出后才启动：两条拉取都失败时 Web 不会带病对外服务，看 `docker compose logs ollama-init` 定位，修好网络后重跑 `docker compose up -d`。
 - Docker Hub 不可达时用 `OLLAMA_IMAGE` 指向可用的镜像源（保持同一 tag），例如 `OLLAMA_IMAGE=<镜像站>/ollama/ollama:0.40.11`。
 
