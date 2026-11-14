@@ -48,6 +48,13 @@ services:
       DJANGO_HTTPS: ${DJANGO_HTTPS:-0}
       DJANGO_SSL_REDIRECT: ${DJANGO_SSL_REDIRECT:-0}
       DJANGO_HSTS_SECONDS: ${DJANGO_HSTS_SECONDS:-31536000}
+      # v2.3.0 A 阶段：OpenAI 兼容模型服务。base_url + model 同时非空才启用对话输入；
+      # api_key 可空（ollama / llama.cpp 本地服务通常不校验）。
+      ASSISTANT_LLM_BASE_URL: ${ASSISTANT_LLM_BASE_URL:-}
+      ASSISTANT_LLM_MODEL: ${ASSISTANT_LLM_MODEL:-}
+      ASSISTANT_LLM_API_KEY: ${ASSISTANT_LLM_API_KEY:-}
+      ASSISTANT_LLM_TIMEOUT: ${ASSISTANT_LLM_TIMEOUT:-30}
+      ASSISTANT_LLM_MAX_TOKENS: ${ASSISTANT_LLM_MAX_TOKENS:-1024}
     command: ["sh", "./entrypoint.sh"]
     ports:
       - "${WEB_PORT:-8000}:8000"

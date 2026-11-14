@@ -2,6 +2,8 @@
 
 > 决策记录（2026-11-12 负责人已拍板）：**按 A→B→C 渐进迭代**、**替换现有首页**、**交付给最终用户使用**、**留出模型选择接口由用户自行配置**。
 > 本文在该前提下给出架构与阶段定义。视觉基线见 `docs/dsh-visual-spec.md`，前端框架选型见 `docs/frontend-refactor-plan.md`。
+>
+> **实施进度（2026-11-14）**：A 阶段后端已落地——`plugins/assistant/models.py`（Conversation/Message）、`llm.py`（标准库 OpenAI 兼容客户端 + 连通性自检）、`tools.py`（6 个只读工具，`write=False` 硬断言）、`services.py`（逐条校验 + 3 轮执行循环 + 会话落库）；首页改为服务端 POST + PRG，支持 `?conversation=` 历史与侧栏最近 20 条；全量 **580 项测试**。**未完成**：20 条固定问句验收集、配置页、术语表生成、向量检索、手动删除入口；真实模型已在开发机 ollama `qwen3.5:9b` 上完成单轮与多轮工具冒烟（`stats_approval_count` 调用成功、`probe` 支持工具、容器内 HTTP 登录/对话/落库与 `?conversation=` 续聊通过），但尚未按 4B/70% 口径跑固定问句集。B/C 阶段未开始。
 
 ## 一、结论先行
 

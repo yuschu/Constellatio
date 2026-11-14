@@ -1,8 +1,8 @@
-"""对话式首页视图（v2.0.1 → v2.1.0 主页面板）。
+"""对话式首页视图（v2.0.1 → v2.3.0 A 阶段）。
 
-本版只交付界面与骨架：**不调用模型、不读写会话数据**。
-模型服务是否可用由部署环境（ASSISTANT_LLM_BASE_URL / ASSISTANT_LLM_MODEL）
-决定；未配置时页面照常打开，只禁用输入区并给出提示，绝不白屏。
+A 阶段起对话走服务端 POST：校验工具调用、执行只读 ORM、把消息落库后 PRG
+回同一页。模型服务是否可用由部署环境（ASSISTANT_LLM_*）决定；未配置时
+页面照常打开，只禁用输入区并给出提示，绝不白屏。
 
 v2.0.1：侧栏信息架构对齐 DSH——顶部只留 4 个单列入口（新会话/助手/看板/功能），
 其余插件菜单收进「功能」抽屉。全部业务菜单平铺会让侧栏变成功能目录，
@@ -11,13 +11,17 @@ v2.0.1：侧栏信息架构对齐 DSH——顶部只留 4 个单列入口（新�
 v2.1.0：顶部三格（考勤 / 插件 / 看板）改为**在主页面板内切换**（`?panel=`），
 不再跳业务页——DSH 的 panel 行只换主区内容，侧栏原地不动。业务页仍可直达，
 但侧栏不再重复展示这三条入口。
+
+v2.3.0：接入只读工具调用与会话落库；`?conversation=<id>` 打开历史会话，
+侧栏列出最近 20 条。模型/工具失败只写一条助手消息，首页不降级。
 """
 
 from urllib.parse import quote
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
+from django.http import HttpResponseBadRequest, HttpResponseNotFound
+from django.shortcuts import redirect, render
 
 from plugin_host.context_processors import (
     COLOR_MODE_COOKIE,
@@ -26,6 +30,9 @@ from plugin_host.context_processors import (
     HOME_PANEL_URLS,
 )
 from plugin_host.registry import plugin_enabled
+
+from . import services
+from .models import Conversation, Message
 
 # 顶部固定入口对应的菜单 URL，元组顺序即侧栏渲染顺序（v2.1.0 起与
 # 业务页侧栏的「已由主页承载」清单同源，避免两处各写一套）。
@@ -113,6 +120,23 @@ def home(request):
     # 只关「新会话」入口与对话输入，侧栏 / 面板 / 看板入口都留着。
     assistant_enabled = not getattr(request, 'ds_home_degraded', False)
     chat_enabled = assistant_enabled and _model_configured()
+
+    # A 阶段：对话走服务端 POST + PRG。模型/工具失败也只写一条助手消息，
+    # 首页照常可达；不用 fetch，不引入 CSP 内联脚本。
+    conversation_id = request.POST.get('conversation') if request.method == 'POST' else None
+    if request.method == 'POST' and panel == 'chat' and request.POST.get('message'):
+        if not assistant_enabled:
+            return HttpResponseBadRequest('助手插件已停用')
+        if not chat_enabled:
+            return HttpResponseBadRequest('尚未配置模型服务')
+        text = (request.POST.get('message') or '').strip()
+        if text:
+            conversation = services.get_conversation(request.user, conversation_id)
+            if conversation is None:
+                conversation = Conversation.objects.create(user=request.user)
+            services.chat_turn(request.user, conversation, text)
+            return redirect(f'/?conversation={conversation.pk}')
+
     if request.method == 'POST' and (panel, sub) == ('attendance', 'rules'):
         # 设置弹层里的规则表单 action 为空 → POST 回到面板 URL（/）：
         # 保存逻辑与业务页共用 save_rules()，成功 PRG 回面板并带 saved=1，
@@ -122,6 +146,20 @@ def home(request):
         if rules_response is not None:
             return rules_response
         request.ds_rules_form = rules_form
+
+    conversation = services.get_conversation(
+        request.user, request.GET.get('conversation'))
+    if request.GET.get('conversation') and conversation is None:
+        return HttpResponseNotFound('会话不存在')
+
+    conversations = list(Conversation.objects.filter(
+        user=request.user).order_by('-updated_at')[:20])
+    chat_messages = []
+    if conversation is not None:
+        chat_messages = list(conversation.messages.filter(
+            role__in=[Message.Role.USER, Message.Role.ASSISTANT]
+        ).order_by('created_at', 'pk'))
+
     primary_menus, common_menus = _split_menus(request, panel)
     # v2.2.0：快捷键「快速操作」与首页真正渲染出来的入口同源——固定入口指向面板
     # URL，「更多」白名单保持业务 URL；首页本来不显示的菜单不能只在快捷键卡里冒头。
@@ -135,7 +173,9 @@ def home(request):
         'model_configured': _model_configured(),
         'assistant_enabled': assistant_enabled,
         'chat_enabled': chat_enabled,
-        'chat_messages': [],
+        'chat_messages': chat_messages,
+        'conversations': conversations,
+        'conversation': conversation,
         'primary_menus': primary_menus,
         'common_menus': common_menus,
         'quick_actions': quick_actions,

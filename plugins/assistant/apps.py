@@ -14,7 +14,7 @@ class AssistantConfig(AppConfig):
 
         register(PluginMeta(
             name='assistant',
-            version='2.0.0',
+            version='2.3.0',
             title=_('AI 助手'),
             # v2.2.1：菜单清空——看板入口已挪到容器的 builtin core。
             # 停用助手插件只该关掉「新会话」与对话输入，不能再连带摘掉看板入口。

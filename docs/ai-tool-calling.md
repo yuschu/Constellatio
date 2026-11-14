@@ -94,7 +94,7 @@ OpenAI 标准格式，字段固定不可改：
       "properties": {
         "approval_type": {
           "type": "string",
-          "enum": ["EXPENSE", "LEAVE", "PURCHASE", "DEPT_DELETE", "USER_DISABLE"],
+          "enum": ["leave", "expense", "seal", "outing", "overtime", "comp", "dept_delete", "user_disable"],
           "description": "审批类型，取值见枚举。不确定就不要填"
         },
         "status": {
@@ -115,6 +115,10 @@ OpenAI 标准格式，字段固定不可改：
 ```
 
 **`enum` 必须写全**——这是给小模型最重要的约束。不写 enum，模型会自己编一个 `"出差"`、`"报销单"` 这种它以为对的类型名，然后你的后端查不到。
+
+**取值以真实模型为准**：`plugins/assistant/tools.py` 在导入时直接读 `Approval.Type.choices` 生成 enum（小写，且没有 `PURCHASE`）。文档历史示例曾写成大写 + `PURCHASE`，已按真实模型修正；A 阶段测试 `test_approval_enum_uses_real_model_values` 守住这条。
+
+**范围与可见性**：`scope=applicant` 与「我的申请」同口径，过滤 `applicant_hidden`——用户主动隐藏或被替换的驳回单不再被助手翻出来；`approver` / `cc` 只按当前用户的审批人、抄送人关系过滤。
 
 **description 用中文写**，而且要写"什么时候用 / 什么时候不用"。小模型对 description 的依赖远高于大模型。
 

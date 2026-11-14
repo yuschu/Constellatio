@@ -1,4 +1,4 @@
-{% load static i18n %}{% get_current_language as LANGUAGE_CODE %}<!DOCTYPE html>
+{% load static i18n assistant_extras %}{% get_current_language as LANGUAGE_CODE %}<!DOCTYPE html>
 <html lang="{{ LANGUAGE_CODE }}" data-color-mode="{{ color_mode }}">
 <head>
   <meta charset="utf-8">
@@ -164,10 +164,12 @@
       </div>
 
       <div class="as-tree">
-        {% if chat_messages %}
+        {% if conversations %}
         <ul class="as-session-list">
-          {% for message in chat_messages %}
-          <li class="as-session-item">{{ message.title|default:message.content|truncatechars:24 }}</li>
+          {% for item in conversations %}
+          <li class="as-session-item{% if conversation and item.pk == conversation.pk %} is-active{% endif %}">
+            <a href="/?conversation={{ item.pk }}">{{ item.title|default:_('新会话')|truncatechars:24 }}</a>
+          </li>
           {% endfor %}
         </ul>
         {% else %}
@@ -275,7 +277,7 @@
     <div class="as-scroll as-scroll--thread" role="log" aria-live="polite">
       {% for message in chat_messages %}
       <div class="as-row as-row--{{ message.role }}">
-        <div class="as-bubble">{{ message.content }}</div>
+        <div class="as-bubble">{{ message.content|chat_text }}</div>
       </div>
       {% endfor %}
     </div>
@@ -288,9 +290,11 @@
             <span class="as-hero__badge">{% trans "助手" %}</span>
           </div>
           <div class="as-composer">
-            <div class="as-card" data-ds-card>
+            <form method="post" action="/" class="as-card" data-ds-card>
+              {% csrf_token %}
+              {% if conversation %}<input type="hidden" name="conversation" value="{{ conversation.pk }}">{% endif %}
               <label class="as-sr-only" for="as-input">{% trans "输入消息" %}</label>
-              <textarea id="as-input" class="as-input" rows="1" data-ds-input data-locked="{% if not chat_enabled %}1{% else %}0{% endif %}"
+              <textarea id="as-input" name="message" class="as-input" rows="1" data-ds-input data-locked="{% if not chat_enabled %}1{% else %}0{% endif %}"
                         placeholder="{% trans '描述你要处理的事，/ 调用指令' %}"
                         {% if not chat_enabled %}disabled{% endif %}>{{ draft_prompt }}</textarea>
               <div class="as-bar">
@@ -319,7 +323,7 @@
                   <span class="as-trigger as-trigger--model" aria-hidden="true">
                     <span class="as-trigger__label">{% if not assistant_enabled %}{% trans "助手已停用" %}{% elif not model_configured %}{% trans "未配置模型" %}{% else %}{% trans "模型服务" %}{% endif %}</span>
                   </span>
-                  <button type="button" class="as-send" data-ds-send aria-label="{% trans '发送' %}"
+                  <button type="submit" class="as-send" data-ds-send aria-label="{% trans '发送' %}"
                           {% if not chat_enabled %}disabled{% endif %}>
                     <svg class="as-ico" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
                       <path d="M8 13V3.6M3.8 7.8L8 3.6l4.2 4.2"
@@ -328,7 +332,7 @@
                   </button>
                 </div>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       </div>
@@ -337,9 +341,11 @@
 
     {% if chat_messages %}
     <div class="as-composer as-composer--docked">
-      <div class="as-card" data-ds-card>
+      <form method="post" action="/" class="as-card" data-ds-card>
+        {% csrf_token %}
+        {% if conversation %}<input type="hidden" name="conversation" value="{{ conversation.pk }}">{% endif %}
         <label class="as-sr-only" for="as-input">{% trans "输入消息" %}</label>
-        <textarea id="as-input" class="as-input" rows="1" data-ds-input data-locked="{% if not chat_enabled %}1{% else %}0{% endif %}"
+        <textarea id="as-input" name="message" class="as-input" rows="1" data-ds-input data-locked="{% if not chat_enabled %}1{% else %}0{% endif %}"
                   placeholder="{% trans '描述你要处理的事，/ 调用指令' %}"
                   {% if not chat_enabled %}disabled{% endif %}>{{ draft_prompt }}</textarea>
         <div class="as-bar">
@@ -368,7 +374,7 @@
             <span class="as-trigger as-trigger--model" aria-hidden="true">
               <span class="as-trigger__label">{% if not assistant_enabled %}{% trans "助手已停用" %}{% elif not model_configured %}{% trans "未配置模型" %}{% else %}{% trans "模型服务" %}{% endif %}</span>
             </span>
-            <button type="button" class="as-send" data-ds-send aria-label="{% trans '发送' %}"
+            <button type="submit" class="as-send" data-ds-send aria-label="{% trans '发送' %}"
                     {% if not chat_enabled %}disabled{% endif %}>
               <svg class="as-ico" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
                 <path d="M8 13V3.6M3.8 7.8L8 3.6l4.2 4.2"
@@ -377,7 +383,7 @@
             </button>
           </div>
         </div>
-      </div>
+      </form>
     </div>
     {% endif %}
     {% endif %}{# /panel：对话态 #}

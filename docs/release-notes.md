@@ -3,6 +3,8 @@
 > 本文件是**发版总入口**：每一版做了什么、怎么升级、按 tag 检出时要注意什么。
 > 单版实现细节仍以 `docs/plugin-dev-vXXXX.md` 为准，本文件只做汇总与指路。
 > **命名规范**：GitHub Release 标题统一写作 `vX.Y.Z Beta`（例：`v2.2.13 Beta`）；**tag 名保持 `vX.Y.Z`**（annotated，不带 `Beta`——tag 是不可变引用，`Beta` 只是 Release 层级的展示标记）。
+>
+> **开发中（2026-11-14）**：AI 助手 A 阶段后端已落地（`assistant` 0001 迁移、6 个只读工具、会话落库、首页 POST+PRG），全量 **580 项测试**；尚未发版，Release 线仍停在 `v2.2.13`。
 
 ---
 

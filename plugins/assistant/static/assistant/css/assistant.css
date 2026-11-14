@@ -503,6 +503,21 @@ div.as-more__menu {
   color: var(--as-label-primary);
 }
 
+.as-session-item.is-active {
+  background-color: var(--as-interactive-active, var(--as-interactive-hover));
+  color: var(--as-label-primary);
+}
+
+.as-session-item a {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* footArea */
 .as-foot {
   flex: none;
@@ -923,6 +938,14 @@ div.as-more__menu {
 .as-row--assistant .as-bubble {
   background: transparent;
   color: var(--as-label-primary);
+}
+
+.as-bubble code {
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--as-interactive-hover);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
 }
 
 /* ============================================================

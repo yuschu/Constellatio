@@ -2,6 +2,7 @@
 
 > 项目：Constellatio —— 基于 Django 的企业办公自动化系统（全栈插件化）
 > 文档版本：v2.2.13 · 2026-11-14（v2.2.1–v2.2.13 无新增迁移；v1.5 theme 无表；v1.4 language 无表；修正 approval 字段 / blockchain 哈希公式 / 软删冻结标志）
+> 2026-11-14 A 阶段：新增 `assistant` 插件 `0001_initial`，落 `assistant_conversation` / `assistant_message` 两张表。
 > 关联文档：tech-stack-and-architecture.md、constraints-and-acceptance.md、development-guide.md
 
 ---
@@ -50,9 +51,11 @@
 | workspace | `workspace_pluginswitch` | 业务 | 插件运行时开关（v1.1 落地，DB 覆盖静态配置） |
 | structure | `structure_structurerecord` | 业务 | 结构模板应用记录（v1.3 落地，幂等应用留痕） |
 | notify | `notify_notification` | 业务 | 站内消息（审批待办/结果、公告，v1.7.0 落地） |
+| assistant | `assistant_conversation` | 业务 | AI 助手会话（A 阶段，按用户隔离） |
+| assistant | `assistant_message` | 业务 | 助手消息（user / assistant / tool） |
 | — | `auth_permission` 等 | 框架内置 | Django 自带（auth_group / django_session / django_migrations 等） |
 
-业务插件共 **14 张表**；框架内置表不属于任何插件，由 Django 自动管理。
+业务插件共 **16 张表**；框架内置表不属于任何插件，由 Django 自动管理。
 
 > v1.7.0 的 `sso` 插件**无业务表**：登录态复用 Django session；Ticket 防重放走缓存不落库。
 

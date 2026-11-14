@@ -227,12 +227,15 @@ OA_PLUGINS = [
 ]
 
 # ---------------------------------------------------------------------------
-# v2.0.0 对话式首页的模型服务配置（部署时填写，不在安装包里内置任何模型）
+# 对话式首页的模型服务配置（部署时填写，不在安装包里内置任何模型）
 # ---------------------------------------------------------------------------
-# 本轮只消费「是否已配置」这一个事实：两项都有值才启用输入区。
-# 真正的 OpenAI 兼容客户端在后续 A 阶段接入（见 docs/ai-assistant-plan.md）。
+# v2.3.0 A 阶段：OpenAI 兼容客户端只读这几项；base_url + model 都有值才启用输入区。
+# api_key 可空（本地 ollama / llama.cpp 通常不校验）；超时与输出上限按最低档机器给默认值。
 ASSISTANT_LLM_BASE_URL = os.environ.get('ASSISTANT_LLM_BASE_URL', '')
 ASSISTANT_LLM_MODEL = os.environ.get('ASSISTANT_LLM_MODEL', '')
+ASSISTANT_LLM_API_KEY = os.environ.get('ASSISTANT_LLM_API_KEY', '')
+ASSISTANT_LLM_TIMEOUT = int(os.environ.get('ASSISTANT_LLM_TIMEOUT', '30') or 30)
+ASSISTANT_LLM_MAX_TOKENS = int(os.environ.get('ASSISTANT_LLM_MAX_TOKENS', '1024') or 1024)
 
 # ---------------------------------------------------------------------------
 # v1.7.0 企业 SSO（签名 Ticket 网关）
