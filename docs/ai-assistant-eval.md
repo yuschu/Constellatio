@@ -88,6 +88,7 @@ docker exec constellatio-web-1 python manage.py eval_assistant_a --output /tmp/a
 - 首轮耗时：3.3–15.4 秒；多数在 3–8 秒
 - 明细：`.tmp-test/assistant-a-4b-official.json`
 - 六类草稿改动后（规则 8，账号 `admin`）复跑：仍 **19/20（95.0%）**，本轮唯一失败 A18「首轮未调用工具」，未出现工具参数回归；`mkt_chu` 缺 `query_department`、`search_user` 权限，不能作为验收账号。
+- A18 隔离复跑 5 次全部通过（耗时 13.9 / 85.6 / 17.6 / 67.3 / 146.7 秒），确认是 4B 首轮工具调用的采样波动，不是工具描述或参数问题；耗时波动来自本机 CPU 推理。
 
 同一模型规格用 ModelScope 的 `Qwen3-4B-Q4_K_M.gguf` 导入时，另有一轮 **18/20（90.0%）** 的结果（失败 A06/A10，均为参数层），明细 `.tmp-test/assistant-a-4b.json`。两种制品来源能力一致，验收取本轮官方制品的 19/20 作为正式结论。
 
