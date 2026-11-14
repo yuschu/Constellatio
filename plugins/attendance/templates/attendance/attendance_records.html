@@ -10,21 +10,24 @@ v2.1.4：签到详情保持业务页宽度（明细表要横向可读），但�
 {% endcomment %}
 <div class="at-page">
   <header class="at-head">
-    <h2 class="at-head__title">{% trans "签到详情" %}</h2>
+    <div class="at-head__lead">
+      <h2 class="at-head__title">{% trans "签到详情" %}</h2>
+      <span class="at-note">{{ start|date:"Y-m-d H:i" }} ~ {{ end|date:"Y-m-d H:i" }}</span>
+    </div>
     <div class="at-head__aside">
-      <span class="r-badge">{{ start|date:"Y-m-d H:i" }} ~ {{ end|date:"Y-m-d H:i" }}</span>
+      <span class="r-badge">{% trans "签到记录" %} {{ total }}</span>
     </div>
   </header>
 
   <section class="r-card at-card" aria-label="{% trans "筛选" %}">
-    <form method="get" class="at-form">
-      <div class="at-field">
-        <label for="start">{% trans "开始时间" %}</label>
-        <input class="r-input" type="datetime-local" id="start" name="start" value="{{ start_value }}">
-      </div>
-      <div class="at-field">
-        <label for="end">{% trans "结束时间" %}</label>
-        <input class="r-input" type="datetime-local" id="end" name="end" value="{{ end_value }}">
+    <form method="get" class="at-form at-form--grid at-filter">
+      <div class="at-field at-field--span-2">
+        <label>{% trans "时间范围" %}</label>
+        <div class="at-range">
+          <input class="r-input" type="datetime-local" id="start" name="start" value="{{ start_value }}" aria-label="{% trans "开始时间" %}">
+          <span class="at-range__sep" aria-hidden="true">~</span>
+          <input class="r-input" type="datetime-local" id="end" name="end" value="{{ end_value }}" aria-label="{% trans "结束时间" %}">
+        </div>
       </div>
       <div class="at-field">
         <label for="status">{% trans "签到状态" %}</label>
@@ -53,7 +56,7 @@ v2.1.4：签到详情保持业务页宽度（明细表要横向可读），但�
           {% endfor %}
         </select>
       </div>
-      <div class="at-field">
+      <div class="at-field at-field--span-2">
         <label for="q">{% trans "姓名或账号" %}</label>
         <input class="r-input" type="search" id="q" name="q" value="{{ keyword }}" placeholder="{% trans "筛选" %}">
       </div>
@@ -87,9 +90,9 @@ v2.1.4：签到详情保持业务页宽度（明细表要横向可读），但�
     <div class="at-head at-head--tight">
       <h3 class="at-card__title">{% trans "月度看板" %}</h3>
       {% if chart %}
-      <div class="at-head__aside">
+      <div class="at-head__aside at-month">
         <label class="at-note" for="chart_month">{% trans "月份" %}</label>
-        <input class="r-input" type="month" id="chart_month" value="{{ month_value }}">
+        <input class="r-input at-month__input" type="month" id="chart_month" value="{{ month_value }}">
       </div>
       {% else %}
       <span class="r-badge">{{ month_value }}</span>
@@ -104,6 +107,7 @@ v2.1.4：签到详情保持业务页宽度（明细表要横向可读），但�
     {% endif %}
     <div id="attendance-chart-fallback" {% if chart %}hidden{% endif %}
          data-empty="{% trans "本月暂无考勤记录" %}">
+      {% if chart_rows %}
       <table class="r-table">
         <thead>
           <tr>
@@ -143,12 +147,20 @@ v2.1.4：签到详情保持业务页宽度（明细表要横向可读），但�
         </tfoot>
         {% endif %}
       </table>
+      {% else %}
+      <div class="at-empty">
+        <span>{% trans "本月暂无考勤记录" %}</span>
+      </div>
+      {% endif %}
     </div>
     <p class="at-note">{% trans "统计口径与签到记录一致；图表不可用时自动降级为表格。" %}</p>
   </section>
 
   <section class="r-card at-card">
-    <h3 class="at-card__title">{% trans "签到明细" %}</h3>
+    <div class="at-card__head">
+      <h3 class="at-card__title">{% trans "签到明细" %}</h3>
+      <span class="r-badge">{% trans "签到记录" %} {{ total }}</span>
+    </div>
     <table class="r-table">
       <thead>
         <tr>
@@ -187,9 +199,9 @@ v2.1.4：签到详情保持业务页宽度（明细表要横向可读），但�
 
   <section class="r-card at-card">
     <h3 class="at-card__title">{% trans "补卡登记" %}</h3>
-    <form method="post" action="{% url 'attendance:attendance_makeup' %}" class="at-form">
+    <form method="post" action="{% url 'attendance:attendance_makeup' %}" class="at-form at-form--grid at-form--makeup">
       {% csrf_token %}
-      <div class="at-field">
+      <div class="at-field at-field--span-2">
         <label for="makeup_user">{% trans "员工" %}</label>
         <select class="r-input" id="makeup_user" name="user" required>
           <option value="">{% trans "请选择员工" %}</option>
@@ -203,20 +215,20 @@ v2.1.4：签到详情保持业务页宽度（明细表要横向可读），但�
         <input class="r-input" type="date" id="makeup_date" name="date" value="{{ end|date:'Y-m-d' }}" required>
       </div>
       <div class="at-field">
-        <label for="makeup_in">{% trans "签到" %}</label>
-        <input class="r-input" type="time" id="makeup_in" name="check_in" value="09:00">
-      </div>
-      <div class="at-field">
-        <label for="makeup_out">{% trans "签退" %}</label>
-        <input class="r-input" type="time" id="makeup_out" name="check_out" value="18:00">
-      </div>
-      <div class="at-field">
         <label for="makeup_type">{% trans "签到类型" %}</label>
         <select class="r-input" id="makeup_type" name="sign_type">
           {% for value, label in sign_types %}
           <option value="{{ value }}">{{ label }}</option>
           {% endfor %}
         </select>
+      </div>
+      <div class="at-field">
+        <label for="makeup_in">{% trans "签到" %}</label>
+        <input class="r-input" type="time" id="makeup_in" name="check_in" value="09:00">
+      </div>
+      <div class="at-field">
+        <label for="makeup_out">{% trans "签退" %}</label>
+        <input class="r-input" type="time" id="makeup_out" name="check_out" value="18:00">
       </div>
       <div class="at-actions">
         <button class="r-btn" type="submit">{% trans "登记补卡" %}</button>
@@ -245,19 +257,14 @@ v2.1.4：签到详情保持业务页宽度（明细表要横向可读），但�
   }
 
   function showEmpty(text) {
-    var body = fallback.querySelector('tbody');
-    if (body) {
-      body.innerHTML = '';
-      var row = document.createElement('tr');
-      var cell = document.createElement('td');
-      cell.colSpan = 7;
-      cell.className = 'text-muted';
-      cell.textContent = text || fallback.dataset.empty || '';
-      row.appendChild(cell);
-      body.appendChild(row);
-    }
-    var foot = fallback.querySelector('tfoot');
-    if (foot) { foot.hidden = true; }
+    // 空月份不铺一张只有表头的空表：直接给一块紧凑空态，卡片高度跟着收
+    fallback.innerHTML = '';
+    var box = document.createElement('div');
+    box.className = 'at-empty';
+    var label = document.createElement('span');
+    label.textContent = text || fallback.dataset.empty || '';
+    box.appendChild(label);
+    fallback.appendChild(box);
     showFallback();
   }
 

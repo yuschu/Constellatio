@@ -331,6 +331,35 @@ class AttendanceChartPageTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, f'value="{month_value}"')
         self.assertContains(response, '本月暂无考勤记录')
+        self.assertContains(response, 'at-empty')
+
+    def test_board_month_follows_filter_range(self):
+        """v2.2.10：不给 month 时，看板月份跟随筛选区间右界。
+
+        否则筛 9 月、看板仍停在当前 11 月，就会出现「有 599 条记录、看板
+        却是空板」的错位。
+        """
+        previous = (self.first - timedelta(days=1)).replace(day=1)
+        last_day = self.first - timedelta(days=1)
+        response = self.client.get('/plugins/attendance/records/', {
+            'start': previous.strftime('%Y-%m-%dT00:00'),
+            'end': last_day.strftime('%Y-%m-%dT23:59'),
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'value="{previous.strftime("%Y-%m")}"')
+
+    def test_records_layout_groups_filters_and_titles(self):
+        """v2.2.10 布局：筛选四列网格 + 时间范围成组 + 明细标题带计数。"""
+        response = self.client.get('/plugins/attendance/records/')
+        self.assertEqual(response.status_code, 200)
+        for token in (
+            'at-form--grid',
+            'at-range',
+            'at-card__head',
+            'at-month__input',
+            'at-form--makeup',
+        ):
+            self.assertContains(response, token)
 
     def test_db_chart_switch_degrades(self):
         """v1.6.1：workspace 运行时开关关闭图表引擎 → 页面表格、stats payload=null。"""

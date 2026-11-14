@@ -1706,3 +1706,36 @@ body{--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l1);--dsh-scrollbar-thum
 - 截图 `.tmp-test/screens-v21/rail-new-center-after.png`、`.tmp-test/screens-v21/container/rail-new-center-after.png`。
 - 容器 `assistant.css d60fa3c8e6e99bba88c2b5b0c4afe138` 三处一致，`tests.py 14dad395e2de950d3fdcef951f84ab71` 与本地同哈希。
 
+
+### 9.13.38 签到详情布局重排（v2.2.10 / 2026-11-14）
+
+**原来哪里不顺手**
+
+- 筛选区是 6 个 flex 字段平铺：时间起止和状态下拉挤在一行，姓名搜索被拉成整行，右侧「筛选/重置」孤零零吊在第二行。
+- 四个统计格用 `auto-fit minmax(180px)`：1440 下是四列，1024 内容区只剩 707px 时排成 3+1 的孤行。
+- 月份控件和「月份」标签在卡片头里换行成上下两截；且不给 `month` 时看板固定当前月，筛 9 月却看到 11 月的空板。
+- 空月份降级表格整张表头 + 一行「暂无」占掉 130 多像素，卡片显得空而高。
+- 「签到明细」标题只有文字下的一条短横线，右侧没有记录数。
+- 「补卡登记」5 个字段挤在一行，员工选择框放不下全名。
+
+**改动**
+
+1. 页头：标题下面加筛选区间小字，右侧只留「签到记录 N」徽标，不再让时间范围当徽标飘在最右。
+2. 筛选：新增 `.at-form--grid` 四列网格；起止时间合成「时间范围」一组（两 input + `~`，占两列）；第二行「部门 / 姓名或账号（占两列）/ 动作（右对齐）」恰好收满。`≤900px` 收两列。
+3. 统计格：`.at-kpis` 固定四列（1024 也同排），`≤720px` 两列。
+4. 月度看板：月份标签与控件同一行、输入固定 150px；视图在未显式传 `month` 时取筛选区间右界的月份；`.at-empty` 96px 紧凑空态替换只有表头的空表，脚本 `showEmpty()` 同步改为替换成空态节点。
+5. 明细：标题与记录徽标同一行，0.5px 分隔线落在整行。
+6. 补卡：员工占两列，日期/类型一行，签到/签退 + 右侧提交第二行。
+
+**几何与实测**
+
+- 1440：内容区 920，筛选表单 124 高（两行 58 + 8 间距）；时间范围 439×58、状态/类型各 216×58；`r-table` 相对卡片 `scrollWidth - clientWidth = 0`；空月份 `at-empty` 文本命中，默认 `month=2026-11`，筛 9 月后 `month=2026-09`。
+- 1024：内容区 707，四列仍是 162/333；`r-table` 溢出 0；四张统计卡同排（截图 `.tmp-test/screens-v21/att-records-layout-1024b.png`）。
+- 深浅两态与容器（8000，662 条）同值；截图 `.tmp-test/screens-v21/att-records-layout-after2.png`、`att-records-default2.png`、`att-records-dark-empty2.png`、`att-records-dark-data.png`、`container/att-records-layout.png`、`container/att-records-empty.png`。
+
+**门禁**
+
+- `plugin_host` 无回归；`plugins/attendance/tests.py` 新增 `test_board_month_follows_filter_range`、`test_records_layout_groups_filters_and_titles`，并在月份用例里钉住 `at-empty`。
+- 全量 **562 tests OK**（560 + 2），ruff / `manage.py check` 干净。
+- 容器：`attendance_records.html 31492a43c413921b5f2a4f9ad4cc6bbe`、`corporate-clean.css 074dd0e9feee1281784822c3a16ae52f`（源 / `/app/staticfiles/themes/...` 同值）、`views.py 644ed8e76225d7fd7e7aaebacc8876a1`、`tests.py 0c9df58edf7763b4250931f6bfe6b529`。
+

@@ -479,11 +479,13 @@ def attendance_records(request):
     missing_count = records.filter(status=Attendance.Status.MISSING).count()
 
     # v1.6 月度看板：月份与部门跟随签到详情筛选；图表停用时表格降级
+    # v2.2.10：没显式给 month 时，看板取筛选区间右界的月份，避免「筛 9 月、
+    # 看板却停在当前 11 月」的空板。
     month_param = (request.GET.get('month') or '').strip()
     try:
-        month_first = _parse_month(month_param) if month_param else now.date().replace(day=1)
+        month_first = _parse_month(month_param) if month_param else end.date().replace(day=1)
     except ValueError:
-        month_first = now.date().replace(day=1)
+        month_first = end.date().replace(day=1)
     stats_department_id = int(department_id) if department_id.isdigit() else None
     month_stats, chart_rows = _month_stats(month_first, stats_department_id)
 

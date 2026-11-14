@@ -3693,6 +3693,30 @@ html:not([data-color-mode="dark"]) .lc-ov-session {
   gap: var(--ds-space-2);
 }
 
+/* 签到详情：标题 + 时间范围两行起排，右侧只放计数徽标 */
+.at-head__lead {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* 标题与右侧计数同一行，分隔线落在整行而不是只压住标题文字 */
+.at-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-2);
+  margin-bottom: 9px;
+  padding-bottom: 7px;
+  border-bottom: 0.5px solid var(--ds-border-l2);
+}
+
+.at-card__head .at-card__title {
+  margin: 0;
+  padding: 0;
+  border-bottom: 0;
+}
+
 .at-grid {
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
@@ -3775,12 +3799,81 @@ html:not([data-color-mode="dark"]) .lc-ov-session {
   display: flex;
   gap: var(--ds-space-2);
 }
+
+/* 签到详情筛选 / 补卡：四列网格。时间范围占两列（两个 datetime 并排），
+   第二行「部门 + 姓名 + 动作」正好收满，避免旧版把搜索框拉成整行。 */
+.at-form--grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: end;
+  gap: var(--ds-space-3) var(--ds-space-4);
+}
+
+.at-form--grid .at-field {
+  flex: none;
+  min-width: 0;
+}
+
+.at-form--grid .at-field--span-2 {
+  grid-column: span 2;
+}
+
+.at-form--grid .at-actions {
+  justify-self: end;
+  align-self: end;
+}
+
+.at-range {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--ds-space-2);
+}
+
+.at-range__sep {
+  color: var(--ds-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+/* 补卡：员工占两列，签到/签退各一列，提交按钮收在第二行右侧 */
+.at-form--makeup .at-actions {
+  grid-column: span 2;
+  justify-self: end;
+}
+
+@media (max-width: 900px) {
+  .at-form--grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .at-form--makeup .at-actions {
+    grid-column: span 2;
+  }
+}
+
+/* 月度看板的月份控件：标签与输入同一行，输入固定宽度不被 flex 拉满 */
+.at-month {
+  flex-wrap: nowrap;
+}
+
+.at-month__input {
+  flex: 0 0 auto;
+  width: 150px;
+}
 /* 统计格（签到详情的四张数卡）：DSH .lc-ov-kpis 的取法 —— auto-fit 列、16 间距、
    标签 12-18 三级色、数值 26-32 主色 + tabular-nums，卡片内 4 间距。 */
 .at-kpis {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--ds-space-4);
+}
+
+/* 四列在 1024（内容区约 700px）也排得开；窄屏收两列，避免 3+1 孤行 */
+@media (max-width: 720px) {
+  .at-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .at-kpi {
@@ -3806,6 +3899,18 @@ html:not([data-color-mode="dark"]) .lc-ov-session {
 .at-chart__canvas {
   width: 100%;
   height: 300px;
+}
+
+/* 看板空月份：不铺一张只有表头的空表，收到一块 96 高的中性空态 */
+.at-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 96px;
+  padding: var(--ds-space-4);
+  color: var(--ds-label-tertiary);
+  font-size: 13px;
+  line-height: 20px;
 }
 
 /* ==========================================================================
