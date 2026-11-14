@@ -11,7 +11,7 @@
 
 ## 二、存哪里、谁优先
 
-五项配置写在 `assistant_llm_settings` 表的单例行（`pk=1`），字段与 `ASSISTANT_LLM_*` 环境变量一一对应：
+五项配置写在 `assistant_llmsettings` 表的单例行（`pk=1`），字段与 `ASSISTANT_LLM_*` 环境变量一一对应：
 
 | 页面字段 | 数据库字段 | 环境变量兜底 |
 |---|---|---|
