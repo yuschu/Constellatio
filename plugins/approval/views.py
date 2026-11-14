@@ -1,7 +1,5 @@
 """approval 插件视图：发起 / 我的审批 / 待我审批 / 抄送我的 / 详情操作。"""
 
-from datetime import timedelta
-
 from django.apps import apps as dj_apps
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
@@ -9,7 +7,6 @@ from django.db import transaction
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from plugin_host.exceptions import ObjectPermissionDenied
@@ -19,7 +16,7 @@ from plugin_host.permissions import require_perm
 from . import forms, services
 from .models import Approval, ApprovalRecord
 from .routing import candidate_approvers as resolve_candidates
-from .routing import fallback_approvers
+from .routing import comp_basis_choices, fallback_approvers
 from .services import approve, reject, sign_approve, sign_reject, submit
 
 User = get_user_model()
@@ -65,7 +62,7 @@ def _assistant_draft(request):
         return None, None
     draft = record.get('draft')
     if (not isinstance(draft, dict)
-            or draft.get('approval_type') not in (Approval.Type.LEAVE, Approval.Type.EXPENSE)
+            or draft.get('approval_type') not in Approval.Type.values
             or not isinstance(draft.get('initial'), dict)):
         return None, None
     return token, draft
@@ -78,26 +75,6 @@ def _departments():
     except LookupError:
         return []
     return Department.objects.filter(is_active=True).order_by('name')
-
-
-def _overtime_choices(user):
-    """调休依据：本人近一年已通过的加班审批（v1.7.1 / P1-25）。
-
-    只认 APPROVED：草稿 / 待审批 / 已驳回的加班都不能作为调休依据；
-    created_at 限近 365 天，避免陈年加班被反复使用。
-    """
-    since = timezone.now() - timedelta(days=365)
-    rows = Approval.objects.filter(
-        applicant=user, approval_type=Approval.Type.OVERTIME,
-        status=Approval.Status.APPROVED, created_at__gte=since,
-    ).order_by('-created_at')[:50]
-    choices = []
-    for row in rows:
-        start = row.form_data.get('start_time', '')
-        end = row.form_data.get('end_time', '')
-        label = f'#{row.pk} {start} ~ {end}' if start or end else f'#{row.pk} {row.title}'
-        choices.append((str(row.pk), label))
-    return choices
 
 
 def _summary(approval_type, cleaned, basis_label=''):
@@ -146,7 +123,7 @@ def _create_context(request, form=None, type_key=None, source=None, chip_prefix=
         form = forms.form_for_type(
             type_key, None, None, applicant=request.user,
             departments=departments, approvers=approvers,
-            overtime_choices=_overtime_choices(request.user))
+            overtime_choices=comp_basis_choices(request.user))
         if approvers:
             form.fields['approver'].initial = str(approvers[0].pk)
     return {
@@ -246,7 +223,7 @@ def approval_create(request):
                  if u.pk != request.user.pk]
     if not approvers:
         approvers = fallback_approvers(request.user)
-    overtime_choices = _overtime_choices(request.user)
+    overtime_choices = comp_basis_choices(request.user)
     initial = dict(source.form_data) if source else None
     if (source is None and assistant_draft
             and assistant_draft.get('approval_type') == type_key):

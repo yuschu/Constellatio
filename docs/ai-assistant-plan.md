@@ -3,7 +3,7 @@
 > 决策记录（2026-11-12 负责人已拍板）：**按 A→B→C 渐进迭代**、**替换现有首页**、**交付给最终用户使用**、**内置 Ollama 4B 开箱即用，配置页保留为覆盖入口**（2026-11-14 由“用户自行配置模型”调整）。
 > 本文在该前提下给出架构与阶段定义。视觉基线见 `docs/dsh-visual-spec.md`，前端框架选型见 `docs/frontend-refactor-plan.md`。
 >
-> **实施进度（2026-11-14）**：A 阶段后端已落地——`plugins/assistant/models.py`（Conversation/Message/LLMSettings）、`llm.py`（标准库 OpenAI 兼容客户端 + 连通性自检）、`tools.py`（6 个只读查询 + 1 个草稿工具，全部 `write=False` 硬断言）、`services.py`（逐条校验 + 3 轮执行循环 + 会话落库 + 工具调用日志）；首页改为服务端 POST + PRG，支持 `?conversation=` 历史与侧栏最近 20 条；全量 **623 项测试**。20 条固定问句验收集已落成 `manage.py eval_assistant_a`（见 `docs/ai-assistant-eval.md`），含首轮工具/参数严格评分、schema 上下限校验、JSON 明细与 70% 退出码；**4B 正式验收 19/20（95.0%），达到 70% 阈值**，9B 参考 19/20（95.0%）。模型配置页与连通性自检已落地（数据库优先、环境变量兜底，API Key 加密，见 `docs/ai-assistant-config.md`）；Compose 已加入 `ollama` + `ollama-init`，默认 `qwen3:4b`，首次启动自动拉取；官方源最多等 300 秒，失败或超时自动切 ModelScope 回退，并把 GGUF 建成 `qwen3:4b`（`num_ctx 4096`）。**空卷冷启动已实跑（2026-11-14）**：官方源 5 秒 EOF 失败 → 回退以 6.5 MB/s 拉完 2.5 GB → `ollama create` → 预热 → `web` 启动，旧回退件全程约 6 分 40 秒；回退件已换为非思考版 `Qwen3-4B-Instruct-2507-GGUF:Q4_K_M`，A 阶段 18/20（90%，旧回退件 15/20），默认空卷冷启动复跑 7 分 13 秒、Web 200；冷启动栈内真实对话返回部门清单，`query_department` 工具调用落库；正式栈官方件复跑的回复已剥离 `</think>` 思考段。`docker compose config` 已通过。**Compose 端到端已实跑（2026-11-14）**：本机 Docker Hub 与镜像站大层持续截断，改用 Ollama v0.40.11 官方 Linux 包自建同 tag 镜像（构建上下文约 95 MB，只装 CPU 库），全栈 `docker compose up -d` 成功；`ollama-init` 命中卷内模型后预热，Web 等其退出后启动，容器内真实对话返回部门清单，`tool_calls` 落库；清空数据库覆盖行后配置页显示 `http://ollama:11434/v1` / `qwen3:4b` / 240 秒 / 「内置默认 / 环境变量」。**B 阶段最小闭环已落地（2026-11-14）**：新增 `draft_approval`（只支持请假/报销，`write=False`，只产草稿、不建 `Approval`）；首页助手消息渲染可编辑草稿卡片，请假/报销字段可直接改，部门/审批人取原表单同源默认值；卡片直接 POST 原 `approval_create`，或经 session 一次性 token 跳到原表单改部门/审批人，成功后清 token；无新迁移、无新写入口。正式栈官方 `qwen3:4b` 实跑“明天上午九点、事由家里有事”得到 `2026-11-15T09:00`，卡片 HTTP 200、原表单 200 且预填；全量 **623 项测试**通过。**未完成**：术语表生成、向量检索、手动删除入口；其余四类审批草稿、C 阶段未开始。自建镜像仅用于本机验证，产品默认仍指官方 `ollama/ollama:0.40.11`。
+> **实施进度（2026-11-14）**：A 阶段后端已落地——`plugins/assistant/models.py`（Conversation/Message/LLMSettings）、`llm.py`（标准库 OpenAI 兼容客户端 + 连通性自检）、`tools.py`（6 个只读查询 + 1 个草稿工具，全部 `write=False` 硬断言）、`services.py`（逐条校验 + 3 轮执行循环 + 会话落库 + 工具调用日志）；首页改为服务端 POST + PRG，支持 `?conversation=` 历史与侧栏最近 20 条；全量 **632 项测试**。20 条固定问句验收集已落成 `manage.py eval_assistant_a`（见 `docs/ai-assistant-eval.md`），含首轮工具/参数严格评分、schema 上下限校验、JSON 明细与 70% 退出码；**4B 正式验收 19/20（95.0%），达到 70% 阈值**，9B 参考 19/20（95.0%）。模型配置页与连通性自检已落地（数据库优先、环境变量兜底，API Key 加密，见 `docs/ai-assistant-config.md`）；Compose 已加入 `ollama` + `ollama-init`，默认 `qwen3:4b`，首次启动自动拉取；官方源最多等 300 秒，失败或超时自动切 ModelScope 回退，并把 GGUF 建成 `qwen3:4b`（`num_ctx 4096`）。**空卷冷启动已实跑（2026-11-14）**：官方源 5 秒 EOF 失败 → 回退以 6.5 MB/s 拉完 2.5 GB → `ollama create` → 预热 → `web` 启动，旧回退件全程约 6 分 40 秒；回退件已换为非思考版 `Qwen3-4B-Instruct-2507-GGUF:Q4_K_M`，A 阶段 18/20（90%，旧回退件 15/20），默认空卷冷启动复跑 7 分 13 秒、Web 200；冷启动栈内真实对话返回部门清单，`query_department` 工具调用落库；正式栈官方件复跑的回复已剥离 `</think>` 思考段。`docker compose config` 已通过。**Compose 端到端已实跑（2026-11-14）**：本机 Docker Hub 与镜像站大层持续截断，改用 Ollama v0.40.11 官方 Linux 包自建同 tag 镜像（构建上下文约 95 MB，只装 CPU 库），全栈 `docker compose up -d` 成功；`ollama-init` 命中卷内模型后预热，Web 等其退出后启动，容器内真实对话返回部门清单，`tool_calls` 落库；清空数据库覆盖行后配置页显示 `http://ollama:11434/v1` / `qwen3:4b` / 240 秒 / 「内置默认 / 环境变量」。**B 阶段最小闭环已落地（2026-11-14）**：新增 `draft_approval`（支持请假/报销/用章/外出/加班/调休，`write=False`，只产草稿、不建 `Approval`）；首页助手消息渲染可编辑草稿卡片，六类字段可直接改，用章卡片带文件选择、调休卡片选加班依据，部门/审批人取原表单同源默认值；卡片直接 POST 原 `approval_create`，或经 session 一次性 token 跳到原表单改部门/审批人，成功后清 token；无新迁移、无新写入口。正式栈官方 `qwen3:4b` 实跑“明天上午九点、事由家里有事”得到 `2026-11-15T09:00`，卡片 HTTP 200、原表单 200 且预填；全量 **632 项测试**通过。**未完成**：术语表生成、向量检索、手动删除入口；C 阶段未开始；六类草稿已实现。自建镜像仅用于本机验证，产品默认仍指官方 `ollama/ollama:0.40.11`。
 
 ## 一、结论先行
 
@@ -357,7 +357,7 @@ POST {base_url}/embeddings
 
 **A 阶段工具集（全部只读，6 个）**：`search_approval`、`stats_approval_count`、`stats_attendance`、`list_notice`、`query_department`、`search_user`。
 
-**B 阶段新增**：`draft_approval`（也只读、不写业务库，只把请假/报销字段整理成草稿）。
+**B 阶段新增**：`draft_approval`（也只读、不写业务库，把请假/报销/用章/外出/加班/调休六类字段整理成草稿）。
 
 **验收标准**：
 - 20 条固定问句，意图识别 + 参数正确 ≥ 70%（4B 级模型的现实天花板，达不到就换 8B）。验收集与评分命令见 `docs/ai-assistant-eval.md`；**4B 19/20（95.0%）已达标**，9B 参考 19/20。
@@ -386,13 +386,13 @@ POST {base_url}/embeddings
 - 提交必须经过真实 HTTP POST 到原审批创建端点（测试断言请求路径）
 - 模型生成的字段必须在界面上可编辑，不允许"生成即提交"
 
-**本轮落地（最小闭环，2026-11-14）**：
-- 工具：`draft_approval` 只接受 `leave` / `expense`；时间规范化到 `YYYY-MM-DDTHH:MM` / `YYYY-MM-DD`，金额用 `Decimal` 量化两位；缺时间或金额时返回 `missing`，不猜；工具注册 `write=False`，不创建 `Approval`。
-- 卡片：助手消息的 `tool_calls` 提取最后一份有效草稿，首页渲染**可编辑草稿卡片**——请假时间/事由、报销日期/金额/事由直接在卡片里改；部门/审批人取 `candidate_approvers` / `fallback_approvers` 同源默认值，以隐藏字段随表单提交。卡片不自动提交。
-- 桥接：卡片「改部门 / 审批人」进入 `/plugins/assistant/draft/<message_id>/`，只有当前用户会话下、且 `approval_view` 才可读；草稿放 session 的 `assistant_approval_drafts`（随机 token，最多 5 份），302 到 `/plugins/approval/new/?type=...&draft=...`。
+**本轮落地（六类草稿，2026-11-14）**：
+- 工具：`draft_approval` 接受 `leave` / `expense` / `seal` / `outing` / `overtime` / `comp`；时间规范化到 `YYYY-MM-DDTHH:MM` / `YYYY-MM-DD`，金额用 `Decimal` 量化两位；缺时间、金额或起止时间时返回 `missing`，不猜；结束时间必须晚于开始时间；工具注册 `write=False`，不创建 `Approval`。
+- 卡片：助手消息的 `tool_calls` 提取最后一份有效草稿，首页渲染**可编辑草稿卡片**——请假、报销、用章、外出、加班、调休字段按类型直接在卡片里改；用章卡片带文件选择；调休卡片从本人已通过的加班单里选依据；部门/审批人取 `candidate_approvers` / `fallback_approvers` 同源默认值，以隐藏字段随表单提交。卡片不自动提交。
+- 桥接：卡片「去审批表单调整」进入 `/plugins/assistant/draft/<message_id>/`，只有当前用户会话下、且 `approval_view` 才可读；草稿放 session 的 `assistant_approval_drafts`（随机 token，最多 5 份），302 到 `/plugins/approval/new/?type=...&draft=...`。
 - 提交：卡片表单直接 POST 原 `approval_create`，隐藏 `approval_type` / `draft` / `department` / `approver`；`approval_create` 校验字段、建单并 `submit()`，成功后清 token。没有新增数据库迁移或审批写入口。
-- 真实验证：正式栈官方 `qwen3:4b` 对“帮我请个假，明天上午九点开始，事由家里有事”返回 `2026-11-15 09:00` / “家里有事”；`tool_calls` 落库 `duration_ms=103`；首页与草稿链接 HTTP 200/302，原表单 200 且预填。POST 建单由测试覆盖，未在正式库执行。
-- 评价缺口：**用章/外出/加班/调休草稿尚未实现**；草稿完整率与平均修改字段数未做统计，留待积累真实会话后再评。
+- 真实验证：正式栈官方 `qwen3:4b` 对“帮我请个假，明天上午九点开始，事由家里有事”返回 `2026-11-15 09:00` / “家里有事”；`tool_calls` 落库 `duration_ms=103`；首页与草稿链接 HTTP 200/302，原表单 200 且预填。六类扩展后，正式栈对“明天晚上六点到九点加班，事由版本上线”返回 `2026-11-15 18:00`~`21:00` / “版本上线”，`draft_approval` 成功且 `Approval` 新增 0；容器内真实数据库渲染六类卡片 6/6，用章文件、调休依据、外出/加班事由字段均命中。POST 建单由测试覆盖，未在正式库执行。
+- 评价缺口：六类草稿均已支持；草稿完整率与平均修改字段数未做统计，留待积累真实会话后再评。
 
 ### C 阶段：对话操作（独立项目，不建议在设计阶段承诺排期）
 

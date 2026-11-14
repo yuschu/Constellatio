@@ -280,7 +280,8 @@
         <div class="as-turn">
           <div class="as-bubble">{{ message.content|chat_text }}</div>
           {% if message.draft %}
-          <form class="as-draft" data-ds-card method="post" action="{% url 'approval:approval_create' %}">
+          <form class="as-draft" data-ds-card method="post" enctype="multipart/form-data"
+                action="{% url 'approval:approval_create' %}">
             {% csrf_token %}
             <input type="hidden" name="approval_type" value="{{ message.draft.approval_type }}">
             {% if message.draft_token %}<input type="hidden" name="draft" value="{{ message.draft_token }}">{% endif %}
@@ -303,7 +304,7 @@
                 <span>事由</span>
                 <textarea class="as-draft__input" name="reason" rows="2">{{ message.draft.initial.reason }}</textarea>
               </label>
-              {% else %}
+              {% elif message.draft.approval_type == 'expense' %}
               <label class="as-draft__field">
                 <span>提交时间</span>
                 <input class="as-draft__input" type="date" name="submit_time"
@@ -318,6 +319,56 @@
                 <span>费用事由</span>
                 <textarea class="as-draft__input" name="reason" rows="2">{{ message.draft.initial.reason }}</textarea>
               </label>
+              {% elif message.draft.approval_type == 'seal' %}
+              <label class="as-draft__field">
+                <span>用章时间</span>
+                <input class="as-draft__input" type="datetime-local" name="seal_time"
+                       value="{{ message.draft.initial.seal_time }}" required>
+              </label>
+              <label class="as-draft__field">
+                <span>用途</span>
+                <textarea class="as-draft__input" name="purpose" rows="2">{{ message.draft.initial.purpose }}</textarea>
+              </label>
+              <label class="as-draft__field">
+                <span>用章文件</span>
+                <input class="as-draft__input" type="file" name="seal_file" required>
+              </label>
+              {% elif message.draft.approval_type == 'comp' %}
+              <label class="as-draft__field">
+                <span>调休开始时间</span>
+                <input class="as-draft__input" type="datetime-local" name="start_time"
+                       value="{{ message.draft.initial.start_time }}" required>
+              </label>
+              <label class="as-draft__field">
+                <span>调休结束时间</span>
+                <input class="as-draft__input" type="datetime-local" name="end_time"
+                       value="{{ message.draft.initial.end_time }}" required>
+              </label>
+              {% if message.draft_meta %}
+              <label class="as-draft__field">
+                <span>调休依据</span>
+                <select class="as-draft__input r-select" name="basis" required>
+                  {% for option in message.draft_meta.basis_options %}
+                  <option value="{{ option.id }}">{{ option.label }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              {% endif %}
+              {% else %}
+              <label class="as-draft__field">
+                <span>{{ message.draft.type_label }}开始时间</span>
+                <input class="as-draft__input" type="datetime-local" name="start_time"
+                       value="{{ message.draft.initial.start_time }}" required>
+              </label>
+              <label class="as-draft__field">
+                <span>{{ message.draft.type_label }}结束时间</span>
+                <input class="as-draft__input" type="datetime-local" name="end_time"
+                       value="{{ message.draft.initial.end_time }}" required>
+              </label>
+              <label class="as-draft__field">
+                <span>{{ message.draft.type_label }}事由</span>
+                <textarea class="as-draft__input" name="reason" rows="2">{{ message.draft.initial.reason }}</textarea>
+              </label>
               {% endif %}
             </div>
             {% if message.draft_meta %}
@@ -326,10 +377,16 @@
             </div>
             <div class="as-draft__actions">
               <button class="as-draft__submit" type="submit">确认提交</button>
-              <a class="as-draft__link" href="{{ message.draft_url }}">改部门 / 审批人</a>
+              <a class="as-draft__link" href="{{ message.draft_url }}">去审批表单调整</a>
             </div>
             {% else %}
-            <div class="as-draft__meta">请先到审批表单选择部门与审批人。</div>
+            <div class="as-draft__meta">
+              {% if message.draft.approval_type == 'comp' %}
+              没有可用的已通过加班记录，请先到审批表单补齐调休依据。
+              {% else %}
+              请先到审批表单补齐部门与审批人。
+              {% endif %}
+            </div>
             <div class="as-draft__actions">
               <a class="as-draft__action" href="{{ message.draft_url }}">去审批</a>
             </div>

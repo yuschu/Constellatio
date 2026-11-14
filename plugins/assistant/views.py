@@ -123,7 +123,11 @@ def _remember_draft(request, draft):
 def _draft_card_meta(user, draft):
     """卡片内联提交所需的部门/审批人默认值，与审批表单同源；缺一不可返回 None。"""
     try:
-        from plugins.approval.routing import candidate_approvers, fallback_approvers
+        from plugins.approval.routing import (
+            candidate_approvers,
+            comp_basis_choices,
+            fallback_approvers,
+        )
         from plugins.user.models import Department
     except LookupError:
         return None
@@ -142,12 +146,20 @@ def _draft_card_meta(user, draft):
     if department is None or not approvers:
         return None
     approver = approvers[0]
-    return {
+    meta = {
         'department_id': department.pk,
         'department_name': department.name,
         'approver_id': approver.pk,
         'approver_name': approver.last_name or approver.username,
     }
+    if draft['approval_type'] == 'comp':
+        choices = comp_basis_choices(user)
+        if not choices:
+            return None
+        meta['basis_options'] = [
+            {'id': value, 'label': label} for value, label in choices
+        ]
+    return meta
 
 
 def _attach_draft_cards(request, chat_messages):

@@ -8,6 +8,7 @@ from urllib.parse import parse_qs, urlparse
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
@@ -656,10 +657,58 @@ class ApprovalDraftToolTests(SimpleTestCase):
         self.assertIsNone(result['draft'])
         self.assertEqual(result['missing'], ['提交时间', '金额'])
 
-    def test_only_leave_and_expense_are_supported(self):
-        result = tools.draft_approval(None, 'seal', reason='盖章')
+    def test_only_known_types_are_supported(self):
+        result = tools.draft_approval(None, 'unknown', reason='测试')
         self.assertIsNone(result['draft'])
         self.assertIn('只支持', result['error'])
+
+    def test_outing_draft_fields(self):
+        result = tools.draft_approval(
+            None, 'outing', start_time='2026-11-16T09:00',
+            end_time='2026-11-16T12:00', reason='拜访客户')
+        draft = result['draft']
+        self.assertEqual(draft['approval_type'], 'outing')
+        self.assertEqual(draft['type_label'], '外出')
+        self.assertEqual(
+            [field['label'] for field in draft['fields']],
+            ['外出开始时间', '外出结束时间', '外出事由'])
+        self.assertEqual(draft['initial']['start_time'], '2026-11-16T09:00')
+
+    def test_overtime_requires_both_times(self):
+        result = tools.draft_approval(
+            None, 'overtime', start_time='2026-11-16T18:00', reason='上线')
+        self.assertIsNone(result['draft'])
+        self.assertEqual(result['missing'], ['结束时间'])
+
+    def test_overtime_rejects_reversed_span(self):
+        result = tools.draft_approval(
+            None, 'overtime', start_time='2026-11-16T18:00',
+            end_time='2026-11-16T17:00')
+        self.assertIsNone(result['draft'])
+        self.assertIn('结束时间必须晚于开始时间', result['error'])
+
+    def test_comp_draft_fields(self):
+        result = tools.draft_approval(
+            None, 'comp', start_time='2026-11-17T09:00',
+            end_time='2026-11-17T18:00')
+        draft = result['draft']
+        self.assertEqual(draft['approval_type'], 'comp')
+        self.assertEqual(draft['type_label'], '调休')
+        self.assertEqual(
+            [field['label'] for field in draft['fields']],
+            ['调休开始时间', '调休结束时间'])
+        self.assertNotIn('reason', draft['initial'])
+
+    def test_seal_draft_fields(self):
+        result = tools.draft_approval(
+            None, 'seal', seal_time='2026-11-16T10:00', reason='合同盖章')
+        draft = result['draft']
+        self.assertEqual(draft['approval_type'], 'seal')
+        self.assertEqual(draft['type_label'], '用章')
+        self.assertEqual(draft['initial']['purpose'], '合同盖章')
+        self.assertEqual(
+            [field['label'] for field in draft['fields']],
+            ['用章时间', '用途', '用章文件'])
 
     def test_amount_must_be_numeric_in_tool_validation(self):
         args = {
@@ -795,6 +844,133 @@ class AssistantApprovalDraftBridgeTests(TestCase):
         approval = Approval.objects.get(applicant=self.applicant)
         self.assertEqual(approval.form_data['leave_time'], '2026-11-16T10:00')
         self.assertEqual(approval.form_data['reason'], '改成明天上午十点')
+        self.assertNotIn(token, self.client.session['assistant_approval_drafts'])
+
+    def _card_response(self, approval_type, **kwargs):
+        conversation = Conversation.objects.create(user=self.applicant)
+        result = tools.draft_approval(
+            self.applicant, approval_type, **kwargs)
+        Message.objects.create(
+            conversation=conversation, role=Message.Role.ASSISTANT,
+            content='草稿已生成，请确认。',
+            tool_calls=[{
+                'tool': 'draft_approval',
+                'args': {'approval_type': approval_type},
+                'ok': True, 'result': result, 'error': '', 'duration_ms': 1,
+            }])
+        response = self.client.get('/', {'conversation': conversation.pk})
+        return response
+
+    def test_outing_card_is_editable_and_posts_to_original_endpoint(self):
+        response = self._card_response(
+            'outing', start_time='2026-11-16T09:00',
+            end_time='2026-11-16T12:00', reason='拜访客户')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="start_time"')
+        self.assertContains(response, 'value="2026-11-16T09:00"')
+        self.assertContains(response, 'name="end_time"')
+        self.assertContains(response, 'value="2026-11-16T12:00"')
+        self.assertContains(response, '外出事由')
+
+        token = list(self.client.session['assistant_approval_drafts'])[-1]
+        response = self.client.post(reverse('approval:approval_create'), {
+            'approval_type': 'outing',
+            'start_time': '2026-11-16T10:00',
+            'end_time': '2026-11-16T13:00',
+            'reason': '拜访新客户',
+            'department': str(self.dept.pk),
+            'approver': str(self.leader.pk),
+            'draft': token,
+        })
+        self.assertEqual(response.status_code, 302)
+        approval = Approval.objects.get(
+            applicant=self.applicant, approval_type='outing')
+        self.assertEqual(approval.form_data['start_time'], '2026-11-16T10:00')
+        self.assertEqual(approval.form_data['reason'], '拜访新客户')
+        self.assertNotIn(token, self.client.session['assistant_approval_drafts'])
+
+    def test_overtime_card_is_editable_and_posts_to_original_endpoint(self):
+        response = self._card_response(
+            'overtime', start_time='2026-11-16T18:00',
+            end_time='2026-11-16T21:00', reason='版本上线')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '加班开始时间')
+        self.assertContains(response, 'name="start_time"')
+        self.assertContains(response, 'name="end_time"')
+
+        token = list(self.client.session['assistant_approval_drafts'])[-1]
+        response = self.client.post(reverse('approval:approval_create'), {
+            'approval_type': 'overtime',
+            'start_time': '2026-11-16T19:00',
+            'end_time': '2026-11-16T22:00',
+            'reason': '版本上线值守',
+            'department': str(self.dept.pk),
+            'approver': str(self.leader.pk),
+            'draft': token,
+        })
+        self.assertEqual(response.status_code, 302)
+        approval = Approval.objects.get(
+            applicant=self.applicant, approval_type='overtime')
+        self.assertEqual(approval.form_data['end_time'], '2026-11-16T22:00')
+        self.assertNotIn(token, self.client.session['assistant_approval_drafts'])
+
+    def test_comp_card_uses_approved_overtime_as_basis(self):
+        overtime = Approval.objects.create(
+            approval_type='overtime', title='加班｜朱研发',
+            applicant=self.applicant,
+            approver=self.leader, department_id=self.dept.pk,
+            department_name=self.dept.name,
+            status=Approval.Status.APPROVED,
+            form_data={'start_time': '2026-11-16T18:00',
+                       'end_time': '2026-11-16T21:00'})
+        response = self._card_response(
+            'comp', start_time='2026-11-17T09:00', end_time='2026-11-17T18:00')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="basis"')
+        self.assertContains(response, f'value="{overtime.pk}"')
+        self.assertContains(response, '调休依据')
+
+        token = list(self.client.session['assistant_approval_drafts'])[-1]
+        response = self.client.post(reverse('approval:approval_create'), {
+            'approval_type': 'comp',
+            'start_time': '2026-11-17T10:00',
+            'end_time': '2026-11-17T17:00',
+            'basis': str(overtime.pk),
+            'department': str(self.dept.pk),
+            'approver': str(self.leader.pk),
+            'draft': token,
+        })
+        self.assertEqual(response.status_code, 302)
+        approval = Approval.objects.get(
+            applicant=self.applicant, approval_type='comp')
+        self.assertEqual(approval.form_data['basis'], str(overtime.pk))
+        self.assertNotIn(token, self.client.session['assistant_approval_drafts'])
+
+    def test_seal_card_posts_file_to_original_endpoint(self):
+        response = self._card_response(
+            'seal', seal_time='2026-11-16T10:00', reason='合同盖章')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'enctype="multipart/form-data"')
+        self.assertContains(response, 'name="seal_time"')
+        self.assertContains(response, 'name="seal_file"')
+        self.assertContains(response, 'name="purpose"')
+
+        token = list(self.client.session['assistant_approval_drafts'])[-1]
+        response = self.client.post(reverse('approval:approval_create'), {
+            'approval_type': 'seal',
+            'seal_time': '2026-11-16T11:00',
+            'purpose': '合同用章',
+            'seal_file': SimpleUploadedFile(
+                'contract.pdf', b'%PDF-1.4 test', content_type='application/pdf'),
+            'department': str(self.dept.pk),
+            'approver': str(self.leader.pk),
+            'draft': token,
+        })
+        self.assertEqual(response.status_code, 302)
+        approval = Approval.objects.get(
+            applicant=self.applicant, approval_type='seal')
+        self.assertEqual(approval.form_data['purpose'], '合同用章')
+        self.assertTrue(approval.attachment.name.endswith('.pdf'))
         self.assertNotIn(token, self.client.session['assistant_approval_drafts'])
 
     def test_expense_card_is_editable_and_posts_to_original_endpoint(self):

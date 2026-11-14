@@ -11,7 +11,7 @@ from django.utils import timezone
 
 from . import llm
 from .models import Conversation, Message
-from .tools import TOOLS, allowed_names_for
+from .tools import DRAFT_TYPES, TOOLS, allowed_names_for
 
 MONTH_RE = re.compile(r'^\d{4}-\d{2}$')
 DENIED = '__DENIED__'
@@ -32,8 +32,11 @@ def build_system_prompt(user):
         '5. 一律使用简体中文回答，语气简洁。\n'
         '6. 不要使用 Markdown 标记（*、#、反引号）；用纯文本短句和换行。\n'
         '7. 调用工具时只填用户明确说出的筛选条件；用户没提到的月份、状态、类型、未读等参数不要自行补默认值。\n'
-        '8. 用户要发起请假或报销时，先调用 draft_approval 生成草稿；草稿不是提交，'
-        '必须让用户打开审批表单确认。不要替用户编造未说出的时间、金额或事由。'
+        '8. 用户要发起请假、报销、用章、外出、加班或调休时，先调用 '
+        'draft_approval 生成草稿；草稿不是提交，不得自动提交或落库。'
+        '有草稿卡片时，告诉用户可在卡片里改字段后点「确认提交」；用章草稿'
+        '还要在卡片里选择用章文件。不要替用户编造未说出的时间、金额、'
+        '事由或用途。'
     )
 
 
@@ -45,7 +48,7 @@ def extract_draft(message):
         result = log.get('result') or {}
         draft = result.get('draft')
         if (isinstance(draft, dict)
-                and draft.get('approval_type') in ('leave', 'expense')
+                and draft.get('approval_type') in DRAFT_TYPES
                 and isinstance(draft.get('initial'), dict)):
             return draft
     return None

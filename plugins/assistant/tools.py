@@ -146,23 +146,64 @@ def _draft_date(value):
     return date.fromisoformat(str(value or '').strip()).isoformat()
 
 
+DRAFT_TYPES = {
+    'leave': '请假',
+    'expense': '报销',
+    'seal': '用章',
+    'outing': '外出',
+    'overtime': '加班',
+    'comp': '调休',
+}
+
+
+def _draft_result(approval_type, initial, fields):
+    return {
+        'draft': {
+            'approval_type': approval_type,
+            'type_label': DRAFT_TYPES[approval_type],
+            'initial': initial,
+            'fields': fields,
+        },
+    }
+
+
+def _draft_span(start_time, end_time):
+    """校验并规范化开始/结束时间，结束必须晚于开始。"""
+    missing = []
+    if not start_time:
+        missing.append('开始时间')
+    if not end_time:
+        missing.append('结束时间')
+    if missing:
+        return None, {'missing': missing}
+    try:
+        start_value = _draft_datetime(start_time)
+        end_value = _draft_datetime(end_time)
+    except ValueError:
+        return None, {'error': '时间格式应为 YYYY-MM-DDTHH:MM'}
+    if end_value <= start_value:
+        return None, {'error': '结束时间必须晚于开始时间'}
+    return (start_value, end_value), None
+
+
 def draft_approval(user, approval_type, leave_time=None, submit_time=None,
-                   amount=None, reason=None):
-    """生成请假/报销草稿。只返回待确认数据，不写库、不提交。"""
-    if approval_type not in ('leave', 'expense'):
+                   amount=None, reason=None, start_time=None, end_time=None,
+                   seal_time=None):
+    """生成六类审批草稿。只返回待确认数据，不写库、不提交。"""
+    label = DRAFT_TYPES.get(approval_type)
+    if label is None:
         return {
             'draft': None,
             'missing': [],
-            'error': '目前只支持 leave（请假）和 expense（报销）',
+            'error': '目前只支持 leave/expense/seal/outing/overtime/comp',
         }
     reason = str(reason or '').strip()
     if len(reason) > 500:
         return {'draft': None, 'missing': [], 'error': '事由不能超过 500 字'}
 
     if approval_type == 'leave':
-        missing = [] if leave_time else ['请假时间']
-        if missing:
-            return {'draft': None, 'missing': missing}
+        if not leave_time:
+            return {'draft': None, 'missing': ['请假时间']}
         try:
             leave_value = _draft_datetime(leave_time)
         except ValueError:
@@ -173,58 +214,91 @@ def draft_approval(user, approval_type, leave_time=None, submit_time=None,
         initial = {'leave_time': leave_value}
         if reason:
             initial['reason'] = reason
-        return {
-            'draft': {
-                'approval_type': 'leave',
-                'type_label': '请假',
-                'initial': initial,
-                'fields': [
-                    {'name': 'leave_time', 'label': '请假时间',
-                     'value': leave_value.replace('T', ' ')},
-                    {'name': 'reason', 'label': '事由',
-                     'value': reason or '未填写'},
-                ],
-            },
-        }
+        return _draft_result('leave', initial, [
+            {'name': 'leave_time', 'label': '请假时间',
+             'value': leave_value.replace('T', ' ')},
+            {'name': 'reason', 'label': '事由', 'value': reason or '未填写'},
+        ])
 
-    missing = []
-    if not submit_time:
-        missing.append('提交时间')
-    if amount in (None, ''):
-        missing.append('金额')
-    if missing:
-        return {'draft': None, 'missing': missing}
-    try:
-        submit_value = _draft_date(submit_time)
-    except ValueError:
-        return {
-            'draft': None, 'missing': [],
-            'error': '提交时间格式应为 YYYY-MM-DD',
+    if approval_type == 'expense':
+        missing = []
+        if not submit_time:
+            missing.append('提交时间')
+        if amount in (None, ''):
+            missing.append('金额')
+        if missing:
+            return {'draft': None, 'missing': missing}
+        try:
+            submit_value = _draft_date(submit_time)
+        except ValueError:
+            return {
+                'draft': None, 'missing': [],
+                'error': '提交时间格式应为 YYYY-MM-DD',
+            }
+        try:
+            amount_value = Decimal(str(amount)).quantize(Decimal('0.01'))
+            if not amount_value.is_finite() or amount_value < 0:
+                raise InvalidOperation
+        except (InvalidOperation, ValueError, TypeError):
+            return {'draft': None, 'missing': [], 'error': '金额必须是非负数字'}
+        initial = {
+            'submit_time': submit_value,
+            'amount': f'{amount_value:.2f}',
         }
-    try:
-        amount_value = Decimal(str(amount)).quantize(Decimal('0.01'))
-        if not amount_value.is_finite() or amount_value < 0:
-            raise InvalidOperation
-    except (InvalidOperation, ValueError, TypeError):
-        return {'draft': None, 'missing': [], 'error': '金额必须是非负数字'}
-    initial = {
-        'submit_time': submit_value,
-        'amount': f'{amount_value:.2f}',
-    }
-    if reason:
+        if reason:
+            initial['reason'] = reason
+        return _draft_result('expense', initial, [
+            {'name': 'submit_time', 'label': '提交时间', 'value': submit_value},
+            {'name': 'amount', 'label': '金额', 'value': f'{amount_value:.2f}'},
+            {'name': 'reason', 'label': '费用事由', 'value': reason or '未填写'},
+        ])
+
+    if approval_type == 'seal':
+        if not seal_time:
+            return {'draft': None, 'missing': ['用章时间']}
+        try:
+            seal_value = _draft_datetime(seal_time)
+        except ValueError:
+            return {
+                'draft': None, 'missing': [],
+                'error': '用章时间格式应为 YYYY-MM-DDTHH:MM',
+            }
+        initial = {'seal_time': seal_value}
+        if reason:
+            initial['purpose'] = reason
+        return _draft_result('seal', initial, [
+            {'name': 'seal_time', 'label': '用章时间',
+             'value': seal_value.replace('T', ' ')},
+            {'name': 'purpose', 'label': '用途', 'value': reason or '未填写'},
+            {'name': 'seal_file', 'label': '用章文件', 'value': '请在卡片中选择'},
+        ])
+
+    span, error = _draft_span(start_time, end_time)
+    if error:
+        if 'missing' in error:
+            return {'draft': None, 'missing': error['missing']}
+        return {'draft': None, 'missing': [], 'error': error['error']}
+    start_value, end_value = span
+    initial = {'start_time': start_value, 'end_time': end_value}
+    if reason and approval_type != 'comp':
         initial['reason'] = reason
-    return {
-        'draft': {
-            'approval_type': 'expense',
-            'type_label': '报销',
-            'initial': initial,
-            'fields': [
-                {'name': 'submit_time', 'label': '提交时间', 'value': submit_value},
-                {'name': 'amount', 'label': '金额', 'value': f'{amount_value:.2f}'},
-                {'name': 'reason', 'label': '费用事由', 'value': reason or '未填写'},
-            ],
-        },
-    }
+
+    if approval_type == 'outing':
+        labels = ('外出开始时间', '外出结束时间', '外出事由')
+    elif approval_type == 'overtime':
+        labels = ('加班开始时间', '加班结束时间', '加班事由')
+    else:
+        labels = ('调休开始时间', '调休结束时间', None)
+    fields = [
+        {'name': 'start_time', 'label': labels[0],
+         'value': start_value.replace('T', ' ')},
+        {'name': 'end_time', 'label': labels[1],
+         'value': end_value.replace('T', ' ')},
+    ]
+    if labels[2]:
+        fields.append({'name': 'reason', 'label': labels[2],
+                       'value': reason or '未填写'})
+    return _draft_result(approval_type, initial, fields)
 
 
 def list_notice(user, limit=5, unread_only=False):
@@ -367,13 +441,15 @@ _register(
 _register(
     'draft_approval', draft_approval,
     _schema('draft_approval',
-            '生成请假或报销草稿。只返回待确认字段，不写库、不提交。用户明确说'
-            '「帮我请假 / 报销 / 起草」时使用；缺时间或金额就返回 missing 追问，'
+            '生成请假、报销、用章、外出、加班或调休草稿。只返回待确认字段，'
+            '不写库、不提交。用户明确说「帮我请假 / 报销 / 用章 / 外出 / 加班 / '
+            '调休 / 起草」时使用；缺时间、金额或起止时间就返回 missing 追问，'
             '不要替用户编造。部门与审批人交给审批表单默认值，不要填。',
             {
                 'approval_type': {
-                    'type': 'string', 'enum': ['leave', 'expense'],
-                    'description': 'leave=请假，expense=报销',
+                    'type': 'string', 'enum': list(DRAFT_TYPES),
+                    'description': 'leave=请假，expense=报销，seal=用章，'
+                                   'outing=外出，overtime=加班，comp=调休',
                 },
                 'leave_time': {
                     'type': 'string',
@@ -387,9 +463,22 @@ _register(
                     'type': 'number', 'minimum': 0,
                     'description': '报销金额，只填数字，不带货币符号',
                 },
+                'start_time': {
+                    'type': 'string',
+                    'description': '外出/加班/调休开始时间，格式 YYYY-MM-DDTHH:MM',
+                },
+                'end_time': {
+                    'type': 'string',
+                    'description': '外出/加班/调休结束时间，格式 YYYY-MM-DDTHH:MM',
+                },
+                'seal_time': {
+                    'type': 'string',
+                    'description': '用章时间，格式 YYYY-MM-DDTHH:MM',
+                },
                 'reason': {
                     'type': 'string',
-                    'description': '请假事由或费用事由，按用户原话概括，不要扩写',
+                    'description': '事由或用途：请假事由、费用事由、外出事由、'
+                                   '加班事由、用章用途，按用户原话概括，不要扩写',
                 },
             }),
     ['approval_view'], '生成审批草稿'),

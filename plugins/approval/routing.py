@@ -8,7 +8,10 @@
 查找顺序：目标部门内持有经理角色 → 目标部门内具备 approval_approve 的启用用户 → None（调用方回退到直属上级 / 超管）。
 """
 
+from datetime import timedelta
+
 from django.apps import apps as dj_apps
+from django.utils import timezone
 
 ROUTING = {
     'leave': {'dept': '人力资源部', 'role': '人力资源经理'},
@@ -75,3 +78,26 @@ def fallback_approvers(applicant):
         if user.has_perm('approval_approve') and user not in candidates:
             candidates.append(user)
     return candidates
+
+
+def comp_basis_choices(user):
+    """调休依据：本人近一年已通过的加班审批（与审批表单同源）。
+
+    只认 APPROVED：草稿 / 待审批 / 已驳回的加班都不能作为调休依据。
+    """
+    try:
+        Approval = dj_apps.get_model('approval', 'Approval')
+    except LookupError:
+        return []
+    since = timezone.now() - timedelta(days=365)
+    rows = Approval.objects.filter(
+        applicant=user, approval_type=Approval.Type.OVERTIME,
+        status=Approval.Status.APPROVED, created_at__gte=since,
+    ).order_by('-created_at')[:50]
+    choices = []
+    for row in rows:
+        start = row.form_data.get('start_time', '')
+        end = row.form_data.get('end_time', '')
+        label = f'#{row.pk} {start} ~ {end}' if start or end else f'#{row.pk} {row.title}'
+        choices.append((str(row.pk), label))
+    return choices

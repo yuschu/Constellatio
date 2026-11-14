@@ -11,7 +11,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .models import Approval
-from .views import _overtime_choices
+from .routing import comp_basis_choices
 
 User = get_user_model()
 
@@ -190,7 +190,7 @@ class OvertimeBasisTests(TestCase):
             Approval.Status.APPROVED,
             created_at=timezone.now() - timedelta(days=400))
 
-        choices = dict(_overtime_choices(self.user))
+        choices = dict(comp_basis_choices(self.user))
         self.assertIn(str(approved.pk), choices)
         self.assertNotIn(str(pending.pk), choices)
         self.assertNotIn(str(rejected.pk), choices)
