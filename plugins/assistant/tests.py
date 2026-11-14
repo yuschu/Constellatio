@@ -766,7 +766,70 @@ class AssistantApprovalDraftBridgeTests(TestCase):
         response = self.client.get('/', {'conversation': self.conversation.pk})
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '草稿')
-        self.assertContains(response, '去审批')
+        self.assertContains(response, '确认提交')
         self.assertContains(
             response,
             reverse('assistant:approval_draft', args=[self.message.pk]))
+
+    def test_home_card_is_editable_and_posts_to_original_endpoint(self):
+        response = self.client.get('/', {'conversation': self.conversation.pk})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="leave_time"')
+        self.assertContains(response, 'value="2026-11-15T09:00"')
+        self.assertContains(response, 'name="reason"')
+        self.assertContains(response, 'name="department"')
+        self.assertContains(response, 'name="approver"')
+        self.assertContains(response, '确认提交')
+        self.assertContains(response, reverse('approval:approval_create'))
+
+        token = list(self.client.session['assistant_approval_drafts'])[-1]
+        response = self.client.post(reverse('approval:approval_create'), {
+            'approval_type': 'leave',
+            'leave_time': '2026-11-16T10:00',
+            'reason': '改成明天上午十点',
+            'department': str(self.dept.pk),
+            'approver': str(self.leader.pk),
+            'draft': token,
+        })
+        self.assertEqual(response.status_code, 302)
+        approval = Approval.objects.get(applicant=self.applicant)
+        self.assertEqual(approval.form_data['leave_time'], '2026-11-16T10:00')
+        self.assertEqual(approval.form_data['reason'], '改成明天上午十点')
+        self.assertNotIn(token, self.client.session['assistant_approval_drafts'])
+
+    def test_expense_card_is_editable_and_posts_to_original_endpoint(self):
+        conversation = Conversation.objects.create(user=self.applicant)
+        result = tools.draft_approval(
+            self.applicant, 'expense', submit_time='2026-11-14',
+            amount='120.50', reason='打车')
+        Message.objects.create(
+            conversation=conversation, role=Message.Role.ASSISTANT,
+            content='报销草稿已生成，请确认。',
+            tool_calls=[{
+                'tool': 'draft_approval', 'args': {'approval_type': 'expense'},
+                'ok': True, 'result': result, 'error': '', 'duration_ms': 1,
+            }])
+        response = self.client.get('/', {'conversation': conversation.pk})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="submit_time"')
+        self.assertContains(response, 'value="2026-11-14"')
+        self.assertContains(response, 'name="amount"')
+        self.assertContains(response, 'value="120.50"')
+        self.assertContains(response, 'name="reason"')
+
+        token = list(self.client.session['assistant_approval_drafts'])[-1]
+        response = self.client.post(reverse('approval:approval_create'), {
+            'approval_type': 'expense',
+            'submit_time': '2026-11-14',
+            'amount': '88.00',
+            'reason': '打车费',
+            'department': str(self.dept.pk),
+            'approver': str(self.leader.pk),
+            'draft': token,
+        })
+        self.assertEqual(response.status_code, 302)
+        approval = Approval.objects.get(
+            applicant=self.applicant, approval_type='expense')
+        self.assertEqual(approval.form_data['amount'], '88.00')
+        self.assertEqual(approval.form_data['reason'], '打车费')
+        self.assertNotIn(token, self.client.session['assistant_approval_drafts'])

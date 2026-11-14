@@ -280,21 +280,61 @@
         <div class="as-turn">
           <div class="as-bubble">{{ message.content|chat_text }}</div>
           {% if message.draft %}
-          <div class="as-draft" data-ds-card>
+          <form class="as-draft" data-ds-card method="post" action="{% url 'approval:approval_create' %}">
+            {% csrf_token %}
+            <input type="hidden" name="approval_type" value="{{ message.draft.approval_type }}">
+            {% if message.draft_token %}<input type="hidden" name="draft" value="{{ message.draft_token }}">{% endif %}
+            {% if message.draft_meta %}
+            <input type="hidden" name="department" value="{{ message.draft_meta.department_id }}">
+            <input type="hidden" name="approver" value="{{ message.draft_meta.approver_id }}">
+            {% endif %}
             <div class="as-draft__head">
               <span class="as-draft__tag">{% trans "草稿" %}</span>
               <span class="as-draft__type">{{ message.draft.type_label }}</span>
             </div>
-            <dl class="as-draft__fields">
-              {% for field in message.draft.fields %}
-              <div class="as-draft__row">
-                <dt>{{ field.label }}</dt>
-                <dd>{{ field.value }}</dd>
-              </div>
-              {% endfor %}
-            </dl>
-            <a class="as-draft__action" href="{{ message.draft_url }}">{% trans "去审批" %}</a>
-          </div>
+            <div class="as-draft__fields">
+              {% if message.draft.approval_type == 'leave' %}
+              <label class="as-draft__field">
+                <span>请假时间</span>
+                <input class="as-draft__input" type="datetime-local" name="leave_time"
+                       value="{{ message.draft.initial.leave_time }}" required>
+              </label>
+              <label class="as-draft__field">
+                <span>事由</span>
+                <textarea class="as-draft__input" name="reason" rows="2">{{ message.draft.initial.reason }}</textarea>
+              </label>
+              {% else %}
+              <label class="as-draft__field">
+                <span>提交时间</span>
+                <input class="as-draft__input" type="date" name="submit_time"
+                       value="{{ message.draft.initial.submit_time }}" required>
+              </label>
+              <label class="as-draft__field">
+                <span>金额</span>
+                <input class="as-draft__input" type="number" name="amount" step="0.01" min="0"
+                       value="{{ message.draft.initial.amount }}" required>
+              </label>
+              <label class="as-draft__field">
+                <span>费用事由</span>
+                <textarea class="as-draft__input" name="reason" rows="2">{{ message.draft.initial.reason }}</textarea>
+              </label>
+              {% endif %}
+            </div>
+            {% if message.draft_meta %}
+            <div class="as-draft__meta">
+              部门：{{ message.draft_meta.department_name }} · 审批人：{{ message.draft_meta.approver_name }}
+            </div>
+            <div class="as-draft__actions">
+              <button class="as-draft__submit" type="submit">确认提交</button>
+              <a class="as-draft__link" href="{{ message.draft_url }}">改部门 / 审批人</a>
+            </div>
+            {% else %}
+            <div class="as-draft__meta">请先到审批表单选择部门与审批人。</div>
+            <div class="as-draft__actions">
+              <a class="as-draft__action" href="{{ message.draft_url }}">去审批</a>
+            </div>
+            {% endif %}
+          </form>
           {% endif %}
         </div>
       </div>

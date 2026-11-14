@@ -56,3 +56,22 @@ def candidate_approvers(approval_type):
         user for user in User.objects.filter(is_active=True, department=department).order_by('pk')
         if user.has_perm('approval_approve')
     ]
+
+
+def fallback_approvers(applicant):
+    """路由缺失时的审批人候选（v1.5.18）：申请人直属上级 + 具备审批权限的启用用户。
+
+    B 阶段助手卡片也用同一份候选，避免卡片默认值与审批表单不一致。
+    """
+    try:
+        User = dj_apps.get_model('user', 'User')
+    except LookupError:
+        return []
+    candidates = []
+    leader = applicant.leader if applicant.leader_id else None
+    if leader is not None and leader.is_active and leader.pk != applicant.pk:
+        candidates.append(leader)
+    for user in User.objects.filter(is_active=True).exclude(pk=applicant.pk).order_by('pk'):
+        if user.has_perm('approval_approve') and user not in candidates:
+            candidates.append(user)
+    return candidates

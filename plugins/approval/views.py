@@ -19,6 +19,7 @@ from plugin_host.permissions import require_perm
 from . import forms, services
 from .models import Approval, ApprovalRecord
 from .routing import candidate_approvers as resolve_candidates
+from .routing import fallback_approvers
 from .services import approve, reject, sign_approve, sign_reject, submit
 
 User = get_user_model()
@@ -99,18 +100,6 @@ def _overtime_choices(user):
     return choices
 
 
-def _fallback_approvers(applicant):
-    """路由缺失时的审批人候选（v1.5.18）：申请人直属上级 + 具备审批权限的启用用户。"""
-    candidates = []
-    leader = applicant.leader if applicant.leader_id else None
-    if leader is not None and leader.is_active and leader.pk != applicant.pk:
-        candidates.append(leader)
-    for user in User.objects.filter(is_active=True).exclude(pk=applicant.pk).order_by('pk'):
-        if user.has_perm('approval_approve') and user not in candidates:
-            candidates.append(user)
-    return candidates
-
-
 def _summary(approval_type, cleaned, basis_label=''):
     """把动态字段拼成 human-readable 内容（同时保留原始 form_data）。"""
     lines = []
@@ -152,7 +141,7 @@ def _create_context(request, form=None, type_key=None, source=None, chip_prefix=
     departments = _departments()
     approvers = [u for u in resolve_candidates(type_key) if u.pk != request.user.pk]
     if not approvers:
-        approvers = _fallback_approvers(request.user)
+        approvers = fallback_approvers(request.user)
     if form is None:
         form = forms.form_for_type(
             type_key, None, None, applicant=request.user,
@@ -256,7 +245,7 @@ def approval_create(request):
     approvers = [u for u in resolve_candidates(type_key)
                  if u.pk != request.user.pk]
     if not approvers:
-        approvers = _fallback_approvers(request.user)
+        approvers = fallback_approvers(request.user)
     overtime_choices = _overtime_choices(request.user)
     initial = dict(source.form_data) if source else None
     if (source is None and assistant_draft

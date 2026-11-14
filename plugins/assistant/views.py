@@ -108,6 +108,63 @@ def _resolve_color_mode(request):
     return DEFAULT_COLOR_MODE
 
 
+def _remember_draft(request, draft):
+    """把一份草稿放进 session，返回一次性 token；最多保留最近 5 份。"""
+    token = secrets.token_urlsafe(16)
+    records = request.session.get(APPROVAL_DRAFT_SESSION_KEY) or {}
+    if not isinstance(records, dict):
+        records = {}
+    records = dict(list(records.items())[-4:])
+    records[token] = {'user_id': request.user.pk, 'draft': draft}
+    request.session[APPROVAL_DRAFT_SESSION_KEY] = records
+    return token
+
+
+def _draft_card_meta(user, draft):
+    """卡片内联提交所需的部门/审批人默认值，与审批表单同源；缺一不可返回 None。"""
+    try:
+        from plugins.approval.routing import candidate_approvers, fallback_approvers
+        from plugins.user.models import Department
+    except LookupError:
+        return None
+    departments = Department.objects.filter(is_active=True).order_by('name')
+    department = None
+    if user.department_id:
+        department = departments.filter(pk=user.department_id).first()
+    if department is None:
+        department = departments.first()
+    approvers = [
+        candidate for candidate in candidate_approvers(draft['approval_type'])
+        if candidate.pk != user.pk
+    ]
+    if not approvers:
+        approvers = fallback_approvers(user)
+    if department is None or not approvers:
+        return None
+    approver = approvers[0]
+    return {
+        'department_id': department.pk,
+        'department_name': department.name,
+        'approver_id': approver.pk,
+        'approver_name': approver.last_name or approver.username,
+    }
+
+
+def _attach_draft_cards(request, chat_messages):
+    """给助手消息挂草稿、卡片链接和内联提交所需的 session token。"""
+    for message in chat_messages:
+        draft = services.extract_draft(message)
+        if not draft:
+            continue
+        message.draft = draft
+        message.draft_url = reverse(
+            'assistant:approval_draft', args=[message.pk])
+        message.draft_meta = _draft_card_meta(request.user, draft)
+        message.draft_token = (
+            _remember_draft(request, draft) if message.draft_meta else ''
+        )
+
+
 @login_required
 def home(request):
     """对话式首页：空态 + 输入区；有会话时渲染消息流（本版无数据，分支已就位）。
@@ -161,12 +218,7 @@ def home(request):
         chat_messages = list(conversation.messages.filter(
             role__in=[Message.Role.USER, Message.Role.ASSISTANT]
         ).order_by('created_at', 'pk'))
-        for message in chat_messages:
-            draft = services.extract_draft(message)
-            if draft:
-                message.draft = draft
-                message.draft_url = reverse(
-                    'assistant:approval_draft', args=[message.pk])
+        _attach_draft_cards(request, chat_messages)
 
     primary_menus, common_menus = _split_menus(request, panel)
     # v2.2.0：快捷键「快速操作」与首页真正渲染出来的入口同源——固定入口指向面板
@@ -328,14 +380,7 @@ def approval_draft(request, message_id):
     if draft is None:
         return HttpResponseNotFound('草稿不存在')
 
-    token = secrets.token_urlsafe(16)
-    records = request.session.get(APPROVAL_DRAFT_SESSION_KEY) or {}
-    if not isinstance(records, dict):
-        records = {}
-    # 只保留最近 5 份，避免 session 越用越大。
-    records = dict(list(records.items())[-4:])
-    records[token] = {'user_id': request.user.pk, 'draft': draft}
-    request.session[APPROVAL_DRAFT_SESSION_KEY] = records
+    token = _remember_draft(request, draft)
     url = reverse('approval:approval_create')
     return redirect(
         f'{url}?type={quote(draft["approval_type"])}&draft={quote(token)}')

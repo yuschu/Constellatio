@@ -964,8 +964,75 @@ div.as-more__menu {
 
 .as-draft__fields {
   display: grid;
-  gap: 6px;
+  gap: 8px;
   margin: 0;
+}
+
+.as-draft__field {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.as-draft__field > span {
+  color: var(--as-label-secondary);
+}
+
+.as-draft__input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0.5px solid var(--as-border-l2);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--as-label-primary);
+  font: inherit;
+}
+
+.as-draft__input:focus {
+  border-color: var(--as-interactive-hover-solid);
+  outline: none;
+}
+
+.as-draft__meta {
+  margin-top: 10px;
+  color: var(--as-label-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.as-draft__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.as-draft__submit {
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--as-interactive-hover-solid);
+  color: var(--as-label-primary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+}
+
+.as-draft__submit:hover {
+  background: var(--as-interactive-hover);
+}
+
+.as-draft__link {
+  color: var(--as-label-secondary);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.as-draft__link:hover {
+  color: var(--as-label-primary);
 }
 
 .as-draft__row {
