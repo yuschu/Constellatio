@@ -8,7 +8,9 @@
 `docker compose up -d --build` 会同时拉起 `ollama` 服务；`ollama-init` 在 Ollama 健康后把 `OLLAMA_MODEL`（默认 `qwen3:4b`）拉进 `ollama_data` 卷。Web 默认连 `http://ollama:11434/v1`，所以全新部署不需要再填地址和模型，打开首页就能对话。
 
 - 模型卷约占 2–3 GB；首次启动需要联网拉取，耗时取决于网络。
-- 已存在模型时 `ollama-init` 先查 `ollama list`，命中就直接退出，不重复拉取，也避免离线重启被 registry 卡住。
+- 已存在模型时 `ollama-init` 跳过拉取，不再请求 registry；随后仍会做一次最小生成预热。
+- 预热会把 4B 载入 `ollama` 内存（`OLLAMA_KEEP_ALIVE` 默认 30 分钟），Web 等预热结束才启动。CPU 冷加载约 30–45 秒，这一步把等待放在启动阶段，而不是用户第一次提问。
+- 内置 Ollama 默认跑 CPU，4B 生成约 7 token/s；一次带工具调用的问答实测约 3 分钟。Compose 默认 `ASSISTANT_LLM_TIMEOUT=240`，低于 120 秒容易在思考段未结束时被掐断。
 - Web 等 `ollama-init` 成功退出后才启动：模型没拉下来时 Web 不会带病对外服务，看 `docker compose logs ollama-init` 定位，修好网络后重跑 `docker compose up -d`。
 - Docker Hub 不可达时用 `OLLAMA_IMAGE` 指向可用的镜像源（保持同一 tag），例如 `OLLAMA_IMAGE=<镜像站>/ollama/ollama:0.40.11`。
 
@@ -81,7 +83,8 @@
 
 - 应用迁移：`python manage.py migrate assistant`；
 - 查看内置模型是否就绪：`docker compose exec ollama ollama list`；
-- 查看初始化日志：`docker compose logs ollama-init`；
+- 查看模型是否已载入内存：`docker compose exec ollama ollama ps`（预热后应看到 `qwen3:4b`，`UNTIL` 约为 30 分钟后）；
+- 查看初始化日志：`docker compose logs ollama-init`（`already present` 后应跟着 `warming`；出现 `warmup skipped` 说明预热失败，但不阻断启动）；
 - 查看当前生效配置（不打印 Key）：`python manage.py shell -c "from plugins.assistant import llm; print({k: v for k, v in llm.raw_config().items() if k != 'api_key'})"`；
 - 回退到内置默认：把接口地址和模型名同时清空后保存，会删除数据库单例行（含已保存的 Key），下次请求重新读 Compose 的 `http://ollama:11434/v1` + `qwen3:4b`；也可以在 shell 里删除该行；
 - 容器部署后如果只重建、不迁移，配置表不存在，读取会自动回退环境变量，但页面保存会失败；重建后必须执行迁移。

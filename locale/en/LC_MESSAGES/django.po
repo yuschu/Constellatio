@@ -2088,8 +2088,8 @@ msgstr "Clear saved API Key"
 msgid "超时（秒）"
 msgstr "Timeout (seconds)"
 
-msgid "单次模型请求的最长等待时间，1–120 秒"
-msgstr "Maximum wait for one model request, 1–120 seconds"
+msgid "单次模型请求的最长等待时间，1–300 秒；CPU 推理建议 240"
+msgstr "Maximum wait for one model request, 1–300 seconds; 240 is recommended for CPU inference"
 
 msgid "输出上限"
 msgstr "Max output tokens"

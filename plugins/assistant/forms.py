@@ -23,8 +23,8 @@ class LLMSettingsForm(forms.Form):
         help_text=_('本地 ollama / llama.cpp 通常不需要；留空保持不变'))
     clear_api_key = forms.BooleanField(label=_('清除已保存的 API Key'), required=False)
     timeout_seconds = forms.IntegerField(
-        label=_('超时（秒）'), min_value=1, max_value=120, initial=30,
-        help_text=_('单次模型请求的最长等待时间，1–120 秒'))
+        label=_('超时（秒）'), min_value=1, max_value=300, initial=30,
+        help_text=_('单次模型请求的最长等待时间，1–300 秒；CPU 推理建议 240'))
     max_tokens = forms.IntegerField(
         label=_('输出上限'), min_value=1, max_value=8192, initial=1024,
         help_text=_('单次回复的最大 token 数，1–8192'))

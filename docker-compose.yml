@@ -51,10 +51,12 @@ services:
         set -e
         if ollama list | awk 'NR > 1 {print $1}' | grep -qx "$${OLLAMA_MODEL}"; then
           echo "model $${OLLAMA_MODEL} already present"
-          exit 0
+        else
+          echo "pulling $${OLLAMA_MODEL}"
+          ollama pull "$${OLLAMA_MODEL}"
         fi
-        echo "pulling $${OLLAMA_MODEL}"
-        ollama pull "$${OLLAMA_MODEL}"
+        echo "warming $${OLLAMA_MODEL}"
+        ollama run "$${OLLAMA_MODEL}" "hi" >/dev/null 2>&1 || echo "warmup skipped"
     depends_on:
       ollama:
         condition: service_healthy
@@ -93,8 +95,8 @@ services:
       ASSISTANT_LLM_BASE_URL: ${ASSISTANT_LLM_BASE_URL:-http://ollama:11434/v1}
       ASSISTANT_LLM_MODEL: ${ASSISTANT_LLM_MODEL:-qwen3:4b}
       ASSISTANT_LLM_API_KEY: ${ASSISTANT_LLM_API_KEY:-}
-      ASSISTANT_LLM_TIMEOUT: ${ASSISTANT_LLM_TIMEOUT:-30}
-      ASSISTANT_LLM_MAX_TOKENS: ${ASSISTANT_LLM_MAX_TOKENS:-1024}
+      ASSISTANT_LLM_TIMEOUT: ${ASSISTANT_LLM_TIMEOUT:-240}
+      ASSISTANT_LLM_MAX_TOKENS: ${ASSISTANT_LLM_MAX_TOKENS:-1536}
     command: ["sh", "./entrypoint.sh"]
     ports:
       - "${WEB_PORT:-8000}:8000"

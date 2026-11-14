@@ -235,8 +235,8 @@ OA_PLUGINS = [
 ASSISTANT_LLM_BASE_URL = os.environ.get('ASSISTANT_LLM_BASE_URL', '')
 ASSISTANT_LLM_MODEL = os.environ.get('ASSISTANT_LLM_MODEL', '')
 ASSISTANT_LLM_API_KEY = os.environ.get('ASSISTANT_LLM_API_KEY', '')
-ASSISTANT_LLM_TIMEOUT = int(os.environ.get('ASSISTANT_LLM_TIMEOUT', '30') or 30)
-ASSISTANT_LLM_MAX_TOKENS = int(os.environ.get('ASSISTANT_LLM_MAX_TOKENS', '1024') or 1024)
+ASSISTANT_LLM_TIMEOUT = int(os.environ.get('ASSISTANT_LLM_TIMEOUT', '240') or 240)
+ASSISTANT_LLM_MAX_TOKENS = int(os.environ.get('ASSISTANT_LLM_MAX_TOKENS', '1536') or 1536)
 
 # ---------------------------------------------------------------------------
 # v1.7.0 企业 SSO（签名 Ticket 网关）
