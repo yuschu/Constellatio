@@ -65,6 +65,19 @@ class WorkbenchTests(TestCase):
         self.assertNotContains(response, '业务入口')
         self.assertEqual(html.count('href="/plugins/approval/new/?type=leave"'), 1)
 
+    def test_dashboard_english_ui_labels(self):
+        """v2.2.13：看板英文界面不再残留布局类中文串（部门名/公告标题等数据除外）。"""
+        self.client.force_login(self.admin)
+        self.client.cookies['django_language'] = 'en'
+        response = self.client.get('/dashboard/')
+        html = response.content.decode()
+        for text in ('Total requests', 'Request mix', 'Department overview',
+                     'Department check-ins', 'Requests · last 7 days',
+                     'Plugins enabled', 'Activity'):
+            self.assertContains(response, text)
+        for text in ('单据总量', '单据构成', '部门概况', '部门签到', '单据类型'):
+            self.assertNotIn(text, html)
+
     def test_pending_count(self):
         manager = User.objects.create_user('mgr_pending', '', 'pw', last_name='经理')
         grant(manager, 'approval_view', 'approval_approve')

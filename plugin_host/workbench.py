@@ -236,7 +236,7 @@ def _build_insight(*, user, is_admin, enabled_names, now):
         # 文案取「周六」那天的月份（column[6]），不是周日——取周日会让跨月那周和下一周重名
         saturday = sunday + timedelta(days=6)
         opens = (week == 0 or sunday.month != saturday.month or sunday.day == 1)
-        month_label = f'{saturday.month} 月' if opens else ''
+        month_label = _t(f'{saturday.month} 月') if opens else ''
         for offset in range(7):
             day = sunday + timedelta(days=offset)
             value = heat_counts.get(day, 0)

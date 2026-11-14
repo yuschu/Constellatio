@@ -1831,3 +1831,171 @@ msgstr "Total %(total)s"
 
 msgid "共 %(n)s 条"
 msgstr "Total %(n)s"
+
+msgid "%(days)s 天"
+msgstr "%(days)s days"
+
+msgid "%(total)s 个插件"
+msgstr "%(total)s plugins"
+
+msgid "一"
+msgstr "Mon"
+
+msgid "三"
+msgstr "Wed"
+
+msgid "五"
+msgstr "Fri"
+
+msgid "人"
+msgstr "people"
+
+msgid "人数 / 今日签到 / 待审批"
+msgstr "People / checked in today / pending"
+
+msgid "公告与消息"
+msgstr "Notices & messages"
+
+msgid "共 %(n)s 个部门，全部见「部门签到」"
+msgstr "%(n)s departments total · see “Department check-ins”"
+
+msgid "共 %(total)s 单"
+msgstr "%(total)s requests"
+
+msgid "分布"
+msgstr "Breakdown"
+
+msgid "单"
+msgstr "requests"
+
+msgid "单据总量"
+msgstr "Total requests"
+
+msgid "单据构成"
+msgstr "Request mix"
+
+msgid "单据类型"
+msgstr "Request types"
+
+msgid "多"
+msgstr "More"
+
+msgid "审批中"
+msgstr "Pending"
+
+msgid "少"
+msgstr "Less"
+
+msgid "峰值 %(n)s 人/天"
+msgstr "Peak %(n)s people/day"
+
+msgid "已办结"
+msgstr "Closed"
+
+msgid "已启用"
+msgstr "Enabled"
+
+msgid "已完成 %(done)s / 共 %(total)s"
+msgstr "Done %(done)s of %(total)s"
+
+msgid "我的单据"
+msgstr "My requests"
+
+msgid "我的待处理"
+msgstr "My pending"
+
+msgid "提交"
+msgstr "Submitted"
+
+msgid "插件启用"
+msgstr "Plugins enabled"
+
+msgid "收到"
+msgstr "Received"
+
+msgid "暂无单据"
+msgstr "No requests"
+
+msgid "暂无可用入口"
+msgstr "No shortcuts available"
+
+msgid "未读消息"
+msgstr "Unread messages"
+
+msgid "来源插件"
+msgstr "Sources"
+
+msgid "查看组织架构"
+msgstr "View org chart"
+
+msgid "活跃度"
+msgstr "Activity"
+
+msgid "留痕"
+msgstr "Audit"
+
+msgid "窗口内 %(total)s 单"
+msgstr "%(total)s requests in window"
+
+msgid "窗口内暂无单据"
+msgstr "No requests in this window"
+
+msgid "组织"
+msgstr "Organization"
+
+msgid "统计范围"
+msgstr "Range"
+
+msgid "蓝：提交　绿：已办结"
+msgstr "Blue: submitted · Green: closed"
+
+msgid "记录数"
+msgstr "Records"
+
+msgid "近 7 天单据量"
+msgstr "Requests · last 7 days"
+
+msgid "近 7 天没有单据"
+msgstr "No requests in the last 7 days"
+
+msgid "部门概况"
+msgstr "Department overview"
+
+msgid "部门签到"
+msgstr "Department check-ins"
+
+msgid "1 月"
+msgstr "Jan"
+
+msgid "2 月"
+msgstr "Feb"
+
+msgid "3 月"
+msgstr "Mar"
+
+msgid "4 月"
+msgstr "Apr"
+
+msgid "5 月"
+msgstr "May"
+
+msgid "6 月"
+msgstr "Jun"
+
+msgid "7 月"
+msgstr "Jul"
+
+msgid "8 月"
+msgstr "Aug"
+
+msgid "9 月"
+msgstr "Sep"
+
+msgid "10 月"
+msgstr "Oct"
+
+msgid "11 月"
+msgstr "Nov"
+
+msgid "12 月"
+msgstr "Dec"

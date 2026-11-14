@@ -1806,3 +1806,30 @@ after 的 `loaderHiddenAt` 54–97ms 与 `load` 同量级，`loaderSeen=false` �
 
 - 模板 `04b70f2c11f1d504d83e83f2df0b364a`、CSS `6c3e512ddb06a8045694f94c1299580f`（源 / `/app/staticfiles/themes/corporate-clean/css/corporate-clean.css` 同值）、`workbench.py 4cd1d0e5ae87bda006a7bcc773475f99`、`tests_home.py fe317e64ab5c2e7511143a21abcbdddc`、`django.po ab78790d5f78fdfe70bc998e09e2fab9`、`django.mo f28fa1f60c3d03d318febfd0049ef1fe`。
 - 容器 1440 量测与本地同值：KPI/用量 196，统计 280/280，tiles 598，`scrollHeight=1401`。
+
+### 9.13.41 看板英文界面补齐（v2.2.13 / 2026-11-14）
+
+**现状**
+
+- 上一版只补了「共 %(total)s 个」「共 %(n)s 条」两条计数；英文看板仍有 45 条布局类中文串。
+- 用 `.tmp-test/dashboard-en.mjs` 在 admin / 员工两个视角抓 `innerText` 的 CJK 行，确认缺口集中在 KPI、用量卡、统计两卡、四张 tile、管理员三张运维卡和热力图的星期 / 月份标签。
+
+**改动**
+
+1. `locale/en/LC_MESSAGES/django.po` 补 45 条：`Total requests`、`Request mix`、`Department overview`、`Department check-ins`、`Requests · last 7 days`、`Plugins enabled`、`Activity`、`No requests in this window`、`People / checked in today / pending` 等；`一 / 三 / 五` 改为 `Mon / Wed / Fri`，`少 / 多` 改为 `Less / More`。
+2. 热力图月份标签原来是 `f'{saturday.month} 月'` 的裸字符串，改为 `_t(f'{saturday.month} 月')`；补 1–12 月翻译（`Jan` … `Dec`），英文界面不再出现「9 月」。
+3. `plugin_host/tests_home.py` 新增 `test_dashboard_english_ui_labels`：用 `django_language=en` cookie 渲染管理员看板，断言 7 个英文标签存在、5 个原中文布局串不存在。
+4. 部门名、公告标题、消息标题属于业务数据，保持原样，不做机器翻译；英文探针剩余的 CJK 行只剩这些数据。
+
+**实测**
+
+- 1440 英文管理员：KPI / 用量卡仍为 196，统计两卡 280/280，tiles y598，`scrollHeight=1401`，`overflowX=false`。
+- 1024 英文管理员：KPI 三列各 224×94，用量卡 687×123，统计两卡 339×280，tiles y731，`scrollHeight=1804`，`overflowX=false`。
+- 英文员工视图：6 张 KPI、`Notices & messages`、`My requests`、`View all notices` 全部为英文，剩余 CJK 仅为公告标题数据。
+- 中文界面月份仍为「9 月」，星期仍为「一 / 三 / 五」，布局与上一版一致。
+- 全量 **564 tests OK**（563 + 1）；ruff 全过；`manage.py check` 干净；`python tools/compile_mo.py` 重编译。
+
+**容器（8000）**
+
+- `workbench.py 64eec90335038ecb2cd2a9ee8ccaffaf`、`tests_home.py 253bddccf5aa0280dbdeba86796817b0`、`django.po 48e0ce72e8e85ff393edc02c14c92213`、`django.mo 5055a738801a8d79c0812f109b33c0f7`。
+- 截图：`.tmp-test/screens-v21/dashboard-after-final-en3.png`、`dashboard-after-en-staff.png`、`dashboard-after-en-1024.png`。
