@@ -1,7 +1,7 @@
 # 数据库设计文档（插件化）
 
 > 项目：Constellatio —— 基于 Django 的企业办公自动化系统（全栈插件化）
-> 文档版本：v2.2 · 2026-10-22（v1.5 theme 无表；v1.4 language 无表；修正 approval 字段 / blockchain 哈希公式 / 软删冻结标志）
+> 文档版本：v2.2.13 · 2026-11-14（v2.2.1–v2.2.13 无新增迁移；v1.5 theme 无表；v1.4 language 无表；修正 approval 字段 / blockchain 哈希公式 / 软删冻结标志）
 > 关联文档：tech-stack-and-architecture.md、constraints-and-acceptance.md、development-guide.md
 
 ---

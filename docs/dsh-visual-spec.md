@@ -3,6 +3,7 @@
 > 取数方式：本地起 `@deepseek-ai/dsh@0.2.2-rc.1` 的 web 实例（`npx @deepseek-ai/dsh web --port 8787`），用真实浏览器读 `getComputedStyle` 与 CSS 自定义属性。
 > 采集时间：2026-11-12。
 > 本文件只记录**实测值**，每条标注来源与可信度；未取到的部分单列一节，不猜。
+> 应用状态：主要字面量已在 v2.2.13 落地（外壳 / 看板 / 考勤 / 滚动条）；逐项记录见 `docs/frontend-refactor-plan.md` §9.13.27–41。
 
 ---
 

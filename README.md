@@ -8,6 +8,8 @@
 
 一款基于 Django 的全栈插件化企业办公自动化系统。
 
+**当前基线（2026-11-14）**：`v2.2.13` · 564 项测试全绿 · tag `v2.2.13` · Release `v2.2.13 Beta`（正文标题「视觉风格重构」）
+
 ## ✨ 特性
 
 
@@ -16,13 +18,15 @@
 
 * 🔌 基础设施可插拔：数据库（MySQL↔sqlite）、外观（内置浅色/深色 + `themes/` 外观包）、模板引擎、图表引擎、认证后端
 
+* 🖥 **前端 DSH 化（v2.2.0–v2.2.13）**：侧栏宽窄两态与设置弹层、输入框、插件页、看板、考勤、滚动条、页面切换按 DSH 源码逐项对齐；考勤改为 Jibble 形态仪表盘，看板布局收紧并补齐英文界面；564 项测试全绿
+
 * 🎨 外观收口：内置外观即浅色/深色（设置里一个开关，全站生效）；再要更多外观就放 `themes/<key>/theme.json` 装包，自动出现在「外观包」行；登录页 SSO（已接入）/ 忘记密码入口 + 首屏加载动画
 
 * 🔑 企业 SSO：HMAC 签名 Ticket 网关登录（自动建号 / 防重放 / 登录页入口 / `sso_ticket` 命令），与账号密码登录并存
 
 * ✉ 消息提醒：顶栏未读数 + 消息中心；审批待办 / 审批结果 / 公告发布自动站内信，可停用降级
 
-* 🌐 全站 UI 中英切换：插件名 / 表头 / 状态 / 空态 / 确认文案随语言切换（用户名与业务数据除外）
+* 🌐 全站 UI 中英切换：插件名 / 表头 / 状态 / 空态 / 确认文案随语言切换；v2.2.13 补齐看板布局串与月份/星期标签（用户名与业务数据除外）
 
 * 👤 个人中心：顶栏用户名可点击；编辑资料 / 查看权限 / 修改密码进入二级页面；用户编辑支持直接权限，且只展示操作者可授予的范围
 
@@ -52,13 +56,13 @@
 
 * 🛡 安全与并发基线（v1.7.1）：审批 / 留痕 / 打卡关键写入走行锁 + 事务；审批详情与附件按「申请人 / 审批人 / 会签人 / 抄送人」对象级鉴权；登录失败限流 + 密码校验器；传输安全开关（`DJANGO_HTTPS` / HSTS / 代理 SSL 头）
 
-* 🧪 工程化门禁（v1.7.1）：依赖精确版本 + `ruff` 静态检查 + GitHub Actions（`ruff check` / `manage.py check` / 全量测试），323 项测试全绿
+* 🧪 工程化门禁（v1.7.1 起，v2.2.13 基线）：依赖精确版本 + `ruff` 静态检查 + GitHub Actions（`ruff check` / `manage.py check` / 全量测试），当前 564 项测试全绿
 
 * 🧱 共享缓存（v1.7.3）：缓存后端换 `DatabaseCache`（复用现有 MySQL/sqlite，零新依赖），登录失败限流与 SSO Ticket 防重放靠 `cache.add` 主键冲突跨 gunicorn worker 成立；容器启动自动 `createcachetable`
 
 * 📦 私有化部署收口（v1.7.15）：Bootstrap 落到公共 static（断网样式完整）、生产模式缺 `SECRET_KEY` 拒绝启动、登出改 POST（GET 405）、CI 覆盖率门槛 94
 
-* 🔒 内容安全策略 CSP（v1.7.16）：全站下发 10 条指令，`script-src 'self' 'nonce-…'` **不给** `'unsafe-inline'`（每请求一枚 128 bit nonce，11 处内联脚本全部带 nonce 且实测零缺失）、`style-src` 保留 `'unsafe-inline'`（全站 137+ 处 `style=` 属性，收紧会让图表高度塌成 0）；6 处内联 `onclick` 改 `data-confirm` + 公共 `static/js/confirm.js`（顺带修掉审批按钮弹两次确认框）；`/admin/` 不豁免、静态文件不下发；硬 500 由 `handler500` 单独补头；`json_script` 数据块按非 JS MIME 类型放行%
+* 🔒 内容安全策略 CSP（v1.7.16）：全站下发 10 条指令，`script-src 'self' 'nonce-…'` **不给** `'unsafe-inline'`（每请求一枚 128 bit nonce，11 处内联脚本全部带 nonce 且实测零缺失）、`style-src` 保留 `'unsafe-inline'`（全站 137+ 处 `style=` 属性，收紧会让图表高度塌成 0）；6 处内联 `onclick` 改 `data-confirm` + 公共 `static/js/confirm.js`（顺带修掉审批按钮弹两次确认框）；`/admin/` 不豁免、静态文件不下发；硬 500 由 `handler500` 单独补头；`json_script` 数据块按非 JS MIME 类型放行。
 
 * 🧱 业务逻辑下沉 services（v1.7.14）：用户状态机、考勤判定/打卡/补卡、审批附件校验与鉴权移入 services，视图只做「取参数 → 调 service → 响应」；四个视图降到 12~17 行，锁与事务边界原样搬家；新增 26 条可直接 `manage.py shell` 调用的 service 单测
 
@@ -163,20 +167,24 @@ Constellatio/
 
 ## 📚 文档索引
 
-**建议阅读顺序**：README → 技术栈与架构 → 约束与验收 → 数据库设计 → 开发指南 → AI 辅助开发规范 → 项目说明
+**建议阅读顺序**：README → 技术栈与架构 → 约束与验收 → 数据库设计 → 开发指南 → AI 辅助开发规范 → 项目说明 → 前端重构记录（v2.2）
 
 
 
 | 文档                                                                             | 类型   | 内容                                            |
 | ------------------------------------------------------------------------------ | ---- | --------------------------------------------- |
 | [README.md](README.md)（本文件）                                                    | 总览   | 项目入口、特性、快速开始                                  |
-| [docs/release-notes.md](docs/release-notes.md)                                 | 发版   | **发版总入口**：v1.7.x 收口基线、按 tag 检出时的指路、行为变更与升级须知 |
+| [docs/release-notes.md](docs/release-notes.md)                                 | 发版   | **发版总入口**：v2.2.13 当前基线、v1.7.x 历史收口、按 tag 检出指路、升级须知 |
 | [docs/tech-stack-and-architecture.md](docs/tech-stack-and-architecture.md)     | 设计   | 技术选型、全栈插件化架构、插件契约、竞品调研                        |
 | [docs/constraints-and-acceptance.md](docs/constraints-and-acceptance.md)       | 规范   | 硬约束、功能边界、验收标准、开发规范、风险                         |
 | [docs/database-design.md](docs/database-design.md)                             | 设计   | 数据库设计（插件化：每插件独立表与迁移）                          |
 | [docs/development-guide.md](docs/development-guide.md)                         | 开发   | 开发流程、环境、容器实现、插件开发、编程规约、插件规范                   |
 | [docs/ai-assisted-development-guide.md](docs/ai-assisted-development-guide.md) | 规范   | AI 辅助开发行为规范、迭代规范                              |
 | [docs/project-overview.md](docs/project-overview.md)                           | 说明   | 项目说明、使用指南、插件开发示例                              |
+| [docs/frontend-refactor-plan.md](docs/frontend-refactor-plan.md)               | 前端   | v2.2.0–v2.2.13 DSH 化实施记录与验收数据（§9.13.27–41） |
+| [docs/dsh-visual-spec.md](docs/dsh-visual-spec.md)                             | 前端   | DSH 实测字面量：颜色 / 间距 / 组件 / 快捷键视觉基线       |
+| [docs/ai-assistant-plan.md](docs/ai-assistant-plan.md)                         | 规划   | 对话式首页 A→B→C 阶段方案（未实施）                    |
+| [docs/ai-tool-calling.md](docs/ai-tool-calling.md)                             | 规划   | 本地模型 tool calling 接入与确认闸门（未实施）              |
 | [docs/plugin-dev-workspace.md](docs/plugin-dev-workspace.md)                   | 插件开发 | workspace：工作台可启用 / 禁用功能（v1.1 已实现）             |
 | [docs/plugin-dev-user.md](docs/plugin-dev-user.md)                             | 插件开发 | user 增强：部门软 / 硬删除、用户状态机、密码二次确认、权限层级（v1.2 已实现） |
 | [docs/plugin-dev-structure.md](docs/plugin-dev-structure.md)                   | 插件开发 | structure：职能制组织架构模板（角色 + 用户模板一键应用）（v1.3 已实现）  |
@@ -236,8 +244,10 @@ Constellatio/
 | [docs/plugin-dev-v1714.md](docs/plugin-dev-v1714.md)                           | 插件开发 | v1.7.14：三处重业务逻辑下沉 services（views/services 判据） |
 | [docs/plugin-dev-v1715.md](docs/plugin-dev-v1715.md)                           | 插件开发 | v1.7.15：私有化部署收口（离线资源 / 安全默认值 / 登出 POST / 覆盖率门槛） |
 | [docs/plugin-dev-v1716.md](docs/plugin-dev-v1716.md)                           | 插件开发 | v1.7.16：CSP 加固（nonce 中间件 / 内联面清零 / `style-src` 取舍 / 真机四项验收记录） |
-| [docs/roadmap.md](docs/roadmap.md)                                             | 规划   | 差距矩阵、v1.5–v2.0 迭代路线、修复项与文档债务                  |
+| [docs/roadmap.md](docs/roadmap.md)                                             | 规划   | 差距矩阵、v1.5–v2.2.13 迭代路线、修复项与文档债务                  |
+
+> 文档口径：docs/plugin-dev-vXXXX 为各版交付时的历史记录，不随当前版本回改；当前基线以本文件顶部与 docs/release-notes.md 为准。
 
 ## 📌 状态
 
-**v1.7.16 CSP 加固已交付并部署**（483 项测试全绿，tag `v1.7.16` → `1c9cfb7`，Release `v1.7.16 Beta` 已发布并接管 `Latest`）：全站 10 条 CSP 指令，`script-src` 只认 nonce（11 处内联脚本全带 nonce、无 `'unsafe-inline'`）、6 处 `onclick` 改 `data-confirm`、`/admin/` 不豁免、硬 500 由 `handler500` 补头。上一交付 **v1.7.15 Beta**（私有化部署收口，472 项测试、覆盖率 96%：Bootstrap 离线化、生产缺 `SECRET_KEY` 拒绝启动、登出改 POST、覆盖率门槛 94）。→ ✅ **CSP 真机四项已验收通过**（2026-11-12 真实 Chrome：两主题图表渲染 / 控制台零 CSP 报错 / 确认框只弹一次且取消不发请求 / 401·403 降级回归），之后 v1.8 模板引擎单独起线
+**v2.2.13 视觉风格重构已交付并发布**（564 项测试全绿，tag `v2.2.13` → `3fcf217`，Release `v2.2.13 Beta` 已发布并接管 `Latest`，正文标题「视觉风格重构」）：v2.2.0–v2.2.13 把前端按 DSH 源码完成收口——侧栏宽窄两态与设置弹层、输入框、插件页、看板、考勤、滚动条、页面切换逐项对齐；考勤改为 Jibble 形态仪表盘，看板布局收紧并补齐英文界面，内置插件不外显、浅深两态、快捷键层落地。上一交付 **v1.7.16 Beta**（CSP 加固，483 项测试，tag `v1.7.16`）保留在 `docs/release-notes.md`；v2.2 发版基线冻结为 `v2.2.13`，无新增数据库迁移。
