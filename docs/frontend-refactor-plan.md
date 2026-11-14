@@ -1739,3 +1739,38 @@ body{--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l1);--dsh-scrollbar-thum
 - 全量 **562 tests OK**（560 + 2），ruff / `manage.py check` 干净。
 - 容器：`attendance_records.html 31492a43c413921b5f2a4f9ad4cc6bbe`、`corporate-clean.css 074dd0e9feee1281784822c3a16ae52f`（源 / `/app/staticfiles/themes/...` 同值）、`views.py 644ed8e76225d7fd7e7aaebacc8876a1`、`tests.py 0c9df58edf7763b4250931f6bfe6b529`。
 
+
+### 9.13.39 页面切换去掉全屏加载遮罩（v2.2.11 / 2026-11-14）
+
+**现象与定位**
+
+用户反馈「页面切换卡」。CDP（9229、admin、本地 8011）连点侧栏实测：
+
+- 部门 → 用户：`load` 71ms，但 `#page-loader` 到 **282ms** 才 `visibility:hidden`；角色 64/270、签到 86/313、组织架构 68/266、部门 52/262。也就是页面其实 50–90ms 就绪，却先被一层全屏白底 + spinner 盖住约 200ms。
+- 服务端不慢：业务页 TTFB 28–45ms；部门页 97ms/56KB、用户页 75ms/72KB、角色 40ms、审批 50ms、签到 28ms、组织架构 75ms。浏览器侧 6 个资源、命中缓存时 `transferSize=0`。
+- 两层人为延迟：① `r-loader` 在每页 HTML 里默认不透明铺满全屏，只等 `window.load` 才加 `is-hidden`，而 CSS 取消隐藏要再做 `.2s` 的 opacity/visibility 过渡；② `beforeunload` 在离开旧页时先移除 `is-hidden`，让旧页白一下再开始导航。
+- `rail-boot.js` 的首帧收起态还原会落 `data-rail-settled`，收起侧栏在首页重载时会跑一次 0.15s 进场；业务页侧栏固定 276、没有这个属性，不是本次主因，未改动。
+
+**改动**
+
+- `base.html`、`login.html`：loader 初始即 `is-hidden`，首帧不画；`setTimeout(show, 400)` 只在真正慢页懒出现；`DOMContentLoaded` / `load` / `pageshow` 三个时机都收；删掉 `beforeunload` 的主动弹遮罩，也去掉原来「2500ms 无条件隐藏」的兜底（改为事件驱动）。
+- 遮罩 DOM、CSS、`role=status` 与 `noscript` 兜底保持不变，慢页仍有反馈。
+- `plugin_host/tests.py::test_loader_in_base` 增断言：`r-loader is-hidden`、`400` 懒出现、源码不再含 `beforeunload`。
+
+**实测（同一脚本、同一浏览器）**
+
+| 切换 | before load / loader 消失 | after load / loader 可见 |
+|---|---|---|
+| 部门→用户 | 71 / 282ms | 62 / 全程不可见 |
+| 用户→角色 | 56 / 270ms | 56 / 全程不可见 |
+| 角色→签到 | 94 / 313ms | 94 / 全程不可见 |
+| 签到→组织架构 | 68 / 266ms | 68 / 全程不可见 |
+| 组织架构→部门 | 52 / 262ms | 54 / 全程不可见 |
+
+after 的 `loaderHiddenAt` 54–97ms 与 `load` 同量级，`loaderSeen=false` 说明正常页根本没有画出这层遮罩。容器 8000 复测：load 68–147ms，签到页首次冷拉 `echarts.min.js` 1MB 时 load 128ms，遮罩同样未出现。
+
+**门禁**
+
+- 全量 **562 tests OK**；`ruff check plugins plugin_host` 与 `manage.py check` 干净。
+- 容器：`base.html a5b703c650acc4824b7027d6c6cf3ad2`、`login.html cff706327703bc47f9f90c0ff335bc3a`、`plugin_host/tests.py b20a97ecd57461e13e378ad790ab86e5`，源与 `/app` 一致。
+

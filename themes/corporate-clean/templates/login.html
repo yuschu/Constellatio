@@ -9,7 +9,7 @@
 </head>
 <body class="r-body">
 
-  <div class="r-loader" id="page-loader" role="status" aria-live="polite">
+  <div class="r-loader is-hidden" id="page-loader" role="status" aria-live="polite">
     <span class="r-loader__spinner" aria-hidden="true"></span>
     <span class="r-loader__text">{% trans "加载中…" %}</span>
   </div>
@@ -70,12 +70,19 @@
 
   <script nonce="{{ request.csp_nonce }}">
     (function () {
+      /* v2.2.11：同 base.html，正常页不画全屏遮罩，400ms 后才懒出现 */
       var el = document.getElementById('page-loader');
       if (!el) return;
-      function hide() { el.classList.add('is-hidden'); }
+      var showTimer = window.setTimeout(function () {
+        el.classList.remove('is-hidden');
+      }, 400);
+      function hide() {
+        window.clearTimeout(showTimer);
+        el.classList.add('is-hidden');
+      }
       window.addEventListener('load', hide);
-      window.setTimeout(hide, 2500);
-      window.addEventListener('beforeunload', function () { el.classList.remove('is-hidden'); });
+      window.addEventListener('DOMContentLoaded', hide);
+      window.addEventListener('pageshow', hide);
     })();
   </script>
 </body>

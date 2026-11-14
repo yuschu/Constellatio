@@ -11,7 +11,7 @@
 </head>
 <body class="r-body">
 
-  <div class="r-loader" id="page-loader" role="status" aria-live="polite">
+  <div class="r-loader is-hidden" id="page-loader" role="status" aria-live="polite">
     <span class="r-loader__spinner" aria-hidden="true"></span>
     <span class="r-loader__text">{% trans "加载中…" %}</span>
   </div>
@@ -271,12 +271,21 @@
   <script src="{% static 'js/confirm.js' %}?v={{ assets_version }}" defer></script>
   <script nonce="{{ request.csp_nonce }}">
     (function () {
+      /* v2.2.11：页面切换不再先盖一层全屏遮罩。
+         本地/内网正常页 50–90ms 就能 load，遮罩却要等 0.2s 淡出，反而像卡了 300ms；
+         这里改成 400ms 后才懒出现，慢页仍有反馈，正常页完全不画。离开页面也不再主动弹。 */
       var el = document.getElementById('page-loader');
       if (!el) return;
-      function hide() { el.classList.add('is-hidden'); }
+      var showTimer = window.setTimeout(function () {
+        el.classList.remove('is-hidden');
+      }, 400);
+      function hide() {
+        window.clearTimeout(showTimer);
+        el.classList.add('is-hidden');
+      }
       window.addEventListener('load', hide);
-      window.setTimeout(hide, 2500);
-      window.addEventListener('beforeunload', function () { el.classList.remove('is-hidden'); });
+      window.addEventListener('DOMContentLoaded', hide);
+      window.addEventListener('pageshow', hide);
     })();
   </script>
   {% block extra_js %}{% endblock %}

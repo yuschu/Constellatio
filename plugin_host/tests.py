@@ -84,6 +84,10 @@ class ThemeDiscoveryTest(TestCase):
     def test_loader_in_base(self):
         source = get_template('base.html').template.source
         self.assertIn('r-loader', source)
+        # v2.2.11：遮罩默认隐藏，400ms 后才懒出现；离开页面不再主动弹遮罩
+        self.assertIn('r-loader is-hidden', source)
+        self.assertIn('}, 400);', source)
+        self.assertNotIn('beforeunload', source)
 
     def test_hero_neutralized_for_dsh(self):
         """v2.0：DSH 统一下首页 hero 不再用彩色底板，改为中性卡片 + token。"""
