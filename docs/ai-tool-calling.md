@@ -77,6 +77,8 @@ POST {base_url}/chat/completions
   └─⑧ 落库（Conversation/Message）+ 返回前端
 ```
 
+**工具调用日志**：每次调用都记录 `tool`、`args`、`ok`、`result`、`error`、`duration_ms`，权限不足、参数非法、执行异常也各有一条。整轮日志随最终助手消息写入 `Message.tool_calls`；历史回放只取 user/assistant 的 `content`，不把日志带进下一轮上下文。当前未做结果长度截断，也没有页面展示入口。
+
 **轮次上限**：整个循环最多 **3 轮**（初判 + 一次工具结果 + 一次补调）。超过 3 轮直接返回"这个问题我需要你更明确地描述"，不要让它无限自我循环。
 
 ## 三、工具定义（真实 schema）

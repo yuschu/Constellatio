@@ -3,7 +3,7 @@
 > 基于 Django 的全栈插件化 OA。容器唯一固定：数据库、外观、模板、图表、认证等基础设施，与审批、公告、考勤等业务模块，全部可插拔、可替换。
 
 **当前基线**：`v2.2.13`（2026-11-14）· 564 项测试全绿 · tag `v2.2.13` · Release `v2.2.13 Beta`（「视觉风格重构」）
-**开发中**：AI 助手 A 阶段后端已落地（只读工具 + 会话落库 + 首页 POST/PRG）· 20 条固定问句验收集（9B 参考 19/20）· 模型配置页与连通性自检 · 599 项测试全绿 · 未发版
+**工作区**：AI 助手 A 阶段后端与内置模型已落地（4B 验收 19/20）· 配置页可覆盖模型 · 605 项测试全绿 · 未发版
 
 ## ✨ 特性
 
@@ -16,7 +16,8 @@
 * ⛓ **活动记录**：关键操作 SHA-256 哈希链留痕，单条可查详情，篡改即断链报警；按日 × 来源插件统计
 * 🔑 **企业 SSO**：HMAC 签名 Ticket 网关登录，自动建号 / 防重放，与账号密码登录并存
 * ✉ **消息提醒**：顶栏未读数 + 消息中心；审批待办 / 结果、公告发布自动站内信，可停用降级
-* 📦 **私有化部署**：`docker compose up -d` 一键拉起（MySQL 8 + Gunicorn + WhiteNoise）；Bootstrap 离线化、生产缺 `SECRET_KEY` 拒绝启动、登出改 POST
+* 🤖 **内置 AI 助手（开发中）**：Compose 自带 Ollama 与 `qwen3:4b`，首次启动自动拉取；只读工具调用、会话落库；配置页可覆盖为网关或更大模型
+* 📦 **私有化部署**：`docker compose up -d` 一键拉起（MySQL 8 + Ollama + Gunicorn + WhiteNoise）；Bootstrap 离线化、生产缺 `SECRET_KEY` 拒绝启动、登出改 POST
 
 ### 业务能力
 
@@ -35,7 +36,7 @@
 ### 安全与工程
 
 * 🛡 **安全基线**：审批 / 留痕 / 打卡关键写入行锁 + 事务；审批详情与附件按申请人 / 审批人 / 会签人 / 抄送人对象级鉴权；统一 401 / 403 / 404 / 500 语义与 `X-Request-Id`；登录失败限流 + 密码校验器；CSP 10 条指令，`script-src` 只认 nonce，不放开 `unsafe-inline`
-* 🧪 **工程门禁**：依赖精确版本 + `ruff` + `manage.py check` + GitHub Actions 全量测试，当前 599 项全绿；共享缓存走 `DatabaseCache`，登录限流与 SSO 防重放跨 worker 成立
+* 🧪 **工程门禁**：依赖精确版本 + `ruff` + `manage.py check` + GitHub Actions 全量测试，当前 605 项全绿；共享缓存走 `DatabaseCache`，登录限流与 SSO 防重放跨 worker 成立
 
 ## 🛠 技术栈
 
@@ -48,9 +49,11 @@ Python 3.13・Django 5.2 LTS・MySQL 8.0（可切 sqlite）・内置外观（浅
 跨平台：**Windows / macOS / Linux** 通用，仅需安装 Docker（Desktop 或 Engine）。
 
 ```bash
+cp .env.example .env           # 填 SECRET_KEY；Docker Hub 慢可改 OLLAMA_IMAGE 镜像站
 docker compose up -d --build
 # 访问 http://localhost:8000
 # 默认超管：admin / Constellatio@2026（可用 .env 覆盖，见 .env.example）
+# 首次启动会拉取内置 qwen3:4b（约 2–3 GB）；模型就绪后 web 才开始接流量
 ```
 
 ### 本地开发
@@ -70,7 +73,7 @@ python manage.py runserver
 
 ```text
 Constellatio/
-├── docker-compose.yml   # 一键部署（MySQL8 + web）
+├── docker-compose.yml   # 一键部署（MySQL8 + Ollama + web）
 ├── Dockerfile           # 应用镜像（gunicorn + whitenoise）
 ├── entrypoint.sh        # 容器启动脚本（migrate/collectstatic/超管/gunicorn）
 ├── .env.example         # 部署环境变量示例
@@ -92,7 +95,7 @@ Constellatio/
 │   ├── blockchain/       # 操作留痕上链
 │   ├── workspace/        # 运行时插件开关
 │   ├── structure/        # 职能制组织架构模板
-│   └── language/         # 中英文切换
+│   └── language/         # 语言包
 ├── themes/               # 外观层（可插拔，theme.json 发现）
 │   └── corporate-clean/  # 内置唯一外观：浅色 + 深色两态
 ├── locale/               # 翻译目录（.po 与 .mo 都入库；改 .po 后跑 tools/compile_mo.py）
@@ -125,7 +128,7 @@ Constellatio/
 | [docs/dsh-visual-spec.md](docs/dsh-visual-spec.md) | DSH 实测字面量：颜色 / 间距 / 组件 / 快捷键视觉基线 |
 | [docs/ai-assistant-plan.md](docs/ai-assistant-plan.md) | 对话式首页 A→B→C 阶段方案；A 阶段后端已落地，B/C 待启动 |
 | [docs/ai-assistant-eval.md](docs/ai-assistant-eval.md) | A 阶段 20 条固定问句、评分口径、运行方式与 4B/70% 验收边界 |
-| [docs/ai-assistant-config.md](docs/ai-assistant-config.md) | 模型配置页：数据库/环境变量优先级、API Key 处理、测试连接与数据流向 |
+| [docs/ai-assistant-config.md](docs/ai-assistant-config.md) | 内置 Ollama 默认、配置页覆盖、数据库/环境变量优先级、API Key 加密、测试连接与数据流向 |
 | [docs/ai-tool-calling.md](docs/ai-tool-calling.md) | 本地模型 tool calling 接入规范；A 阶段只读工具与校验层已落地 |
 
 ### 插件开发与历史版本

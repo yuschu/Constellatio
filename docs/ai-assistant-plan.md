@@ -1,9 +1,9 @@
 # 对话式首页方案（A → B → C 渐进）
 
-> 决策记录（2026-11-12 负责人已拍板）：**按 A→B→C 渐进迭代**、**替换现有首页**、**交付给最终用户使用**、**留出模型选择接口由用户自行配置**。
+> 决策记录（2026-11-12 负责人已拍板）：**按 A→B→C 渐进迭代**、**替换现有首页**、**交付给最终用户使用**、**内置 Ollama 4B 开箱即用，配置页保留为覆盖入口**（2026-11-14 由“用户自行配置模型”调整）。
 > 本文在该前提下给出架构与阶段定义。视觉基线见 `docs/dsh-visual-spec.md`，前端框架选型见 `docs/frontend-refactor-plan.md`。
 >
-> **实施进度（2026-11-14）**：A 阶段后端已落地——`plugins/assistant/models.py`（Conversation/Message/LLMSettings）、`llm.py`（标准库 OpenAI 兼容客户端 + 连通性自检）、`tools.py`（6 个只读工具，`write=False` 硬断言）、`services.py`（逐条校验 + 3 轮执行循环 + 会话落库）；首页改为服务端 POST + PRG，支持 `?conversation=` 历史与侧栏最近 20 条；全量 **599 项测试**。20 条固定问句验收集已落成 `manage.py eval_assistant_a`（见 `docs/ai-assistant-eval.md`），含首轮工具/参数严格评分、schema 上下限校验、JSON 明细与 70% 退出码；9B 参考 **19/20（95.0%）**，唯一失败是 A09 多给 `limit=50` 超 schema 上限。模型配置页与连通性自检已落地（数据库优先、环境变量兜底，见 `docs/ai-assistant-config.md`）。**未完成**：4B 档尚未安装，不能按 4B/70% 验收完成表述；术语表生成、向量检索、手动删除入口未做。B/C 阶段未开始。
+> **实施进度（2026-11-14）**：A 阶段后端已落地——`plugins/assistant/models.py`（Conversation/Message/LLMSettings）、`llm.py`（标准库 OpenAI 兼容客户端 + 连通性自检）、`tools.py`（6 个只读工具，`write=False` 硬断言）、`services.py`（逐条校验 + 3 轮执行循环 + 会话落库 + 工具调用日志）；首页改为服务端 POST + PRG，支持 `?conversation=` 历史与侧栏最近 20 条；全量 **605 项测试**。20 条固定问句验收集已落成 `manage.py eval_assistant_a`（见 `docs/ai-assistant-eval.md`），含首轮工具/参数严格评分、schema 上下限校验、JSON 明细与 70% 退出码；**4B 正式验收 19/20（95.0%），达到 70% 阈值**，9B 参考 19/20（95.0%）。模型配置页与连通性自检已落地（数据库优先、环境变量兜底，API Key 加密，见 `docs/ai-assistant-config.md`）；Compose 已加入 `ollama` + `ollama-init`，默认 `qwen3:4b`，首次启动自动拉取，`docker compose config` 已通过。**未完成**：Compose 端到端未实跑——本机 Docker 拉取 `ollama/ollama:0.40.11` 的大层反复被截断（daocloud/1ms/rat 均复现），`docker compose config` 已通过；应用层已用真实 `qwen3:4b` 走通首页对话、工具调用与日志落库。术语表生成、向量检索、手动删除入口未做。B/C 阶段未开始。
 
 ## 一、结论先行
 
@@ -143,7 +143,7 @@ timeout_seconds 默认 30
 max_tokens      默认 1024
 ```
 
-**"留出接口给用户选择模型"的落地含义**：Constellatio 不内置任何模型、不自动下载任何权重、不假设任何服务在跑。用户填了能通，不填就用不了对话功能（自动回落原首页）。这一条同时解决了交付问题——**安装包体积不变**。
+**"内置模型"的落地含义（2026-11-14 调整）**：Constellatio 在 Compose 里内置 `ollama` 服务与 `ollama-init`，首次启动自动把 `qwen3:4b` 拉进 `ollama_data` 卷（约 2–3 GB）；Web 默认连 `http://ollama:11434/v1` + `qwen3:4b`，开箱即用。模型与 Web 镜像分离，不把权重烘焙进应用镜像；配置页仍保留，管理员可改成公司网关、GPU 机器或更大模型。首次拉取需要联网；`web` 等 `ollama-init` 成功后才启动，拉取失败时先看 `ollama-init` 日志，不会出现“服务在、模型没到”的半可用状态。
 
 **档位选择（已定：部分客户有 GPU）**：
 
@@ -358,7 +358,7 @@ POST {base_url}/embeddings
 **工具集（全部只读）**：`search_approval`、`stats_attendance`、`list_notice`、`query_department`、`search_user`。
 
 **验收标准**：
-- 20 条固定问句，意图识别 + 参数正确 ≥ 70%（4B 级模型的现实天花板，达不到就换 8B）。验收集与评分命令见 `docs/ai-assistant-eval.md`；9B 参考 19/20，4B 尚未跑。
+- 20 条固定问句，意图识别 + 参数正确 ≥ 70%（4B 级模型的现实天花板，达不到就换 8B）。验收集与评分命令见 `docs/ai-assistant-eval.md`；**4B 19/20（95.0%）已达标**，9B 参考 19/20。
 - 任何情况下不产生写操作（代码层断言：A 阶段工具集里不存在 `update/delete/create`）
 - 模型服务不可达时，3 秒内降级为"助手暂不可用"，页面其余部分正常
 - **CSP 零违规**（对话流全部走服务端渲染 + 外部 JS，不内联）
@@ -409,7 +409,7 @@ POST {base_url}/embeddings
 
 **明确不做**：
 
-- 不在 Constellatio 里内置模型下载器（安装包体积不变这条不能破）。
+- 不把模型权重打进 Web 应用镜像；内置模型走独立 `ollama` 服务与模型卷。
 - 不引入 requests / httpx / openai SDK，只用标准库。
 - 不为 AI 单独开辟写库路径。
 - A/B 阶段不碰任何写操作。
