@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% load i18n %}
-{% block title %}助手模型配置 · Constellatio{% endblock %}
+{% block title %}{% trans "助手模型配置" %} · Constellatio{% endblock %}
 {% block content %}
 {% comment %}
 深链落点：与考勤规则同一套设置外壳（无遮罩、800px 居中、单分区）。
 右上角返回箭头回到对话首页；入口在首页账号菜单的「设置 → 通用」。
 {% endcomment %}
 <div class="ds-settings ds-settings--inline ds-settings--single">
-  {% include "includes/ds_settings_panel.html" with sp_title="助手模型配置" sp_title_id="ds-assistant-settings-title" sp_body="assistant/_settings_body.html" sp_modal=False sp_back=settings_back_url sp_stack="wide" %}
+  {% include "includes/ds_settings_panel.html" with sp_title=_("助手模型配置") sp_title_id="ds-assistant-settings-title" sp_body="assistant/_settings_body.html" sp_modal=False sp_back=settings_back_url sp_stack="wide" %}
 </div>
 {% endblock %}

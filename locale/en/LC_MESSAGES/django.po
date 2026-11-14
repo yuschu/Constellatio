@@ -1999,3 +1999,136 @@ msgstr "Nov"
 
 msgid "12 月"
 msgstr "Dec"
+
+
+msgid "助手模型配置"
+msgstr "Assistant model settings"
+
+msgid "这里填写的是 OpenAI 兼容服务（ollama / llama.cpp / vLLM / 公司网关均可）。默认使用 Compose 内置 Ollama；保存后立即对全员生效，不填则沿用部署环境变量。"
+msgstr "Configure an OpenAI-compatible service (ollama / llama.cpp / vLLM / a company gateway). Compose ships a built-in Ollama by default; saved values apply to everyone immediately, and blank fields keep the deployment environment variables."
+
+msgid "当前配置来源："
+msgstr "Current configuration source: "
+
+msgid "生效地址："
+msgstr "Effective endpoint: "
+
+msgid "配置已保存"
+msgstr "Configuration saved"
+
+msgid "已清除数据库配置，恢复内置默认 / 部署环境变量"
+msgstr "Database configuration cleared; built-in defaults / deployment environment variables restored"
+
+msgid "本机 / 内网"
+msgstr "Local / intranet"
+
+msgid "对话与工具结果不出当前内网。"
+msgstr "Chat and tool results stay inside the current intranet."
+
+msgid "公网地址"
+msgstr "Public endpoint"
+
+msgid "每轮对话都会把当前用户的业务数据发送到该地址，请确认对方可信。"
+msgstr "Every turn sends the current user's business data to this endpoint; confirm the recipient is trusted."
+
+msgid "未配置地址"
+msgstr "No endpoint configured"
+
+msgid "填写后这里会显示数据是否只在本机 / 内网流动。"
+msgstr "After saving, this shows whether data stays local / intranet."
+
+msgid "已保存一个 API Key；"
+msgstr "A saved API Key exists; "
+
+msgid "连接失败"
+msgstr "Connection failed"
+
+msgid "连接成功"
+msgstr "Connection succeeded"
+
+msgid "本次耗时 %(latency)s ms"
+msgstr "This request took %(latency)s ms"
+
+msgid "支持工具调用"
+msgstr "Tool calling supported"
+
+msgid "未返回工具调用"
+msgstr "No tool call returned"
+
+msgid "模型"
+msgstr "Model"
+
+msgid "测试连接"
+msgstr "Test connection"
+
+msgid "「测试连接」只发一条最短请求，不会保存当前输入。"
+msgstr "Test connection sends one minimal request and does not save the current input."
+
+msgid "接口地址"
+msgstr "Endpoint URL"
+
+msgid "OpenAI 兼容根地址，例如 http://127.0.0.1:11434/v1"
+msgstr "OpenAI-compatible base URL, e.g. http://127.0.0.1:11434/v1"
+
+msgid "模型名"
+msgstr "Model name"
+
+msgid "服务端实际加载的模型名，例如 qwen3:4b"
+msgstr "Model name loaded by the server, e.g. qwen3:4b"
+
+msgid "API Key"
+msgstr "API Key"
+
+msgid "本地 ollama / llama.cpp 通常不需要；留空保持不变"
+msgstr "Local ollama / llama.cpp usually does not need one; leave blank to keep"
+
+msgid "清除已保存的 API Key"
+msgstr "Clear saved API Key"
+
+msgid "超时（秒）"
+msgstr "Timeout (seconds)"
+
+msgid "单次模型请求的最长等待时间，1–120 秒"
+msgstr "Maximum wait for one model request, 1–120 seconds"
+
+msgid "输出上限"
+msgstr "Max output tokens"
+
+msgid "单次回复的最大 token 数，1–8192"
+msgstr "Maximum tokens per reply, 1–8192"
+
+msgid "接口地址必须是 http:// 或 https:// 开头的完整地址"
+msgstr "Endpoint must be a complete URL starting with http:// or https://"
+
+msgid "接口地址不能包含用户名或密码"
+msgstr "Endpoint must not contain a username or password"
+
+msgid "接口地址不能带查询参数或锚点"
+msgstr "Endpoint must not contain query parameters or fragments"
+
+msgid "填了接口地址就必须填模型名"
+msgstr "Model name is required when an endpoint is filled in"
+
+msgid "填了模型名就必须填接口地址"
+msgstr "Endpoint is required when a model name is filled in"
+
+msgid "请先填写接口地址和模型名，再测试连接"
+msgstr "Fill in the endpoint and model name before testing the connection"
+
+msgid "数据库"
+msgstr "Database"
+
+msgid "内置默认 / 环境变量"
+msgstr "Built-in defaults / environment variables"
+
+msgid "助手模型"
+msgstr "Assistant model"
+
+msgid "已配置 OpenAI 兼容服务，可测试连接或更换模型"
+msgstr "An OpenAI-compatible service is configured; test it or switch models"
+
+msgid "尚未配置模型服务，对话输入暂不可用"
+msgstr "No model service configured; chat input is unavailable"
+
+msgid "配置"
+msgstr "Configure"

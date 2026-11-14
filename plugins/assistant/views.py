@@ -22,6 +22,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseBadRequest, HttpResponseNotFound
 from django.shortcuts import redirect, render
+from django.utils.translation import gettext as _
 
 from plugin_host.context_processors import (
     COLOR_MODE_COOKIE,
@@ -315,7 +316,7 @@ def settings_page(request):
             values = form.cleaned_data
             if not values['base_url'] or not values['model']:
                 if action == 'test':
-                    form.add_error(None, '请先填写接口地址和模型名，再测试连接')
+                    form.add_error(None, _('请先填写接口地址和模型名，再测试连接'))
             if not form.errors and action == 'test':
                 api_key = ('' if values['clear_api_key'] else
                            values['api_key'] or effective['api_key'])
@@ -364,7 +365,8 @@ def settings_page(request):
         'saved': saved,
         'reset': reset,
         'api_key_set': bool(effective['api_key']),
-        'config_source': '数据库' if (row and (row.base_url or row.model)) else '环境变量',
+        'config_source': (_('数据库') if (row and (row.base_url or row.model))
+                          else _('内置默认 / 环境变量')),
         'current_base_url': current_base_url,
         'current_is_local': current_is_local,
         'data_flow': ('unknown' if current_is_local is None else

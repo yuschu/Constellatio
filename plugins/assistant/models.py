@@ -1,12 +1,14 @@
 """assistant 插件模型：对话与消息（v2.3.0 A 阶段）。
 
-只保存对话文本与工具调用参数，不保存模型原文、不保存思维链。
+只保存对话文本、工具调用参数与执行结果，不保存模型原文、不保存思维链。
 """
 
 from django.conf import settings
 from django.db import models
 
 from plugin_host.models import AuditModel
+
+from .crypto import encrypt_secret
 
 
 class Conversation(AuditModel):
@@ -33,12 +35,13 @@ class LLMSettings(AuditModel):
     """模型服务配置（单例，pk=1）。
 
     数据库有值时优先于 `ASSISTANT_LLM_*` 环境变量；环境变量只做首次部署兜底。
-    `api_key` 明文存库（A 阶段未引入加密依赖），页面只显示“已保存”，不回显原文。
+    `api_key` 以 `assistant.crypto` 的 v1 格式加密存库，页面只显示“已保存”，
+    不回显原文；旧明文行仍可读取，下次保存时自动转为密文。
     """
 
     base_url = models.CharField('接口地址', max_length=300, blank=True, default='')
     model = models.CharField('模型名', max_length=120, blank=True, default='')
-    api_key = models.CharField('API Key', max_length=500, blank=True, default='')
+    api_key = models.TextField('API Key', blank=True, default='')
     timeout_seconds = models.PositiveSmallIntegerField('超时（秒）', default=30)
     max_tokens = models.PositiveIntegerField('输出上限', default=1024)
 
@@ -48,6 +51,11 @@ class LLMSettings(AuditModel):
 
     def __str__(self):
         return self.model or '未配置'
+
+    def save(self, *args, **kwargs):
+        if self.api_key:
+            self.api_key = encrypt_secret(self.api_key)
+        super().save(*args, **kwargs)
 
     @classmethod
     def load(cls):

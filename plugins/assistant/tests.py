@@ -13,6 +13,7 @@ from django.utils import timezone
 
 from plugins.approval.models import Approval
 from plugins.assistant import llm, services, tools
+from plugins.assistant.crypto import decrypt_secret, encrypt_secret
 from plugins.assistant.eval_cases import build_cases
 from plugins.assistant.eval_harness import (
     evaluate_message,
@@ -207,6 +208,21 @@ class AssistantChatTests(TestCase):
         self.assertEqual(reply, '你本月审批通过 1 单。')
         self.assertEqual(logs[0]['tool'], 'stats_approval_count')
         self.assertEqual(logs[0]['args']['scope'], 'approver')
+        self.assertTrue(logs[0]['ok'])
+        self.assertIn('result', logs[0])
+        self.assertGreaterEqual(logs[0]['duration_ms'], 0)
+
+        conversation = Conversation.objects.create(user=self.user)
+        with mock.patch.object(llm, 'call_llm', side_effect=[first, second]):
+            self.assertEqual(
+                services.chat_turn(
+                    self.user, conversation, '这个月我批了几个单'),
+                '你本月审批通过 1 单。')
+        stored = conversation.messages.filter(
+            role=Message.Role.ASSISTANT).last()
+        self.assertEqual(stored.tool_calls[0]['tool'], 'stats_approval_count')
+        self.assertEqual(stored.tool_calls[0]['args']['scope'], 'approver')
+        self.assertTrue(stored.tool_calls[0]['ok'])
 
     def test_llm_errors_become_assistant_message(self):
         with mock.patch.object(
@@ -350,6 +366,32 @@ class AssistantEvalTests(SimpleTestCase):
         self.assertIn('A20', text)
         self.assertNotIn('结果：', text)
 
+@override_settings(SECRET_KEY='assistant-test-secret-key')
+class AssistantSecretTests(SimpleTestCase):
+    """API Key 字段加密：可逆、带认证、旧明文兼容。"""
+
+    def test_roundtrip_and_ciphertext_differs_each_time(self):
+        first = encrypt_secret('sk-live-secret')
+        second = encrypt_secret('sk-live-secret')
+        self.assertTrue(first.startswith('enc:v1:'))
+        self.assertNotEqual(first, second)
+        self.assertEqual(decrypt_secret(first), 'sk-live-secret')
+        self.assertEqual(decrypt_secret(second), 'sk-live-secret')
+
+    def test_tampered_ciphertext_is_rejected(self):
+        token = encrypt_secret('sk-live-secret')
+        self.assertEqual(decrypt_secret(token[:-2] + 'AA'), '')
+
+    def test_legacy_plaintext_is_read_unchanged(self):
+        self.assertEqual(decrypt_secret('plain-old-key'), 'plain-old-key')
+        self.assertEqual(encrypt_secret(''), '')
+
+    def test_different_secret_key_cannot_decrypt(self):
+        token = encrypt_secret('sk-live-secret')
+        with self.settings(SECRET_KEY='another-secret-key'):
+            self.assertEqual(decrypt_secret(token), '')
+
+
 @override_settings(
     ASSISTANT_LLM_BASE_URL='http://127.0.0.1:11434/v1',
     ASSISTANT_LLM_MODEL='qwen3:4b',
@@ -392,12 +434,15 @@ class AssistantSettingsTests(TestCase):
         row = LLMSettings.load()
         self.assertEqual(row.base_url, 'http://10.0.0.8:8000/v1')
         self.assertEqual(row.model, 'qwen3:8b')
-        self.assertEqual(row.api_key, 'db-secret')
+        self.assertTrue(row.api_key.startswith('enc:v1:'))
+        self.assertNotIn('db-secret', row.api_key)
+        self.assertEqual(decrypt_secret(row.api_key), 'db-secret')
         self.assertEqual(row.timeout_seconds, 45)
         self.assertEqual(row.max_tokens, 2048)
         cfg = llm.get_config()
         self.assertEqual(cfg.base_url, 'http://10.0.0.8:8000/v1')
         self.assertEqual(cfg.model, 'qwen3:8b')
+        self.assertEqual(cfg.api_key, 'db-secret')
         self.assertEqual(cfg.timeout, 45.0)
 
     def test_blank_api_key_keeps_existing_and_clear_removes_it(self):
@@ -413,7 +458,9 @@ class AssistantSettingsTests(TestCase):
             'max_tokens': '1024',
         })
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(LLMSettings.load().api_key, 'old-secret')
+        row = LLMSettings.load()
+        self.assertTrue(row.api_key.startswith('enc:v1:'))
+        self.assertEqual(decrypt_secret(row.api_key), 'old-secret')
 
         response = self.client.post('/plugins/assistant/settings/', {
             'action': 'save',
@@ -476,6 +523,22 @@ class AssistantSettingsTests(TestCase):
         self.assertEqual(cfg.base_url, 'http://127.0.0.1:11434/v1')
         self.assertEqual(cfg.model, 'qwen3:4b')
         self.assertEqual(cfg.api_key, 'env-secret')
+
+    def test_settings_page_renders_english_copy(self):
+        self.client.cookies['django_language'] = 'en'
+        response = self.client.get('/plugins/assistant/settings/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Assistant model settings')
+        self.assertContains(response, 'Endpoint URL')
+        self.assertNotContains(response, '助手模型配置')
+
+    def test_legacy_plaintext_row_is_read_until_next_save(self):
+        LLMSettings.objects.create(
+            pk=1, base_url='http://127.0.0.1:11434/v1',
+            model='qwen3:4b', api_key='')
+        LLMSettings.objects.filter(pk=1).update(api_key='legacy-secret')
+        cfg = llm.get_config()
+        self.assertEqual(cfg.api_key, 'legacy-secret')
 
     def test_half_config_is_rejected(self):
         response = self.client.post('/plugins/assistant/settings/', {

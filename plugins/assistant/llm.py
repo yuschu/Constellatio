@@ -17,6 +17,8 @@ from urllib.parse import urlparse
 from django.conf import settings
 from django.db.utils import OperationalError, ProgrammingError
 
+from .crypto import decrypt_secret
+
 
 class AssistantError(Exception):
     """助手可预期的失败；message 直接作为用户可见提示。"""
@@ -70,7 +72,7 @@ def raw_config():
                      getattr(settings, 'ASSISTANT_LLM_BASE_URL', '') or '').strip(),
         'model': ((row.model if row else '') or
                   getattr(settings, 'ASSISTANT_LLM_MODEL', '') or '').strip(),
-        'api_key': ((row.api_key if row else '') or
+        'api_key': (decrypt_secret(row.api_key if row else '') or
                     getattr(settings, 'ASSISTANT_LLM_API_KEY', '') or '').strip(),
         'timeout': float((row.timeout_seconds if row else 0) or
                          getattr(settings, 'ASSISTANT_LLM_TIMEOUT', 30) or 30),
@@ -181,7 +183,7 @@ def probe(config=None):
 def is_local_base(base_url):
     """base_url 是否指向本机/内网（用于配置页明确数据流向）。"""
     host = (urlparse(base_url).hostname or '').lower()
-    if host in ('localhost', '127.0.0.1', '::1',
+    if host in ('localhost', '127.0.0.1', '::1', 'ollama',
                 'host.docker.internal', 'host.containers.internal'):
         return True
     if host.startswith('127.') or host == '0.0.0.0':

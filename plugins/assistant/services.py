@@ -5,6 +5,7 @@
 
 import json
 import re
+import time
 
 from django.utils import timezone
 
@@ -108,6 +109,20 @@ def _normalise_tool_calls(tool_calls):
     return result
 
 
+def _log_entry(tool, args=None, ok=False, result=None, error='', duration_ms=0):
+    """一条工具执行日志；只存可 JSON 序列化的结果，不存模型原文。"""
+    if result is not None:
+        result = json.loads(json.dumps(result, ensure_ascii=False, default=str))
+    return {
+        'tool': tool,
+        'args': args or {},
+        'ok': bool(ok),
+        'result': result,
+        'error': error,
+        'duration_ms': int(duration_ms),
+    }
+
+
 def run_turn(user, messages, config=None, max_rounds=3):
     """一次用户输入 → 最终回答。返回 (reply_text, logs)。"""
     allowed_names = allowed_names_for(user)
@@ -130,10 +145,13 @@ def run_turn(user, messages, config=None, max_rounds=3):
             'tool_calls': tool_calls,
         })
         for tc in tool_calls:
+            name = tc['function']['name']
             ok, args = validate_tool_call(tc, user, allowed_names, turn_state)
             if not ok and args == DENIED:
+                logs.append(_log_entry(name, error='权限不足'))
                 return '你没有执行这个操作所需的权限。', logs
             if not ok:
+                logs.append(_log_entry(name, error=args))
                 messages.append({
                     'role': 'tool',
                     'tool_call_id': tc['id'],
@@ -141,13 +159,18 @@ def run_turn(user, messages, config=None, max_rounds=3):
                 })
                 continue
 
-            name = tc['function']['name']
             turn_state['calls'][name] = turn_state['calls'].get(name, 0) + 1
+            started = time.monotonic()
             try:
                 result = TOOLS[name]['fn'](user, **args)
+                error = ''
             except Exception as exc:  # 单次工具失败不拖垮整轮对话
                 result = {'error': type(exc).__name__}
-            logs.append({'tool': name, 'args': args})
+                error = type(exc).__name__
+            duration_ms = (time.monotonic() - started) * 1000
+            logs.append(_log_entry(
+                name, args=args, ok=not error, result=result,
+                error=error, duration_ms=duration_ms))
             messages.append({
                 'role': 'tool',
                 'tool_call_id': tc['id'],
@@ -180,13 +203,15 @@ def chat_turn(user, conversation, text):
     messages.extend(history)
     messages.append({'role': 'user', 'content': text})
 
+    logs = []
     try:
-        reply, _logs = run_turn(user, messages)
+        reply, logs = run_turn(user, messages)
     except llm.AssistantError as exc:
         reply = str(exc)
 
     Message.objects.create(
-        conversation=conversation, role=Message.Role.ASSISTANT, content=reply)
+        conversation=conversation, role=Message.Role.ASSISTANT,
+        content=reply, tool_calls=logs)
     conversation.save(update_fields=['updated_at'])
     return reply
 
