@@ -45,11 +45,25 @@ class WorkbenchTests(TestCase):
     def test_admin_view_shows_global_dashboard(self):
         self.client.force_login(self.admin)
         response = self.client.get('/dashboard/')
+        html = response.content.decode()
         self.assertContains(response, '管理员视图')
         self.assertContains(response, '核心数据看板')
         self.assertContains(response, '插件运行状态')
         self.assertContains(response, '插件运维与组织数据')
         self.assertContains(response, '/plugins/workspace/')
+        # 3 列 2 行六格铺满，不再留右下空位
+        self.assertEqual(html.count('class="lc-stat lc-ov-kpi"'), 6)
+        # 有部门概况时才拉平两栏；员工视图不拉高右卡
+        self.assertIn('class="lc-ov-stats"', html)
+        self.assertNotIn('lc-ov-stats lc-ov-stats--plain', html)
+
+    def test_dashboard_removes_duplicate_shortcut_section(self):
+        """快捷入口只在「流程快捷发起」卡里出现一次，下面不再重复整段卡片。"""
+        self.client.force_login(self.admin)
+        response = self.client.get('/dashboard/')
+        html = response.content.decode()
+        self.assertNotContains(response, '业务入口')
+        self.assertEqual(html.count('href="/plugins/approval/new/?type=leave"'), 1)
 
     def test_pending_count(self):
         manager = User.objects.create_user('mgr_pending', '', 'pw', last_name='经理')
@@ -198,10 +212,10 @@ class DashboardDataTests(TestCase):
         self.assertTrue(response.context['cards']['approval']['alert'])
         self.assertContains(response, '待办较多')
 
-    def test_employee_gets_fifth_kpi_instead_of_approval(self):
+    def test_employee_gets_mine_kpi_instead_of_approval(self):
         """没有 approval_approve 的账号看不到「待我审批」，第一格换成「我的待处理」。
 
-        KPI 恒为 5 张，3 列网格不留空位（DSH 的 kpis 是 repeat(3, ...)）。
+        KPI 恒为 6 张（补第 6 格「公告简报」/「部门」），3 列网格不留空位。
         """
         for status in (Approval.Status.PENDING, Approval.Status.PENDING,
                        Approval.Status.APPROVED):
@@ -214,9 +228,11 @@ class DashboardDataTests(TestCase):
         # setUpTestData 里已有 1 条 pending，再补 2 条 → 3
         self.assertEqual(response.context['cards']['mine']['pending'], 3)
         # 注意 'lc-ov-kpis'（容器）是 'lc-ov-kpi'（卡片）的子串，必须连 class 一起数
-        self.assertEqual(html.count('class="lc-stat lc-ov-kpi"'), 5)
+        self.assertEqual(html.count('class="lc-stat lc-ov-kpi"'), 6)
         self.assertContains(response, '我的待处理')
         self.assertNotContains(response, '待我审批')
+        # 员工没有部门概况，统计两栏不被拉成等高白卡
+        self.assertIn('lc-ov-stats lc-ov-stats--plain', html)
 
     def test_plugin_alert_when_plugin_disabled(self):
         from plugins.workspace.models import PluginSwitch
@@ -260,6 +276,7 @@ class DashboardDataTests(TestCase):
         self.assertEqual(pie['total'], 1)
         self.assertEqual(pie['rows'][0]['label'], '用户与组织')
         dept = response.context['dept']
+        self.assertEqual(dept['total'], 1)
         self.assertEqual(dept['rows'][0]['name'], '研发部')
         self.assertEqual(dept['rows'][0]['headcount'], 1)
 

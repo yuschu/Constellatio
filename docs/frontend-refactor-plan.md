@@ -1774,3 +1774,35 @@ after 的 `loaderHiddenAt` 54–97ms 与 `load` 同量级，`loaderSeen=false` �
 - 全量 **562 tests OK**；`ruff check plugins plugin_host` 与 `manage.py check` 干净。
 - 容器：`base.html a5b703c650acc4824b7027d6c6cf3ad2`、`login.html cff706327703bc47f9f90c0ff335bc3a`、`plugin_host/tests.py b20a97ecd57461e13e378ad790ab86e5`，源与 `/app` 一致。
 
+### 9.13.40 看板布局收紧（v2.2.12 / 2026-11-14）
+
+**现象（1440 浅色、admin、本地 8011）**
+
+- 首屏 KPI 是 3 列 5 张，第二行只排到第 2 格，右侧空一格；「近 7 天单据量」被拉到与左栏同高，空态时整卡留白。
+- 统计区左「单据构成」约 174 高，右「部门概况」6 行约 470 高；两栏按内容顶对齐，左卡下方直至 y787 都是页面底色，`lc-ov-tiles` 被右卡拖到 797 才开始。
+- 「业务入口」整段 7 张卡与上方「流程快捷发起」卡是同一批 `shortcuts`，重复一遍并排成 3+3+1，最后一行右侧空两格。
+- 全页高 1995，首屏以下有近 600px 的非内容高度。
+
+**改动**
+
+1. KPI 补第 6 格，铺满 3×2：管理员用「部门」总数（`dept.total`，独立统计全部启用部门，不复用最多 10 行的图表切片）；员工用「公告简报」条数。另加 `.lc-ov-kpi:last-child:nth-child(odd)` 末张占两格，停用插件导致奇数张时也不再空一格。
+2. 统计区：部门概况模板只取前 3 行，右侧卡片高度收敛；管理员视图 `.lc-ov-stats` 改为 `align-items: stretch`，左卡 `display:flex`、`.lc-ov-compose` 吃满剩余高度并垂直居中，两卡同高 280，左侧不再留页面底色洞。员工没有部门概况，模板加 `.lc-ov-stats--plain` 保持顶对齐，避免右卡被拉成大白卡。
+3. 删除重复的「业务入口」整段；7 个快捷入口只保留「流程快捷发起」卡，卡内仍可滚动。
+4. `.lc-ov-tile-body` 补 `overflow-x: hidden`，去掉 tally 行在窄卡里意外出现的横向滚动条。
+
+**几何（CDP 量测）**
+
+- 1440：`.lc-ov-kpis` 与 `.lc-ov-usage` 同为 y102–298、高 196；6 张 KPI 各 177×94，两行齐平；`.lc-ov-stats` 两张卡均为 547×280（y308–588）；`.lc-ov-tiles` y598–878；`scrollHeight=1401`，`overflowX=false`。全页由 1995 降到 1401（-594）。
+- 1024：内容宽 687，KPI 三列各 224×94、两行收满；用量卡下移为 687×123；统计两卡 339×280；tiles y731；`scrollHeight=1804`，`overflowX=false`。
+- 深浅两态同值；员工视图首屏 6 张 KPI，统计区为 174 高的「单据构成」+ 123 高的「公告与消息」，不再等高拉白。
+
+**门禁**
+
+- `plugin_host.tests_home` 新增 `test_dashboard_removes_duplicate_shortcut_section`，并把员工 KPI 断言由 5 改 6；管理员用例补 6 格与 stats 非 plain 断言，员工用例钉 `lc-ov-stats--plain`，部门用例补 `dept.total == 1`。
+- 全量 **563 tests OK**（562 + 1）；ruff / `manage.py check` 干净；`python tools/compile_mo.py` 重编译英文 `.mo`，`MoInRepoTest` 4 条全过。
+- 截图：`.tmp-test/screens-v21/dashboard-after-final.png`、`dashboard-after-final-full.png`、`dashboard-after1-dark.png`、`dashboard-after1-1024.png`、`dashboard-after1-staff2.png`、`container/dashboard-layout.png`。
+
+**容器（8000）**
+
+- 模板 `04b70f2c11f1d504d83e83f2df0b364a`、CSS `6c3e512ddb06a8045694f94c1299580f`（源 / `/app/staticfiles/themes/corporate-clean/css/corporate-clean.css` 同值）、`workbench.py 4cd1d0e5ae87bda006a7bcc773475f99`、`tests_home.py fe317e64ab5c2e7511143a21abcbdddc`、`django.po ab78790d5f78fdfe70bc998e09e2fab9`、`django.mo f28fa1f60c3d03d318febfd0049ef1fe`。
+- 容器 1440 量测与本地同值：KPI/用量 196，统计 280/280，tiles 598，`scrollHeight=1401`。

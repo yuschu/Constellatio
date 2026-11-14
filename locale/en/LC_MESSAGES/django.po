@@ -1825,3 +1825,9 @@ msgstr "No check-in records yet"
 
 msgid "%(time)s 签到"
 msgstr "in at %(time)s"
+
+msgid "共 %(total)s 个"
+msgstr "Total %(total)s"
+
+msgid "共 %(n)s 条"
+msgstr "Total %(n)s"

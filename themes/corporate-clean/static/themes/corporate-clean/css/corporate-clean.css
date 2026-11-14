@@ -2752,6 +2752,11 @@ html:not([data-color-mode="dark"]) .lc-card-title {
   font-size: 20px;
 }
 
+/* 停用插件等场景下 KPI 可能是奇数张：末张占两格，避免 3 列网格右侧空一格 */
+.lc-ov-kpi:last-child:nth-child(odd) {
+  grid-column: span 2;
+}
+
 /* ---------- 用量双柱（overview.css 34–60 行） ---------- */
 .lc-ov-usage {
   flex: 1 1 auto;
@@ -2975,18 +2980,26 @@ html:not([data-color-mode="dark"]) .lc-card-title {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 10px;
-  /* DSH 两栏等高（卡片都满）；本项目两张卡数据量差很大（环形可能空、部门可能十行），
-     等高会把空卡拉成一整片白，所以按内容高度对齐 */
-  align-items: start;
+  /* 部门概况在模板侧只取前 3 行，两栏高度已接近；
+     等高后由「单据构成」内容自己居中，不再在左栏下方留一整块页面底色 */
+  align-items: stretch;
 }
 
 .lc-ov-stats > .lc-card {
   margin-bottom: 0;
   min-width: 0;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 员工视图没有部门概况，右卡只有两行统计：不拉高，避免一张大白卡 */
+.lc-ov-stats--plain {
+  align-items: start;
 }
 
 .lc-ov-compose {
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -3113,6 +3126,7 @@ html:not([data-color-mode="dark"]) .lc-card-title {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  overflow-x: hidden;
   overscroll-behavior: contain;
 }
 

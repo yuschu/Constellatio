@@ -473,6 +473,7 @@ def build_dashboard(*, user, is_admin, enabled_names, range_key, chart,
                 } for item in departments]
                 dept = {
                     'rows': rows,
+                    'total': Department.objects.filter(is_active=True).count(),
                     'max': max((item['headcount'] for item in rows), default=0),
                     'payload': _payload(
                         chart, kind='cartesian',

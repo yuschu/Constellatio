@@ -72,6 +72,19 @@
           <span class="lc-stat-value">{{ unread_count }}</span>
           <span class="lc-stat-sub">{% blocktranslate with n=messages_preview|length %}共 {{ n }} 条{% endblocktranslate %}</span>
         </div>
+        {% if dept %}
+        <div class="lc-stat lc-ov-kpi">
+          <span class="lc-stat-label">{% trans "部门" %}</span>
+          <span class="lc-stat-value">{{ dept.total }}</span>
+          <span class="lc-stat-sub">{% blocktranslate with total=dept.total %}共 {{ total }} 个{% endblocktranslate %}</span>
+        </div>
+        {% elif 'notice' in plugins_enabled %}
+        <div class="lc-stat lc-ov-kpi">
+          <span class="lc-stat-label">{% trans "公告简报" %}</span>
+          <span class="lc-stat-value">{{ notices|length }}</span>
+          <span class="lc-stat-sub">{% blocktranslate with n=notices|length %}共 {{ n }} 条{% endblocktranslate %}</span>
+        </div>
+        {% endif %}
       </div>
 
       <div class="lc-card lc-ov-usage">
@@ -126,7 +139,7 @@
       </div>
     </div>
 
-    <div class="lc-ov-stats">
+    <div class="lc-ov-stats{% if not dept %} lc-ov-stats--plain{% endif %}">
       <div class="lc-card">
         <div class="lc-card-title">
           <span class="lc-card-title-text">{% trans "单据构成" %}</span>
@@ -170,7 +183,7 @@
           <span class="lc-card-sub">{% trans "人数 / 今日签到 / 待审批" %}</span>
         </div>
         <div class="lc-ov-deptlist">
-          {% for row in dept.rows|slice:":6" %}
+          {% for row in dept.rows|slice:":3" %}
           <div class="lc-ov-deptrow">
             <div class="lc-ov-deptrow-head">
               <span class="lc-ov-deptrow-name">{{ row.name }}</span>
@@ -399,34 +412,6 @@
           </div>
         </div>
         {% endif %}
-      </div>
-    </section>
-    {% endif %}
-
-    {% if shortcuts %}
-    <section class="lc-ov-list">
-      <div class="lc-ov-list-head">
-        <h2 class="lc-ov-list-title">{% trans "业务入口" %}</h2>
-        <span class="lc-ov-list-count">{{ shortcuts|length }}</span>
-      </div>
-      <div class="lc-ov-grid">
-        {% for s in shortcuts %}
-        <a class="lc-ov-session lc-ov-session--link" href="{{ s.url }}">
-          <div class="lc-ov-session-head">
-            <span class="lc-ov-session-title">{{ s.label }}</span>
-            <span class="lc-ov-chip">{{ s.icon }}</span>
-          </div>
-          <div class="lc-ov-session-body">
-            <div class="lc-ov-mini-stats">
-              <div class="lc-ov-mini-stat"><span class="lc-ov-mini-label">{% trans "类型" %}</span><span class="lc-ov-mini-value">{{ s.type }}</span></div>
-            </div>
-          </div>
-          <div class="lc-ov-session-preview">
-            <span class="lc-ov-session-preview-label">{% trans "发起" %}</span>
-            <span class="lc-ov-session-preview-text">{% trans "进入表单" %} →</span>
-          </div>
-        </a>
-        {% endfor %}
       </div>
     </section>
     {% endif %}
