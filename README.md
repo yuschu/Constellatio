@@ -1,92 +1,41 @@
 # Constellatio・企业办公自动化系统
 
-> 基于 Django 的全栈插件化 OA ——
->
-> **万物皆可插件**
->
-> ：容器唯一固定，从数据库 / 模板 / 图表等基础设施到审批 / 公告 / 考勤等业务模块全部可插拔、可替换。
+> 基于 Django 的全栈插件化 OA。容器唯一固定：数据库、外观、模板、图表、认证等基础设施，与审批、公告、考勤等业务模块，全部可插拔、可替换。
 
-一款基于 Django 的全栈插件化企业办公自动化系统。
-
-**当前基线（2026-11-14）**：`v2.2.13` · 564 项测试全绿 · tag `v2.2.13` · Release `v2.2.13 Beta`（正文标题「视觉风格重构」）
+**当前基线**：`v2.2.13`（2026-11-14）· 564 项测试全绿 · tag `v2.2.13` · Release `v2.2.13 Beta`（「视觉风格重构」）
 
 ## ✨ 特性
 
-
+### 架构与平台
 
 * 🧩 **万物皆可插件**：插件容器 + 全插件化业务（auth / user / approval / notice / attendance / blockchain / workspace / structure / language）
+* 🔌 **基础设施可插拔**：数据库（MySQL ↔ sqlite）、外观（内置浅色/深色 + `themes/` 外观包）、模板引擎、图表引擎、认证后端
+* ⚙ **运行时插件开关**：工作台启用 / 禁用插件即时生效，停用即隐藏菜单 + 404；操作进入活动记录
+* 🏠 **工作台与图表**：指标卡、流程趋势、插件分布 / 组织人员图表，今日 / 本周 / 本月联动，管理员 / 员工视图分流；ECharts 本地资源，图表引擎可运行时停用并自动降级表格
+* ⛓ **活动记录**：关键操作 SHA-256 哈希链留痕，单条可查详情，篡改即断链报警；按日 × 来源插件统计
+* 🔑 **企业 SSO**：HMAC 签名 Ticket 网关登录，自动建号 / 防重放，与账号密码登录并存
+* ✉ **消息提醒**：顶栏未读数 + 消息中心；审批待办 / 结果、公告发布自动站内信，可停用降级
+* 🌐 **中英切换**：插件名 / 表头 / 状态 / 空态 / 确认文案随语言切换，用户名与业务数据保持原文
+* 📦 **私有化部署**：`docker compose up -d` 一键拉起（MySQL 8 + Gunicorn + WhiteNoise）；Bootstrap 离线化、生产缺 `SECRET_KEY` 拒绝启动、登出改 POST
 
-* 🔌 基础设施可插拔：数据库（MySQL↔sqlite）、外观（内置浅色/深色 + `themes/` 外观包）、模板引擎、图表引擎、认证后端
+### 业务能力
 
-* 🖥 **前端 DSH 化（v2.2.0–v2.2.13）**：侧栏宽窄两态与设置弹层、输入框、插件页、看板、考勤、滚动条、页面切换按 DSH 源码逐项对齐；考勤改为 Jibble 形态仪表盘，看板布局收紧并补齐英文界面；564 项测试全绿
+* 📋 **审批中心**：请假 / 报销 / 用章 / 外出 / 加班 / 调休六类动态表单，必填标注，直属上级自动指派与抄送
+* 🕐 **考勤打卡**：内勤 / 外勤签到、补卡、签到详情筛选、月度看板；考勤规则可配（上下班时间 / 迟到早退宽限 / 工作日 / 补卡回溯）。v2.2 起采用 Jibble 形态仪表盘，签到详情四列筛选、月份跟随区间
+* 📢 **公告通知**：单列公告流，标题与正文同屏；进入即已读，已读明细下沉管理岗
+* 🏢 **组织与权限**：职能制组织架构模板（部门 / 角色 / 用户一键幂等应用）、部门软删 / 硬删会签、用户状态机、权限码 L0–L3 与角色模板授权，菜单与 URL 同一口径
+* 👤 **个人中心**：顶栏用户名入口；编辑资料 / 查看权限 / 修改密码；用户编辑只展示操作者可授予的权限范围
+* 🧾 **全员基线**：考勤打卡与公告浏览登录即用；管理岗额外拥有签到详情（`attendance_report_view`）
 
-* 🎨 外观收口：内置外观即浅色/深色（设置里一个开关，全站生效）；再要更多外观就放 `themes/<key>/theme.json` 装包，自动出现在「外观包」行；登录页 SSO（已接入）/ 忘记密码入口 + 首屏加载动画
+### 前端与体验
 
-* 🔑 企业 SSO：HMAC 签名 Ticket 网关登录（自动建号 / 防重放 / 登录页入口 / `sso_ticket` 命令），与账号密码登录并存
+* 🖥 **DSH 化前端（v2.2.0–v2.2.13）**：侧栏宽窄两态与设置弹层、输入框、插件页、看板、考勤、全站滚动条、页面切换按 DSH 源码逐项对齐；看板布局收紧并补齐英文界面
+* 🎨 **外观收口**：内置外观即浅色 / 深色，设置里一个开关全站生效；更多外观放 `themes/<key>/theme.json` 装包，自动出现在「外观包」行
 
-* ✉ 消息提醒：顶栏未读数 + 消息中心；审批待办 / 审批结果 / 公告发布自动站内信，可停用降级
+### 安全与工程
 
-* 🌐 全站 UI 中英切换：插件名 / 表头 / 状态 / 空态 / 确认文案随语言切换；v2.2.13 补齐看板布局串与月份/星期标签（用户名与业务数据除外）
-
-* 👤 个人中心：顶栏用户名可点击；编辑资料 / 查看权限 / 修改密码进入二级页面；用户编辑支持直接权限，且只展示操作者可授予的范围
-
-* 📋 审批中心：请假 / 报销 / 用章 / 外出 / 加班 / 调休六类动态表单，必填标注、直属上级自动指派与抄送
-
-* 📢 公告通知：单列公告流，标题与正文同屏直接展示；进入即已读，已读人员明细下沉为管理岗页面（v1.7.2）
-
-* 🕐 考勤打卡：内勤 / 外勤签到、签到详情（时间范围 / 状态 / 类型筛选）、补卡登记、月度看板（ECharts，停用自动降级表格）；考勤规则可配（上下班时间 / 迟到早退宽限 / 工作日 / 补卡回溯，v1.7.2）
-
-* 📊 图表引擎：Provider 化（`ChartRenderer` + 本地 ECharts），插件开关页 / CLI 运行时启停，关闭即全部降级表格
-
-* 🏠 工作台：4 张指标卡（数字 + 迷你图）、流程趋势大盘、插件分布 / 组织人员图表，今日 / 本周 / 本月联动筛选，管理员 / 员工视图分流，侧栏当前 Tab 高亮
-
-* ⛓ 区块链留痕：关键操作上链（SHA-256 哈希链），列表可点击查看单条记录详情，篡改即断链报警；按日 × 来源插件统计看板
-
-* ⚙ 插件开关：工作台运行时启用 / 禁用插件，即时生效（停用即隐藏菜单 + 404），操作上链
-
-* 🏢 组织增强：部门软删（即时 + 上链）/ 修改 / 硬删（会签审批全通过后物理删除 + 上链）
-
-* 👤 用户状态机：启用 / 禁用（admin 直接禁用，普通管理员走会签）/ 冻结权限（即时短路），密码二次确认，超管权限层级最高
-
-* ◫ 组织架构模板：职能制部门树 + 31 角色 + 31 用户模板一键幂等应用；组织关系树（责任划分）按直属上级归并，应用动作上链
-
-* 🔐 RBAC 权限：权限码按 L0–L3 分级，角色按模板授予权限；拥有对应权限才能使用对应插件，菜单与 URL 同一口径
-
-* 🧾 全员基线：考勤打卡与公告浏览登录即用；管理岗额外拥有签到详情（`attendance_report_view`）
-
-* 🛡 安全与并发基线（v1.7.1）：审批 / 留痕 / 打卡关键写入走行锁 + 事务；审批详情与附件按「申请人 / 审批人 / 会签人 / 抄送人」对象级鉴权；登录失败限流 + 密码校验器；传输安全开关（`DJANGO_HTTPS` / HSTS / 代理 SSL 头）
-
-* 🧪 工程化门禁（v1.7.1 起，v2.2.13 基线）：依赖精确版本 + `ruff` 静态检查 + GitHub Actions（`ruff check` / `manage.py check` / 全量测试），当前 564 项测试全绿
-
-* 🧱 共享缓存（v1.7.3）：缓存后端换 `DatabaseCache`（复用现有 MySQL/sqlite，零新依赖），登录失败限流与 SSO Ticket 防重放靠 `cache.add` 主键冲突跨 gunicorn worker 成立；容器启动自动 `createcachetable`
-
-* 📦 私有化部署收口（v1.7.15）：Bootstrap 落到公共 static（断网样式完整）、生产模式缺 `SECRET_KEY` 拒绝启动、登出改 POST（GET 405）、CI 覆盖率门槛 94
-
-* 🔒 内容安全策略 CSP（v1.7.16）：全站下发 10 条指令，`script-src 'self' 'nonce-…'` **不给** `'unsafe-inline'`（每请求一枚 128 bit nonce，11 处内联脚本全部带 nonce 且实测零缺失）、`style-src` 保留 `'unsafe-inline'`（全站 137+ 处 `style=` 属性，收紧会让图表高度塌成 0）；6 处内联 `onclick` 改 `data-confirm` + 公共 `static/js/confirm.js`（顺带修掉审批按钮弹两次确认框）；`/admin/` 不豁免、静态文件不下发；硬 500 由 `handler500` 单独补头；`json_script` 数据块按非 JS MIME 类型放行。
-
-* 🧱 业务逻辑下沉 services（v1.7.14）：用户状态机、考勤判定/打卡/补卡、审批附件校验与鉴权移入 services，视图只做「取参数 → 调 service → 响应」；四个视图降到 12~17 行，锁与事务边界原样搬家；新增 26 条可直接 `manage.py shell` 调用的 service 单测
-
-* ⚡ 插件开关即时生效（v1.7.13）：删掉 `registry._switch_cache` 进程内 TTL 缓存，停用/启用插件在**所有 worker** 上立刻生效（原先多 worker 下最多 30 秒内仍可访问）；同时清除 `PLUGIN_SWITCH_CACHE_TTL` / `PLUGIN_SWITCH_ERROR_TTL` 与失效钩子
-
-* 🧭 前端三态反馈（v1.7.12）：两处图表 `fetch` 不再把 401/403/500 一律显示成「图表不可用」——401 跳登录并带 `next`（页面 URL，不是接口地址）、403 显示「无权查看该数据」、其它显示「数据暂时不可用」
-
-* 🔑 匿名 JSON 401（v1.7.11）：`LoginRequiredMiddleware` 换成子类，匿名 + `Accept: application/json`（或 `/stats` 路径）返回 **401** `{code,message}` 而不是 302 登录页，前端 fetch 不再拿到 HTML 炸掉；HTML 仍 302 带 next；`attendance_check` 手写 `has_perm` 由 302 改为 403
-
-* 🔒 对象级越权统一（v1.7.10）：审批详情 GET/POST、附件下载、`approval_hide` 的「不是你的单子」由 302/404 统一为 **403**；`services` 的 `PermissionError` 不再被静默吞掉；配套断言额外验证「附件无字节流出」「未写库」
-
-* 🚫 越权反馈统一（v1.7.9）：`require_perm` 一处改动，31 个视图 / 42 条 URL 的「已登录无权限」由 302 回工作台改为 **403 品牌页**；JSON 接口（`/stats` 或 `Accept: application/json`）返回 `{code,message}`，并修掉中间件丢弃 `exception.message`、日志只打 code 的问题；未登录仍是 302 带 next
-
-* 🧾 审计字段统一（v1.7.8）：业务模型继承 `AuditModel`（created_at/updated_at + created_by/updated_by），`CurrentUserMiddleware` + `pre_save` 自动填「谁写入 / 谁最后修改」；无请求上下文时为 NULL、不报错；三批迁移，历史行保持 NULL（不用迁移时间伪造），structure 明确排除
-
-* 🔐 登录限流与认证后端（v1.7.7）：失败计数换独立表 `LoginFailureCounter` + `select_for_update`（只锁已存在行，避免 gap 锁死锁；计数封顶 5），6 路并发 5 轮实测计数稳定 5；认证后端 `OA_AUTH_BACKENDS` dotted-path 有序链 + `ModelBackend` 垫底 + 契约校验 + 示例 Provider（用户名/邮箱，含 is_active 检查）
-
-* 📄 列表分页统一（v1.7.6）：`plugin_host/pagination.py` 唯一入口 + `templates/includes/pagination.html` 一份公共分页块（`{% querystring %}` 保住筛选参数，翻页不丢条件）；公告中心只登记当页未读；留痕 50/页、总数可见、看板 60 秒快照
-
-* 🧾 错误页与可排障日志（v1.7.5）：`templates/400|403|404|500.html` 全部带品牌外壳与「返回工作台」；每个请求分配 8 位 `X-Request-Id` 并进日志格式；`BusinessError`→400、对象级越权→403，其余异常打全栈后交默认 500；容器只走 console 不落盘（多 worker 不轮转同一文件）
-
-* 🛡 登录守卫默认拦截（v1.7.4）：`LoginRequiredMiddleware` 让所有视图默认要求登录，匿名入口收敛为 6 个显式 `@login_not_required`（登录 / 退出 / 忘记密码 / 语言切换 / SSO 两入口）；「无守卫路由集合」与「匿名可达集合」用两条集合护栏钉死，新增视图忘加守卫会直接测试报红
-
-* 🐳 Docker 一键部署：`docker compose up -d`（MySQL8 + Gunicorn + WhiteNoise，跨平台）
+* 🛡 **安全基线**：审批 / 留痕 / 打卡关键写入行锁 + 事务；审批详情与附件按申请人 / 审批人 / 会签人 / 抄送人对象级鉴权；统一 401 / 403 / 404 / 500 语义与 `X-Request-Id`；登录失败限流 + 密码校验器；CSP 10 条指令，`script-src` 只认 nonce，不放开 `unsafe-inline`
+* 🧪 **工程门禁**：依赖精确版本 + `ruff` + `manage.py check` + GitHub Actions 全量测试，当前 564 项全绿；共享缓存走 `DatabaseCache`，登录限流与 SSO 防重放跨 worker 成立
 
 ## 🛠 技术栈
 
@@ -96,11 +45,9 @@ Python 3.13・Django 5.2 LTS・MySQL 8.0（可切 sqlite）・内置外观（浅
 
 ### Docker 一键部署（推荐）
 
-跨平台：**Windows / macOS / Linux** 通用，仅需安装 Docker（Desktop 或 Engine），一条命令拉起。
+跨平台：**Windows / macOS / Linux** 通用，仅需安装 Docker（Desktop 或 Engine）。
 
-
-
-```
+```bash
 docker compose up -d --build
 # 访问 http://localhost:8000
 # 默认超管：admin / Constellatio@2026（可用 .env 覆盖，见 .env.example）
@@ -108,31 +55,25 @@ docker compose up -d --build
 
 ### 本地开发
 
-
-
-```
+```bash
 python -m venv venv
 venv\Scripts\activate          # Windows
 # source venv/bin/activate     # macOS / Linux
 pip install -r requirements.txt
 python manage.py migrate
-python manage.py createcachetable   # v1.7.3：缓存表，缺表登录会 500（登录限流 / SSO 防重放走共享缓存）
+python manage.py createcachetable   # 缓存表；缺表登录会 500（登录限流 / SSO 防重放走共享缓存）
 python manage.py createsuperuser
 python manage.py runserver
 ```
 
 ## 📁 目录结构
 
-
-
-```
+```text
 Constellatio/
 ├── docker-compose.yml   # 一键部署（MySQL8 + web）
 ├── Dockerfile           # 应用镜像（gunicorn + whitenoise）
 ├── entrypoint.sh        # 容器启动脚本（migrate/collectstatic/超管/gunicorn）
 ├── .env.example         # 部署环境变量示例
-├── .dockerignore
-├── .gitattributes       # 行尾 LF 固定（容器执行必需）
 ├── requirements.txt
 ├── manage.py
 ├── plugin_host/          # 插件容器（唯一固定核心）
@@ -153,101 +94,43 @@ Constellatio/
 │   ├── structure/        # 职能制组织架构模板
 │   └── language/         # 中英文切换
 ├── themes/               # 外观层（可插拔，theme.json 发现）
-│   └── corporate-clean/  # 内置唯一外观：浅色 + 深色两态（Risograph 已于 v2.2.0 移除）
+│   └── corporate-clean/  # 内置唯一外观：浅色 + 深色两态
 ├── locale/               # 翻译目录（.po 与 .mo 都入库；改 .po 后跑 tools/compile_mo.py）
 ├── tools/                # 纯 Python .mo 编译器
-└── docs/                 # 项目文档
-    ├── tech-stack-and-architecture.md    # 技术栈与架构方案
-    ├── constraints-and-acceptance.md     # 约束与验收规范
-    ├── database-design.md                # 数据库设计文档
-    ├── development-guide.md              # 开发指南（含编程规约/插件规范）
-    ├── ai-assisted-development-guide.md  # AI 辅助开发规范（含迭代规范）
-    └── project-overview.md               # 项目说明文档
+└── docs/                 # 项目文档（核心文档 + 前端 / AI 规划 + 插件开发与历史版本记录）
 ```
 
 ## 📚 文档索引
 
-**建议阅读顺序**：README → 技术栈与架构 → 约束与验收 → 数据库设计 → 开发指南 → AI 辅助开发规范 → 项目说明 → 前端重构记录（v2.2）
+**建议阅读顺序**：README → 技术栈与架构 → 约束与验收 → 数据库设计 → 开发指南 → AI 辅助开发规范 → 项目说明 → 前端重构记录
 
+### 核心文档
 
+| 文档 | 内容 |
+| --- | --- |
+| [docs/release-notes.md](docs/release-notes.md) | **发版总入口**：v2.2.13 当前基线、历史收口、按 tag 检出指路、升级须知 |
+| [docs/tech-stack-and-architecture.md](docs/tech-stack-and-architecture.md) | 技术选型、全栈插件化架构、插件契约、竞品调研 |
+| [docs/constraints-and-acceptance.md](docs/constraints-and-acceptance.md) | 硬约束、功能边界、验收标准、开发规范、风险 |
+| [docs/database-design.md](docs/database-design.md) | 数据库设计（插件化：每插件独立表与迁移） |
+| [docs/development-guide.md](docs/development-guide.md) | 开发流程、环境、容器实现、插件开发、编程规约 |
+| [docs/ai-assisted-development-guide.md](docs/ai-assisted-development-guide.md) | AI 辅助开发行为规范、迭代规范 |
+| [docs/project-overview.md](docs/project-overview.md) | 项目说明、使用指南、插件开发示例 |
+| [docs/roadmap.md](docs/roadmap.md) | 差距矩阵、v1.5–v2.2.13 迭代路线、修复项与文档债务 |
 
-| 文档                                                                             | 类型   | 内容                                            |
-| ------------------------------------------------------------------------------ | ---- | --------------------------------------------- |
-| [README.md](README.md)（本文件）                                                    | 总览   | 项目入口、特性、快速开始                                  |
-| [docs/release-notes.md](docs/release-notes.md)                                 | 发版   | **发版总入口**：v2.2.13 当前基线、v1.7.x 历史收口、按 tag 检出指路、升级须知 |
-| [docs/tech-stack-and-architecture.md](docs/tech-stack-and-architecture.md)     | 设计   | 技术选型、全栈插件化架构、插件契约、竞品调研                        |
-| [docs/constraints-and-acceptance.md](docs/constraints-and-acceptance.md)       | 规范   | 硬约束、功能边界、验收标准、开发规范、风险                         |
-| [docs/database-design.md](docs/database-design.md)                             | 设计   | 数据库设计（插件化：每插件独立表与迁移）                          |
-| [docs/development-guide.md](docs/development-guide.md)                         | 开发   | 开发流程、环境、容器实现、插件开发、编程规约、插件规范                   |
-| [docs/ai-assisted-development-guide.md](docs/ai-assisted-development-guide.md) | 规范   | AI 辅助开发行为规范、迭代规范                              |
-| [docs/project-overview.md](docs/project-overview.md)                           | 说明   | 项目说明、使用指南、插件开发示例                              |
-| [docs/frontend-refactor-plan.md](docs/frontend-refactor-plan.md)               | 前端   | v2.2.0–v2.2.13 DSH 化实施记录与验收数据（§9.13.27–41） |
-| [docs/dsh-visual-spec.md](docs/dsh-visual-spec.md)                             | 前端   | DSH 实测字面量：颜色 / 间距 / 组件 / 快捷键视觉基线       |
-| [docs/ai-assistant-plan.md](docs/ai-assistant-plan.md)                         | 规划   | 对话式首页 A→B→C 阶段方案（未实施）                    |
-| [docs/ai-tool-calling.md](docs/ai-tool-calling.md)                             | 规划   | 本地模型 tool calling 接入与确认闸门（未实施）              |
-| [docs/plugin-dev-workspace.md](docs/plugin-dev-workspace.md)                   | 插件开发 | workspace：工作台可启用 / 禁用功能（v1.1 已实现）             |
-| [docs/plugin-dev-user.md](docs/plugin-dev-user.md)                             | 插件开发 | user 增强：部门软 / 硬删除、用户状态机、密码二次确认、权限层级（v1.2 已实现） |
-| [docs/plugin-dev-structure.md](docs/plugin-dev-structure.md)                   | 插件开发 | structure：职能制组织架构模板（角色 + 用户模板一键应用）（v1.3 已实现）  |
-| [docs/plugin-dev-language.md](docs/plugin-dev-language.md)                     | 插件开发 | language：语言切换（v1.4 已实现，v1.5.1 全站文案补全，v1.5.7 插件化 / 可停用）   |
-| [docs/plugin-dev-theme.md](docs/plugin-dev-theme.md)                           | 插件开发 | theme：主题插件化 + Corporate Clean 默认主题（v1.5 已实现）   |
-| [docs/plugin-dev-rbac.md](docs/plugin-dev-rbac.md)                             | 插件开发 | RBAC：权限等级 L0–L3、全员基线、角色权限模板、插件准入（v1.5.4 已实现） |
-| [docs/plugin-dev-v155.md](docs/plugin-dev-v155.md)                             | 插件开发 | v1.5.5：审批动态表单 / 抄送、签到筛选 / 补卡、工作台、菜单高亮、密码权限 |
-| [docs/plugin-dev-v156.md](docs/plugin-dev-v156.md)                             | 插件开发 | v1.5.6：组织关系树（责任划分）、责任人清单、汇报环 / 停用标记 |
-| [docs/plugin-dev-v157.md](docs/plugin-dev-v157.md)                             | 插件开发 | v1.5.7：语言插件化 / 可停用、开关式插件 UI、plugin_switch 兜底命令 |
-| [docs/plugin-dev-v158.md](docs/plugin-dev-v158.md)                             | 插件开发 | v1.5.8：功能区主题切换（运行时换肤，Cookie + ThemeLoader） |
-| [docs/plugin-dev-v159.md](docs/plugin-dev-v159.md)                             | 插件开发 | v1.5.9：组织架构合并（当前架构 + 模板详情页 / 应用模板） |
-| [docs/plugin-dev-v1510.md](docs/plugin-dev-v1510.md)                           | 插件开发 | v1.5.10：角色卡片点击弹窗（成员明细）+ 角色列表滚动自适应 |
-| [docs/plugin-dev-v1511.md](docs/plugin-dev-v1511.md)                           | 插件开发 | v1.5.11：组织架构角色列表布局修正（等高等宽 + 内层滚动，消除无效空白） |
-| [docs/plugin-dev-v1512.md](docs/plugin-dev-v1512.md)                           | 插件开发 | v1.5.12：角色成员弹窗修复 + 用户资料页（成员可点击查看） |
-| [docs/plugin-dev-v1513.md](docs/plugin-dev-v1513.md)                           | 插件开发 | v1.5.13：角色弹窗居中浮出（居中 + 缩放淡入，尊重 reduced-motion） |
-| [docs/plugin-dev-v1514.md](docs/plugin-dev-v1514.md)                           | 插件开发 | v1.5.14：报销金额* + 用章文件附件*（下载权限、media 卷） |
-| [docs/plugin-dev-v1515.md](docs/plugin-dev-v1515.md)                           | 插件开发 | v1.5.15：L3 隐藏待办 / 调休时间段 / 管辖部门路由 / 电子盖章占位 |
-| [docs/plugin-dev-v1516.md](docs/plugin-dev-v1516.md)                           | 插件开发 | v1.5.16：驳回申请重新申请 / 删除（对申请人隐藏，留痕保留） |
-| [docs/plugin-dev-v1517.md](docs/plugin-dev-v1517.md)                           | 插件开发 | v1.5.17：重新申请表单化 + 替换驳回单 / 审批终态 / 抄送 L3 隐藏 |
-| [docs/plugin-dev-v1518.md](docs/plugin-dev-v1518.md)                           | 插件开发 | v1.5.18：审批人限定业务负责人（必选）+ 抄送直系领导 |
-| [docs/plugin-dev-v16.md](docs/plugin-dev-v16.md)                               | 插件开发 | v1.6：图表插件化（ChartRenderer Provider）+ ECharts 本地资源 + 考勤月度看板 |
-| [docs/plugin-dev-v161.md](docs/plugin-dev-v161.md)                             | 插件开发 | v1.6.1：图表引擎运行时开关（UI / CLI / 上链）+ 留痕链统计看板 |
-| [docs/plugin-dev-v162.md](docs/plugin-dev-v162.md)                             | 插件开发 | v1.6.2：工作台图表化大盘（指标卡 / 趋势 / 插件 / 组织 / 范围筛选） |
-| [docs/plugin-dev-v163.md](docs/plugin-dev-v163.md)                             | 插件开发 | v1.6.3：Corporate Clean Banner 白字 + 两套主题侧栏吸顶 |
-| [docs/plugin-dev-v164.md](docs/plugin-dev-v164.md)                             | 插件开发 | v1.6.4：顶部导航栏吸顶（两套主题，sticky） |
-| [docs/plugin-dev-v165.md](docs/plugin-dev-v165.md)                             | 插件开发 | v1.6.5：指标卡按钮底部居中 + 四卡按钮基线对齐 |
-| [docs/plugin-dev-v166.md](docs/plugin-dev-v166.md)                             | 插件开发 | v1.6.6：插件分布卡片紧凑化（高度自适应 / 图表与图例收紧） |
-| [docs/plugin-dev-v167.md](docs/plugin-dev-v167.md)                             | 插件开发 | v1.6.7：指标卡按钮统一 + 去文本箭头 |
-| [docs/plugin-dev-v168.md](docs/plugin-dev-v168.md)                             | 插件开发 | v1.6.8：部门明细表格拆分（独立卡片） |
-| [docs/plugin-dev-v169.md](docs/plugin-dev-v169.md)                             | 插件开发 | v1.6.9：插件分布 / 组织人员双卡等宽等高 |
-| [docs/plugin-dev-v1610.md](docs/plugin-dev-v1610.md)                           | 插件开发 | v1.6.10：公告简报卡片化 + 公告列表 / 详情合并 |
-| [docs/plugin-dev-v1611.md](docs/plugin-dev-v1611.md)                           | 插件开发 | v1.6.11：部门管理页排版优化（表格 / 操作按钮 / 表单对齐） |
-| [docs/plugin-dev-v1612.md](docs/plugin-dev-v1612.md)                           | 插件开发 | v1.6.12：角色 / 审批 / 待办三页统一排版 |
-| [docs/plugin-dev-v1613.md](docs/plugin-dev-v1613.md)                           | 插件开发 | v1.6.13：用户管理操作配色 + 角色权限码流式排版 |
-| [docs/plugin-dev-v1614.md](docs/plugin-dev-v1614.md)                           | 插件开发 | v1.6.14：用户管理操作项按钮化（白底蓝字 / 蓝 / 红） |
-| [docs/plugin-dev-v1615.md](docs/plugin-dev-v1615.md)                           | 插件开发 | v1.6.15：公告中心双卡片改版（信息卡 + 详情卡 + 已读弹窗） |
-| [docs/plugin-dev-v1616.md](docs/plugin-dev-v1616.md)                           | 插件开发 | v1.6.16：考勤页图表卡 + 签到详情单行筛选 |
-| [docs/plugin-dev-v1617.md](docs/plugin-dev-v1617.md)                           | 插件开发 | v1.6.17：考勤卡片收紧 / 签到签退同行 / 插件改名 |
-| [docs/plugin-dev-v1618.md](docs/plugin-dev-v1618.md)                           | 插件开发 | v1.6.18：今日状态卡片压缩并与本月统计等高 |
-| [docs/plugin-dev-v1619.md](docs/plugin-dev-v1619.md)                           | 插件开发 | v1.6.19：部门操作按钮配色（修改白蓝 / 停用蓝 / 删除红） |
-| [docs/plugin-dev-v1620.md](docs/plugin-dev-v1620.md)                           | 插件开发 | v1.6.20：部门状态徽标绿色 + 防折行 |
-| [docs/plugin-dev-sso.md](docs/plugin-dev-sso.md)                               | 插件开发 | v1.7.0：企业 SSO（HMAC Ticket 网关、自动建号、防重放） |
-| [docs/plugin-dev-notify.md](docs/plugin-dev-notify.md)                         | 插件开发 | v1.7.0：消息提醒（站内信 / 审批 / 公告 / 未读 / 停用降级） |
-| [docs/plugin-dev-v171.md](docs/plugin-dev-v171.md)                             | 插件开发 | v1.7.1：安全与并发修复包（行锁 / 对象级鉴权 / 缓存与分页 / 传输安全 / ruff + CI） |
-| [docs/plugin-dev-v172.md](docs/plugin-dev-v172.md)                             | 插件开发 | v1.7.2：公告极简化（单列流 / 自动已读）+ 考勤规则（上下班 / 宽限 / 工作日 / 补卡回溯） |
-| [docs/plugin-dev-v173.md](docs/plugin-dev-v173.md)                             | 插件开发 | v1.7.3：共享缓存（DatabaseCache）—— 登录限流 / SSO 防重放跨 worker 成立 |
-| [docs/plugin-dev-v174.md](docs/plugin-dev-v174.md)                             | 插件开发 | v1.7.4：登录守卫中间件化 —— 默认拦截 + 6 个显式白名单 + 两条集合护栏 |
-| [docs/plugin-dev-v175.md](docs/plugin-dev-v175.md)                             | 插件开发 | v1.7.5：错误页（400/403/404/500）+ 日志与 request_id + 异常分类 |
-| [docs/plugin-dev-v176.md](docs/plugin-dev-v176.md)                             | 插件开发 | v1.7.6：列表分页统一（公共 include + querystring）+ 公告增量已读 + 留痕翻页 |
-| [docs/plugin-dev-v177.md](docs/plugin-dev-v177.md)                             | 插件开发 | v1.7.7：限流计数原子化（独立表 + 行锁）+ 认证后端插件化（OA_AUTH_BACKENDS） |
-| [docs/plugin-dev-v178.md](docs/plugin-dev-v178.md)                             | 插件开发 | v1.7.8：审计字段统一（AuditModel + current_user + pre_save 自动填充，13/14 模型） |
-| [docs/plugin-dev-v179.md](docs/plugin-dev-v179.md)                             | 插件开发 | v1.7.9：越权反馈语义统一（已登录无权限 → 403；JSON `{code,message}`） |
-| [docs/plugin-dev-v1710.md](docs/plugin-dev-v1710.md)                           | 插件开发 | v1.7.10：对象级越权统一（审批详情/附件/隐藏 → 403） |
-| [docs/plugin-dev-v1711.md](docs/plugin-dev-v1711.md)                           | 插件开发 | v1.7.11：匿名 JSON 401 + JSON 判据收敛 + 残留 302 收口 |
-| [docs/plugin-dev-v1712.md](docs/plugin-dev-v1712.md)                           | 插件开发 | v1.7.12：前端接过 401/403（图表请求的三态反馈） |
-| [docs/plugin-dev-v1713.md](docs/plugin-dev-v1713.md)                           | 插件开发 | v1.7.13：插件开关多 worker 立即可见（删进程内缓存） |
-| [docs/plugin-dev-v1714.md](docs/plugin-dev-v1714.md)                           | 插件开发 | v1.7.14：三处重业务逻辑下沉 services（views/services 判据） |
-| [docs/plugin-dev-v1715.md](docs/plugin-dev-v1715.md)                           | 插件开发 | v1.7.15：私有化部署收口（离线资源 / 安全默认值 / 登出 POST / 覆盖率门槛） |
-| [docs/plugin-dev-v1716.md](docs/plugin-dev-v1716.md)                           | 插件开发 | v1.7.16：CSP 加固（nonce 中间件 / 内联面清零 / `style-src` 取舍 / 真机四项验收记录） |
-| [docs/roadmap.md](docs/roadmap.md)                                             | 规划   | 差距矩阵、v1.5–v2.2.13 迭代路线、修复项与文档债务                  |
+### 前端与 AI 规划
 
-> 文档口径：docs/plugin-dev-vXXXX 为各版交付时的历史记录，不随当前版本回改；当前基线以本文件顶部与 docs/release-notes.md 为准。
+| 文档 | 内容 |
+| --- | --- |
+| [docs/frontend-refactor-plan.md](docs/frontend-refactor-plan.md) | v2.2.0–v2.2.13 DSH 化实施记录与验收数据（§9.13.27–41） |
+| [docs/dsh-visual-spec.md](docs/dsh-visual-spec.md) | DSH 实测字面量：颜色 / 间距 / 组件 / 快捷键视觉基线 |
+| [docs/ai-assistant-plan.md](docs/ai-assistant-plan.md) | 对话式首页 A→B→C 阶段方案（未实施） |
+| [docs/ai-tool-calling.md](docs/ai-tool-calling.md) | 本地模型 tool calling 接入与确认闸门（未实施） |
+
+### 插件开发与历史版本
+
+- **插件开发**：[workspace](docs/plugin-dev-workspace.md) / [user](docs/plugin-dev-user.md) / [structure](docs/plugin-dev-structure.md) / [language](docs/plugin-dev-language.md) / [theme](docs/plugin-dev-theme.md) / [RBAC](docs/plugin-dev-rbac.md) / [SSO](docs/plugin-dev-sso.md) / [消息提醒](docs/plugin-dev-notify.md)
+- **历史版本**：`docs/plugin-dev-*.md` 共 59 篇（8 篇插件专题 + 51 篇版本记录），按版本记录交付时状态，不随当前基线回改；完整清单见 `docs/` 目录，统一入口见 [release-notes](docs/release-notes.md)
 
 ## 📌 状态
 
-**v2.2.13 视觉风格重构已交付并发布**（564 项测试全绿，tag `v2.2.13` → `3fcf217`，Release `v2.2.13 Beta` 已发布并接管 `Latest`，正文标题「视觉风格重构」）：v2.2.0–v2.2.13 把前端按 DSH 源码完成收口——侧栏宽窄两态与设置弹层、输入框、插件页、看板、考勤、滚动条、页面切换逐项对齐；考勤改为 Jibble 形态仪表盘，看板布局收紧并补齐英文界面，内置插件不外显、浅深两态、快捷键层落地。上一交付 **v1.7.16 Beta**（CSP 加固，483 项测试，tag `v1.7.16`）保留在 `docs/release-notes.md`；v2.2 发版基线冻结为 `v2.2.13`，无新增数据库迁移。
+**v2.2.13 视觉风格重构已交付并发布**（2026-11-14）：看板 / 考勤 / 前端外壳 / 滚动条 / 英文界面收口完成，564 项测试全绿；tag `v2.2.13` → `3fcf217`，Release `v2.2.13 Beta` 已发布并接管 `Latest`；无新增数据库迁移。完整版本记录与升级须知见 [docs/release-notes.md](docs/release-notes.md)。
