@@ -931,6 +931,44 @@ div.as-more__menu {
   align-items: flex-end;
 }
 
+/* 发送态：DSH 的本地回显 + 运行状态行（提交那一刻就出现，POST 回来后随页面替换） */
+.as-row--pending .as-bubble {
+  opacity: .72;
+}
+
+.as-pending {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px 12px;
+  color: var(--as-label-secondary);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.as-stack > .as-pending {
+  justify-content: center;
+  padding: 10px 16px 0;
+}
+
+.as-pending__spinner {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  border: 2px solid var(--as-label-tertiary);
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: as-pending-spin .8s linear infinite;
+}
+
+@keyframes as-pending-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .as-pending__spinner { animation: none; }
+}
+
 .as-draft {
   width: min(100%, 520px);
   margin-top: 8px;

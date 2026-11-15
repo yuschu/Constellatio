@@ -451,7 +451,8 @@
             <span class="as-hero__badge">{% trans "助手" %}</span>
           </div>
           <div class="as-composer">
-            <form method="post" action="/" class="as-card" data-ds-card>
+            <form method="post" action="/" class="as-card" data-ds-card data-ds-chat-form
+                  data-sending-label="{% trans '正在发送，等待助手回复…' %}">
               {% csrf_token %}
               {% if conversation %}<input type="hidden" name="conversation" value="{{ conversation.pk }}">{% endif %}
               <label class="as-sr-only" for="as-input">{% trans "输入消息" %}</label>
@@ -502,7 +503,8 @@
 
     {% if chat_messages %}
     <div class="as-composer as-composer--docked">
-      <form method="post" action="/" class="as-card" data-ds-card>
+      <form method="post" action="/" class="as-card" data-ds-card data-ds-chat-form
+            data-sending-label="{% trans '正在发送，等待助手回复…' %}">
         {% csrf_token %}
         {% if conversation %}<input type="hidden" name="conversation" value="{{ conversation.pk }}">{% endif %}
         <label class="as-sr-only" for="as-input">{% trans "输入消息" %}</label>

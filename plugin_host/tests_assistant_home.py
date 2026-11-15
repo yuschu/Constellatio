@@ -94,6 +94,53 @@ class AssistantHomePageTests(TestCase):
         self.assertNotContains(response, '未配置模型服务')
         self.assertNotContains(response, 'disabled')
 
+    def test_composer_local_echo_before_post(self):
+        """发送后立刻有反馈：两张 composer 都挂 pending 钩子，shell 提交即回显。
+
+        DSH 口径是「本地回显 + 运行状态行，权威记录到达后替换」，不是整页
+        静默等模型。这里没有异步接口，但提交瞬间必须先画回显再交回 POST。
+        """
+        root = Path(settings.BASE_DIR)
+        template = (
+            root / 'plugins/assistant/templates/assistant/home_chat.html'
+        ).read_text(encoding='utf-8')
+        self.assertEqual(template.count('data-ds-chat-form'), 2)
+        self.assertEqual(template.count('data-sending-label='), 2)
+
+        shell = (root / 'plugin_host/static/js/ds-shell.js').read_text(
+            encoding='utf-8')
+        self.assertIn("form[data-ds-chat-form]", shell)
+        self.assertIn('as-row--pending', shell)
+        self.assertIn('as-pending__spinner', shell)
+        self.assertIn('HTMLFormElement.prototype.submit.call', shell)
+        self.assertIn("setAttribute('aria-busy', 'true')", shell)
+
+        css = (
+            root / 'plugins/assistant/static/assistant/css/assistant.css'
+        ).read_text(encoding='utf-8')
+        self.assertIn('.as-pending__spinner', css)
+        self.assertIn('@keyframes as-pending-spin', css)
+
+        self.client.force_login(self.user)
+        home = self.client.get('/')
+        self.assertContains(home, 'data-ds-chat-form')
+        self.assertContains(home, '正在发送，等待助手回复…')
+
+    def test_composer_keeps_message_until_native_post(self):
+        """清空输入必须晚于原生 submit，否则 POST 里的 message 为空。
+
+        浏览器实测曾出现：本地回显正常，但表单先被清空后提交，服务端收到
+        空 message 直接 200 重渲染首页，用户看起来像「发送没反应」。
+        """
+        shell = (
+            Path(settings.BASE_DIR) / 'plugin_host/static/js/ds-shell.js'
+        ).read_text(encoding='utf-8')
+        submit_at = shell.index(
+            'HTMLFormElement.prototype.submit.call(chatForm)')
+        clear_at = shell.index("input.value = ''", submit_at)
+        self.assertGreater(clear_at, submit_at)
+        self.assertEqual(shell.count("input.value = ''"), 1)
+
     def test_dashboard_route_still_renders_original_board(self):
         self.client.force_login(self.user)
         response = self.client.get('/dashboard/')

@@ -351,7 +351,8 @@
       if (!input) return;
 
       var locked = input.dataset.locked === '1';
-      var form = card.closest('form');
+      var chatForm = card.closest('form[data-ds-chat-form]');
+      var submitting = chatForm && chatForm.dataset.sending === '1';
 
       function autosize() {
         input.style.height = 'auto';
@@ -362,7 +363,95 @@
 
       function syncSend() {
         if (!send) return;
-        send.disabled = locked || input.value.trim().length === 0;
+        send.disabled = locked || submitting || input.value.trim().length === 0;
+      }
+
+      // DSH 发送态：提交那一刻先把本地回显和运行状态画进对话，
+      // 真正的 POST 晚一个绘制帧再交回浏览器，用户不会对着静止页面猜。
+      function paintPending(text) {
+        var row = document.createElement('div');
+        row.className = 'as-row as-row--user as-row--pending';
+        var turn = document.createElement('div');
+        turn.className = 'as-turn';
+        var bubble = document.createElement('div');
+        bubble.className = 'as-bubble';
+        bubble.textContent = text;
+        turn.appendChild(bubble);
+        row.appendChild(turn);
+
+        var status = document.createElement('div');
+        status.className = 'as-pending';
+        status.setAttribute('role', 'status');
+        status.setAttribute('aria-live', 'polite');
+        var spinner = document.createElement('span');
+        spinner.className = 'as-pending__spinner';
+        spinner.setAttribute('aria-hidden', 'true');
+        var label = document.createElement('span');
+        label.className = 'as-pending__label';
+        label.textContent = (chatForm && chatForm.dataset.sendingLabel) || '';
+        status.appendChild(spinner);
+        status.appendChild(label);
+
+        var thread = document.querySelector('.as-scroll--thread');
+        if (thread) {
+          thread.appendChild(row);
+          thread.appendChild(status);
+          thread.scrollTop = thread.scrollHeight;
+          return;
+        }
+
+        var stack = card.closest('.as-stack');
+        var composer = card.closest('.as-composer') || card;
+        if (stack) {
+          stack.insertBefore(row, composer);
+          stack.insertBefore(status, composer);
+          return;
+        }
+        if (composer.parentNode) {
+          composer.parentNode.insertBefore(status, composer.nextSibling);
+        }
+      }
+
+      if (chatForm) {
+        chatForm.addEventListener('submit', function (e) {
+          // 同步消费提交资格：按钮禁用只是状态，不能当作准入门闩。
+          if (chatForm.dataset.sending === '1') {
+            e.preventDefault();
+            return;
+          }
+          var value = input.value.trim();
+          if (!value || locked) return;
+
+          e.preventDefault();
+          chatForm.dataset.sending = '1';
+          submitting = true;
+          chatForm.setAttribute('aria-busy', 'true');
+          paintPending(value);
+
+          input.readOnly = true;
+          autosize();
+          syncSend();
+
+          var handedOff = false;
+          function handOff() {
+            if (handedOff) return;
+            handedOff = true;
+            HTMLFormElement.prototype.submit.call(chatForm);
+            // 原生 submit 已同步构造表单数据；清空放到提交之后，
+            // 否则 POST 里 message 为空，服务端只会原地重渲染。
+            window.setTimeout(function () {
+              input.value = '';
+              autosize();
+            }, 0);
+          }
+          if (window.requestAnimationFrame) {
+            window.requestAnimationFrame(function () {
+              window.setTimeout(handOff, 60);
+            });
+          }
+          // 后台标签页或浏览器不跑 rAF 时的兜底，避免永远卡在 pending。
+          window.setTimeout(handOff, 250);
+        });
       }
 
       input.addEventListener('input', function () { autosize(); syncSend(); });

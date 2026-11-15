@@ -1724,6 +1724,9 @@ msgstr "Message input"
 msgid "发送消息"
 msgstr "Send message"
 
+msgid "正在发送，等待助手回复…"
+msgstr "Sending… waiting for the assistant"
+
 msgid "换行（输入框随内容增高至 336px）"
 msgstr "Line break (the input grows with the content up to 336px)"
 
