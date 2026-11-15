@@ -3,7 +3,7 @@
 > 决策记录（2026-11-12 负责人已拍板）：**按 A→B→C 渐进迭代**、**替换现有首页**、**交付给最终用户使用**、**内置 Ollama 4B 开箱即用，配置页保留为覆盖入口**（2026-11-14 由“用户自行配置模型”调整）。
 > 本文在该前提下给出架构与阶段定义。视觉基线见 `docs/dsh-visual-spec.md`，前端框架选型见 `docs/frontend-refactor-plan.md`。
 >
-> **实施进度（2026-11-14）**：A 阶段后端已落地——`plugins/assistant/models.py`（Conversation/Message/LLMSettings）、`llm.py`（标准库 OpenAI 兼容客户端 + 连通性自检）、`tools.py`（6 个只读查询 + 1 个草稿工具，全部 `write=False` 硬断言）、`services.py`（逐条校验 + 3 轮执行循环 + 会话落库 + 工具调用日志）；首页改为服务端 POST + PRG，支持 `?conversation=` 历史与侧栏最近 20 条；全量 **632 项测试**。20 条固定问句验收集已落成 `manage.py eval_assistant_a`（见 `docs/ai-assistant-eval.md`），含首轮工具/参数严格评分、schema 上下限校验、JSON 明细与 70% 退出码；**4B 正式验收 19/20（95.0%），达到 70% 阈值**；加入星期与相对日期规则后最新一轮 **20/20（100%）**（此前 A18 首轮未调工具，隔离复跑 5/5 通过），9B 参考 19/20（95.0%）。模型配置页与连通性自检已落地（数据库优先、环境变量兜底，API Key 加密，见 `docs/ai-assistant-config.md`）；Compose 已加入 `ollama` + `ollama-init`，默认 `qwen3:4b`，首次启动自动拉取；官方源最多等 300 秒，失败或超时自动切 ModelScope 回退，并把 GGUF 建成 `qwen3:4b`（`num_ctx 4096`）。**空卷冷启动已实跑（2026-11-14）**：官方源 5 秒 EOF 失败 → 回退以 6.5 MB/s 拉完 2.5 GB → `ollama create` → 预热 → `web` 启动，旧回退件全程约 6 分 40 秒；回退件已换为非思考版 `Qwen3-4B-Instruct-2507-GGUF:Q4_K_M`，A 阶段 18/20（90%，旧回退件 15/20），默认空卷冷启动复跑 7 分 13 秒、Web 200；冷启动栈内真实对话返回部门清单，`query_department` 工具调用落库；正式栈官方件复跑的回复已剥离 `</think>` 思考段。`docker compose config` 已通过。**Compose 端到端已实跑（2026-11-14）**：本机 Docker Hub 与镜像站大层持续截断，改用 Ollama v0.40.11 官方 Linux 包自建同 tag 镜像（构建上下文约 95 MB，只装 CPU 库），全栈 `docker compose up -d` 成功；`ollama-init` 命中卷内模型后预热，Web 等其退出后启动，容器内真实对话返回部门清单，`tool_calls` 落库；清空数据库覆盖行后配置页显示 `http://ollama:11434/v1` / `qwen3:4b` / 240 秒 / 「内置默认 / 环境变量」。**B 阶段最小闭环已落地（2026-11-14）**：新增 `draft_approval`（支持请假/报销/用章/外出/加班/调休，`write=False`，只产草稿、不建 `Approval`）；首页助手消息渲染可编辑草稿卡片，六类字段可直接改，用章卡片带文件选择、调休卡片选加班依据，部门/审批人取原表单同源默认值；卡片直接 POST 原 `approval_create`，或经 session 一次性 token 跳到原表单改部门/审批人，成功后清 token；无新迁移、无新写入口。正式栈官方 `qwen3:4b` 实跑“明天上午九点、事由家里有事”得到 `2026-11-15T09:00`，卡片 HTTP 200、原表单 200 且预填；全量 **632 项测试**通过。**未完成**：术语表生成、向量检索、手动删除入口；C 阶段未开始；六类草稿已实现。自建镜像仅用于本机验证，产品默认仍指官方 `ollama/ollama:0.40.11`。
+> **实施进度（2026-11-14）**：A 阶段后端已落地——`plugins/assistant/models.py`（Conversation/Message/LLMSettings）、`llm.py`（标准库 OpenAI 兼容客户端 + 连通性自检）、`tools.py`（6 个只读查询 + 1 个草稿工具，全部 `write=False` 硬断言）、`services.py`（逐条校验 + 3 轮执行循环 + 会话落库 + 工具调用日志）；首页改为服务端 POST + PRG，支持 `?conversation=` 历史与侧栏最近 20 条；全量 **641 项测试**。20 条固定问句验收集已落成 `manage.py eval_assistant_a`（见 `docs/ai-assistant-eval.md`），含首轮工具/参数严格评分、schema 上下限校验、JSON 明细与 70% 退出码；**4B 正式验收 19/20（95.0%），达到 70% 阈值**；加入星期与相对日期规则后最新一轮 **20/20（100%）**（此前 A18 首轮未调工具，隔离复跑 5/5 通过），9B 参考 19/20（95.0%）。模型配置页与连通性自检已落地（数据库优先、环境变量兜底，API Key 加密，见 `docs/ai-assistant-config.md`）；Compose 已加入 `ollama` + `ollama-init`，默认 `qwen3:4b`，首次启动自动拉取；官方源最多等 300 秒，失败或超时自动切 ModelScope 回退，并把 GGUF 建成 `qwen3:4b`（`num_ctx 4096`）。**空卷冷启动已实跑（2026-11-14）**：官方源 5 秒 EOF 失败 → 回退以 6.5 MB/s 拉完 2.5 GB → `ollama create` → 预热 → `web` 启动，旧回退件全程约 6 分 40 秒；回退件已换为非思考版 `Qwen3-4B-Instruct-2507-GGUF:Q4_K_M`，A 阶段 18/20（90%，旧回退件 15/20），默认空卷冷启动复跑 7 分 13 秒、Web 200；冷启动栈内真实对话返回部门清单，`query_department` 工具调用落库；正式栈官方件复跑的回复已剥离 `</think>` 思考段。`docker compose config` 已通过。**Compose 端到端已实跑（2026-11-14）**：本机 Docker Hub 与镜像站大层持续截断，改用 Ollama v0.40.11 官方 Linux 包自建同 tag 镜像（构建上下文约 95 MB，只装 CPU 库），全栈 `docker compose up -d` 成功；`ollama-init` 命中卷内模型后预热，Web 等其退出后启动，容器内真实对话返回部门清单，`tool_calls` 落库；清空数据库覆盖行后配置页显示 `http://ollama:11434/v1` / `qwen3:4b` / 240 秒 / 「内置默认 / 环境变量」。**B 阶段最小闭环已落地（2026-11-14）**：新增 `draft_approval`（支持请假/报销/用章/外出/加班/调休，`write=False`，只产草稿、不建 `Approval`）；首页助手消息渲染可编辑草稿卡片，六类字段可直接改，用章卡片带文件选择、调休卡片选加班依据，部门/审批人取原表单同源默认值；卡片直接 POST 原 `approval_create`，或经 session 一次性 token 跳到原表单改部门/审批人，成功后清 token；无新迁移、无新写入口。正式栈官方 `qwen3:4b` 实跑“明天上午九点、事由家里有事”得到 `2026-11-15T09:00`，卡片 HTTP 200、原表单 200 且预填；全量 **641 项测试**通过。**C1 已落地（2026-11-15）**：新增只读 `prepare_approval_action`，普通单生成动作卡，卡片直接 POST 原 `approval_detail`；无新写工具、无新端点、无迁移；会签单排除。**未完成**：术语表生成、向量检索、手动删除入口；会签单动作卡、批量审批、聊天内原地刷新未做；六类草稿已实现。自建镜像仅用于本机验证，产品默认仍指官方 `ollama/ollama:0.40.11`。
 
 ## 一、结论先行
 
@@ -396,9 +396,11 @@ POST {base_url}/embeddings
 - 调休时段口径：用户只说“上午/下午/晚上”但没有具体钟点时，`draft_approval` 返回 `missing` 并追问具体起止时间，不自行补成 09:00–12:00 / 14:00–18:00 之类的默认区间，避免把猜测带进审批单。
 - 评价缺口：六类草稿均已支持；草稿完整率与平均修改字段数未做统计，留待积累真实会话后再评。
 
-### C 阶段：对话操作（独立项目，不建议在设计阶段承诺排期）
+### C 阶段：对话操作（C1 已落地，会签单仍待独立设计）
 
-**能力**：直接调工具写库。
+**能力**：在对话内对已有审批单发起通过/驳回，但不让助手直接写库。
+
+**C1 采用方案**：助手只生成只读动作卡，卡片本身是 HTML 表单，直接 POST 原 `approval_detail` 端点；用户点按钮才发生状态变更。没有新增写工具、没有新增写端点、没有新迁移。`prepare_approval_action` 只返回卡片元数据，`write=False`，普通单才出卡；会签单（部门删除 / 用户禁用）仍回详情页处理。
 
 **这一阶段的安全底线（不可协商）**：
 
@@ -407,7 +409,19 @@ POST {base_url}/embeddings
 3. **不可逆操作必须二次确认**（删除、批量审批、跨部门操作）。
 4. **意图不明确时拒绝执行**，不允许"猜一个最可能的"。
 
-**这一阶段的真实风险**：BFCL v4 上 8B 级模型整体准确率约 **48%**（本地小模型在难任务上会更低）。48% 放在"读取"能重试，放在"写库"不可接受。所以 C 阶段要么换更大模型（14B 起，Q4 约 9 GB），要么把动作粒度压到"一次只做一件事 + 强确认"。
+**C1 的落地口径**：动作卡只覆盖请假/报销/用章/外出/加班/调休六类普通单；对象级门禁复用 `services.can_act`，提交仍由 `approval_detail` 的 `_can_act` + `services.approve/reject` 行锁状态机兜底；动作卡生成阶段不写 `Approval`、不写 `ApprovalRecord`。会签单、批量审批、跨部门操作不在 C1 范围。
+
+**这一阶段的真实风险**：BFCL v4 上 8B 级模型整体准确率约 **48%**（本地小模型在难任务上会更低）。48% 放在"读取"能重试，放在"写库"不可接受。所以 C 阶段要么换更大模型（14B 起，Q4 约 9 GB），要么把动作粒度压到"一次只做一件事 + 强确认"。C1 选后者：一次一张单、只出卡、用户点确认。
+
+**C1 实施切片**：
+- `plugins/approval/services.py`：公共 `can_act(user, approval)`；`views._can_act` 保留薄壳，行为不变。
+- `plugins/assistant/tools.py`：`prepare_approval_action(approval_id)`，`write=False`、`max_calls_per_turn=1`、`required_permissions=['approval_view']`；查不到与无权查看统一返回 `not_found_or_forbidden`，不泄露存在性。
+- `plugins/assistant/views.py` / `services.py`：从 `tool_calls` 提取最后一张有效动作卡并挂到消息。
+- `plugins/assistant/templates/assistant/home_chat.html`：卡片表单直连 `approval:approval_detail`，带 CSRF、意见输入、`data-confirm`；不自动提交。
+- `plugins/assistant/services.py`：提示规则 10，要求先确认单据、只出卡、不声称已审批、会签单引导去详情。
+- 测试：普通审批人、申请人可看不可批、无关员工不泄露存在性、已处理、会签排除、超管、卡片 POST 原端点、重复提交 403、CSRF 缺失 403。
+
+**C1 未做**：会签单动作卡、批量审批、聊天内 AJAX 原地刷新、驳回意见强制必填、操作后自动回聊天。以上都需要单独设计，不与普通单动作卡混在一起。
 
 ## 五、风险与不做
 
