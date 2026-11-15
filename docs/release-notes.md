@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |---|---|
-| 发版基线 | tag `v2.2.14`（annotated）→ 本版发布提交 |
+| 发版基线 | tag `v2.2.14`（annotated `becc22b`）→ `05ce668` |
 | Release | `v2.2.14 Beta`，正文标题 `# AI 助手 A/B 阶段`，接管 `Latest` |
 | 测试基线 | **632 项全绿**（`ruff check` / `manage.py check` / 全量测试 / `compile_mo.py --check` / `docker compose config`） |
 | 变更范围 | `v2.2.13..v2.2.14`：AI 助手 A/B 阶段 24 个功能与文档提交；新增 `assistant` 0001–0003 迁移，六类草稿与审批侧无新增迁移 |
@@ -119,7 +119,7 @@ tag `v1.7.15` → commit `39baf42`（annotated）。基线 467 → **472 项全�
 
 | tag | 指向 | 是否等同"该版最终状态" | 说明 |
 |---|---|---|---|
-| `v2.2.14` | 本版发布提交 | ✅ | 当前基线；annotated tag，Release `v2.2.14 Beta`（正文 `# AI 助手 A/B 阶段`） |
+| `v2.2.14` | `05ce668` | ✅ | 当前基线；annotated tag `becc22b`，Release `v2.2.14 Beta`（正文 `# AI 助手 A/B 阶段`） |
 | `v2.2.13` | `3fcf217` | ✅ | 历史基线；annotated tag `e4a73d6`，Release `v2.2.13 Beta`（正文 `# 视觉风格重构`） |
 | `v1.7.2` | `503e072` | ✅ | 文档提交即当版末提交 |
 | `v1.7.3` | `5342093` | ⚠️ **文档不完整** | **不含** `b04f512`（当版文档纠偏：缺表后果、缓存对照方法、版本号等口径修正）。要读完整版 → `main` 的 `docs/plugin-dev-v173.md` |
