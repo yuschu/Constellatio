@@ -355,6 +355,20 @@
       var submitting = chatForm && chatForm.dataset.sending === '1';
       var posted = false;
       var DRAFT_KEY = 'constellatio:assistant:draft';
+      var fileInput = card.querySelector('[data-ds-file-input]');
+      var fileList = card.querySelector('[data-ds-file-list]');
+      var fileError = card.querySelector('[data-ds-file-error]');
+      var attach = card.querySelector('[data-ds-attach]');
+      var selectedFiles = [];
+      var maxFiles = parseInt(
+        (fileInput && fileInput.dataset.dsFileMaxCount) || '3', 10) || 3;
+      var maxFileBytes = parseInt(
+        (fileInput && fileInput.dataset.dsFileMaxBytes) || '1000000', 10) || 1000000;
+      var allowedExtensions = fileInput
+        ? (fileInput.getAttribute('accept') || '').split(',').map(function (item) {
+          return item.trim().toLowerCase();
+        }).filter(Boolean)
+        : [];
 
       function readDraft() {
         try { return window.sessionStorage.getItem(DRAFT_KEY) || ''; } catch (e) { return ''; }
@@ -389,19 +403,142 @@
 
       function syncSend() {
         if (!send) return;
-        send.disabled = locked || submitting || input.value.trim().length === 0;
+        var hasText = input.value.trim().length > 0;
+        send.disabled = locked || submitting ||
+          (!hasText && selectedFiles.length === 0);
+      }
+
+      function setFileError(message) {
+        if (!fileError) return;
+        fileError.textContent = message || '';
+        fileError.hidden = !message;
+      }
+
+      function formatBytes(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        return Math.ceil(bytes / 1024) + ' KB';
+      }
+
+      function fileKey(file) {
+        return [file.name, file.size, file.lastModified || 0].join('|');
+      }
+
+      function syncFileInput() {
+        if (!fileInput || !window.DataTransfer) return;
+        try {
+          var transfer = new DataTransfer();
+          selectedFiles.forEach(function (file) { transfer.items.add(file); });
+          fileInput.files = transfer.files;
+        } catch (e) {
+          // 极旧浏览器不支持给 input.files 赋值；保留原生选择，
+          // 移除 chip 时仍可从列表上看出实际会提交哪些文件。
+        }
+      }
+
+      function renderSelectedFiles() {
+        if (!fileList) return;
+        fileList.textContent = '';
+        selectedFiles.forEach(function (file) {
+          var chip = document.createElement('span');
+          chip.className = 'as-file-chip';
+          var name = document.createElement('span');
+          name.className = 'as-file-chip__name';
+          name.textContent = file.name;
+          chip.appendChild(name);
+          var size = document.createElement('span');
+          size.className = 'as-file-chip__size';
+          size.textContent = formatBytes(file.size);
+          chip.appendChild(size);
+          var remove = document.createElement('button');
+          remove.type = 'button';
+          remove.className = 'as-file-chip__remove';
+          remove.setAttribute('aria-label', '移除 ' + file.name);
+          remove.textContent = '×';
+          remove.addEventListener('click', function () {
+            setSelectedFiles(selectedFiles.filter(function (item) {
+              return fileKey(item) !== fileKey(file);
+            }));
+            setFileError('');
+          });
+          chip.appendChild(remove);
+          fileList.appendChild(chip);
+        });
+        fileList.hidden = selectedFiles.length === 0;
+        syncSend();
+      }
+
+      function setSelectedFiles(files) {
+        selectedFiles = files;
+        syncFileInput();
+        renderSelectedFiles();
+      }
+
+      function handleFileSelection() {
+        if (!fileInput) return;
+        var incoming = Array.prototype.slice.call(fileInput.files || []);
+        if (incoming.length === 0) return;
+        var next = selectedFiles.slice();
+        var error = '';
+        incoming.forEach(function (file) {
+          if (next.length >= maxFiles) {
+            error = '一次最多附加 ' + maxFiles + ' 个文件';
+            return;
+          }
+          var dot = file.name.lastIndexOf('.');
+          var ext = dot >= 0 ? file.name.slice(dot).toLowerCase() : '';
+          if (allowedExtensions.length && allowedExtensions.indexOf(ext) === -1) {
+            error = '暂不支持 ' + file.name + '；首版只收文本类文件';
+            return;
+          }
+          if (file.size > maxFileBytes) {
+            error = file.name + ' 超过 ' + Math.ceil(maxFileBytes / 1000000) + ' MB';
+            return;
+          }
+          var duplicate = next.some(function (item) {
+            return fileKey(item) === fileKey(file);
+          });
+          if (!duplicate) next.push(file);
+        });
+        setFileError(error);
+        setSelectedFiles(next);
+      }
+
+      if (attach && fileInput) {
+        attach.addEventListener('click', function () {
+          if (attach.disabled || locked) return;
+          fileInput.click();
+        });
+        fileInput.addEventListener('change', handleFileSelection);
       }
 
       // DSH 发送态：提交那一刻先把本地回显和运行状态画进对话，
       // 真正的 POST 晚一个绘制帧再交回浏览器，用户不会对着静止页面猜。
-      function paintPending(text) {
+      function paintPending(text, files) {
         var row = document.createElement('div');
         row.className = 'as-row as-row--user as-row--pending';
         var turn = document.createElement('div');
         turn.className = 'as-turn';
         var bubble = document.createElement('div');
         bubble.className = 'as-bubble';
-        bubble.textContent = text;
+        if (files && files.length) {
+          var fileRow = document.createElement('div');
+          fileRow.className = 'as-bubble__files';
+          files.forEach(function (file) {
+            var chip = document.createElement('span');
+            chip.className = 'as-file-chip as-file-chip--static';
+            var name = document.createElement('span');
+            name.className = 'as-file-chip__name';
+            name.textContent = file.name;
+            chip.appendChild(name);
+            var size = document.createElement('span');
+            size.className = 'as-file-chip__size';
+            size.textContent = formatBytes(file.size);
+            chip.appendChild(size);
+            fileRow.appendChild(chip);
+          });
+          bubble.appendChild(fileRow);
+        }
+        bubble.appendChild(document.createTextNode(text));
         turn.appendChild(bubble);
         row.appendChild(turn);
 
@@ -446,13 +583,13 @@
             return;
           }
           var value = input.value.trim();
-          if (!value || locked) return;
+          if ((!value && selectedFiles.length === 0) || locked) return;
 
           e.preventDefault();
           chatForm.dataset.sending = '1';
           submitting = true;
           chatForm.setAttribute('aria-busy', 'true');
-          paintPending(value);
+          paintPending(value || '请阅读附件', selectedFiles.slice());
 
           // DSH 口径：提交后不锁死输入。等待期间可以继续敲下一条；
           // 同步 PRG 返回会换页，所以输入内容进 sessionStorage，落地后恢复。
@@ -529,6 +666,118 @@
       autosize();
       syncSend();
     });
+  }
+
+  // ---------- composer 的只读模式 / 模型服务浮层 ----------
+  function initComposerMenus() {
+    var MODE_KEY = 'constellatio:assistant:mode';
+    var lastTrigger = null;
+
+    function menuFor(trigger) {
+      if (!trigger || !trigger.parentNode) return null;
+      if (trigger.hasAttribute('data-ds-mode-trigger')) {
+        return trigger.parentNode.querySelector('[data-ds-mode-menu]');
+      }
+      return trigger.parentNode.querySelector('[data-ds-model-menu]');
+    }
+
+    function closeMenus(except) {
+      Array.prototype.forEach.call(
+        document.querySelectorAll('[data-ds-mode-menu], [data-ds-model-menu]'),
+        function (menu) {
+          if (menu === except) return;
+          menu.hidden = true;
+          var trigger = menu.parentNode &&
+            menu.parentNode.querySelector(
+              '[data-ds-mode-trigger], [data-ds-model-trigger]');
+          if (trigger) trigger.setAttribute('aria-expanded', 'false');
+        }
+      );
+    }
+
+    function labelFor(mode) {
+      var option = document.querySelector(
+        '[data-ds-mode-option="' + mode + '"] .as-popover__item-main');
+      if (option && option.textContent.trim()) return option.textContent.trim();
+      return mode === 'readwrite' ? '可写' : '只读';
+    }
+
+    function setMode(mode) {
+      var normalized = mode === 'readwrite' ? 'readwrite' : 'readonly';
+      Array.prototype.forEach.call(
+        document.querySelectorAll('[data-ds-mode-input]'),
+        function (input) { input.value = normalized; }
+      );
+      Array.prototype.forEach.call(
+        document.querySelectorAll('[data-ds-mode-label]'),
+        function (label) { label.textContent = labelFor(normalized); }
+      );
+      Array.prototype.forEach.call(
+        document.querySelectorAll('[data-ds-mode-option]'),
+        function (option) {
+          option.setAttribute(
+            'aria-checked',
+            option.getAttribute('data-ds-mode-option') === normalized
+              ? 'true' : 'false');
+        }
+      );
+      try { window.sessionStorage.setItem(MODE_KEY, normalized); } catch (e) { /* 隐私模式 */ }
+    }
+
+    function readMode() {
+      try {
+        var value = window.sessionStorage.getItem(MODE_KEY);
+        return value === 'readwrite' ? 'readwrite' : 'readonly';
+      } catch (e) {
+        return 'readonly';
+      }
+    }
+
+    document.addEventListener('click', function (event) {
+      var trigger = event.target.closest &&
+        event.target.closest('[data-ds-mode-trigger], [data-ds-model-trigger]');
+      if (trigger) {
+        event.preventDefault();
+        var menu = menuFor(trigger);
+        if (!menu) return;
+        var willOpen = menu.hidden;
+        closeMenus();
+        menu.hidden = !willOpen;
+        trigger.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        lastTrigger = trigger;
+        if (willOpen) {
+          var first = menu.querySelector('.as-popover__item, .as-popover__link');
+          if (first) first.focus();
+        }
+        return;
+      }
+
+      var option = event.target.closest &&
+        event.target.closest('[data-ds-mode-option]');
+      if (option) {
+        event.preventDefault();
+        setMode(option.getAttribute('data-ds-mode-option'));
+        closeMenus();
+        if (lastTrigger) lastTrigger.focus();
+        return;
+      }
+
+      if (event.target.closest && !event.target.closest('.as-popover-anchor')) {
+        closeMenus();
+      }
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key !== 'Escape') return;
+      var open = document.querySelector(
+        '[data-ds-mode-menu]:not([hidden]), [data-ds-model-menu]:not([hidden])');
+      if (!open) return;
+      event.preventDefault();
+      closeMenus();
+      if (lastTrigger) lastTrigger.focus();
+    });
+
+    setMode(readMode());
   }
 
   // ---------- 设置式二级页（复用 DSH SettingsPanel 的那一页）----------
@@ -877,6 +1126,7 @@
     initAccount();
     initMore();
     initComposer();
+    initComposerMenus();
   }
 
   if (document.readyState === 'loading') {

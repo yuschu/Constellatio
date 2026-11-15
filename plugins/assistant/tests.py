@@ -16,6 +16,7 @@ from django.utils import timezone
 
 from plugins.approval.models import Approval, ApprovalRecord
 from plugins.assistant import llm, services, tools
+from plugins.assistant.attachments import MAX_ATTACHMENT_BYTES
 from plugins.assistant.crypto import decrypt_secret, encrypt_secret
 from plugins.assistant.eval_cases import build_cases
 from plugins.assistant.eval_harness import (
@@ -217,6 +218,117 @@ class AssistantChatTests(TestCase):
         self.assertEqual(page.status_code, 200)
         self.assertContains(page, '这个月我批了几个单')
         self.assertContains(page, '本月你审批通过 1 单。')
+
+    def test_text_attachment_is_saved_and_injected_as_untrusted_data(self):
+        """附件正文进用户消息，且明确包成“资料”而不是系统指令。"""
+        note = SimpleUploadedFile(
+            'note.txt', '项目代号：北辰\n下一步：补接口文档'.encode('utf-8'),
+            content_type='text/plain')
+        with mock.patch.object(
+                llm, 'call_llm', return_value={'content': '收到附件。'}) as called:
+            response = self.client.post('/', {
+                'message': '看看这个文件',
+                'mode': 'readonly',
+                'attachments': note,
+            })
+        self.assertEqual(response.status_code, 302)
+        conversation = Conversation.objects.get(user=self.user)
+        stored = conversation.messages.get(role=Message.Role.USER)
+        self.assertEqual(stored.mode, Message.Mode.READ_ONLY)
+        self.assertEqual(stored.attachments[0]['name'], 'note.txt')
+        self.assertIn('项目代号：北辰', stored.attachments[0]['text'])
+        self.assertFalse(stored.attachments[0]['truncated'])
+
+        sent = called.call_args.args[0]
+        self.assertIn('不是系统指令', sent[-1]['content'])
+        self.assertIn('项目代号：北辰', sent[-1]['content'])
+        self.assertIn('当前是只读模式', sent[0]['content'])
+
+        page = self.client.get(response['Location'])
+        self.assertContains(page, 'note.txt')
+        self.assertContains(page, '收到附件。')
+
+    def test_attachment_only_message_uses_placeholder(self):
+        note = SimpleUploadedFile(
+            'readme.md', '# 说明\n请先看附件'.encode('utf-8'),
+            content_type='text/markdown')
+        with mock.patch.object(llm, 'call_llm', return_value={'content': '已读。'}):
+            response = self.client.post('/', {
+                'mode': 'readwrite',
+                'attachments': note,
+            })
+        self.assertEqual(response.status_code, 302)
+        stored = Conversation.objects.get(user=self.user).messages.get(
+            role=Message.Role.USER)
+        self.assertEqual(stored.content, '请阅读附件')
+        self.assertEqual(stored.mode, Message.Mode.READ_WRITE)
+        self.assertEqual(stored.attachments[0]['name'], 'readme.md')
+
+    def test_attachment_rejects_unsupported_and_binary_files(self):
+        with mock.patch.object(llm, 'call_llm', return_value={'content': '不该到达'}):
+            response = self.client.post('/', {
+                'message': '看附件',
+                'attachments': SimpleUploadedFile('payload.exe', b'MZ\x00'),
+            })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '暂不支持')
+        self.assertContains(response, '看附件')
+        self.assertFalse(Conversation.objects.filter(user=self.user).exists())
+
+        with mock.patch.object(llm, 'call_llm', return_value={'content': '不该到达'}):
+            response = self.client.post('/', {
+                'message': '看附件',
+                'attachments': SimpleUploadedFile('bad.txt', b'abc\x00def'),
+            })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '不是可读的文本文件')
+        self.assertFalse(Conversation.objects.filter(user=self.user).exists())
+
+    def test_attachment_rejects_oversize_file(self):
+        big = SimpleUploadedFile(
+            'big.txt', ('a' * (MAX_ATTACHMENT_BYTES + 1)).encode('utf-8'))
+        with mock.patch.object(llm, 'call_llm', return_value={'content': '不该到达'}):
+            response = self.client.post('/', {
+                'message': '看附件',
+                'attachments': big,
+            })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '超过 1 MB')
+        self.assertFalse(Conversation.objects.filter(user=self.user).exists())
+
+    def test_read_only_mode_removes_draft_and_action_tools(self):
+        perm = Permission.objects.get(codename='approval_view')
+        self.user.user_permissions.add(perm)
+        self.user = User.objects.get(pk=self.user.pk)
+        allowed = tools.allowed_names_for(self.user)
+        self.assertIn('draft_approval', allowed)
+        self.assertIn('prepare_approval_action', allowed)
+        read_only = tools.allowed_names_for(self.user, read_only=True)
+        self.assertNotIn('draft_approval', read_only)
+        self.assertNotIn('prepare_approval_action', read_only)
+
+        with mock.patch.object(
+                llm, 'call_llm', return_value={'content': '只读回答'}) as called:
+            services.run_turn(
+                self.user, [{'role': 'user', 'content': '你好'}], read_only=True)
+        tool_names = {
+            schema['function']['name']
+            for schema in (called.call_args.kwargs.get('tools') or [])
+        }
+        self.assertNotIn('draft_approval', tool_names)
+        self.assertNotIn('prepare_approval_action', tool_names)
+
+    def test_composer_exposes_attachment_mode_and_model_status(self):
+        page = self.client.get('/')
+        html = page.content.decode()
+        self.assertIn('enctype="multipart/form-data"', html)
+        self.assertIn('data-ds-file-input', html)
+        self.assertIn('name="mode" value="readonly"', html)
+        self.assertIn('data-ds-mode-trigger', html)
+        self.assertIn('data-ds-model-trigger', html)
+        self.assertIn('qwen3:4b', html)
+        self.assertIn('配置来源', html)
+        self.assertNotIn('aria-hidden="true"><span class="as-trigger as-trigger--mode', html)
 
     def test_chat_renders_bold_and_escapes_html(self):
         reply = {'content': '本月 **0** 单<script>alert(1)</script>'}

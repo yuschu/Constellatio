@@ -2135,3 +2135,60 @@ msgstr "No model service configured; chat input is unavailable"
 
 msgid "配置"
 msgstr "Configure"
+
+msgid "附加文件"
+msgstr "Attach file"
+
+msgid "输入模式"
+msgstr "Input mode"
+
+msgid "只读"
+msgstr "Read-only"
+
+msgid "可写"
+msgstr "Read-write"
+
+msgid "只查询和给页面入口，不生成草稿或动作卡"
+msgstr "Queries and page links only; no drafts or action cards"
+
+msgid "允许生成草稿和审批动作卡，提交仍需你确认"
+msgstr "Allow drafts and approval action cards; submission still needs your confirmation"
+
+msgid "模型服务"
+msgstr "Model service"
+
+msgid "未配置模型"
+msgstr "Model not configured"
+
+msgid "助手插件已停用，启用后才能使用模型服务。"
+msgstr "The assistant plugin is disabled. Enable it to use model service."
+
+msgid "当前还没有配置模型服务。"
+msgstr "No model service is configured yet."
+
+msgid "去配置模型服务"
+msgstr "Configure model service"
+
+msgid "请联系管理员在系统设置中配置。"
+msgstr "Ask an administrator to configure it in system settings."
+
+msgid "当前模型"
+msgstr "Current model"
+
+msgid "配置来源"
+msgstr "Configuration source"
+
+msgid "这里只显示当前生效的配置；切换模型请到模型设置页。"
+msgstr "This shows the active configuration only; switch models on the model settings page."
+
+msgid "打开模型设置"
+msgstr "Open model settings"
+
+msgid "模型由管理员统一配置。"
+msgstr "Models are configured centrally by an administrator."
+
+msgid "环境变量"
+msgstr "Environment variable"
+
+msgid "请阅读附件"
+msgstr "Please read the attachment"

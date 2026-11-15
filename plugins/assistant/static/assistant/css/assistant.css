@@ -824,6 +824,11 @@ div.as-more__menu {
   cursor: default;
 }
 
+.as-add:focus-visible {
+  outline: 2px solid var(--as-button-info-fill);
+  outline-offset: 2px;
+}
+
 /* modes / standardControls / trailing */
 .as-modes {
   display: flex;
@@ -841,25 +846,291 @@ div.as-more__menu {
   margin-left: auto;
 }
 
-/* trigger：高 28 / radius 8 / 图标 14 */
+/* trigger：高 28 / radius 8 / 图标 14；现在是 button，需要显式清掉默认外观 */
 .as-trigger {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   height: 28px;
   padding: 0 4px 0 8px;
+  border: 0;
   border-radius: var(--as-radius-sm);
+  background: transparent;
   color: var(--as-label-secondary);
+  font: inherit;
   font-size: 13px;
   line-height: 20px;
   white-space: nowrap;
+  cursor: pointer;
   corner-shape: superellipse(1.5);
+  transition: background-color var(--as-dur-fast) linear;
+}
+
+.as-trigger:hover {
+  background: var(--as-interactive-hover);
+}
+
+.as-trigger:focus-visible {
+  outline: 2px solid var(--as-button-info-fill);
+  outline-offset: 2px;
+}
+
+.as-trigger[aria-expanded="true"] {
+  background: var(--as-selector);
 }
 
 .as-trigger--model {
-  max-width: 360px;
+  max-width: min(360px, 42vw);
   overflow: hidden;
   color: var(--as-label-tertiary);
+}
+
+/* 附件入口：与 composer 同一套控件语义，但视觉上保持 DSH 的 28px 圆钮 */
+.as-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.as-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 14px;
+}
+
+.as-files[hidden] {
+  display: none;
+}
+
+.as-file-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  min-width: 0;
+  height: 24px;
+  padding: 0 7px;
+  border: 0.5px solid var(--as-border-l2);
+  border-radius: var(--as-radius-sm);
+  background: var(--as-selector);
+  color: var(--as-label-secondary);
+  font-size: 12px;
+  line-height: 22px;
+}
+
+.as-file-chip--static {
+  height: 20px;
+  padding: 0 6px;
+  line-height: 18px;
+}
+
+.as-file-chip__icon {
+  flex: none;
+  color: var(--as-label-tertiary);
+}
+
+.as-file-chip__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.as-file-chip__size {
+  flex: none;
+  color: var(--as-label-caption);
+  font-variant-numeric: tabular-nums;
+}
+
+.as-file-chip__remove {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--as-label-tertiary);
+  font: inherit;
+  font-size: 13px;
+  line-height: 16px;
+  cursor: pointer;
+}
+
+.as-file-chip__remove:hover {
+  background: var(--as-interactive-hover-solid);
+  color: var(--as-label-primary);
+}
+
+.as-file-chip__remove:focus-visible {
+  outline: 2px solid var(--as-button-info-fill);
+  outline-offset: 1px;
+}
+
+.as-file-error {
+  margin: -4px 14px 0;
+  color: var(--as-error);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.as-file-error[hidden] {
+  display: none;
+}
+
+/* 浮层：定位锚在控件上，避免两个 composer 各写一套绝对坐标 */
+.as-popover-anchor {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+}
+
+.as-popover-anchor--end {
+  justify-content: flex-end;
+}
+
+.as-popover {
+  position: absolute;
+  z-index: 12;
+  bottom: calc(100% + 8px);
+  left: 0;
+  width: 300px;
+  max-width: calc(100vw - 32px);
+  padding: 6px;
+  border: 0.5px solid var(--as-border-l3);
+  border-radius: var(--as-radius-md);
+  background: var(--as-elevated-fill);
+  box-shadow: 0 8px 24px #00000014, 0 2px 8px #0000000a;
+  color: var(--as-label-primary);
+}
+
+.as-popover[hidden] {
+  display: none;
+}
+
+.as-popover--model {
+  right: 0;
+  left: auto;
+  width: 320px;
+}
+
+.as-popover__title {
+  padding: 6px 8px 4px;
+  color: var(--as-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.as-popover__item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: var(--as-radius-sm);
+  background: transparent;
+  color: var(--as-label-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.as-popover__item:hover {
+  background: var(--as-interactive-hover);
+}
+
+.as-popover__item[aria-checked="true"] {
+  background: var(--as-selector);
+}
+
+.as-popover__item:focus-visible {
+  outline: 2px solid var(--as-button-info-fill);
+  outline-offset: -2px;
+}
+
+.as-popover__item-main {
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.as-popover__item-desc {
+  color: var(--as-label-tertiary);
+  font-size: 12px;
+  line-height: 17px;
+}
+
+.as-popover__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 8px;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.as-popover__row span {
+  color: var(--as-label-tertiary);
+}
+
+.as-popover__row strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--as-label-primary);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.as-popover__desc,
+.as-popover__hint {
+  margin: 0;
+  padding: 4px 8px 6px;
+  color: var(--as-label-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.as-popover__hint {
+  color: var(--as-label-tertiary);
+}
+
+.as-popover__link {
+  display: block;
+  margin: 2px 2px 0;
+  padding: 7px 8px;
+  border-radius: var(--as-radius-sm);
+  color: var(--as-link);
+  font-size: 13px;
+  line-height: 20px;
+  text-decoration: none;
+}
+
+.as-popover__link:hover {
+  background: var(--as-interactive-hover);
+}
+
+.as-popover__link:focus-visible {
+  outline: 2px solid var(--as-button-info-fill);
+  outline-offset: -2px;
+}
+
+.as-bubble__files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 6px;
 }
 
 .as-trigger__icon,
@@ -873,6 +1144,7 @@ div.as-more__menu {
 }
 
 .as-trigger__label {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }

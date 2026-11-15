@@ -279,7 +279,24 @@
       {% for message in chat_messages %}
       <div class="as-row as-row--{{ message.role }}">
         <div class="as-turn">
-          <div class="as-bubble">{{ message.content|chat_text }}</div>
+          <div class="as-bubble">
+            {% if message.attachments %}
+            <div class="as-bubble__files">
+              {% for attachment in message.attachments %}
+              <span class="as-file-chip as-file-chip--static" title="{{ attachment.name }}">
+                <svg class="as-file-chip__icon" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+                  <path d="M9.5 2.5H5.2A2.2 2.2 0 0 0 3 4.7v6.6A2.2 2.2 0 0 0 5.2 13.5h5.6A2.2 2.2 0 0 0 13 11.3V6.3L9.5 2.5Z"
+                        stroke="currentColor" stroke-width="1.2" fill="none"/>
+                  <path d="M9.5 2.5v3.2c0 .55.45 1 1 1h2.3" stroke="currentColor" stroke-width="1.2" fill="none"/>
+                </svg>
+                <span class="as-file-chip__name">{{ attachment.name }}</span>
+                <span class="as-file-chip__size">{{ attachment.size|filesizeformat }}</span>
+              </span>
+              {% endfor %}
+            </div>
+            {% endif %}
+            {{ message.content|chat_text }}
+          </div>
           {% if message.draft %}
           <form class="as-draft" data-ds-card method="post" enctype="multipart/form-data"
                 action="{% url 'approval:approval_create' %}">
@@ -452,40 +469,100 @@
             <span class="as-hero__badge">{% trans "助手" %}</span>
           </div>
           <div class="as-composer">
-            <form method="post" action="/" class="as-card" data-ds-card data-ds-chat-form
+            <form method="post" action="/" enctype="multipart/form-data"
+                  class="as-card" data-ds-card data-ds-chat-form
                   data-sending-label="{% trans '正在发送，等待助手回复…' %}">
               {% csrf_token %}
               {% if conversation %}<input type="hidden" name="conversation" value="{{ conversation.pk }}">{% endif %}
+              <input type="hidden" name="mode" value="readonly" data-ds-mode-input>
+              <input type="file" class="as-file-input" name="attachments" multiple
+                     accept="{{ attachment_accept }}" data-ds-file-input tabindex="-1"
+                     data-ds-file-max-count="{{ attachment_max_count }}"
+                     data-ds-file-max-bytes="{{ attachment_max_bytes }}"
+                     aria-label="{% trans '附加文件' %}">
               <label class="as-sr-only" for="as-input">{% trans "输入消息" %}</label>
               <textarea id="as-input" name="message" class="as-input" rows="1" data-ds-input data-locked="{% if not chat_enabled %}1{% else %}0{% endif %}"
                         placeholder="{% trans '描述你要处理的事，/ 调用指令' %}"
                         {% if not chat_enabled %}disabled{% endif %}>{{ draft_prompt }}</textarea>
+              <div class="as-files" data-ds-file-list hidden></div>
+              <div class="as-file-error" data-ds-file-error role="alert"
+                   {% if not attachment_error %}hidden{% endif %}>{{ attachment_error }}</div>
               <div class="as-bar">
-                <button type="button" class="as-add" aria-label="{% trans '附加文件' %}"
+                <button type="button" class="as-add" data-ds-attach
+                        aria-label="{% trans '附加文件' %}"
                         {% if not chat_enabled %}disabled{% endif %}>
                   <svg class="as-ico" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
                     <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" fill="none"/>
                   </svg>
                 </button>
                 <div class="as-modes">
-                  <span class="as-trigger as-trigger--mode" aria-hidden="true">
-                    <span class="as-trigger__icon">
-                      <svg viewBox="0 0 16 16" width="14" height="14">
-                        <path d="M4 3.5h8M3 8h10M5 12.5h6" stroke="currentColor" stroke-width="1.5" fill="none"/>
-                      </svg>
-                    </span>
-                    <span class="as-trigger__label">{% trans "只读" %}</span>
-                    <span class="as-trigger__chevron">
-                      <svg viewBox="0 0 16 16" width="14" height="14">
-                        <path d="M4.5 6.5L8 10l3.5-3.5" stroke="currentColor" stroke-width="1.5" fill="none"/>
-                      </svg>
-                    </span>
-                  </span>
+                  <div class="as-popover-anchor">
+                    <button type="button" class="as-trigger as-trigger--mode"
+                            data-ds-mode-trigger aria-haspopup="menu" aria-expanded="false">
+                      <span class="as-trigger__icon">
+                        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                          <path d="M4 3.5h8M3 8h10M5 12.5h6" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                        </svg>
+                      </span>
+                      <span class="as-trigger__label" data-ds-mode-label>{% trans "只读" %}</span>
+                      <span class="as-trigger__chevron">
+                        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                          <path d="M4.5 6.5L8 10l3.5-3.5" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                        </svg>
+                      </span>
+                    </button>
+                    <div class="as-popover as-popover--mode" data-ds-mode-menu hidden
+                         role="menu" aria-label="{% trans '输入模式' %}">
+                      <div class="as-popover__title">{% trans "输入模式" %}</div>
+                      <button type="button" class="as-popover__item" role="menuitemradio"
+                              aria-checked="true" data-ds-mode-option="readonly">
+                        <span class="as-popover__item-main">{% trans "只读" %}</span>
+                        <span class="as-popover__item-desc">{% trans "只查询和给页面入口，不生成草稿或动作卡" %}</span>
+                      </button>
+                      <button type="button" class="as-popover__item" role="menuitemradio"
+                              aria-checked="false" data-ds-mode-option="readwrite">
+                        <span class="as-popover__item-main">{% trans "可写" %}</span>
+                        <span class="as-popover__item-desc">{% trans "允许生成草稿和审批动作卡，提交仍需你确认" %}</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
                 <div class="as-trailing">
-                  <span class="as-trigger as-trigger--model" aria-hidden="true">
-                    <span class="as-trigger__label">{% if not assistant_enabled %}{% trans "助手已停用" %}{% elif not model_configured %}{% trans "未配置模型" %}{% else %}{% trans "模型服务" %}{% endif %}</span>
-                  </span>
+                  <div class="as-popover-anchor as-popover-anchor--end">
+                    <button type="button" class="as-trigger as-trigger--model"
+                            data-ds-model-trigger aria-haspopup="dialog" aria-expanded="false">
+                      <span class="as-trigger__label">{% if not assistant_enabled %}{% trans "助手已停用" %}{% elif not model_configured %}{% trans "未配置模型" %}{% else %}{% trans "模型服务" %}{% endif %}</span>
+                    </button>
+                    <div class="as-popover as-popover--model" data-ds-model-menu hidden
+                         role="dialog" aria-label="{% trans '模型服务' %}">
+                      <div class="as-popover__title">{% trans "模型服务" %}</div>
+                      {% if not assistant_enabled %}
+                      <p class="as-popover__desc">{% trans "助手插件已停用，启用后才能使用模型服务。" %}</p>
+                      {% elif not model_configured %}
+                      <p class="as-popover__desc">{% trans "当前还没有配置模型服务。" %}</p>
+                      {% if can_manage_model %}
+                      <a class="as-popover__link" href="{{ model_settings_url }}">{% trans "去配置模型服务" %}</a>
+                      {% else %}
+                      <p class="as-popover__hint">{% trans "请联系管理员在系统设置中配置。" %}</p>
+                      {% endif %}
+                      {% else %}
+                      <div class="as-popover__row">
+                        <span>{% trans "当前模型" %}</span>
+                        <strong>{{ current_model }}</strong>
+                      </div>
+                      <div class="as-popover__row">
+                        <span>{% trans "配置来源" %}</span>
+                        <strong>{{ model_source }}</strong>
+                      </div>
+                      <p class="as-popover__hint">{% trans "这里只显示当前生效的配置；切换模型请到模型设置页。" %}</p>
+                      {% if can_manage_model %}
+                      <a class="as-popover__link" href="{{ model_settings_url }}">{% trans "打开模型设置" %}</a>
+                      {% else %}
+                      <p class="as-popover__hint">{% trans "模型由管理员统一配置。" %}</p>
+                      {% endif %}
+                      {% endif %}
+                    </div>
+                  </div>
                   <button type="submit" class="as-send" data-ds-send aria-label="{% trans '发送' %}"
                           {% if not chat_enabled %}disabled{% endif %}>
                     <svg class="as-ico" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
@@ -504,40 +581,100 @@
 
     {% if chat_messages %}
     <div class="as-composer as-composer--docked">
-      <form method="post" action="/" class="as-card" data-ds-card data-ds-chat-form
+      <form method="post" action="/" enctype="multipart/form-data"
+            class="as-card" data-ds-card data-ds-chat-form
             data-sending-label="{% trans '正在发送，等待助手回复…' %}">
         {% csrf_token %}
         {% if conversation %}<input type="hidden" name="conversation" value="{{ conversation.pk }}">{% endif %}
+        <input type="hidden" name="mode" value="readonly" data-ds-mode-input>
+        <input type="file" class="as-file-input" name="attachments" multiple
+               accept="{{ attachment_accept }}" data-ds-file-input tabindex="-1"
+               data-ds-file-max-count="{{ attachment_max_count }}"
+               data-ds-file-max-bytes="{{ attachment_max_bytes }}"
+               aria-label="{% trans '附加文件' %}">
         <label class="as-sr-only" for="as-input">{% trans "输入消息" %}</label>
         <textarea id="as-input" name="message" class="as-input" rows="1" data-ds-input data-locked="{% if not chat_enabled %}1{% else %}0{% endif %}"
                   placeholder="{% trans '描述你要处理的事，/ 调用指令' %}"
                   {% if not chat_enabled %}disabled{% endif %}>{{ draft_prompt }}</textarea>
+        <div class="as-files" data-ds-file-list hidden></div>
+        <div class="as-file-error" data-ds-file-error role="alert"
+             {% if not attachment_error %}hidden{% endif %}>{{ attachment_error }}</div>
         <div class="as-bar">
-          <button type="button" class="as-add" aria-label="{% trans '附加文件' %}"
+          <button type="button" class="as-add" data-ds-attach
+                  aria-label="{% trans '附加文件' %}"
                   {% if not chat_enabled %}disabled{% endif %}>
             <svg class="as-ico" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
               <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" fill="none"/>
             </svg>
           </button>
           <div class="as-modes">
-            <span class="as-trigger as-trigger--mode" aria-hidden="true">
-              <span class="as-trigger__icon">
-                <svg viewBox="0 0 16 16" width="14" height="14">
-                  <path d="M4 3.5h8M3 8h10M5 12.5h6" stroke="currentColor" stroke-width="1.5" fill="none"/>
-                </svg>
-              </span>
-              <span class="as-trigger__label">{% trans "只读" %}</span>
-              <span class="as-trigger__chevron">
-                <svg viewBox="0 0 16 16" width="14" height="14">
-                  <path d="M4.5 6.5L8 10l3.5-3.5" stroke="currentColor" stroke-width="1.5" fill="none"/>
-                </svg>
-              </span>
-            </span>
+            <div class="as-popover-anchor">
+              <button type="button" class="as-trigger as-trigger--mode"
+                      data-ds-mode-trigger aria-haspopup="menu" aria-expanded="false">
+                <span class="as-trigger__icon">
+                  <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                    <path d="M4 3.5h8M3 8h10M5 12.5h6" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                  </svg>
+                </span>
+                <span class="as-trigger__label" data-ds-mode-label>{% trans "只读" %}</span>
+                <span class="as-trigger__chevron">
+                  <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                    <path d="M4.5 6.5L8 10l3.5-3.5" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                  </svg>
+                </span>
+              </button>
+              <div class="as-popover as-popover--mode" data-ds-mode-menu hidden
+                   role="menu" aria-label="{% trans '输入模式' %}">
+                <div class="as-popover__title">{% trans "输入模式" %}</div>
+                <button type="button" class="as-popover__item" role="menuitemradio"
+                        aria-checked="true" data-ds-mode-option="readonly">
+                  <span class="as-popover__item-main">{% trans "只读" %}</span>
+                  <span class="as-popover__item-desc">{% trans "只查询和给页面入口，不生成草稿或动作卡" %}</span>
+                </button>
+                <button type="button" class="as-popover__item" role="menuitemradio"
+                        aria-checked="false" data-ds-mode-option="readwrite">
+                  <span class="as-popover__item-main">{% trans "可写" %}</span>
+                  <span class="as-popover__item-desc">{% trans "允许生成草稿和审批动作卡，提交仍需你确认" %}</span>
+                </button>
+              </div>
+            </div>
           </div>
           <div class="as-trailing">
-            <span class="as-trigger as-trigger--model" aria-hidden="true">
-              <span class="as-trigger__label">{% if not assistant_enabled %}{% trans "助手已停用" %}{% elif not model_configured %}{% trans "未配置模型" %}{% else %}{% trans "模型服务" %}{% endif %}</span>
-            </span>
+            <div class="as-popover-anchor as-popover-anchor--end">
+              <button type="button" class="as-trigger as-trigger--model"
+                      data-ds-model-trigger aria-haspopup="dialog" aria-expanded="false">
+                <span class="as-trigger__label">{% if not assistant_enabled %}{% trans "助手已停用" %}{% elif not model_configured %}{% trans "未配置模型" %}{% else %}{% trans "模型服务" %}{% endif %}</span>
+              </button>
+              <div class="as-popover as-popover--model" data-ds-model-menu hidden
+                   role="dialog" aria-label="{% trans '模型服务' %}">
+                <div class="as-popover__title">{% trans "模型服务" %}</div>
+                {% if not assistant_enabled %}
+                <p class="as-popover__desc">{% trans "助手插件已停用，启用后才能使用模型服务。" %}</p>
+                {% elif not model_configured %}
+                <p class="as-popover__desc">{% trans "当前还没有配置模型服务。" %}</p>
+                {% if can_manage_model %}
+                <a class="as-popover__link" href="{{ model_settings_url }}">{% trans "去配置模型服务" %}</a>
+                {% else %}
+                <p class="as-popover__hint">{% trans "请联系管理员在系统设置中配置。" %}</p>
+                {% endif %}
+                {% else %}
+                <div class="as-popover__row">
+                  <span>{% trans "当前模型" %}</span>
+                  <strong>{{ current_model }}</strong>
+                </div>
+                <div class="as-popover__row">
+                  <span>{% trans "配置来源" %}</span>
+                  <strong>{{ model_source }}</strong>
+                </div>
+                <p class="as-popover__hint">{% trans "这里只显示当前生效的配置；切换模型请到模型设置页。" %}</p>
+                {% if can_manage_model %}
+                <a class="as-popover__link" href="{{ model_settings_url }}">{% trans "打开模型设置" %}</a>
+                {% else %}
+                <p class="as-popover__hint">{% trans "模型由管理员统一配置。" %}</p>
+                {% endif %}
+                {% endif %}
+              </div>
+            </div>
             <button type="submit" class="as-send" data-ds-send aria-label="{% trans '发送' %}"
                     {% if not chat_enabled %}disabled{% endif %}>
               <svg class="as-ico" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">

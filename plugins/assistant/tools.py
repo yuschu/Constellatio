@@ -695,6 +695,10 @@ _register(
             }, ['keyword']),
     ['user_manage'], '搜索用户'),
 
+# 只读模式会收起这两类“需要用户确认后才落库”的工具：
+# 它们本身不写库，但会生成可提交的草稿/动作卡，属于可写模式的产物。
+READ_WRITE_TOOLS = frozenset({'draft_approval', 'prepare_approval_action'})
+
 # 兼容 docs/ai-tool-calling.md 里的 TOOLS 名称
 TOOLS = _TOOL_SPECS
 assert all(not spec['write'] for spec in TOOLS.values()), 'A 阶段不允许存在写工具'
@@ -704,14 +708,22 @@ def schemas():
     return [spec['schema'] for spec in TOOLS.values()]
 
 
-def allowed_names_for(user):
-    """按权限过滤工具名；权限判定集中在 registry。"""
+def allowed_names_for(user, read_only=False):
+    """按权限过滤工具名；权限判定集中在 registry。
+
+    只读模式在权限结果之上再移除草稿和动作卡工具；这是模式语义，
+    不是权限降级，所以放在权限过滤之后。
+    """
     from plugin_host.registry import _user_perm_codenames
 
     allowed = _user_perm_codenames(user)
     if allowed is None:
-        return set(TOOLS)
-    return {
-        name for name, spec in TOOLS.items()
-        if all(perm in allowed for perm in spec['required_permissions'])
-    }
+        names = set(TOOLS)
+    else:
+        names = {
+            name for name, spec in TOOLS.items()
+            if all(perm in allowed for perm in spec['required_permissions'])
+        }
+    if read_only:
+        names -= READ_WRITE_TOOLS
+    return names

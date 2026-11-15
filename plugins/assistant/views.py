@@ -36,6 +36,12 @@ from plugin_host.permissions import require_perm
 from plugin_host.registry import plugin_enabled
 
 from . import llm, services
+from .attachments import (
+    ATTACHMENT_ACCEPT,
+    MAX_ATTACHMENT_BYTES,
+    MAX_ATTACHMENT_COUNT,
+    read_attachments,
+)
 from .forms import LLMSettingsForm
 from .models import Conversation, LLMSettings, Message
 
@@ -211,18 +217,27 @@ def home(request):
     # A 阶段：对话走服务端 POST + PRG。模型/工具失败也只写一条助手消息，
     # 首页照常可达；不用 fetch，不引入 CSP 内联脚本。
     conversation_id = request.POST.get('conversation') if request.method == 'POST' else None
-    if request.method == 'POST' and panel == 'chat' and request.POST.get('message'):
-        if not assistant_enabled:
-            return HttpResponseBadRequest('助手插件已停用')
-        if not chat_enabled:
-            return HttpResponseBadRequest('尚未配置模型服务')
-        text = (request.POST.get('message') or '').strip()
-        if text:
-            conversation = services.get_conversation(request.user, conversation_id)
-            if conversation is None:
-                conversation = Conversation.objects.create(user=request.user)
-            services.chat_turn(request.user, conversation, text)
-            return redirect(f'/?conversation={conversation.pk}')
+    attachment_error = ''
+    if request.method == 'POST' and panel == 'chat':
+        uploaded = request.FILES.getlist('attachments')
+        if request.POST.get('message') or uploaded:
+            if not assistant_enabled:
+                return HttpResponseBadRequest('助手插件已停用')
+            if not chat_enabled:
+                return HttpResponseBadRequest('尚未配置模型服务')
+            text = (request.POST.get('message') or '').strip()
+            attachments, attachment_error = read_attachments(uploaded)
+            if not text and attachments:
+                text = _('请阅读附件')
+            if text and not attachment_error:
+                read_only = request.POST.get('mode') == Message.Mode.READ_ONLY
+                conversation = services.get_conversation(request.user, conversation_id)
+                if conversation is None:
+                    conversation = Conversation.objects.create(user=request.user)
+                services.chat_turn(
+                    request.user, conversation, text,
+                    attachments=attachments, read_only=read_only)
+                return redirect(f'/?conversation={conversation.pk}')
 
     if request.method == 'POST' and (panel, sub) == ('attendance', 'rules'):
         # 设置弹层里的规则表单 action 为空 → POST 回到面板 URL（/）：
@@ -270,12 +285,28 @@ def home(request):
         'common_menus': common_menus,
         'quick_actions': quick_actions,
         'create_plugin_url': '/?prompt=' + quote(CREATE_PLUGIN_PROMPT),
-        'draft_prompt': request.GET.get('prompt', ''),
+        'draft_prompt': (
+            request.POST.get('message') or ''
+        ) if attachment_error else request.GET.get('prompt', ''),
         'panel': panel,
         'panel_sub': sub,
         'panel_title': SUB_TITLES.get((panel, sub)) or PANEL_TITLES.get(panel, '助手'),
         'can_manage_model': request.user.has_perm('workspace_manage'),
+        'attachment_error': attachment_error,
+        'attachment_accept': ATTACHMENT_ACCEPT,
+        'attachment_max_count': MAX_ATTACHMENT_COUNT,
+        'attachment_max_bytes': MAX_ATTACHMENT_BYTES,
     }
+    llm_config = llm.raw_config()
+    stored_model = LLMSettings.load()
+    context.update({
+        'current_model': llm_config['model'],
+        'model_source': (
+            _('数据库') if stored_model and stored_model.model.strip()
+            else _('环境变量') if llm_config['model'] else ''
+        ),
+        'model_settings_url': reverse('assistant:settings'),
+    })
     context.update(_panel_context(request, panel, sub))
     if panel != 'chat':
         theme = getattr(getattr(request, 'theme', None), 'key', settings.OA_THEME)

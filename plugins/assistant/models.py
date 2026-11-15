@@ -71,11 +71,19 @@ class Message(AuditModel):
         ASSISTANT = 'assistant', '助手'
         TOOL = 'tool', '工具'
 
+    class Mode(models.TextChoices):
+        READ_ONLY = 'readonly', '只读'
+        READ_WRITE = 'readwrite', '可写'
+
     conversation = models.ForeignKey(
         Conversation, on_delete=models.CASCADE,
         related_name='messages', verbose_name='对话')
     role = models.CharField('角色', max_length=20, choices=Role.choices)
     content = models.TextField('内容', blank=True, default='')
+    attachments = models.JSONField('附件', default=list, blank=True)
+    mode = models.CharField(
+        '模式', max_length=20, choices=Mode.choices,
+        default=Mode.READ_WRITE)
     tool_calls = models.JSONField('工具调用', default=list, blank=True)
     tool_call_id = models.CharField('工具调用 ID', max_length=100, blank=True, default='')
     tokens_in = models.PositiveIntegerField('输入 token', default=0)
