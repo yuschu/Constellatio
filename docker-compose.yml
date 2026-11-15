@@ -99,6 +99,8 @@ services:
       DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME:-admin}
       DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:-Constellatio@2026}
       GUNICORN_WORKERS: ${GUNICORN_WORKERS:-3}
+      # 助手一轮最多 3 次模型调用，单次 240 秒；Gunicorn 默认 30 秒会在模型返回前杀 worker。
+      GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-900}
       # v1.7.0 企业 SSO（生产务必覆盖共享密钥）
       SSO_SHARED_SECRET: ${SSO_SHARED_SECRET:-constellatio-sso-dev-secret}
       SSO_TICKET_TTL: ${SSO_TICKET_TTL:-300}

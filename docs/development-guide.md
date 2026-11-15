@@ -794,6 +794,8 @@ services:
       DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME:-admin}
       DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:-Constellatio@2026}
       GUNICORN_WORKERS: ${GUNICORN_WORKERS:-3}
+      # 助手单次模型调用默认 240 秒、一轮最多 3 次；Gunicorn 默认 30 秒会提前杀 worker。
+      GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-900}
     command: ["sh", "./entrypoint.sh"]
     ports:
       - "${WEB_PORT:-8000}:8000"
@@ -815,7 +817,7 @@ python manage.py migrate --noinput
 python manage.py collectstatic --noinput
 # 存在 DJANGO_SUPERUSER_* 时幂等创建超管
 python manage.py shell -c "..."
-exec gunicorn plugin_host.wsgi:application --bind 0.0.0.0:8000 --workers "${GUNICORN_WORKERS:-3}"
+exec gunicorn plugin_host.wsgi:application --bind 0.0.0.0:8000 --workers "${GUNICORN_WORKERS:-3}" --timeout "${GUNICORN_TIMEOUT:-900}"
 ```
 
 ### 8.4 一键部署

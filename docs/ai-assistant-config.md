@@ -43,6 +43,8 @@
 
 全新部署不写数据库行，直接使用 Compose 注入的 `http://ollama:11434/v1` + `qwen3:4b`；管理员在页面保存后才由数据库行覆盖。
 
+**部署层超时**：`ASSISTANT_LLM_TIMEOUT` 只控制单次模型 HTTP 调用；一轮对话最多 3 次调用。Gunicorn 的 `GUNICORN_TIMEOUT` 必须覆盖整轮上限，Compose 默认 900 秒。若只保留 Gunicorn 默认 30 秒，CPU 上的 4B 模型还没返回，worker 就会被杀，页面表现为 `Internal Server Error`。
+
 ## 四、API Key 的显示、加密与清除
 
 页面**不回显**已保存的 Key：

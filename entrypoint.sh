@@ -33,5 +33,6 @@ echo "[entrypoint] gunicorn"
 exec gunicorn plugin_host.wsgi:application \
     --bind 0.0.0.0:8000 \
     --workers "${GUNICORN_WORKERS:-3}" \
+    --timeout "${GUNICORN_TIMEOUT:-900}" \
     --access-logfile - \
     --error-logfile -
