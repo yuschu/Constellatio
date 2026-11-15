@@ -279,9 +279,7 @@
       {% for message in chat_messages %}
       <div class="as-row as-row--{{ message.role }}">
         <div class="as-turn">
-          <div class="as-bubble">
-            {% if message.attachments %}
-            <div class="as-bubble__files">
+          <div class="as-bubble">{% if message.attachments %}<div class="as-bubble__files">
               {% for attachment in message.attachments %}
               <span class="as-file-chip as-file-chip--static" title="{{ attachment.name }}">
                 <svg class="as-file-chip__icon" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
@@ -293,10 +291,7 @@
                 <span class="as-file-chip__size">{{ attachment.size|filesizeformat }}</span>
               </span>
               {% endfor %}
-            </div>
-            {% endif %}
-            {{ message.content|chat_text }}
-          </div>
+            </div>{% endif %}{{ message.content|chat_text }}</div>
           {% if message.draft %}
           <form class="as-draft" data-ds-card method="post" enctype="multipart/form-data"
                 action="{% url 'approval:approval_create' %}">

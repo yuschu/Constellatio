@@ -126,6 +126,13 @@ class AssistantChatTests(TestCase):
         self.assertIn('打开考勤打卡', html)
         self.assertIn('/plugins/attendance/', html)
         self.assertIn('签到需要你本人操作', html)
+        # 气泡内容必须紧贴容器输出；模板缩进会被 pre-wrap 当成真实空行/空格。
+        self.assertRegex(html, r'<div class="as-bubble">签到需要你本人操作')
+
+    def test_chat_text_trims_edge_whitespace(self):
+        """消息首尾空白不能进 pre-wrap 气泡，否则会撑出空行。"""
+        from plugins.assistant.templatetags.assistant_extras import chat_text
+        self.assertEqual(chat_text('\n   签到\n\n'), '签到')
 
     def test_extract_page_link_rejects_external_url(self):
         message = Message(tool_calls=[{
@@ -247,6 +254,7 @@ class AssistantChatTests(TestCase):
         page = self.client.get(response['Location'])
         self.assertContains(page, 'note.txt')
         self.assertContains(page, '收到附件。')
+        self.assertContains(page, '<div class="as-bubble"><div class="as-bubble__files">')
 
     def test_attachment_only_message_uses_placeholder(self):
         note = SimpleUploadedFile(

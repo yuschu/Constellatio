@@ -680,7 +680,12 @@ div.as-more__menu {
 }
 
 .as-scroll--thread {
+  /* 消息列与 composer 同宽（763 + 两侧 16）并居中；窄屏由 max(0px, …) 归零。 */
   padding-top: 8px;
+  padding-inline: max(
+    0px,
+    calc((100% - var(--as-card-max-width) - 2 * var(--as-side-clearance)) / 2)
+  );
 }
 
 /* composerSeat：flex none（居中由 scrollBody 决定），自身只管排列方向 */
