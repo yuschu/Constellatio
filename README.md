@@ -2,8 +2,8 @@
 
 > 基于 Django 的全栈插件化 OA。容器唯一固定：数据库、外观、模板、图表、认证等基础设施，与审批、公告、考勤等业务模块，全部可插拔、可替换。
 
-**当前基线**：`v2.2.13`（2026-11-14）· 564 项测试全绿 · tag `v2.2.13` · Release `v2.2.13 Beta`（「视觉风格重构」）
-**工作区**：AI 助手 A 阶段后端与内置模型已落地（4B 最新一轮 20/20）· 配置页可覆盖模型 · 632 项测试全绿 · 未发版
+**当前基线**：`v2.2.14`（2026-11-15）· 632 项测试全绿 · tag `v2.2.14` · Release `v2.2.14 Beta`（「AI 助手 A/B 阶段」）
+**工作区**：发版收口完成 · C 阶段（对话内审批操作）未开始 · 全量 632 项测试全绿
 
 ## ✨ 特性
 
@@ -16,7 +16,7 @@
 * ⛓ **活动记录**：关键操作 SHA-256 哈希链留痕，单条可查详情，篡改即断链报警；按日 × 来源插件统计
 * 🔑 **企业 SSO**：HMAC 签名 Ticket 网关登录，自动建号 / 防重放，与账号密码登录并存
 * ✉ **消息提醒**：顶栏未读数 + 消息中心；审批待办 / 结果、公告发布自动站内信，可停用降级
-* 🤖 **内置 AI 助手（开发中）**：Compose 自带 Ollama 与 `qwen3:4b`，首次启动自动拉取并预热；官方源失败自动切 ModelScope 非思考版回退；只读查询 + 六类审批草稿卡片（卡片内联编辑，提交仍回原审批端点）；会话落库；配置页可覆盖为网关或更大模型
+* 🤖 **内置 AI 助手（A/B 阶段）**：Compose 自带 Ollama 与 `qwen3:4b`，首次启动自动拉取并预热；官方源失败自动切 ModelScope 非思考版回退；只读查询 + 六类审批草稿卡片（卡片内联编辑，提交仍回原审批端点）；会话落库；配置页可覆盖为网关或更大模型
 * 📦 **私有化部署**：`docker compose up -d` 一键拉起（MySQL 8 + Ollama + Gunicorn + WhiteNoise）；Bootstrap 离线化、生产缺 `SECRET_KEY` 拒绝启动、登出改 POST
 
 ### 业务能力
@@ -36,7 +36,7 @@
 ### 安全与工程
 
 * 🛡 **安全基线**：审批 / 留痕 / 打卡关键写入行锁 + 事务；审批详情与附件按申请人 / 审批人 / 会签人 / 抄送人对象级鉴权；统一 401 / 403 / 404 / 500 语义与 `X-Request-Id`；登录失败限流 + 密码校验器；CSP 10 条指令，`script-src` 只认 nonce，不放开 `unsafe-inline`
-* 🧪 **工程门禁**：依赖精确版本 + `ruff` + `manage.py check` + GitHub Actions 全量测试，当前 610 项全绿；共享缓存走 `DatabaseCache`，登录限流与 SSO 防重放跨 worker 成立
+* 🧪 **工程门禁**：依赖精确版本 + `ruff` + `manage.py check` + GitHub Actions 全量测试，当前 632 项全绿；共享缓存走 `DatabaseCache`，登录限流与 SSO 防重放跨 worker 成立
 
 ## 🛠 技术栈
 
@@ -112,14 +112,14 @@ Constellatio/
 
 | 文档 | 内容 |
 | --- | --- |
-| [docs/release-notes.md](docs/release-notes.md) | **发版总入口**：v2.2.13 当前基线、历史收口、按 tag 检出指路、升级须知 |
+| [docs/release-notes.md](docs/release-notes.md) | **发版总入口**：v2.2.14 当前基线、历史收口、按 tag 检出指路、升级须知 |
 | [docs/tech-stack-and-architecture.md](docs/tech-stack-and-architecture.md) | 技术选型、全栈插件化架构、插件契约、竞品调研 |
 | [docs/constraints-and-acceptance.md](docs/constraints-and-acceptance.md) | 硬约束、功能边界、验收标准、开发规范、风险 |
 | [docs/database-design.md](docs/database-design.md) | 数据库设计（插件化：每插件独立表与迁移） |
 | [docs/development-guide.md](docs/development-guide.md) | 开发流程、环境、容器实现、插件开发、编程规约 |
 | [docs/ai-assisted-development-guide.md](docs/ai-assisted-development-guide.md) | AI 辅助开发行为规范、迭代规范 |
 | [docs/project-overview.md](docs/project-overview.md) | 项目说明、使用指南、插件开发示例 |
-| [docs/roadmap.md](docs/roadmap.md) | 差距矩阵、v1.5–v2.2.13 迭代路线、修复项与文档债务 |
+| [docs/roadmap.md](docs/roadmap.md) | 差距矩阵、v1.5–v2.2.14 迭代路线、修复项与文档债务 |
 
 ### 前端与 AI 规划
 
@@ -127,7 +127,7 @@ Constellatio/
 | --- | --- |
 | [docs/frontend-refactor-plan.md](docs/frontend-refactor-plan.md) | v2.2.0–v2.2.13 DSH 化实施记录与验收数据（§9.13.27–41） |
 | [docs/dsh-visual-spec.md](docs/dsh-visual-spec.md) | DSH 实测字面量：颜色 / 间距 / 组件 / 快捷键视觉基线 |
-| [docs/ai-assistant-plan.md](docs/ai-assistant-plan.md) | 对话式首页 A→B→C 阶段方案；A 阶段后端已落地，B/C 待启动 |
+| [docs/ai-assistant-plan.md](docs/ai-assistant-plan.md) | 对话式首页 A→B→C 阶段方案；A/B 阶段已落地，C 阶段待启动 |
 | [docs/ai-assistant-eval.md](docs/ai-assistant-eval.md) | A 阶段 20 条固定问句、评分口径、运行方式与 4B/70% 验收边界 |
 | [docs/ai-assistant-config.md](docs/ai-assistant-config.md) | 内置 Ollama 默认、配置页覆盖、数据库/环境变量优先级、API Key 加密、测试连接与数据流向 |
 | [docs/ai-tool-calling.md](docs/ai-tool-calling.md) | 本地模型 tool calling 接入规范；A 阶段只读工具与校验层已落地 |
@@ -139,4 +139,4 @@ Constellatio/
 
 ## 📌 状态
 
-**v2.2.13 视觉风格重构已交付并发布**（2026-11-14）：看板 / 考勤 / 前端外壳 / 滚动条收口完成，564 项测试全绿；tag `v2.2.13` → `3fcf217`，Release `v2.2.13 Beta` 已发布并接管 `Latest`；无新增数据库迁移。完整版本记录与升级须知见 [docs/release-notes.md](docs/release-notes.md)。
+**v2.2.14 AI 助手 A/B 阶段已交付并发布**（2026-11-15）：A 阶段只读工具、会话落库、20 条验收集最新一轮 20/20；B 阶段六类审批草稿卡片、卡片内联编辑、原审批端点提交闭环；全量 632 项测试全绿；tag `v2.2.14`，Release `v2.2.14 Beta` 已发布并接管 `Latest`；新增 `assistant` 0001–0003 迁移。完整版本记录与升级须知见 [docs/release-notes.md](docs/release-notes.md)。
