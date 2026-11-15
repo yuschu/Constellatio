@@ -8,6 +8,22 @@
 
 ---
 
+## 未发版工作区：C1 普通单动作卡（2026-11-15）
+
+> 以下变更已合入 `main`，但**尚未打 tag、尚未创建 Release**；下一版版本号与 Release 标题待定。
+
+| 项 | 值 |
+|---|---|
+| 代码提交 | `29c3485` `feat(assistant): add approval action cards for ordinary approvals` |
+| 文档提交 | `ab4cf9b` `docs(assistant): record C1 approval action cards` |
+| 测试基线 | **641 项全绿**（`ruff check` / `manage.py check` / 全量测试 / `compile_mo.py --check`） |
+| 变更范围 | 普通审批单只读动作卡；复用 `approval_detail` 写入口；无新写工具、无新 URL、无新模型字段、无迁移 |
+| 正式栈复验 | 卡片 HTTP 200；事务内 POST 原详情端点 302、`approved`、`ApprovalRecord` 1 条；回滚后 `Approval` 48→48 |
+
+**边界**：会签单 `dept_delete` / `user_disable` 不出卡；批量审批、聊天内 AJAX 原地刷新、驳回意见强制必填均未做。
+
+---
+
 ## 当前版本：v2.2.14（2026-11-15，AI 助手 A/B 阶段）
 
 | 项 | 值 |
@@ -31,7 +47,7 @@
 - `docker compose up -d --build` 首次启动会拉取并预热 `qwen3:4b`；CPU 单轮约 2–4 分钟（官方件），回退件关闭思考后约 3–6 秒；可在配置页改网关或更大模型。
 - 助手只产草稿，不自动提交、不自动落库；审批提交仍走原 `approval:approval_create`，无新增写入口。
 - 用章草稿需在卡片选择文件；调休草稿需选一条已通过加班记录作为依据，无可用记录时卡片提示去原表单补齐。
-- C 阶段（对话内审批通过/驳回）未开始，本版不含审批写操作。
+- v2.2.14 发版时 C 阶段（对话内审批通过/驳回）未开始，本版不含审批写操作；C1 普通单动作卡已在后续工作区落地，尚未发版。
 
 ---
 
