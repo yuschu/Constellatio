@@ -2,8 +2,8 @@
 
 > 基于 Django 的全栈插件化 OA。容器唯一固定：数据库、外观、模板、图表、认证等基础设施，与审批、公告、考勤等业务模块，全部可插拔、可替换。
 
-**当前基线**：`v2.2.14`（2026-11-15）· 641 项测试全绿 · tag `v2.2.14` · Release `v2.2.14 Beta`（「AI 助手 A/B 阶段」）
-**工作区**：C1（普通单动作卡）已落地 · 会签单 C 阶段待设计 · 全量 641 项测试全绿
+**当前基线**：`v2.2.15`（2026-11-15）· 641 项测试全绿 · tag `v2.2.15` · Release `v2.2.15 Beta`（「AI 助手 C1 普通单动作卡」）
+**工作区**：发版收口完成 · C1 已发布 · 会签单 C 阶段待设计 · 全量 641 项测试全绿
 
 ## ✨ 特性
 
@@ -112,14 +112,14 @@ Constellatio/
 
 | 文档 | 内容 |
 | --- | --- |
-| [docs/release-notes.md](docs/release-notes.md) | **发版总入口**：v2.2.14 当前基线、历史收口、按 tag 检出指路、升级须知 |
+| [docs/release-notes.md](docs/release-notes.md) | **发版总入口**：v2.2.15 当前基线、历史收口、按 tag 检出指路、升级须知 |
 | [docs/tech-stack-and-architecture.md](docs/tech-stack-and-architecture.md) | 技术选型、全栈插件化架构、插件契约、竞品调研 |
 | [docs/constraints-and-acceptance.md](docs/constraints-and-acceptance.md) | 硬约束、功能边界、验收标准、开发规范、风险 |
 | [docs/database-design.md](docs/database-design.md) | 数据库设计（插件化：每插件独立表与迁移） |
 | [docs/development-guide.md](docs/development-guide.md) | 开发流程、环境、容器实现、插件开发、编程规约 |
 | [docs/ai-assisted-development-guide.md](docs/ai-assisted-development-guide.md) | AI 辅助开发行为规范、迭代规范 |
 | [docs/project-overview.md](docs/project-overview.md) | 项目说明、使用指南、插件开发示例 |
-| [docs/roadmap.md](docs/roadmap.md) | 差距矩阵、v1.5–v2.2.14 迭代路线、修复项与文档债务 |
+| [docs/roadmap.md](docs/roadmap.md) | 差距矩阵、v1.5–v2.2.15 迭代路线、修复项与文档债务 |
 
 ### 前端与 AI 规划
 
@@ -139,4 +139,4 @@ Constellatio/
 
 ## 📌 状态
 
-**v2.2.14 AI 助手 A/B 阶段已交付并发布**（2026-11-15）：A 阶段只读工具、会话落库、20 条验收集最新一轮 20/20；B 阶段六类审批草稿卡片、卡片内联编辑、原审批端点提交闭环；C1 普通单动作卡已落地（只读工具 + 原详情 POST，无新写入口、无迁移）；全量 641 项测试全绿；tag `v2.2.14`，Release `v2.2.14 Beta` 已发布并接管 `Latest`；新增 `assistant` 0001–0003 迁移。完整版本记录与升级须知见 [docs/release-notes.md](docs/release-notes.md)。
+**v2.2.15 AI 助手 C1 普通单动作卡已交付并发布**（2026-11-15）：普通审批单在对话内生成只读动作卡，卡片直接 POST 原 `approval_detail`，用户点击后才写库；无新写工具、无新端点、无迁移；会签单不出卡。全量 641 项测试全绿；tag `v2.2.15`，Release `v2.2.15 Beta` 已发布并接管 `Latest`。完整版本记录与升级须知见 [docs/release-notes.md](docs/release-notes.md)。
