@@ -353,6 +353,32 @@
       var locked = input.dataset.locked === '1';
       var chatForm = card.closest('form[data-ds-chat-form]');
       var submitting = chatForm && chatForm.dataset.sending === '1';
+      var posted = false;
+      var DRAFT_KEY = 'constellatio:assistant:draft';
+
+      function readDraft() {
+        try { return window.sessionStorage.getItem(DRAFT_KEY) || ''; } catch (e) { return ''; }
+      }
+
+      function writeDraft() {
+        // 提交动作已经发出后，用户再敲的字属于下一条草稿；
+        // 发出前敲的字会进入本次 POST，不写入草稿。
+        if (locked || (submitting && !posted)) return;
+        try {
+          if (input.value) window.sessionStorage.setItem(DRAFT_KEY, input.value);
+          else window.sessionStorage.removeItem(DRAFT_KEY);
+        } catch (e) { /* 隐私模式下 sessionStorage 不可用，不影响发送 */ }
+      }
+
+      function clearDraft() {
+        try { window.sessionStorage.removeItem(DRAFT_KEY); } catch (e) { /* 同上 */ }
+      }
+
+      function restoreDraft() {
+        if (locked || input.value) return;
+        var draft = readDraft();
+        if (draft) input.value = draft;
+      }
 
       function autosize() {
         input.style.height = 'auto';
@@ -428,7 +454,8 @@
           chatForm.setAttribute('aria-busy', 'true');
           paintPending(value);
 
-          input.readOnly = true;
+          // DSH 口径：提交后不锁死输入。等待期间可以继续敲下一条；
+          // 同步 PRG 返回会换页，所以输入内容进 sessionStorage，落地后恢复。
           autosize();
           syncSend();
 
@@ -437,11 +464,14 @@
             if (handedOff) return;
             handedOff = true;
             HTMLFormElement.prototype.submit.call(chatForm);
+            posted = true;
+            clearDraft();
             // 原生 submit 已同步构造表单数据；清空放到提交之后，
             // 否则 POST 里 message 为空，服务端只会原地重渲染。
             window.setTimeout(function () {
               input.value = '';
               autosize();
+              syncSend();
             }, 0);
           }
           if (window.requestAnimationFrame) {
@@ -452,9 +482,34 @@
           // 后台标签页或浏览器不跑 rAF 时的兜底，避免永远卡在 pending。
           window.setTimeout(handOff, 250);
         });
+
+        // 从会话页后退时浏览器可能走 bfcache，页面会带着 pending 和
+        // data-sending=1 回来；此时必须复位，否则 composer 永远发不出第二条。
+        window.addEventListener('pageshow', function (event) {
+          if (!event.persisted) return;
+          if (chatForm.dataset.sending === '1') {
+            delete chatForm.dataset.sending;
+            chatForm.removeAttribute('aria-busy');
+            submitting = false;
+            posted = false;
+            Array.prototype.forEach.call(
+              document.querySelectorAll('.as-row--pending, .as-pending'),
+              function (node) {
+                if (node.parentNode) node.parentNode.removeChild(node);
+              }
+            );
+          }
+          restoreDraft();
+          autosize();
+          syncSend();
+        });
       }
 
-      input.addEventListener('input', function () { autosize(); syncSend(); });
+      input.addEventListener('input', function () {
+        writeDraft();
+        autosize();
+        syncSend();
+      });
       input.addEventListener('compositionstart', function () { input.dataset.composing = '1'; });
       input.addEventListener('compositionend', function () {
         delete input.dataset.composing;
@@ -470,6 +525,7 @@
         if (send && !send.disabled) send.click();
       });
 
+      restoreDraft();
       autosize();
       syncSend();
     });

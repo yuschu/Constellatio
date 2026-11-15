@@ -141,6 +141,22 @@ class AssistantHomePageTests(TestCase):
         self.assertGreater(clear_at, submit_at)
         self.assertEqual(shell.count("input.value = ''"), 1)
 
+    def test_composer_input_stays_usable_while_waiting(self):
+        """发送等待期间不能把输入框锁死。
+
+        DSH 的 composer 在 pending 时仍可继续输入；本项目是同步 PRG，
+        但用户至少可以继续敲下一条，草稿通过 sessionStorage 撑过换页。
+        浏览器实测曾出现 readOnly 后输入框只剩占位符、无法再输入。
+        """
+        shell = (
+            Path(settings.BASE_DIR) / 'plugin_host/static/js/ds-shell.js'
+        ).read_text(encoding='utf-8')
+        self.assertNotIn('input.readOnly = true', shell)
+        self.assertIn('sessionStorage', shell)
+        self.assertIn("addEventListener('pageshow'", shell)
+        self.assertIn('restoreDraft()', shell)
+        self.assertIn('writeDraft()', shell)
+
     def test_dashboard_route_still_renders_original_board(self):
         self.client.force_login(self.user)
         response = self.client.get('/dashboard/')
