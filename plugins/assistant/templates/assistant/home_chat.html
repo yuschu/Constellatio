@@ -33,7 +33,7 @@
     </div>
 
     {% if assistant_enabled %}
-    <a href="/" class="as-new">
+    <a href="/" class="as-new" aria-keyshortcuts="Control+Alt+N">
       <span class="as-new__content">
         <svg class="as-new__ico" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
           <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" fill="none"/>
@@ -860,7 +860,7 @@
   </div>
 </div>
 
-{% include "includes/ds_shortcuts.html" %}
+{% include "includes/ds_shortcuts.html" with rail_toggle=True %}
 
 <script src="{% static 'js/ds-shell.js' %}?v={{ assets_version }}" defer></script>
 <script src="{% static 'js/shortcuts.js' %}?v={{ assets_version }}" defer></script>

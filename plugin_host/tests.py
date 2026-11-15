@@ -382,8 +382,28 @@ class ShortcutLayerTest(TestCase):
         self.assertIn('data-keys="Ctrl+Alt+1"', html)
         self.assertIn('data-shortcut-url="/dashboard/"', html)
         rows = html.count('data-ds-shortcut-row')
-        self.assertGreaterEqual(rows, 3)
-        self.assertLessEqual(rows, 9 + 3)   # 菜单最多 9 行 + 设置/参考/关闭 3 行
+        self.assertGreaterEqual(rows, 5)
+        self.assertLessEqual(rows, 9 + 5)   # 菜单最多 9 行 + 会话/侧栏/设置/参考/关闭 5 行
+
+    def test_dsh_core_shortcuts_are_in_reference_dialog(self):
+        """DSH 0.2.2 官方核心绑定：新建会话全站可分发，侧栏开合只在可折叠的首页出现。"""
+        resp = self.client.get('/dashboard/')
+        html = resp.content.decode()
+        self.assertIn('data-keys="Ctrl+Alt+N"', html)
+        self.assertRegex(html, r'data-keys="Ctrl\+Alt\+N"\s+data-shortcut-url="/"')
+
+        home = self.client.get('/')
+        home_html = home.content.decode()
+        self.assertIn('data-keys="Ctrl+Alt+B"', home_html)
+        self.assertIn('data-shortcut-action="sidebar"', home_html)
+        self.assertContains(home, 'aria-keyshortcuts="Control+Alt+B"')
+        self.assertContains(home, 'aria-keyshortcuts="Control+Alt+N"')
+
+    def test_business_pages_do_not_offer_sidebar_toggle_binding(self):
+        """业务页按 v2.1.0 设计不折叠侧栏，参考卡不能列一个按了没反应的 Ctrl+Alt+B。"""
+        resp = self.client.get('/dashboard/')
+        self.assertNotContains(resp, 'data-keys="Ctrl+Alt+B"')
+        self.assertNotContains(resp, 'data-shortcut-action="sidebar"')
 
     def test_settings_row_opens_the_same_dialog(self):
         """设置面板里的「快捷键」行是一个按钮，和 Ctrl+/ 开的是同一张卡。"""
@@ -438,3 +458,23 @@ class ShortcutLayerTest(TestCase):
         self.assertIn('border: 0', key)
         kbd = ''.join(re.findall(r'\.ds-kbd\s*\{(.*?)\}', css, re.S))
         self.assertIn('border: 0', kbd)
+
+    def test_homepage_carries_the_same_shortcuts_css(self):
+        """首页不加载主题表：ds-panels.css 必须有一份等价的快捷键弹层字面量。
+
+        实测打开 Ctrl+/ 时 panel 变成整屏白块（width 1811 / position static），
+        根因就是首页只有 assistant.css + ds-panels.css，而第 36 节只在
+        corporate-clean.css。这里钉住首页那份的关键几何。
+        """
+        resp = self.client.get('/')
+        self.assertContains(resp, 'css/ds-panels.css')
+        css = (settings.BASE_DIR / 'plugin_host/static/css/ds-panels.css'
+               ).read_text(encoding='utf-8')
+        panel = re.search(r'\.ds-shortcuts__panel\s*\{(.*?)\}', css, re.S)
+        self.assertIsNotNone(panel, '首页缺少 .ds-shortcuts__panel 规则')
+        body = panel.group(1)
+        self.assertIn('width: min(480px, calc(100% - 32px))', body)
+        self.assertIn('height: 600px', body)
+        self.assertIn('max-height: calc(100dvh - 108px)', body)
+        self.assertIn('border-radius: 24px', body)
+        self.assertIn('translateY(30px)', body)

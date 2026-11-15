@@ -323,6 +323,257 @@ html[data-color-mode="dark"] .ds-settings .r-badge--orange {
   box-shadow: inset 0 0 0 0.5px var(--as-border-l2, #0000001a);
 }
 
+/* ---------- 快捷键参考弹层：首页等价于主题表第 36 节 ---------- */
+/* 首页只加载 assistant.css + ds-panels.css，不含 corporate-clean.css；
+   这里按同一份 DSH 字面量补一遍，变量落到 --as-*，否则弹层会退化成整屏白块。 */
+.ds-shortcuts {
+  position: fixed;
+  inset: 0;
+  z-index: 1002;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ds-shortcuts[hidden] {
+  display: none;
+}
+
+.ds-shortcuts__overlay {
+  position: absolute;
+  inset: 0;
+  background: var(--as-bg-mask, #0000004d);
+}
+
+.ds-shortcuts__panel {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: min(480px, calc(100% - 32px));
+  height: 600px;
+  max-height: calc(100dvh - 108px);
+  padding: 0;
+  overflow: hidden;
+  background: var(--as-bg-layer-1, #ffffff);
+  border-radius: 24px;
+  box-shadow: 0 0 1px #0003, 0 0 4px #00000005, 0 12px 32px #00000014;
+  transform: translateY(30px);
+  outline: none;
+}
+
+/* DSH 卡片没有可见标题，标题只为 aria-labelledby 存在 */
+.ds-shortcuts__title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.ds-shortcuts__search {
+  box-sizing: border-box;
+  flex: 0 0 60px;
+  display: flex;
+  align-items: center;
+  padding: 14px 20px 10px;
+}
+
+.ds-shortcuts__field {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 36px;
+  padding: 8px 14px;
+  background: var(--as-selector, #f5f6f7);
+  border: 0.5px solid var(--as-border-l2, #0000001a);
+  border-radius: 12px;
+}
+
+.ds-shortcuts__search-glyph {
+  flex: none;
+  color: var(--as-label-caption, #adb2b8);
+}
+
+.ds-shortcuts__search-input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  color: var(--as-label-primary, #0f1115);
+  font: inherit;
+  font-size: 13px;
+  line-height: 18px;
+  background: none;
+  border: 0;
+  outline: none;
+}
+
+.ds-shortcuts__search-input::placeholder {
+  color: var(--as-label-tertiary, #81858c);
+  opacity: 1;
+}
+
+.ds-shortcuts__search-input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}
+
+.ds-shortcuts__clear {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  color: var(--as-label-secondary, #61666b);
+  cursor: pointer;
+  background: none;
+  border: 0.5px solid var(--as-label-tertiary, #81858c);
+  border-radius: 50%;
+}
+
+.ds-shortcuts__clear[hidden],
+.ds-shortcuts__group[hidden],
+.ds-shortcuts__row[hidden],
+.ds-shortcuts__empty[hidden] {
+  display: none;
+}
+
+.ds-shortcuts__clear:hover {
+  background: var(--as-interactive-hover, #2631480f);
+}
+
+.ds-shortcuts__list {
+  flex: 1;
+  min-height: 0;
+  padding: 0 16px 18px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.ds-shortcuts__group {
+  margin: 18px 8px 4px;
+  color: var(--as-label-tertiary, #81858c);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+}
+
+.ds-shortcuts__rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ds-shortcuts__row {
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 42px;
+  padding: 8px;
+  color: var(--as-label-primary, #0f1115);
+  font-size: 13px;
+  line-height: 18px;
+  border-radius: var(--as-radius-md, 12px);
+}
+
+.ds-shortcuts__row:not(.ds-shortcuts__row--fixed):hover {
+  background: var(--as-interactive-hover, #2631480f);
+}
+
+.ds-shortcuts__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds-shortcuts__binding {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  height: 26px;
+  padding: 0 12px;
+  color: var(--as-label-secondary, #61666b);
+  font-size: 13px;
+  line-height: 18px;
+  background: var(--as-selector, #f5f6f7);
+  border-radius: 10px;
+}
+
+.ds-shortcuts__key {
+  padding: 0;
+  color: inherit;
+  background: none;
+  border: 0;
+  font: inherit;
+}
+
+.ds-shortcuts__key + .ds-shortcuts__key::before {
+  margin: 0 3px;
+  color: var(--as-label-tertiary, #81858c);
+  content: "+";
+}
+
+/* 只读固定项：不描边、不 hover、tertiary 文本（DSH fixedKeyBadge） */
+.ds-shortcuts__row--fixed .ds-shortcuts__binding {
+  height: 26px;
+  padding: 0;
+  color: var(--as-label-tertiary, #81858c);
+  background: none;
+}
+
+.ds-shortcuts__empty {
+  margin: 18px 8px;
+  color: var(--as-label-tertiary, #81858c);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.ds-shortcuts__footer {
+  box-sizing: border-box;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 0 24px;
+  font-size: 12px;
+  line-height: 18px;
+  border-top: 0.5px solid var(--as-border-l2, #0000001a);
+}
+
+.ds-shortcuts__note {
+  color: var(--as-label-tertiary, #81858c);
+}
+
+.ds-shortcuts__done {
+  height: 28px;
+  padding: 0 14px;
+  color: var(--as-label-primary, #0f1115);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  background: none;
+  border: 0.5px solid var(--as-border-l3, #0000001f);
+  border-radius: var(--as-radius-sm, 8px);
+}
+
+.ds-shortcuts__done:hover {
+  background: var(--as-interactive-hover, #2631480f);
+}
+
 /* 只在首页设置弹层里补按钮外观；业务页主题自己的 .r-btn 不受影响 */
 .ds-settings .r-btn,
 .ds-settings .r-btn--ghost {

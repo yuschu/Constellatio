@@ -1,8 +1,10 @@
-/* v2.2.0 · 快捷键层（照 DSH `dsh-client-ui-shortcuts` 的参考对话框 + 固定绑定）
+/* v2.2.14 · 快捷键层（照 DSH `dsh-client-ui-shortcuts` 的参考对话框 + 固定绑定）
  *
  * 约定（全部对应用户在弹层里能看到的行）：
- *   Ctrl+/        打开 / 关闭快捷键参考（DSH 的 Mod+Slash）
+ *   Ctrl+Alt+N    新建会话（DSH `session.new` 的 Web Windows 默认键）
+ *   Ctrl+Alt+B    收起 / 展开侧栏（DSH `sidebar.left.toggle` 的 Web Windows 默认键）
  *   Ctrl+Alt+,    打开设置弹层（DSH Web 的 Mod+Alt+Comma——把 Ctrl+, 留给浏览器）
+ *   Ctrl+/        打开 / 关闭快捷键参考（DSH 的 Mod+Slash）
  *   Ctrl+Alt+1..9 侧栏菜单第 1..9 项直达（行由服务端按权限与插件启停过滤）
  *   Esc           关闭当前弹层
  *
@@ -134,7 +136,18 @@
       toggle(null);
       return true;
     }
+    if (action === 'sidebar') {
+      /* DSH resolve: modal !== null && modal !== "sidebar" -> pass；
+         本站设置 / 参考层都算 modal，打开时不让侧栏跟着收。 */
+      if (document.body.classList.contains('ds-modal-open')) { return false; }
+      var railToggle = document.querySelector('[data-ds-rail-toggle]');
+      if (railToggle) { railToggle.click(); return true; }
+      return false;
+    }
     if (url) {
+      /* 应用级跳转在弹层打开时 pass（DSH 的 modal 允许集只给 sidebar），
+         避免在设置里按 Ctrl+Alt+N 直接把未保存的表单带走。 */
+      if (document.body.classList.contains('ds-modal-open')) { return false; }
       window.location.assign(url);
       return true;
     }

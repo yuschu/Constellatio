@@ -1715,6 +1715,18 @@ msgstr "Open settings"
 msgid "快捷键参考"
 msgstr "Keyboard shortcuts"
 
+msgid "会话"
+msgstr "Session"
+
+msgid "新建会话"
+msgstr "New session"
+
+msgid "侧栏与设置"
+msgstr "Sidebar and settings"
+
+msgid "收起或展开侧栏"
+msgstr "Collapse or expand sidebar"
+
 msgid "关闭当前弹层"
 msgstr "Close the current overlay"
 

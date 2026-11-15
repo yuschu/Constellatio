@@ -1833,3 +1833,68 @@ after 的 `loaderHiddenAt` 54–97ms 与 `load` 同量级，`loaderSeen=false` �
 
 - `workbench.py 64eec90335038ecb2cd2a9ee8ccaffaf`、`tests_home.py 253bddccf5aa0280dbdeba86796817b0`、`django.po 48e0ce72e8e85ff393edc02c14c92213`、`django.mo 5055a738801a8d79c0812f109b33c0f7`。
 - 截图：`.tmp-test/screens-v21/dashboard-after-final-en3.png`、`dashboard-after-en-staff.png`、`dashboard-after-en-1024.png`。
+
+### 9.13.42 快捷键按 DSH 0.2.2 官方默认表补口（v2.2.14 / 2026-11-15）
+
+**源码真值**（`@deepseek-ai/dsh-client-ui-workspace@0.2.2-rc.3` / `ui-layout` / `ui-conversation` 的 `lib/client.js`）
+
+| DSH command | web:windows 默认 | 本项落点 |
+|---|---|---|
+| `session.new` | `Ctrl+Alt+N`（`KeyN` + primary + alt） | 参考卡「会话」行，`data-shortcut-url="{% url 'index' %}"` |
+| `sidebar.left.toggle` | `Ctrl+Alt+B`（`KeyB` + primary + alt） | 参考卡「侧栏与设置」行，`data-shortcut-action="sidebar"`；仅首页（有 `[data-ds-rail-toggle]`）渲染，业务页不列 |
+| 打开设置 | `Ctrl+Alt+,`（沿用既有 DSH Web 口径） | 原 `settings` 行不动 |
+| 快捷键参考 | `Ctrl+/`（`Mod+/`） | 原 `shortcuts` 行不动 |
+| 输入框发送 | `Enter` | 原固定行不动 |
+| 输入框换行 | `Shift+Enter` | 原固定行不动 |
+
+同一源码里另有 `session.search`（Web `Ctrl+Alt+K`）、`workspace.add`（`Ctrl+Alt+O`）、
+`session.rename`（`Ctrl+Alt+G`）、`session.fork`（Web `Ctrl+Shift+F`）、
+`session.archive`（Web `Ctrl+Alt+A`）、输入框 `/`（命令菜单）、`@`（引用菜单）、
+`Esc Esc`（停止生成）。这些动作在本项目没有对应后端（无工作区、无分叉、无归档、无会话搜索、
+无命令/引用菜单、同步 POST 不可取消），**没有做成假快捷键**，参考卡不列。
+
+**交互收口**
+
+- `shortcuts.js` 新增 `data-shortcut-action="sidebar"`：先检查 `body.ds-modal-open`，
+  设置 / 参考层打开时 pass（对应 DSH `resolve` 的 `modal !== null && modal !== "sidebar"`），
+  否则点击 `[data-ds-rail-toggle]`。
+- 删除 `ds-shell.js` 里重复的 `Ctrl+Alt+B` document 监听：两处各 toggle 一次会把侧栏原地开关两次。
+  现在快捷键分发只有 `shortcuts.js` 一处，`[data-ds-rail-toggle]` 仍是唯一执行器。
+- 业务页按 v2.1.0 不折叠侧栏（brand 行是「返回主页」），`ds_shortcuts.html` 用
+  `{% if rail_toggle %}` 控制侧栏行；首页 include 时传 `rail_toggle=True`，业务页不渲染，
+  避免参考卡出现按了没反应的键位。
+- 首页「新会话」链接补 `aria-keyshortcuts="Control+Alt+N"`；侧栏 toggle 原有 `Control+Alt+B` 保留。
+- 搜索仍按 label + `data-keys` 的有序子序列匹配，新增行自动进入过滤。
+
+**门禁**
+
+- `ShortcutLayerTest::test_quick_actions_come_from_sidebar_menus` 的行数上限从 `9+3` 改为 `9+5`；
+- 新增 `test_dsh_core_shortcuts_are_in_reference_dialog`，钉住 `Ctrl+Alt+N` 行、
+  `Ctrl+Alt+B` 行、`data-shortcut-action="sidebar"` 和侧栏 `aria-keyshortcuts`。
+- `locale/en/LC_MESSAGES/django.po` 补 4 条（Session / New session / Sidebar and settings /
+  Collapse or expand sidebar），`python tools/compile_mo.py` 重编译后 `--check` 通过。
+
+**首页样式缺口（真机验收抓到）**
+
+首页只加载 `assistant.css` + `ds-panels.css`，不加载 `base.html` 的主题表；而快捷键弹层第 36 节
+只写在 `corporate-clean.css`。浏览器实际按 `Ctrl+/` 后，panel 退化成
+`position: static / width: 1811px / border-radius: 0` 的整屏白块——DOM 有行，但没有卡片。
+修复：在 `ds-panels.css` 补一份同字面量的 `.ds-shortcuts*` 规则，变量落到 `--as-*`
+（`--as-bg-layer-1` / `--as-selector` / `--as-label-*` / `--as-border-l2` / `--as-interactive-hover`），
+面板仍是 480×600、24px 圆角、`translateY(30px)`、列表内部滚动，深色跟随 `html[data-color-mode="dark"]`。
+门禁新增 `ShortcutLayerTest::test_homepage_carries_the_same_shortcuts_css`：首页必须引用
+`css/ds-panels.css`，且该文件里的 panel 几何与主题表一致。
+
+**真实栈验收（constellatio-web-1，1440 / 1811 viewport）**
+
+- `Ctrl+/`：panel `480×600`，rect `665.5, 237`，list `clientHeight 488 / scrollHeight 766`，
+  底部「关闭当前弹层 / 输入框」组可滚动到达；浅色与深色均正常。
+- `Ctrl+Alt+B`：首页 rail `280 → 56 → 280`，`data-rail-collapsed` 与
+  `data-rail-settled` 同步；toggle `aria-label` 在「收起侧边栏 / 打开侧边栏」间切换。
+- `Ctrl+Alt+,`：首页与公告中心均打开 `#ds-settings`（800×800），`body.ds-modal-open = true`。
+- 设置打开时按 `Ctrl+Alt+B` 与 `Ctrl+Alt+N` 均被 modal 拦截：rail 保持 280，URL 保持
+  `/plugins/notice/`，设置层不关闭；关闭设置后 `Ctrl+Alt+N` 从公告中心导航回 `/`。
+- 公告中心没有 `Ctrl+Alt+B` 行，`[data-ds-rail-toggle]` 不存在；按该组合键 URL 与页面状态均不变。
+- 输入框：`Shift+Enter` 连按两次得到 3 行，textarea 高度 `52 → 76`，发送按钮点击计数为 0；
+  `Enter` 使发送按钮点击计数 +1。为避免往真实会话写入验收文本，本次用捕获监听拦下发送按钮的
+  最终提交动作，只验证键盘到发送路径的映射；实际落库发送沿用此前已验收的 `Enter` 路径。

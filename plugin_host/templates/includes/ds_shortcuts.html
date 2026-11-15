@@ -8,8 +8,12 @@
 
 快速操作行来自当前页面的入口清单：业务页用侧栏菜单（`menus`），对话式首页用
 自己的固定入口 + 「更多」白名单（`quick_actions`）——首页不渲染的入口不能只在这里
-冒出来。两组都已在后端按插件启停与权限过滤，Ctrl+Alt+1…9 直达；
-不属于菜单的固定动作（设置、快捷键本身、关闭弹层、输入框换行）手写在下面。
+冒出来。两组都已在后端按插件启停与权限过滤，Ctrl+Alt+1…9 直达。
+会话 / 侧栏与设置两组是 DSH 官方核心绑定（0.2.2 客户端包字面量）：
+`session.new` = Web Windows `Ctrl+Alt+N`，`sidebar.left.toggle` = Web Windows
+`Ctrl+Alt+B`，设置 = Web `Ctrl+Alt+,`，参考层 = `Ctrl+/`。
+DSH 的 `session.fork / session.search / workspace.add / session.rename /
+session.archive` 在本项目没有对应后端动作，reference 卡不列无效键位。
 {% endcomment %}
 <div class="ds-shortcuts" id="ds-shortcuts" role="dialog" aria-modal="true"
      aria-labelledby="ds-shortcuts-title" aria-hidden="true" hidden>
@@ -51,8 +55,30 @@
         {% endfor %}
       </ul>
 
-      <p class="ds-shortcuts__group">{% trans "设置与外观" %}</p>
+      <p class="ds-shortcuts__group">{% trans "会话" %}</p>
       <ul class="ds-shortcuts__rows">
+        <li class="ds-shortcuts__row" data-ds-shortcut-row
+            data-keys="Ctrl+Alt+N"
+            data-shortcut-url="{% url 'index' %}">
+          <span class="ds-shortcuts__label">{% trans "新建会话" %}</span>
+          <span class="ds-shortcuts__binding">
+            <kbd class="ds-shortcuts__key">Ctrl</kbd><kbd class="ds-shortcuts__key">Alt</kbd><kbd class="ds-shortcuts__key">N</kbd>
+          </span>
+        </li>
+      </ul>
+
+      <p class="ds-shortcuts__group">{% if rail_toggle %}{% trans "侧栏与设置" %}{% else %}{% trans "设置与外观" %}{% endif %}</p>
+      <ul class="ds-shortcuts__rows">
+        {% if rail_toggle %}
+        <li class="ds-shortcuts__row" data-ds-shortcut-row
+            data-keys="Ctrl+Alt+B"
+            data-shortcut-action="sidebar">
+          <span class="ds-shortcuts__label">{% trans "收起或展开侧栏" %}</span>
+          <span class="ds-shortcuts__binding">
+            <kbd class="ds-shortcuts__key">Ctrl</kbd><kbd class="ds-shortcuts__key">Alt</kbd><kbd class="ds-shortcuts__key">B</kbd>
+          </span>
+        </li>
+        {% endif %}
         <li class="ds-shortcuts__row" data-ds-shortcut-row
             data-keys="Ctrl+Alt+,"
             data-shortcut-action="settings">

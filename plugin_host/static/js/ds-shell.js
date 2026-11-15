@@ -116,13 +116,8 @@
       sync(!isCollapsed(), true);
     });
 
-    /* 快捷键：desktop 为 primary+B，Web 口径另加 alt（源码 defaults.web:windows） */
-    document.addEventListener('keydown', function (e) {
-      if (!e.ctrlKey || !e.altKey || e.shiftKey) return;
-      if (e.code !== 'KeyB' && e.key !== 'b' && e.key !== 'B') return;
-      e.preventDefault();
-      sync(!isCollapsed(), true);
-    });
+    /* 快捷键 Ctrl+Alt+B 统一由 shortcuts.js 的参考表分发（row[data-shortcut-action=sidebar]），
+       避免两处 document 监听各 toggle 一次、把侧栏原地开关两次。 */
   }
 
   // ---------- 设置分区切换（通用 / 模型 / 我的）----------
