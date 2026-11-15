@@ -9,6 +9,8 @@
   grid-template-areas: "title header" "options options";
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-rows: auto minmax(0, 1fr);
+  height: auto;
+  max-height: min(800px, calc(100vh - 48px));
 }
 
 .ds-settings__stack {
@@ -33,6 +35,251 @@
 
 .ds-settings__actions--center {
   justify-content: center;
+}
+
+/* ---------- 设置表单：DSH SettingsValueField 口径 ---------- */
+/* 首页不加载 base.html 的主题表，账号弹窗和模型分区共用这套语义组件。 */
+.ds-settings__desc {
+  margin: 0 0 8px;
+  color: var(--as-label-secondary, #61666b);
+  font-size: 13px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+.ds-settings__desc code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--as-selector, #f5f6f7);
+  color: var(--as-label-primary, #0f1115);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+
+.ds-settings__form {
+  display: flex;
+  flex-direction: column;
+  margin-top: 12px;
+}
+
+.ds-fields {
+  display: flex;
+  flex-direction: column;
+}
+
+.ds-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 0;
+}
+
+.ds-field + .ds-field {
+  border-top: 0.5px solid var(--as-border-l2, #0000001a);
+}
+
+.ds-field__label {
+  color: var(--as-label-secondary, #61666b);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.ds-field__help {
+  color: var(--as-label-tertiary, #81858c);
+  font-size: 12px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+
+.ds-field__error {
+  color: var(--as-error, #ec1313);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+/* Django 直接渲染的控件在首页没有 Bootstrap / 主题表兜底，必须显式给尺寸。 */
+.ds-field input:not([type="checkbox"]):not([type="radio"]),
+.ds-field select,
+.ds-field textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 0.5px solid var(--as-border-l2, #0000001a);
+  border-radius: var(--as-radius-sm, 8px);
+  background: var(--as-input-major, #ffffff);
+  color: var(--as-label-primary, #0f1115);
+  font: inherit;
+  font-size: 13px;
+  line-height: 34px;
+}
+
+.ds-field select {
+  appearance: auto;
+  cursor: pointer;
+}
+
+.ds-field textarea {
+  min-height: 88px;
+  padding: 8px 10px;
+  line-height: 20px;
+  resize: vertical;
+}
+
+.ds-field input::placeholder,
+.ds-field textarea::placeholder {
+  color: var(--as-label-tertiary, #81858c);
+}
+
+.ds-field input:not([type="checkbox"]):not([type="radio"]):focus-visible,
+.ds-field select:focus-visible,
+.ds-field textarea:focus-visible {
+  outline: 2px solid var(--as-link, #4176e6);
+  outline-offset: 1px;
+}
+
+.ds-field input:disabled,
+.ds-field select:disabled,
+.ds-field textarea:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ds-field select[multiple] {
+  height: auto;
+  min-height: 132px;
+  max-height: 132px;
+  padding: 6px 10px;
+  line-height: 20px;
+  overflow-y: auto;
+}
+
+.ds-field__checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: fit-content;
+  color: var(--as-label-secondary, #61666b);
+  font-size: 12px;
+  line-height: 18px;
+  cursor: pointer;
+}
+
+.ds-field__checkbox input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--as-link, #4176e6);
+}
+
+.ds-settings__status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 10px 0;
+}
+
+.ds-settings__status .ds-settings__desc {
+  margin: 0;
+}
+
+/* 徽标：首页此前没有 .r-badge，权限页只能退化成裸文字。 */
+.ds-settings .r-badge {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 22px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--as-selector, #f5f6f7);
+  color: var(--as-label-secondary, #61666b);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.ds-settings .r-badge--blue {
+  background: #e8f1ff;
+  color: #1f5fbf;
+}
+
+.ds-settings .r-badge--green {
+  background: #e8f7ee;
+  color: #1d7a46;
+}
+
+.ds-settings .r-badge--orange {
+  background: #fff0e5;
+  color: #b45309;
+}
+
+/* 权限页：行内多枚徽标靠右成组换行，不再挤成一段裸文本。 */
+.ds-settings__row--badges {
+  align-items: flex-start;
+}
+
+.ds-settings__row--badges > div:first-child {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.ds-settings__row--badges > div:last-child {
+  display: flex;
+  flex: 0 1 58%;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.ds-settings__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+html[data-color-mode="dark"] .ds-settings .r-badge--blue {
+  background: #1d2f4d;
+  color: #9dc0ff;
+}
+
+html[data-color-mode="dark"] .ds-settings .r-badge--green {
+  background: #173526;
+  color: #8fe0b0;
+}
+
+html[data-color-mode="dark"] .ds-settings .r-badge--orange {
+  background: #3a2617;
+  color: #ffc08a;
+}
+
+@media (width <= 520px) {
+  .ds-settings__row--badges > div:last-child {
+    flex-basis: 100%;
+    justify-content: flex-start;
+  }
+
+  .ds-settings__badges {
+    justify-content: flex-start;
+  }
+}
+
+@media (width <= 767px) {
+  .ds-settings--single {
+    align-items: flex-end;
+  }
+
+  .ds-settings--single .ds-settings__panel {
+    height: auto;
+    max-height: calc(100vh - 24px);
+    border-radius: var(--as-radius-panel) var(--as-radius-panel) 0 0;
+  }
 }
 
 /* 账号信息在首页设置里是独立卡片；原先只有裸头像和文字 */

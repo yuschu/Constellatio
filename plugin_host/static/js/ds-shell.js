@@ -125,11 +125,11 @@
     });
   }
 
-  // ---------- 设置分区切换（通用 / 我的）----------
+  // ---------- 设置分区切换（通用 / 模型 / 我的）----------
   function initSettingsTabs(modal) {
     var cells = modal.querySelectorAll('[data-ds-settings-tab]');
     var panels = modal.querySelectorAll('[data-ds-settings-panel]');
-    if (cells.length === 0 || panels.length === 0) return;
+    if (cells.length === 0 || panels.length === 0) return null;
 
     function select(name) {
       Array.prototype.forEach.call(cells, function (cell) {
@@ -149,6 +149,7 @@
         select(cell.getAttribute('data-ds-settings-tab'));
       });
     });
+    return select;
   }
 
   // ---------- 账号菜单（dsh-client-ui-settings-account/AccountMenu）----------
@@ -286,12 +287,16 @@
     var panel = modal.querySelector('.ds-settings__panel');
     var lastTrigger = null;
 
-    initSettingsTabs(modal);
+    var selectTab = initSettingsTabs(modal);
 
     function isOpen() { return !modal.hasAttribute('hidden'); }
 
     function open(trigger) {
       lastTrigger = trigger || null;
+      if (trigger) {
+        var targetTab = trigger.getAttribute('data-ds-settings-target');
+        if (targetTab && selectTab) selectTab(targetTab);
+      }
       modal.removeAttribute('hidden');
       modal.setAttribute('aria-hidden', 'false');
       document.body.classList.add('ds-modal-open');
@@ -341,6 +346,13 @@
         if (isOpen()) close(); else open(null);
       }
     });
+
+    // 保存/测试模型配置后服务端带 settings=model 回跳；刷新时直接展开该分区。
+    var initialTab = modal.getAttribute('data-ds-settings-open-tab');
+    if (initialTab) {
+      if (selectTab) selectTab(initialTab);
+      open(null);
+    }
   }
 
   // ---------- composer ----------

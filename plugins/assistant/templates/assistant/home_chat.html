@@ -541,7 +541,8 @@
                       {% elif not model_configured %}
                       <p class="as-popover__desc">{% trans "当前还没有配置模型服务。" %}</p>
                       {% if can_manage_model %}
-                      <a class="as-popover__link" href="{{ model_settings_url }}">{% trans "去配置模型服务" %}</a>
+                      <a class="as-popover__link" href="{{ model_settings_url }}"
+                         data-ds-settings-open data-ds-settings-target="model">{% trans "去配置模型服务" %}</a>
                       {% else %}
                       <p class="as-popover__hint">{% trans "请联系管理员在系统设置中配置。" %}</p>
                       {% endif %}
@@ -554,9 +555,10 @@
                         <span>{% trans "配置来源" %}</span>
                         <strong>{{ model_source }}</strong>
                       </div>
-                      <p class="as-popover__hint">{% trans "这里只显示当前生效的配置；切换模型请到模型设置页。" %}</p>
+                      <p class="as-popover__hint">{% trans "这里只显示当前生效的配置；切换模型请在「设置 › 模型」中调整。" %}</p>
                       {% if can_manage_model %}
-                      <a class="as-popover__link" href="{{ model_settings_url }}">{% trans "打开模型设置" %}</a>
+                      <a class="as-popover__link" href="{{ model_settings_url }}"
+                         data-ds-settings-open data-ds-settings-target="model">{% trans "打开模型设置" %}</a>
                       {% else %}
                       <p class="as-popover__hint">{% trans "模型由管理员统一配置。" %}</p>
                       {% endif %}
@@ -653,7 +655,8 @@
                 {% elif not model_configured %}
                 <p class="as-popover__desc">{% trans "当前还没有配置模型服务。" %}</p>
                 {% if can_manage_model %}
-                <a class="as-popover__link" href="{{ model_settings_url }}">{% trans "去配置模型服务" %}</a>
+                <a class="as-popover__link" href="{{ model_settings_url }}"
+                   data-ds-settings-open data-ds-settings-target="model">{% trans "去配置模型服务" %}</a>
                 {% else %}
                 <p class="as-popover__hint">{% trans "请联系管理员在系统设置中配置。" %}</p>
                 {% endif %}
@@ -666,9 +669,10 @@
                   <span>{% trans "配置来源" %}</span>
                   <strong>{{ model_source }}</strong>
                 </div>
-                <p class="as-popover__hint">{% trans "这里只显示当前生效的配置；切换模型请到模型设置页。" %}</p>
+                <p class="as-popover__hint">{% trans "这里只显示当前生效的配置；切换模型请在「设置 › 模型」中调整。" %}</p>
                 {% if can_manage_model %}
-                <a class="as-popover__link" href="{{ model_settings_url }}">{% trans "打开模型设置" %}</a>
+                <a class="as-popover__link" href="{{ model_settings_url }}"
+                   data-ds-settings-open data-ds-settings-target="model">{% trans "打开模型设置" %}</a>
                 {% else %}
                 <p class="as-popover__hint">{% trans "模型由管理员统一配置。" %}</p>
                 {% endif %}
@@ -695,7 +699,8 @@
 
 <!-- 设置弹层：DSH settings-general 的 800×800 两栏（nav 188px），挂在 shell 之外 -->
 <div class="ds-settings" id="ds-settings" role="dialog" aria-modal="true"
-     aria-labelledby="ds-settings-title" aria-hidden="true" hidden>
+     aria-labelledby="ds-settings-title" aria-hidden="true" hidden
+     {% if settings_open_tab %}data-ds-settings-open-tab="{{ settings_open_tab }}"{% endif %}>
   <div class="ds-settings__overlay" aria-hidden="true"></div>
   <div class="ds-settings__panel" tabindex="-1">
     <h2 class="ds-settings__title" id="ds-settings-title">{% trans "设置" %}</h2>
@@ -711,11 +716,21 @@
     <nav class="ds-settings__nav" aria-label="{% trans '设置分区' %}">
       <ul class="ds-settings__cells">
         <li>
-          <button type="button" class="ds-settings__cell is-active" aria-current="true"
+          <button type="button" class="ds-settings__cell{% if settings_open_tab != 'model' %} is-active{% endif %}"
+                  {% if settings_open_tab != 'model' %}aria-current="true"{% endif %}
                   data-ds-settings-tab="general">
             {% trans "通用" %}
           </button>
         </li>
+        {% if can_manage_model %}
+        <li>
+          <button type="button" class="ds-settings__cell{% if settings_open_tab == 'model' %} is-active{% endif %}"
+                  {% if settings_open_tab == 'model' %}aria-current="true"{% endif %}
+                  data-ds-settings-tab="model">
+            {% trans "模型" %}
+          </button>
+        </li>
+        {% endif %}
         <li>
           <button type="button" class="ds-settings__cell" data-ds-settings-tab="account">
             {% trans "我的" %}
@@ -723,7 +738,8 @@
         </li>
       </ul>
     </nav>
-    <div class="ds-settings__options" tabindex="0" data-ds-settings-panel="general">
+    <div class="ds-settings__options" tabindex="0" data-ds-settings-panel="general"
+         {% if settings_open_tab == 'model' %}hidden{% endif %}>
       {% if 'language' in plugins_enabled %}
       <div class="ds-settings__row">
         <div>
@@ -747,7 +763,8 @@
             {% if model_configured %}{% trans "已配置 OpenAI 兼容服务，可测试连接或更换模型" %}{% else %}{% trans "尚未配置模型服务，对话输入暂不可用" %}{% endif %}
           </div>
         </div>
-        <a class="r-btn r-btn--sm" href="{% url 'assistant:settings' %}">{% trans "配置" %}</a>
+        <a class="r-btn r-btn--sm" href="{% url 'assistant:settings' %}"
+           data-ds-settings-open data-ds-settings-target="model">{% trans "配置" %}</a>
       </div>
       {% endif %}
 
@@ -802,6 +819,15 @@
 
       <p class="ds-settings__version">Constellatio · {% trans "万物皆可插件" %}</p>
     </div>
+
+    {% if can_manage_model %}
+    <div class="ds-settings__options" tabindex="0" data-ds-settings-panel="model"
+         {% if settings_open_tab != 'model' %}hidden{% endif %}>
+      <div class="ds-settings__stack">
+        {% include "assistant/_settings_body.html" %}
+      </div>
+    </div>
+    {% endif %}
 
     <div class="ds-settings__options" tabindex="0" data-ds-settings-panel="account" hidden>
       <div class="ds-settings__row">

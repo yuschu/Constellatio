@@ -17,11 +17,11 @@ v2.3.0：接入只读工具调用与会话落库；`?conversation=<id>` 打开�
 """
 
 import secrets
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseBadRequest, HttpResponseNotFound
+from django.http import HttpResponseBadRequest, HttpResponseForbidden, HttpResponseNotFound
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext as _
@@ -199,6 +199,17 @@ def _attach_page_links(chat_messages):
             message.page_link = link
 
 
+def _home_model_url(panel, sub, **extra):
+    """首页设置「模型」分区的 PRG 回跳地址，保留当前面板和子页。"""
+    params = {'settings': 'model'}
+    if panel and panel != 'chat':
+        params['panel'] = panel
+    if sub:
+        params['sub'] = sub
+    params.update(extra)
+    return '/?' + urlencode(params)
+
+
 @login_required
 def home(request):
     """对话式首页：空态 + 输入区；有会话时渲染消息流（本版无数据，分支已就位）。
@@ -209,6 +220,20 @@ def home(request):
     color_mode = _resolve_color_mode(request)
     panel = _resolve_panel(request)
     sub = _resolve_sub(request, panel)
+    can_manage_model = request.user.has_perm('workspace_manage')
+    # 模型配置已从独立功能页迁入首页设置「模型」分区。表单带
+    # settings=model 标记，避免和对话、考勤规则等首页 POST 混淆。
+    home_model_context = None
+    if request.method == 'POST' and request.POST.get('settings') == 'model':
+        if not can_manage_model:
+            return HttpResponseForbidden('无权修改模型配置')
+        home_model_context, model_redirect = _llm_settings_state(
+            request,
+            success_url=_home_model_url(panel, sub, saved='1'),
+            reset_url=_home_model_url(panel, sub, reset='1'),
+        )
+        if model_redirect:
+            return redirect(model_redirect)
     # v2.2.1：插件停用后宿主仍走这里（index 设 ds_home_degraded），
     # 只关「新会话」入口与对话输入，侧栏 / 面板 / 看板入口都留着。
     assistant_enabled = not getattr(request, 'ds_home_degraded', False)
@@ -291,12 +316,25 @@ def home(request):
         'panel': panel,
         'panel_sub': sub,
         'panel_title': SUB_TITLES.get((panel, sub)) or PANEL_TITLES.get(panel, '助手'),
-        'can_manage_model': request.user.has_perm('workspace_manage'),
+        'can_manage_model': can_manage_model,
         'attachment_error': attachment_error,
         'attachment_accept': ATTACHMENT_ACCEPT,
         'attachment_max_count': MAX_ATTACHMENT_COUNT,
         'attachment_max_bytes': MAX_ATTACHMENT_BYTES,
     }
+    if can_manage_model:
+        if home_model_context is None:
+            home_model_context, model_redirect = _llm_settings_state(
+                request,
+                success_url=_home_model_url(panel, sub, saved='1'),
+                reset_url=_home_model_url(panel, sub, reset='1'),
+            )
+            if model_redirect:
+                return redirect(model_redirect)
+        context.update(home_model_context)
+        if (request.POST.get('settings') == 'model'
+                or request.GET.get('settings') == 'model'):
+            context['settings_open_tab'] = 'model'
     llm_config = llm.raw_config()
     stored_model = LLMSettings.load()
     context.update({
@@ -447,9 +485,12 @@ def approval_draft(request, message_id):
         f'{url}?type={quote(draft["approval_type"])}&draft={quote(token)}')
 
 
-@require_perm('workspace_manage')
-def settings_page(request):
-    """模型服务配置：五项入数据库；保存与测试连接分离，测试不落库。"""
+def _llm_settings_state(request, *, success_url, reset_url):
+    """模型配置的 GET 表单 / POST 保存与测试连接，首页和独立页共用。
+
+    返回 ``(context, redirect_url)``；保存成功时 context 为 None，由调用方
+    按入口回跳，测试连接不落库、留在当前入口展示探测结果。
+    """
     row = LLMSettings.load()
     effective = llm.raw_config()
     saved = request.GET.get('saved') == '1'
@@ -482,7 +523,7 @@ def settings_page(request):
                 if not values['base_url']:
                     # 两项都留空 = 放弃数据库配置，回到部署环境变量。
                     LLMSettings.objects.filter(pk=1).delete()
-                    return redirect('/plugins/assistant/settings/?reset=1')
+                    return None, reset_url
                 if values['clear_api_key']:
                     api_key = ''
                 elif values['api_key']:
@@ -496,7 +537,7 @@ def settings_page(request):
                 obj.timeout_seconds = values['timeout_seconds']
                 obj.max_tokens = values['max_tokens']
                 obj.save()
-                return redirect('/plugins/assistant/settings/?saved=1')
+                return None, success_url
     else:
         form = LLMSettingsForm(initial={
             'base_url': effective['base_url'],
@@ -521,7 +562,20 @@ def settings_page(request):
                       'local' if current_is_local else 'public'),
         'probe_result': probe_result,
         'probe_error': probe_error,
-        'settings_back_url': '/',
     }
+    return context, ''
+
+
+@require_perm('workspace_manage')
+def settings_page(request):
+    """模型服务配置独立页（保留深链兼容；首页设置「模型」为主入口）。"""
+    context, redirect_url = _llm_settings_state(
+        request,
+        success_url='/plugins/assistant/settings/?saved=1',
+        reset_url='/plugins/assistant/settings/?reset=1',
+    )
+    if redirect_url:
+        return redirect(redirect_url)
+    context['settings_back_url'] = '/'
     return render(request, 'assistant/settings.html', context)
 

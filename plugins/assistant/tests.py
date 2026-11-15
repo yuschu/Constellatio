@@ -688,6 +688,77 @@ class AssistantSettingsTests(TestCase):
         self.assertContains(response, '环境变量')
         self.assertNotContains(response, 'env-secret')
 
+    def test_home_settings_embeds_model_form(self):
+        response = self.client.get('/?settings=model')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-ds-settings-tab="model"')
+        self.assertContains(response, 'data-ds-settings-panel="model"')
+        self.assertContains(response, 'name="settings" value="model"')
+        self.assertContains(response, 'data-ds-settings-open-tab="model"')
+        self.assertContains(response, '接口地址')
+
+    def test_home_save_persists_and_returns_to_model_tab(self):
+        response = self.client.post('/', {
+            'settings': 'model',
+            'action': 'save',
+            'base_url': 'http://10.0.0.8:8000/v1',
+            'model': 'qwen3:8b',
+            'api_key': 'home-secret',
+            'timeout_seconds': '45',
+            'max_tokens': '2048',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/?settings=model&saved=1')
+        row = LLMSettings.load()
+        self.assertEqual(row.base_url, 'http://10.0.0.8:8000/v1')
+        self.assertEqual(row.model, 'qwen3:8b')
+        self.assertEqual(decrypt_secret(row.api_key), 'home-secret')
+        self.assertEqual(row.timeout_seconds, 45)
+        self.assertEqual(row.max_tokens, 2048)
+
+    def test_home_test_connection_stays_on_home_and_does_not_save(self):
+        with mock.patch(
+                'plugins.assistant.views.llm.probe',
+                return_value={
+                    'latency_ms': 321,
+                    'is_local': True,
+                    'supports_tools': True,
+                    'model': 'qwen3:4b',
+                }) as probe:
+            response = self.client.post('/', {
+                'settings': 'model',
+                'action': 'test',
+                'base_url': 'http://127.0.0.1:11434/v1',
+                'model': 'qwen3:4b',
+                'api_key': '',
+                'timeout_seconds': '30',
+                'max_tokens': '1024',
+            })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-ds-settings-open-tab="model"')
+        self.assertContains(response, '连接成功')
+        self.assertContains(response, '321 ms')
+        self.assertFalse(LLMSettings.objects.exists())
+        probe.assert_called_once()
+
+    def test_home_model_panel_requires_workspace_manage(self):
+        self.client.force_login(self.user)
+        response = self.client.get('/')
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'data-ds-settings-tab="model"')
+        self.assertFalse(LLMSettings.objects.exists())
+
+        response = self.client.post('/', {
+            'settings': 'model',
+            'action': 'save',
+            'base_url': 'https://llm.example.com/v1',
+            'model': 'qwen3:4b',
+            'timeout_seconds': '30',
+            'max_tokens': '1024',
+        })
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(LLMSettings.objects.exists())
+
     def test_save_persists_and_database_wins_over_env(self):
         response = self.client.post('/plugins/assistant/settings/', {
             'action': 'save',
