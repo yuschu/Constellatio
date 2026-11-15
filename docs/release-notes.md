@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |---|---|
-| 发版基线 | tag `v2.2.15`（annotated）→ 本次发版提交 |
+| 发版基线 | tag `v2.2.15`（annotated `3db10e3`）→ `4516307` |
 | Release | `v2.2.15 Beta`，正文标题 `# AI 助手 C1 普通单动作卡`，接管 `Latest` |
 | 测试基线 | **641 项全绿**（`ruff check` / `manage.py check` / 全量测试 / `compile_mo.py --check` / `docker compose config`） |
 | 变更范围 | `v2.2.14..v2.2.15`：C1 普通单动作卡 3 个提交；无新增迁移、无新增写入口 |
@@ -146,7 +146,7 @@ tag `v1.7.15` → commit `39baf42`（annotated）。基线 467 → **472 项全�
 
 | tag | 指向 | 是否等同"该版最终状态" | 说明 |
 |---|---|---|---|
-| `v2.2.15` | 本次发版提交 | ✅ | 当前基线；annotated tag，Release `v2.2.15 Beta`（正文 `# AI 助手 C1 普通单动作卡`） |
+| `v2.2.15` | `4516307` | ✅ | 当前基线；annotated tag `3db10e3`，Release `v2.2.15 Beta`（正文 `# AI 助手 C1 普通单动作卡`） |
 | `v2.2.14` | `05ce668` | ✅ | 历史基线；annotated tag `becc22b`，Release `v2.2.14 Beta`（正文 `# AI 助手 A/B 阶段`） |
 | `v2.2.13` | `3fcf217` | ✅ | 历史基线；annotated tag `e4a73d6`，Release `v2.2.13 Beta`（正文 `# 视觉风格重构`） |
 | `v1.7.2` | `503e072` | ✅ | 文档提交即当版末提交 |
