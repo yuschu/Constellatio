@@ -11,6 +11,7 @@ from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
 from django.db.models import Count
+from django.urls import reverse
 from django.utils import timezone
 
 from .models import Message  # noqa: F401  （确保 app 已加载，不参与逻辑）
@@ -90,6 +91,68 @@ def search_approval(user, approval_type=None, status=None, month=None,
             if item.approver else '',
             'created_at': _fmt_dt(item.created_at),
         } for item in qs.order_by('-created_at')[:limit]],
+    }
+
+
+def _action_unavailable(reason, detail_url=''):
+    return {
+        'available': False,
+        'reason': reason,
+        'detail_url': detail_url,
+    }
+
+
+def prepare_approval_action(user, approval_id):
+    """为当前用户准备一张只读审批动作卡；不写库、不流转。
+
+    只覆盖普通单（请假/报销/用章/外出/加班/调休）。会签单
+    （dept_delete / user_disable）会触发删除/禁用回调，C1 不提供卡片，
+    由模型引导用户回到审批详情页处理。
+    """
+    from plugins.approval import services as approval_services
+    from plugins.approval.models import Approval
+
+    try:
+        pk = int(approval_id)
+    except (TypeError, ValueError):
+        return _action_unavailable('not_found_or_forbidden')
+    try:
+        approval = Approval.objects.select_related(
+            'applicant', 'approver').get(pk=pk)
+    except Approval.DoesNotExist:
+        return _action_unavailable('not_found_or_forbidden')
+
+    detail_url = reverse(
+        'approval:approval_detail', args=[approval.pk])
+    if not approval_services.may_view(user, approval):
+        # 不区分「不存在」与「无权查看」，避免 id 枚举泄露单据存在性。
+        return _action_unavailable('not_found_or_forbidden')
+    if approval.is_counter_signature():
+        return _action_unavailable('counter_signature', detail_url)
+    if not approval_services.can_act(user, approval):
+        reason = ('not_pending' if approval.status != Approval.Status.PENDING
+                  else 'not_approver')
+        return _action_unavailable(reason, detail_url)
+
+    return {
+        'available': True,
+        'action_card': {
+            'approval_id': approval.pk,
+            'type_label': approval.get_approval_type_display(),
+            'title': approval.title,
+            'applicant': (approval.applicant.last_name
+                          or approval.applicant.username),
+            'status_label': approval.get_status_display(),
+            'amount': str(approval.amount) if approval.amount is not None else '',
+            'created_at': _fmt_dt(approval.created_at),
+            'detail_url': detail_url,
+            'actions': [
+                {'value': 'approve', 'label': '通过',
+                 'confirm': '确认通过该申请？确认后不可修改。'},
+                {'value': 'reject', 'label': '驳回',
+                 'confirm': '确认驳回该申请？确认后不可修改。'},
+            ],
+        },
     }
 
 
@@ -438,6 +501,20 @@ _register(
                           'description': '最多返回条数，默认 10'},
             }),
     ['approval_view'], '查询审批单'),
+_register(
+    'prepare_approval_action', prepare_approval_action,
+    _schema('prepare_approval_action',
+            '为一条待审批的普通单准备只读动作卡。只返回卡片元数据，不写库、'
+            '不通过、不驳回；用户明确要求「通过 / 驳回某条审批」时使用。'
+            '会签单（部门删除 / 用户禁用）不要调用本工具，直接让用户去审批详情处理。'
+            '先确认用户说的是哪一条单；有多条候选就先问，不要猜。',
+            {
+                'approval_id': {
+                    'type': 'integer', 'minimum': 1,
+                    'description': '审批单 ID，来自 search_approval 返回的 id',
+                },
+            }, required=['approval_id']),
+    ['approval_view'], '准备审批动作卡'),
 _register(
     'draft_approval', draft_approval,
     _schema('draft_approval',

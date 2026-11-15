@@ -43,7 +43,12 @@ def build_system_prompt(user):
         '9. 用户说今天、明天、昨天、后天或下周几时，严格按“今天”的日期'
         '和星期几换算：明天=今天+1 天，昨天=今天-1 天，后天=今天+2 天，'
         '下周几=下一个对应星期几（今天就是该星期几时算 7 天后）；先换算'
-        '成具体日期再调用工具，换算不确定就追问，不要猜。'
+        '成具体日期再调用工具，换算不确定就追问，不要猜。\n'
+        '10. 用户要求通过或驳回某条审批时，先确认是哪一条单；有多条候选'
+        '就先问，不要猜。确认后调用 prepare_approval_action 只读工具准备'
+        '动作卡；卡片只是待确认表单，不得声称已通过或已驳回，也不得自动'
+        '提交。会签单（部门删除、用户禁用）不要生成动作卡，告诉用户去审批'
+        '详情处理。用户没说驳回理由就不要编造，卡片里的意见可以留空。'
     )
 
 
@@ -58,6 +63,22 @@ def extract_draft(message):
                 and draft.get('approval_type') in DRAFT_TYPES
                 and isinstance(draft.get('initial'), dict)):
             return draft
+    return None
+
+
+def extract_action_card(message):
+    """从助手消息的工具日志里取最后一张有效动作卡；没有返回 None。"""
+    for log in reversed(message.tool_calls or []):
+        if log.get('tool') != 'prepare_approval_action' or not log.get('ok'):
+            continue
+        result = log.get('result') or {}
+        card = result.get('action_card')
+        if (isinstance(card, dict)
+                and result.get('available') is True
+                and isinstance(card.get('approval_id'), int)
+                and isinstance(card.get('actions'), list)
+                and card.get('actions')):
+            return card
     return None
 
 

@@ -177,6 +177,14 @@ def _attach_draft_cards(request, chat_messages):
         )
 
 
+def _attach_action_cards(chat_messages):
+    """给助手消息挂只读审批动作卡；提交仍走原审批详情 POST。"""
+    for message in chat_messages:
+        card = services.extract_action_card(message)
+        if card:
+            message.action_card = card
+
+
 @login_required
 def home(request):
     """对话式首页：空态 + 输入区；有会话时渲染消息流（本版无数据，分支已就位）。
@@ -231,6 +239,7 @@ def home(request):
             role__in=[Message.Role.USER, Message.Role.ASSISTANT]
         ).order_by('created_at', 'pk'))
         _attach_draft_cards(request, chat_messages)
+        _attach_action_cards(chat_messages)
 
     primary_menus, common_menus = _split_menus(request, panel)
     # v2.2.0：快捷键「快速操作」与首页真正渲染出来的入口同源——固定入口指向面板

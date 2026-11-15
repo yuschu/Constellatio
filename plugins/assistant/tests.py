@@ -10,11 +10,11 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
-from django.test import SimpleTestCase, TestCase, override_settings
+from django.test import Client, SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from plugins.approval.models import Approval
+from plugins.approval.models import Approval, ApprovalRecord
 from plugins.assistant import llm, services, tools
 from plugins.assistant.crypto import decrypt_secret, encrypt_secret
 from plugins.assistant.eval_cases import build_cases
@@ -268,10 +268,10 @@ class AssistantEvalTests(SimpleTestCase):
         cases = list(self.cases.values())
         self.assertEqual(len(cases), 20)
         self.assertEqual(len({case['question'] for case in cases}), 20)
-        # B 阶段新增的 draft_approval 只产草稿，不进入 A 阶段 20 条只读验收集。
+        # B/C 阶段新增的草稿与动作卡工具不进入 A 阶段 20 条只读验收集。
         self.assertEqual(
             {case['tool'] for case in cases},
-            set(tools.TOOLS) - {'draft_approval'})
+            set(tools.TOOLS) - {'draft_approval', 'prepare_approval_action'})
         self.assertTrue(all(not spec['write'] for spec in tools.TOOLS.values()))
 
     def test_relative_month_cases_follow_injected_today(self):
@@ -1009,3 +1009,177 @@ class AssistantApprovalDraftBridgeTests(TestCase):
         self.assertEqual(approval.form_data['amount'], '88.00')
         self.assertEqual(approval.form_data['reason'], '打车费')
         self.assertNotIn(token, self.client.session['assistant_approval_drafts'])
+
+
+class ApprovalActionToolTests(TestCase):
+    """C1：动作卡工具只读、只普通单、按对象级 can_act 决定是否出卡。"""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.applicant = User.objects.create_user(
+            'action_app', '', 'pw', last_name='申请人')
+        cls.approver = User.objects.create_user(
+            'action_approver', '', 'pw', last_name='审批人')
+        cls.outsider = User.objects.create_user(
+            'action_outsider', '', 'pw', last_name='无关员工')
+        cls.superuser = User.objects.create_superuser(
+            'action_root', '', 'pw', last_name='超管')
+
+    def _approval(self, **kwargs):
+        values = {
+            'approval_type': Approval.Type.LEAVE,
+            'title': '请假',
+            'applicant': self.applicant,
+            'approver': self.approver,
+            'status': Approval.Status.PENDING,
+        }
+        values.update(kwargs)
+        return Approval.objects.create(**values)
+
+    def test_approver_gets_read_only_card(self):
+        approval = self._approval()
+        result = tools.prepare_approval_action(self.approver, approval.pk)
+        self.assertTrue(result['available'])
+        card = result['action_card']
+        self.assertEqual(card['approval_id'], approval.pk)
+        self.assertEqual(card['type_label'], '请假')
+        self.assertEqual(card['status_label'], '待审批')
+        self.assertEqual(
+            [action['value'] for action in card['actions']],
+            ['approve', 'reject'])
+        self.assertEqual(
+            card['detail_url'],
+            reverse('approval:approval_detail', args=[approval.pk]))
+        self.assertEqual(approval.status, Approval.Status.PENDING)
+        self.assertEqual(ApprovalRecord.objects.filter(approval=approval).count(), 0)
+
+    def test_applicant_can_view_but_gets_not_approver(self):
+        approval = self._approval()
+        result = tools.prepare_approval_action(self.applicant, approval.pk)
+        self.assertFalse(result['available'])
+        self.assertEqual(result['reason'], 'not_approver')
+        self.assertEqual(ApprovalRecord.objects.filter(approval=approval).count(), 0)
+
+    def test_outsider_does_not_learn_existence(self):
+        approval = self._approval()
+        hidden = tools.prepare_approval_action(self.outsider, approval.pk)
+        missing = tools.prepare_approval_action(self.outsider, 999999)
+        self.assertEqual(hidden['reason'], 'not_found_or_forbidden')
+        self.assertEqual(missing['reason'], 'not_found_or_forbidden')
+        self.assertEqual(hidden['detail_url'], '')
+        self.assertEqual(missing['detail_url'], '')
+
+    def test_processed_approval_gets_not_pending(self):
+        approval = self._approval(status=Approval.Status.APPROVED)
+        result = tools.prepare_approval_action(self.approver, approval.pk)
+        self.assertFalse(result['available'])
+        self.assertEqual(result['reason'], 'not_pending')
+
+    def test_counter_signature_is_excluded(self):
+        approval = self._approval(
+            approval_type=Approval.Type.DEPT_DELETE,
+            title='删部门',
+            approver=self.applicant)
+        result = tools.prepare_approval_action(self.applicant, approval.pk)
+        self.assertFalse(result['available'])
+        self.assertEqual(result['reason'], 'counter_signature')
+        self.assertEqual(
+            result['detail_url'],
+            reverse('approval:approval_detail', args=[approval.pk]))
+
+    def test_superuser_can_get_card(self):
+        approval = self._approval()
+        result = tools.prepare_approval_action(self.superuser, approval.pk)
+        self.assertTrue(result['available'])
+        self.assertEqual(result['action_card']['approval_id'], approval.pk)
+
+
+class AssistantApprovalActionBridgeTests(TestCase):
+    """C1：动作卡渲染在助手消息内，提交仍走原审批详情 POST。"""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.applicant = User.objects.create_user(
+            'action_bridge_app', '', 'pw', last_name='申请人')
+        cls.approver = User.objects.create_user(
+            'action_bridge_approver', '', 'pw', last_name='审批人')
+        cls.outsider = User.objects.create_user(
+            'action_bridge_outsider', '', 'pw', last_name='无关员工')
+
+    def setUp(self):
+        self.approval = Approval.objects.create(
+            approval_type=Approval.Type.EXPENSE,
+            title='11 月打车费',
+            amount='35.00',
+            applicant=self.applicant,
+            approver=self.approver,
+            status=Approval.Status.PENDING,
+        )
+        self.client.force_login(self.approver)
+        self.conversation = Conversation.objects.create(user=self.approver)
+        result = tools.prepare_approval_action(self.approver, self.approval.pk)
+        Message.objects.create(
+            conversation=self.conversation, role=Message.Role.ASSISTANT,
+            content='请确认是否通过这笔报销。',
+            tool_calls=[{
+                'tool': 'prepare_approval_action',
+                'args': {'approval_id': self.approval.pk},
+                'ok': True, 'result': result, 'error': '', 'duration_ms': 1,
+            }])
+
+    def test_home_renders_card_and_post_to_detail_approves_once(self):
+        before_status = self.approval.status
+        before_records = ApprovalRecord.objects.filter(
+            approval=self.approval).count()
+        response = self.client.get('/', {'conversation': self.conversation.pk})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '待审批')
+        self.assertContains(response, '11 月打车费')
+        self.assertContains(response, '35.00')
+        self.assertContains(response, 'name="comment"')
+        self.assertContains(response, 'name="action"')
+        self.assertContains(response, 'value="approve"')
+        self.assertContains(response, 'value="reject"')
+        self.assertContains(
+            response,
+            reverse('approval:approval_detail', args=[self.approval.pk]))
+        self.assertEqual(self.approval.status, before_status)
+        self.assertEqual(
+            ApprovalRecord.objects.filter(approval=self.approval).count(),
+            before_records)
+
+        response = self.client.post(
+            reverse('approval:approval_detail', args=[self.approval.pk]),
+            {'action': 'approve', 'comment': '同意报销'})
+        self.assertEqual(response.status_code, 302)
+        self.approval.refresh_from_db()
+        self.assertEqual(self.approval.status, Approval.Status.APPROVED)
+        record = ApprovalRecord.objects.get(approval=self.approval)
+        self.assertEqual(record.action, 'approve')
+        self.assertEqual(record.comment, '同意报销')
+        self.assertEqual(record.operator, self.approver)
+
+        # 卡片已过期：再次提交必须被对象级门禁挡住，不产生第二条记录。
+        response = self.client.post(
+            reverse('approval:approval_detail', args=[self.approval.pk]),
+            {'action': 'reject', 'comment': '重复提交'})
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            ApprovalRecord.objects.filter(approval=self.approval).count(), 1)
+        self.approval.refresh_from_db()
+        self.assertEqual(self.approval.status, Approval.Status.APPROVED)
+
+    def test_csrf_is_required(self):
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.approver)
+        response = csrf_client.post(
+            reverse('approval:approval_detail', args=[self.approval.pk]),
+            {'action': 'approve'})
+        self.assertEqual(response.status_code, 403)
+        self.approval.refresh_from_db()
+        self.assertEqual(self.approval.status, Approval.Status.PENDING)
+
+    def test_outsider_card_result_is_unavailable(self):
+        result = tools.prepare_approval_action(self.outsider, self.approval.pk)
+        self.assertFalse(result['available'])
+        self.assertEqual(result['reason'], 'not_found_or_forbidden')

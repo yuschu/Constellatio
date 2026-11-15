@@ -35,18 +35,8 @@ def _may_view(user, approval):
 
 
 def _can_act(user, approval):
-    """审批操作人校验（v1.5.17：仅待审批可操作，处理后不可修改）：
-    - 会签单：必须是会签人本人且未签
-    - 普通单：审批人本人 或 超级管理员（v1.7.1 / P0-10：去掉 approval_approve 全局旁路）
-    """
-    if approval.status != Approval.Status.PENDING:
-        return False
-    if approval.is_counter_signature():
-        row = approval.signers.filter(signer=user).first()
-        return row is not None and not row.signed
-    if approval.approver_id is None:
-        return False
-    return user == approval.approver or user.is_superuser
+    """审批操作人校验（口径在 services.can_act，这里保留薄壳给既有调用点）。"""
+    return services.can_act(user, approval)
 
 
 def _assistant_draft(request):

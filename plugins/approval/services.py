@@ -205,6 +205,25 @@ def may_view(user, approval):
     return approval.cc_users.filter(pk=user.pk).exists()
 
 
+def can_act(user, approval):
+    """对象级审批操作校验：仅待审批可操作，处理后不可修改。
+
+    - 会签单：必须是会签人本人且未签；
+    - 普通单：审批人本人或超级管理员（v1.7.1 / P0-10：去掉
+      approval_approve 全局旁路）。
+
+    本函数只读，不代替 ``approve`` / ``reject`` 行锁内的状态校验。
+    """
+    if approval.status != Approval.Status.PENDING:
+        return False
+    if approval.is_counter_signature():
+        row = approval.signers.filter(signer=user).first()
+        return row is not None and not row.signed
+    if approval.approver_id is None:
+        return False
+    return user == approval.approver or user.is_superuser
+
+
 def validate_attachment(upload):
     """校验附件：非空、扩展名白名单、大小上限；不合法抛 AttachmentError。"""
     if upload is None:

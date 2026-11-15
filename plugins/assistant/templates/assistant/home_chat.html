@@ -393,6 +393,38 @@
             {% endif %}
           </form>
           {% endif %}
+          {% if message.action_card %}
+          <form class="as-draft as-action" data-ds-card method="post"
+                action="{% url 'approval:approval_detail' approval_id=message.action_card.approval_id %}">
+            {% csrf_token %}
+            <div class="as-draft__head">
+              <span class="as-draft__tag">{% trans "待审批" %}</span>
+              <span class="as-draft__type">{{ message.action_card.type_label }}</span>
+            </div>
+            <dl class="as-draft__row">
+              <dt>标题</dt><dd>{{ message.action_card.title }}</dd>
+              <dt>申请人</dt><dd>{{ message.action_card.applicant }}</dd>
+              {% if message.action_card.amount %}
+              <dt>金额</dt><dd>{{ message.action_card.amount }}</dd>
+              {% endif %}
+              <dt>提交时间</dt><dd>{{ message.action_card.created_at }}</dd>
+            </dl>
+            <label class="as-draft__field">
+              <span>审批意见</span>
+              <input class="as-draft__input" type="text" name="comment"
+                     placeholder="审批意见（可选）">
+            </label>
+            <div class="as-draft__actions">
+              {% for action in message.action_card.actions %}
+              <button class="as-draft__submit{% if action.value == 'reject' %} as-action__reject{% endif %}"
+                      type="submit" name="action" value="{{ action.value }}"
+                      data-confirm="{{ action.confirm }}">{{ action.label }}</button>
+              {% endfor %}
+              <a class="as-draft__link" href="{{ message.action_card.detail_url }}">查看完整详情</a>
+            </div>
+            <p class="as-draft__meta" style="text-align:center;">审批操作需二次确认；确认后状态不可修改。</p>
+          </form>
+          {% endif %}
         </div>
       </div>
       {% endfor %}
