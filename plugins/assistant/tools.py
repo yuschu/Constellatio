@@ -41,6 +41,27 @@ PAGES = {
         'title': '公告中心',
         'description': '打开公告列表，查看已读和未读通知。',
     },
+    'approval_pending': {
+        'plugin': 'approval',
+        'permission': 'approval_approve',
+        'url_name': 'approval:approval_pending',
+        'title': '待我审批',
+        'description': '打开待我审批列表，查看并处理分配给你的审批单。',
+    },
+    'approval_new': {
+        'plugin': 'approval',
+        'permission': 'approval_view',
+        'url_name': 'approval:approval_create',
+        'title': '发起审批',
+        'description': '打开新建审批表单，由你本人填写并提交。',
+    },
+    'notice_new': {
+        'plugin': 'notice',
+        'permission': 'notice_manage',
+        'url_name': 'notice:notice_create',
+        'title': '发布公告',
+        'description': '打开公告发布表单，由你本人填写并发布。',
+    },
 }
 
 
@@ -629,14 +650,17 @@ _register(
     'open_page', open_page,
     _schema('open_page',
             '返回一个站内页面入口。只读：不打开浏览器、不代替用户点击、不写库。'
-            '用户要求打开签到、审批、公告页面，或某项操作必须到页面完成时使用；'
+            '用户要求打开签到、审批、待办、新建审批、公告或发布公告页面，'
+            '或某项操作必须到页面完成时使用；'
             '只能打开白名单里的页面，不要编造 URL。返回后只说明入口已准备好，'
             '不得声称已打开或已跳转。',
             {
                 'page': {
                     'type': 'string',
                     'enum': list(PAGES),
-                    'description': 'attendance=考勤打卡，approval=审批中心，notice=公告中心',
+                    'description': 'attendance=考勤打卡，approval=审批中心，notice=公告中心，'
+                                   'approval_pending=待我审批，approval_new=发起审批，'
+                                   'notice_new=发布公告',
                 },
             }, ['page']),
     [], '打开站内页面')

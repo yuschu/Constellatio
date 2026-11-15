@@ -63,13 +63,38 @@ class AssistantChatTests(TestCase):
         self.assertTrue(result['requires_user_action'])
 
     def test_open_page_denies_without_permission_and_rejects_unknown_page(self):
-        # attendance_view 是全员基线权限，这里用非基线的 approval_view 验证拒绝路径。
-        denied = tools.open_page(self.user, 'approval')
-        self.assertFalse(denied['available'])
-        self.assertEqual(denied['reason'], 'not_permitted')
+        # attendance_view 是全员基线权限，这里用非基线的审批/发布权限验证拒绝路径。
+        for page in ('approval', 'approval_pending', 'notice_new'):
+            denied = tools.open_page(self.user, page)
+            self.assertFalse(denied['available'])
+            self.assertEqual(denied['reason'], 'not_permitted')
         unknown = tools.open_page(self.user, 'https://example.com')
         self.assertFalse(unknown['available'])
         self.assertEqual(unknown['reason'], 'unknown_page')
+
+    def test_open_page_expanded_whitelist_returns_real_pages(self):
+        """扩展后的入口必须指向真实可打开的页面，而不是只有 URL 字符串。"""
+        for codename in (
+                'attendance_view', 'approval_view', 'approval_approve',
+                'notice_view', 'notice_manage'):
+            self.user.user_permissions.add(
+                Permission.objects.get(codename=codename))
+        self.user = User.objects.get(pk=self.user.pk)
+        expected = {
+            'attendance': ('/plugins/attendance/', '考勤打卡'),
+            'approval': ('/plugins/approval/', '审批中心'),
+            'notice': ('/plugins/notice/', '公告中心'),
+            'approval_pending': ('/plugins/approval/pending/', '待我审批'),
+            'approval_new': ('/plugins/approval/new/', '发起审批'),
+            'notice_new': ('/plugins/notice/new/', '发布公告'),
+        }
+        for page, (url, title) in expected.items():
+            result = tools.open_page(self.user, page)
+            self.assertTrue(result['available'], page)
+            self.assertEqual(result['url'], url)
+            self.assertEqual(result['title'], title)
+            response = self.client.get(result['url'])
+            self.assertEqual(response.status_code, 200, page)
 
     def test_open_page_is_rendered_as_link_card(self):
         """工具日志落库后，历史消息仍能还原页面入口卡。"""
