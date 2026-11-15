@@ -124,6 +124,8 @@ OpenAI 标准格式，字段固定不可改：
 
 **description 用中文写**，而且要写"什么时候用 / 什么时候不用"。小模型对 description 的依赖远高于大模型。
 
+**只读页面入口**：`open_page` 不返回任意 URL，只接受 `attendance` / `approval` / `notice` 三个枚举，内部用 `reverse()` 生成 `/plugins/.../` 路径。工具本身 `write=False`，只给入口，不打开浏览器，不代替用户签到或提交；页面权限在函数内部按目标页面单独判断，工具元数据不再绑定某一个页面的权限码。助手消息渲染成链接卡，历史回放时从 `Message.tool_calls` 还原。
+
 **每个工具的元数据里带两样东西**（不放进 schema，放 Python 侧）：
 
 ```python

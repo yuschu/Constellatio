@@ -1025,6 +1025,11 @@ div.as-more__menu {
   background: var(--as-interactive-hover);
 }
 
+.as-page-link__open {
+  display: inline-block;
+  text-decoration: none;
+}
+
 .as-draft__link {
   color: var(--as-label-secondary);
   font-size: 12px;

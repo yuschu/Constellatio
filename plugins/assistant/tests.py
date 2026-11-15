@@ -51,6 +51,64 @@ class AssistantChatTests(TestCase):
             {spec['schema']['function']['name'] for spec in tools.TOOLS.values()},
             set(tools.TOOLS))
 
+    def test_open_page_returns_allowlisted_internal_url(self):
+        """页面入口只来自白名单，不接受模型或用户给的任意 URL。"""
+        self.user.user_permissions.add(
+            Permission.objects.get(codename='attendance_view'))
+        self.user = User.objects.get(pk=self.user.pk)
+        result = tools.open_page(self.user, 'attendance')
+        self.assertTrue(result['available'])
+        self.assertEqual(result['url'], '/plugins/attendance/')
+        self.assertTrue(result['url'].startswith('/'))
+        self.assertTrue(result['requires_user_action'])
+
+    def test_open_page_denies_without_permission_and_rejects_unknown_page(self):
+        # attendance_view 是全员基线权限，这里用非基线的 approval_view 验证拒绝路径。
+        denied = tools.open_page(self.user, 'approval')
+        self.assertFalse(denied['available'])
+        self.assertEqual(denied['reason'], 'not_permitted')
+        unknown = tools.open_page(self.user, 'https://example.com')
+        self.assertFalse(unknown['available'])
+        self.assertEqual(unknown['reason'], 'unknown_page')
+
+    def test_open_page_is_rendered_as_link_card(self):
+        """工具日志落库后，历史消息仍能还原页面入口卡。"""
+        self.user.user_permissions.add(
+            Permission.objects.get(codename='attendance_view'))
+        first = {
+            'content': '',
+            'tool_calls': [{
+                'id': 'call_1',
+                'function': {
+                    'name': 'open_page',
+                    'arguments': json.dumps({'page': 'attendance'}),
+                },
+            }],
+        }
+        second = {'content': '签到需要你本人操作，点下面的入口打开考勤页。'}
+        with mock.patch.object(llm, 'call_llm', side_effect=[first, second]):
+            response = self.client.post('/', {'message': '帮我签个到'})
+        self.assertEqual(response.status_code, 302)
+        conversation = Conversation.objects.filter(user=self.user).latest('pk')
+        stored = conversation.messages.filter(
+            role=Message.Role.ASSISTANT).latest('pk')
+        self.assertEqual(stored.tool_calls[0]['tool'], 'open_page')
+        self.assertTrue(stored.tool_calls[0]['ok'])
+        page = self.client.get(f'/?conversation={conversation.pk}')
+        html = page.content.decode()
+        self.assertIn('页面入口', html)
+        self.assertIn('打开考勤打卡', html)
+        self.assertIn('/plugins/attendance/', html)
+        self.assertIn('签到需要你本人操作', html)
+
+    def test_extract_page_link_rejects_external_url(self):
+        message = Message(tool_calls=[{
+            'tool': 'open_page', 'ok': True,
+            'result': {'available': True, 'title': '坏链接',
+                       'url': 'https://example.com/steal'},
+        }])
+        self.assertIsNone(services.extract_page_link(message))
+
     def test_approval_enum_uses_real_model_values(self):
         """文档里的旧示例是大写 + PURCHASE；落地必须以模型 choices 为准。"""
         spec = tools.TOOLS['search_approval']['schema']['function']['parameters']
@@ -268,10 +326,11 @@ class AssistantEvalTests(SimpleTestCase):
         cases = list(self.cases.values())
         self.assertEqual(len(cases), 20)
         self.assertEqual(len({case['question'] for case in cases}), 20)
-        # B/C 阶段新增的草稿与动作卡工具不进入 A 阶段 20 条只读验收集。
+        # B/C 阶段新增的草稿、动作卡与页面入口不进入 A 阶段 20 条只读验收集。
         self.assertEqual(
             {case['tool'] for case in cases},
-            set(tools.TOOLS) - {'draft_approval', 'prepare_approval_action'})
+            set(tools.TOOLS) - {
+                'draft_approval', 'prepare_approval_action', 'open_page'})
         self.assertTrue(all(not spec['write'] for spec in tools.TOOLS.values()))
 
     def test_relative_month_cases_follow_injected_today(self):

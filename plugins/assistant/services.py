@@ -48,7 +48,12 @@ def build_system_prompt(user):
         '就先问，不要猜。确认后调用 prepare_approval_action 只读工具准备'
         '动作卡；卡片只是待确认表单，不得声称已通过或已驳回，也不得自动'
         '提交。会签单（部门删除、用户禁用）不要生成动作卡，告诉用户去审批'
-        '详情处理。用户没说驳回理由就不要编造，卡片里的意见可以留空。'
+        '详情处理。用户没说驳回理由就不要编造，卡片里的意见可以留空。\n'
+        '11. 用户要求打开签到、审批、公告等系统页面，或某项操作必须到页面'
+        '完成时，调用 open_page 返回入口；只能打开白名单页面，不要编造 URL。'
+        '调用后只能说明“已准备好页面入口，请点击下方按钮打开”，不得写'
+        '“已打开”“已跳转”或声称已完成签到、打卡、提交等操作；这些操作'
+        '必须由用户本人在打开后的页面上完成。'
     )
 
 
@@ -79,6 +84,21 @@ def extract_action_card(message):
                 and isinstance(card.get('actions'), list)
                 and card.get('actions')):
             return card
+    return None
+
+
+def extract_page_link(message):
+    """从助手消息的工具日志里取最后一个有效站内页面入口。"""
+    for log in reversed(message.tool_calls or []):
+        if log.get('tool') != 'open_page' or not log.get('ok'):
+            continue
+        result = log.get('result') or {}
+        if (result.get('available') is True
+                and isinstance(result.get('url'), str)
+                and result['url'].startswith('/')
+                and isinstance(result.get('title'), str)
+                and result['title']):
+            return result
     return None
 
 

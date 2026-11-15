@@ -425,6 +425,19 @@
             <p class="as-draft__meta" style="text-align:center;">审批操作需二次确认；确认后状态不可修改。</p>
           </form>
           {% endif %}
+          {% if message.page_link %}
+          <div class="as-draft as-page-link">
+            <div class="as-draft__head">
+              <span class="as-draft__tag">页面入口</span>
+              <span class="as-draft__type">{{ message.page_link.title }}</span>
+            </div>
+            <p class="as-draft__meta">{{ message.page_link.description }}</p>
+            <div class="as-draft__actions">
+              <a class="as-draft__submit as-page-link__open"
+                 href="{{ message.page_link.url }}">打开{{ message.page_link.title }}</a>
+            </div>
+          </div>
+          {% endif %}
         </div>
       </div>
       {% endfor %}

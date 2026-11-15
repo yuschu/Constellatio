@@ -185,6 +185,14 @@ def _attach_action_cards(chat_messages):
             message.action_card = card
 
 
+def _attach_page_links(chat_messages):
+    """给助手消息挂站内页面入口；只渲染链接，不代用户操作。"""
+    for message in chat_messages:
+        link = services.extract_page_link(message)
+        if link:
+            message.page_link = link
+
+
 @login_required
 def home(request):
     """对话式首页：空态 + 输入区；有会话时渲染消息流（本版无数据，分支已就位）。
@@ -240,6 +248,7 @@ def home(request):
         ).order_by('created_at', 'pk'))
         _attach_draft_cards(request, chat_messages)
         _attach_action_cards(chat_messages)
+        _attach_page_links(chat_messages)
 
     primary_menus, common_menus = _split_menus(request, panel)
     # v2.2.0：快捷键「快速操作」与首页真正渲染出来的入口同源——固定入口指向面板

@@ -18,6 +18,31 @@ from .models import Message  # noqa: F401  （确保 app 已加载，不参与�
 
 MONTH_RE = re.compile(r'^\d{4}-\d{2}$')
 
+# 助手能引导用户打开的站内页面白名单；不接收任意 URL，避免把模型输出当跳转目标。
+PAGES = {
+    'attendance': {
+        'plugin': 'attendance',
+        'permission': 'attendance_view',
+        'url_name': 'attendance:attendance_dashboard',
+        'title': '考勤打卡',
+        'description': '打开考勤看板，在页面上完成签到或签退。',
+    },
+    'approval': {
+        'plugin': 'approval',
+        'permission': 'approval_view',
+        'url_name': 'approval:approval_list',
+        'title': '审批中心',
+        'description': '打开发起、待办和已办审批的统一入口。',
+    },
+    'notice': {
+        'plugin': 'notice',
+        'permission': 'notice_view',
+        'url_name': 'notice:notice_list',
+        'title': '公告中心',
+        'description': '打开公告列表，查看已读和未读通知。',
+    },
+}
+
 
 def _month_start(value):
     if not MONTH_RE.match(str(value or '')):
@@ -99,6 +124,26 @@ def _action_unavailable(reason, detail_url=''):
         'available': False,
         'reason': reason,
         'detail_url': detail_url,
+    }
+
+
+def open_page(user, page):
+    """返回一个站内页面入口；只读，不打开浏览器、不代用户操作。"""
+    meta = PAGES.get(page)
+    if meta is None:
+        return {'available': False, 'reason': 'unknown_page'}
+    from plugin_host.registry import plugin_enabled
+    if not plugin_enabled(meta['plugin']):
+        return {'available': False, 'reason': 'plugin_disabled'}
+    if not user.has_perm(meta['permission']):
+        return {'available': False, 'reason': 'not_permitted'}
+    return {
+        'available': True,
+        'page': page,
+        'title': meta['title'],
+        'description': meta['description'],
+        'url': reverse(meta['url_name']),
+        'requires_user_action': True,
     }
 
 
@@ -580,6 +625,21 @@ _register(
                 'month': {'type': 'string', 'description': '月份，严格格式 YYYY-MM，例如 2026-11'},
             }, ['month']),
     ['attendance_view'], '统计本人考勤'),
+_register(
+    'open_page', open_page,
+    _schema('open_page',
+            '返回一个站内页面入口。只读：不打开浏览器、不代替用户点击、不写库。'
+            '用户要求打开签到、审批、公告页面，或某项操作必须到页面完成时使用；'
+            '只能打开白名单里的页面，不要编造 URL。返回后只说明入口已准备好，'
+            '不得声称已打开或已跳转。',
+            {
+                'page': {
+                    'type': 'string',
+                    'enum': list(PAGES),
+                    'description': 'attendance=考勤打卡，approval=审批中心，notice=公告中心',
+                },
+            }, ['page']),
+    [], '打开站内页面')
 _register(
     'list_notice', list_notice,
     _schema('list_notice',
