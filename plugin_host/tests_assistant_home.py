@@ -126,6 +126,43 @@ class AssistantHomePageTests(TestCase):
         self.assertContains(home, 'data-ds-chat-form')
         self.assertContains(home, '正在发送，等待助手回复…')
 
+    def test_embedded_panel_styles_for_settings_account_and_notify(self):
+        """首页只加载 assistant.css，设置「我的」与消息中心必须自带组件样式。
+
+        浏览器实测：账号区三个按钮只剩裸内联链接；消息页的 r-card /
+        Bootstrap 工具类全部失配，正文挤在左上。两处都由 ds-panels.css
+        在首页挂载，消息模板不能再依赖业务页主题。
+        """
+        root = Path(settings.BASE_DIR)
+        home = (
+            root / 'plugins/assistant/templates/assistant/home_chat.html'
+        ).read_text(encoding='utf-8')
+        self.assertIn("css/ds-panels.css", home)
+
+        panels = (
+            root / 'plugin_host/static/css/ds-panels.css'
+        ).read_text(encoding='utf-8')
+        for selector in (
+            '.ds-settings__stack',
+            '.ds-settings__actions',
+            '.ds-settings .r-btn',
+            '.ds-settings__keybtn',
+            '.ds-kbd',
+            '.notify-card',
+            '.notify-toolbar',
+            '.notify-row',
+            '.notify-empty',
+        ):
+            self.assertIn(selector, panels)
+
+        notify = (
+            root / 'plugins/notify/templates/notify/notify_list.html'
+        ).read_text(encoding='utf-8')
+        self.assertIn("css/ds-panels.css", notify)
+        self.assertIn('notify-panel', notify)
+        for bootstrap_only in ('d-flex', 'justify-content-end', 'mb-3'):
+            self.assertNotIn(bootstrap_only, notify)
+
     def test_composer_keeps_message_until_native_post(self):
         """清空输入必须晚于原生 submit，否则 POST 里的 message 为空。
 

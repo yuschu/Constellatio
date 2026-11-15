@@ -123,6 +123,7 @@ def notifications(request):
 # 页面上给静态链接带 ?v=<mtime>，重建后 URL 变化即强制重新拉取。
 _ASSETS_VERSION = None
 _ASSET_STAMP_FILES = (
+    'plugin_host/static/css/ds-panels.css',
     'themes/corporate-clean/static/themes/corporate-clean/css/corporate-clean.css',
     'plugin_host/static/js/ds-shell.js',
     'plugin_host/static/js/shortcuts.js',

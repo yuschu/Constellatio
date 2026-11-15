@@ -1677,6 +1677,7 @@ body.ds-modal-open {
     border-radius: 0;
     grid-template-areas: "title header" "nav nav" "options options";
     grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto minmax(0, 1fr);
   }
 
   .ds-settings__title {

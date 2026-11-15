@@ -1,54 +1,61 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n static %}
 {% block title %}{% trans "消息中心" %} · Constellatio{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/ds-panels.css' %}?v={{ assets_version }}">
+{% endblock %}
 {% block content %}
 {% comment %}
 v2.1.3：消息中心改成 DSH 设置页形态（单分区 → 不渲染左侧 188px 分区列）。
 本页没有父列表页，所以是无遮罩的 inline 面板（右上角没有 ✕），
 「全部 / 未读」筛选与「全部已读」都留在正文里。
+
+v2.2.16：首页账号菜单把本页正文原地嵌进二级面板，首页不加载
+Bootstrap / 主题表；正文不再用 Bootstrap 工具类，改用 ds-panels.css
+里的 notify-* 语义类，两种挂载方式同一套样式。
 {% endcomment %}
 <div class="ds-settings ds-settings--inline ds-settings--single">
   <div class="ds-settings__panel" tabindex="-1">
     <h2 class="ds-settings__title">{% trans "消息中心" %}</h2>
     <div class="ds-settings__header"></div>
     <div class="ds-settings__options" tabindex="0">
-      <div class="ds-settings__stack ds-settings__stack--wide">
+      <div class="ds-settings__stack ds-settings__stack--wide notify-panel">
 
-<div class="d-flex justify-content-end align-items-center flex-wrap gap-2 mb-3">
-  <span class="r-badge {% if unread %}r-badge--blue{% endif %}">
+<div class="notify-summary">
+  <span class="notify-badge {% if unread %}notify-badge--blue{% endif %}">
     {% blocktranslate with count=unread %}{{ count }} 条未读{% endblocktranslate %}
   </span>
 </div>
 
-<div class="r-card">
-  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <div class="d-flex align-items-center gap-2">
-      <a href="{% url 'notify:notify_list' %}" class="{% if status != 'unread' %}r-badge{% else %}r-offset-hover{% endif %}">{% trans "全部" %}</a>
-      <a href="{% url 'notify:notify_list' %}?status=unread" class="{% if status == 'unread' %}r-badge{% else %}r-offset-hover{% endif %}">{% trans "未读" %}</a>
+<div class="notify-card">
+  <div class="notify-toolbar">
+    <div class="notify-filters">
+      <a href="{% url 'notify:notify_list' %}" class="notify-filter{% if status != 'unread' %} is-active{% endif %}">{% trans "全部" %}</a>
+      <a href="{% url 'notify:notify_list' %}?status=unread" class="notify-filter{% if status == 'unread' %} is-active{% endif %}">{% trans "未读" %}</a>
     </div>
     {% if unread %}
-    <form method="post" action="{% url 'notify:notify_read_all' %}" class="m-0">
+    <form method="post" action="{% url 'notify:notify_read_all' %}">
       {% csrf_token %}
-      <button class="r-btn r-btn--plain" type="submit">{% trans "全部已读" %}</button>
+      <button class="notify-readall" type="submit">{% trans "全部已读" %}</button>
     </form>
     {% endif %}
   </div>
 
-  <div class="d-flex flex-column">
+  <div class="notify-list">
     {% for item in notifications %}
-    <div class="d-flex justify-content-between align-items-start gap-3 py-3 border-bottom">
-      <div class="d-flex align-items-start gap-2">
-        <span class="r-badge {% if item.category == 'approval' %}r-badge--blue{% elif item.category == 'notice' %}r-badge--green{% endif %}">{{ item.get_category_display }}</span>
-        <div>
-          <a href="{% url 'notify:notify_read' item.pk %}" class="{% if not item.is_read %}fw-semibold{% endif %}">{{ item.title }}</a>
-          {% if item.body %}<div class="text-muted" style="font-size:.78rem;">{{ item.body }}</div>{% endif %}
-          <div class="text-muted" style="font-size:.72rem;">{{ item.created_at|date:"Y-m-d H:i" }}</div>
+    <div class="notify-row">
+      <div class="notify-row__main">
+        <span class="notify-badge {% if item.category == 'approval' %}notify-badge--blue{% elif item.category == 'notice' %}notify-badge--green{% endif %}">{{ item.get_category_display }}</span>
+        <div class="notify-row__body">
+          <a href="{% url 'notify:notify_read' item.pk %}" class="notify-title{% if not item.is_read %} is-unread{% endif %}">{{ item.title }}</a>
+          {% if item.body %}<div class="notify-excerpt">{{ item.body }}</div>{% endif %}
+          <div class="notify-time">{{ item.created_at|date:"Y-m-d H:i" }}</div>
         </div>
       </div>
-      {% if not item.is_read %}<span class="r-badge r-badge--orange">{% trans "未读" %}</span>{% endif %}
+      {% if not item.is_read %}<span class="notify-badge notify-badge--orange">{% trans "未读" %}</span>{% endif %}
     </div>
     {% empty %}
-    <p class="text-muted mb-0 py-3">{% trans "暂无消息" %}</p>
+    <p class="notify-empty">{% trans "暂无消息" %}</p>
     {% endfor %}
   </div>
 </div>

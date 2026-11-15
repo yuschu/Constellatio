@@ -7,6 +7,7 @@
   <title>{% if panel and panel != 'chat' %}{{ panel_title }}{% else %}{% trans "助手" %}{% endif %} · Constellatio</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="{% static 'assistant/css/assistant.css' %}">
+  <link rel="stylesheet" href="{% static 'css/ds-panels.css' %}?v={{ assets_version }}">
   {% if panel_theme_css %}<link rel="stylesheet" data-panel-theme href="{% static panel_theme_css %}">{% endif %}
   <script src="{% static 'js/rail-boot.js' %}"></script>
   <script src="{% static 'js/home-panels.js' %}" defer></script>
