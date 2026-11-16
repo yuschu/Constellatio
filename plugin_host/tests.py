@@ -1,6 +1,8 @@
 """主题插件测试：发现 / 默认 / 契约 / 模板与静态解析。"""
 
+import os
 import re
+import tempfile
 from pathlib import Path
 
 from django.conf import settings
@@ -8,8 +10,9 @@ from django.contrib.auth import get_user_model
 from django.contrib.staticfiles import finders
 from django.core.exceptions import ImproperlyConfigured
 from django.template.loader import get_template
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 
+from plugin_host import context_processors
 from plugin_host.charts import discover_charts
 from plugin_host.theming import discover_themes, get_theme
 
@@ -478,3 +481,42 @@ class ShortcutLayerTest(TestCase):
         self.assertIn('max-height: calc(100dvh - 108px)', body)
         self.assertIn('border-radius: 24px', body)
         self.assertIn('translateY(30px)', body)
+
+
+class AssetsVersionTest(SimpleTestCase):
+    """v2.2.15：资源戳按内容哈希，不再依赖 mtime。
+
+    旧实现取 mtime 最大值，Docker COPY 保留源文件时间，重建后 ?v= 不变，
+    浏览器继续用旧 CSS/JS，表现成“容器还是老版本”。
+    """
+
+    def test_version_tracks_content_not_mtime(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            sample = base / 'asset.css'
+            sample.write_text('v1', encoding='utf-8')
+            os.utime(sample, (1000, 1000))
+            first = context_processors._build_assets_version(base, ('asset.css',))
+            os.utime(sample, (2000, 2000))
+            same = context_processors._build_assets_version(base, ('asset.css',))
+            self.assertEqual(first, same)
+            sample.write_text('v2', encoding='utf-8')
+            changed = context_processors._build_assets_version(base, ('asset.css',))
+            self.assertNotEqual(first, changed)
+            self.assertRegex(first, r'^[0-9a-f]{16}$')
+
+    def test_home_styles_and_scripts_carry_the_version_stamp(self):
+        html = (settings.BASE_DIR / 'plugins/assistant/templates/assistant/home_chat.html'
+                ).read_text(encoding='utf-8')
+        for ref in (
+            'assistant/css/assistant.css',
+            'css/ds-panels.css',
+            'js/rail-boot.js',
+            'js/home-panels.js',
+            'js/ds-shell.js',
+            'js/shortcuts.js',
+        ):
+            self.assertIn(
+                "{% static '" + ref + "' %}?v={{ assets_version }}", html,
+                f'{ref} 缺少资源版本戳',
+            )

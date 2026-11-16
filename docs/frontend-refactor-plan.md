@@ -1898,3 +1898,28 @@ after 的 `loaderHiddenAt` 54–97ms 与 `load` 同量级，`loaderSeen=false` �
 - 输入框：`Shift+Enter` 连按两次得到 3 行，textarea 高度 `52 → 76`，发送按钮点击计数为 0；
   `Enter` 使发送按钮点击计数 +1。为避免往真实会话写入验收文本，本次用捕获监听拦下发送按钮的
   最终提交动作，只验证键盘到发送路径的映射；实际落库发送沿用此前已验收的 `Enter` 路径。
+
+### 9.13.43 静态资源戳改为内容哈希（v2.2.15 / 2026-11-16）
+
+**现象**：`docker compose up -d --build --force-recreate web` 之后，浏览器仍像在跑旧版本；
+但容器内 `ds-panels.css` / `shortcuts.js` / `ds-shell.js` / `ds_shortcuts.html` / `home_chat.html`
+与本地 MD5 全部一致，服务端返回的 CSS 也是新版。
+
+**根因**：`assets_version` 取 `_ASSET_STAMP_FILES` 的 `st_mtime` 最大值。Docker `COPY . .`
+保留源文件 mtime，重建只换容器、不换 mtime，`?v=1794758281` 在两次构建间保持不变；
+浏览器继续命中同 URL 的旧 CSS/JS。首页另有三条资源完全没有版本戳：
+`assistant/css/assistant.css`、`js/rail-boot.js`、`js/home-panels.js`。
+
+**修复**：
+
+- `_build_assets_version()` 对「清单相对路径 + 文件 SHA-256」求 16 位 hex；
+  mtime 改动不影响结果，文件内容改动必换 `?v`；缺失文件也以 `<missing>` 参与哈希。
+- 清单追加 `assistant.css`、`rail-boot.js`、`home-panels.js`。
+- 首页 `assistant.css`、`rail-boot.js`、`home-panels.js`、`panel_theme_css` 全部补
+  `?v={{ assets_version }}`。
+- 新增 `AssetsVersionTest`：mtime 变但内容相同时版本一致；内容变化时版本改变；
+  首页 6 条关键 CSS/JS 链接必须带资源戳。
+
+**真实栈验收**：强制重建后页面 `?v` 由 `1794758281` 变为 `6dfdc2659a93f0f7`，
+刷新后首页 12 条 `data-ds-shortcut-row`、分组仍为「快速操作 / 会话 / 侧栏与设置 / 输入框」，
+`Ctrl+/` 面板恢复 `480×600`。以后部署只需要正常重建容器，不再需要用户手动清浏览器缓存。

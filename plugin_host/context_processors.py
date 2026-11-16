@@ -1,6 +1,8 @@
 """容器上下文处理器：插件菜单（含当前 Tab 高亮）、启用插件名、主题列表、图表引擎。"""
 
+import hashlib
 import logging
+from pathlib import Path
 
 from django.conf import settings
 from django.db.utils import OperationalError, ProgrammingError
@@ -118,30 +120,45 @@ def notifications(request):
         count = 0
     return {'notify_unread': count}
 
-# v2.1.5：静态资源版本戳。
-# 容器重建后 CSS 仍是同名文件，浏览器对同 URL 的缓存不会失效 ——
-# 页面上给静态链接带 ?v=<mtime>，重建后 URL 变化即强制重新拉取。
+# v2.2.15：静态资源版本戳改成内容哈希。
+# 旧实现取 mtime 最大值；Docker `COPY . .` 会保留源文件 mtime，重建后戳不变，
+# 浏览器继续拿着同名旧 CSS/JS —— 部署后看起来像"容器还是老版本"。
+# 内容哈希与 mtime 无关，文件内容一变，?v= 必变。
 _ASSETS_VERSION = None
 _ASSET_STAMP_FILES = (
     'plugin_host/static/css/ds-panels.css',
     'themes/corporate-clean/static/themes/corporate-clean/css/corporate-clean.css',
+    'plugins/assistant/static/assistant/css/assistant.css',
     'plugin_host/static/js/ds-shell.js',
     'plugin_host/static/js/shortcuts.js',
     'plugin_host/static/js/confirm.js',
     'plugin_host/static/js/dashboard-range.js',
+    'plugin_host/static/js/rail-boot.js',
+    'plugin_host/static/js/home-panels.js',
     'themes/corporate-clean/static/themes/corporate-clean/js/home.js',
 )
 
 
+def _build_assets_version(base_dir=None, files=None):
+    """对固定资源清单做内容哈希；文件缺失也参与哈希，清单顺序保持稳定。"""
+    base = Path(base_dir or settings.BASE_DIR)
+    digest = hashlib.sha256()
+    for rel in files or _ASSET_STAMP_FILES:
+        digest.update(rel.encode('utf-8'))
+        digest.update(b'\0')
+        try:
+            payload = (base / rel).read_bytes()
+        except OSError:
+            digest.update(b'<missing>')
+        else:
+            digest.update(hashlib.sha256(payload).digest())
+        digest.update(b'\0')
+    return digest.hexdigest()[:16]
+
+
 def assets(request):
-    """注入静态资源版本戳（v2.1.5），模板里写成 ?v={{ assets_version }}。"""
+    """注入静态资源版本戳（v2.2.15），模板里写成 ?v={{ assets_version }}。"""
     global _ASSETS_VERSION
     if _ASSETS_VERSION is None:
-        stamp = 0
-        for rel in _ASSET_STAMP_FILES:
-            try:
-                stamp = max(stamp, int((settings.BASE_DIR / rel).stat().st_mtime))
-            except OSError:
-                continue
-        _ASSETS_VERSION = str(stamp)
+        _ASSETS_VERSION = _build_assets_version()
     return {'assets_version': _ASSETS_VERSION}
