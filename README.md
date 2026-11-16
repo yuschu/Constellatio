@@ -1,16 +1,165 @@
-# Constellatio・企业办公自动化系统
+# Constellatio · Enterprise Office Automation
 
-> 基于 Django 的全栈插件化 OA。容器唯一固定：数据库、外观、模板、图表、认证等基础设施，与审批、公告、考勤等业务模块，全部可插拔、可替换。
+**English** | [简体中文](#简体中文)
 
-**当前基线**：`v2.2.15`（2026-11-15）· 656 项测试全绿 · tag `v2.2.15` · Release `v2.2.15 Beta`（「AI 助手 C1 普通单动作卡」）
-**工作区**：首页 composer 的附件/只读模式/模型状态已补齐 · 全量 656 项测试全绿
+> **flexible plugin** — a full-stack, plugin-driven OA built on Django. The plugin container is the only fixed layer: infrastructure such as the database, themes, templates, charting, and authentication, together with business modules such as approvals, notices, and attendance, is fully pluggable and replaceable.
+
+**Current baseline**: `v2.2.15` (2026-11-15) · 650+ automated tests passing · tag `v2.2.15` · Release `v2.2.15 Beta` ("AI Assistant C1: single-action approval card")
+**Workspace**: assistant composer attachments, read-only mode, and model status are in place · 650+ automated tests passing
+
+## ✨ Features
+
+### Architecture and platform
+
+* 🧩 **Plugin-first**: a plugin container plus fully pluginized business capabilities (auth / user / approval / notice / attendance / blockchain / workspace / structure / language)
+* 🔌 **Pluggable infrastructure**: database (MySQL ↔ SQLite), appearance (built-in light/dark + `themes/` theme packs), template engine, chart engine, and authentication backend
+* ⚙ **Runtime plugin switches**: enabling or disabling a plugin takes effect immediately; a disabled plugin hides its menus and returns 404, and the change is recorded in the activity log
+* 🏠 **Workspace and charts**: metric cards, workflow trends, plugin distribution, and organization charts with today / week / month linkage and separate admin / employee views; ECharts is bundled locally, and the chart engine can be disabled at runtime with automatic table fallback
+* ⛓ **Activity log**: key operations are recorded in a SHA-256 hash chain, each entry has a detail view, and tampering breaks the chain and raises an alert; statistics are grouped by day × source plugin
+* 🔑 **Enterprise SSO**: HMAC-signed ticket gateway login with automatic account provisioning and replay protection, coexisting with password login
+* ✉ **Notifications**: an unread badge in the top bar plus a message center; pending approval tasks, approval results, and published notices generate in-app messages, and the feature can be disabled with graceful fallback
+* 🤖 **Built-in AI assistant (A/B/C1)**: Compose bundles Ollama and `qwen3:4b`, pulled and prewarmed on first start, with automatic fallback to the ModelScope non-thinking variant if the official source fails; read-only queries, six approval draft cards (inline editing, with submission still posting to the original approval endpoints), and ordinary single-action approval cards (card only; confirmation still POSTs to the existing approval detail endpoint); conversations are persisted; the configuration page can override the model with a gateway or a larger model
+* 📦 **Self-hosted deployment**: `docker compose up -d` starts the full stack (MySQL 8 + Ollama + Gunicorn + WhiteNoise); Bootstrap is vendored for offline use, startup is refused without `SECRET_KEY` in production, and logout uses POST
+
+### Business capabilities
+
+* 📋 **Approval center**: six dynamic forms for leave, reimbursement, seal use, field work, overtime, and compensatory time off, with required-field markers and automatic assignment / CC to the direct manager
+* 🕐 **Attendance**: office and field check-in, makeup check-in, detail filters, and a monthly dashboard; attendance rules are configurable (working hours, late/early grace periods, workdays, and makeup lookback). Since v2.2, the dashboard follows the Jibble layout, with four-column detail filters and a month selector that follows the selected range
+* 📢 **Notices**: a single-column notice feed with the title and body on the same screen; notices are marked read on entry, and read details are available to administrators
+* 🏢 **Organization and permissions**: a functional organization template (one-click idempotent application of departments / roles / users), countersigned soft and hard department deletion, a user state machine, L0–L3 permission codes, and role-template grants; menus and URLs use the same policy
+* 👤 **Profile**: a top-bar username entry for editing the profile, viewing permissions, and changing the password; user editing only exposes permissions that the operator can grant
+* 🧾 **Baseline access**: attendance check-in and notice browsing are available to every signed-in user; administrative roles additionally get attendance report details (`attendance_report_view`)
+
+### Frontend and experience
+
+* 🖥 **DSH-style frontend (v2.2.0–v2.2.13)**: the sidebar's wide and narrow states, settings sheet, composer, plugin page, dashboard, attendance, site-wide scrollbars, and page transitions are aligned item by item with the DSH source; dashboard spacing is tightened
+* 🎨 **Theme consolidation**: the built-in themes are light and dark, controlled by one site-wide switch; additional themes are installed under `themes/<key>/theme.json` and automatically appear in the "Theme packs" row
+
+### Security and engineering
+
+* 🛡 **Security baseline**: row locks and transactions for approval, audit, and attendance writes; object-level authorization for approval details and attachments by applicant / approver / countersigner / CC; unified 401 / 403 / 404 / 500 semantics with `X-Request-Id`; login rate limiting and password validators; a CSP with 10 directives and a nonce-only `script-src`, without enabling `unsafe-inline`
+* 🧪 **Engineering gates**: pinned dependencies + `ruff` + `manage.py check` + full test suite in GitHub Actions, with 650+ tests passing; the shared cache uses `DatabaseCache`, so login rate limiting and SSO replay protection hold across workers
+
+## 🛠 Tech stack
+
+Python 3.13 · Django 5.2 LTS · MySQL 8.0 (SQLite switchable) · built-in themes (light / dark, `themes/corporate-clean`) · ECharts 5 · Gunicorn · WhiteNoise · Docker Compose
+
+## 🚀 Quick start
+
+### Docker (recommended)
+
+Cross-platform: **Windows / macOS / Linux**, with only Docker (Desktop or Engine) required.
+
+```bash
+cp .env.example .env           # set SECRET_KEY; use an OLLAMA_IMAGE mirror if Docker Hub is slow
+docker compose up -d --build
+# open http://localhost:8000
+# default superuser: admin / Constellatio@2026 (override in .env; see .env.example)
+# first start pulls and prewarms the bundled qwen3:4b (~2–3 GB); falls back to the ModelScope non-thinking variant if the official source fails
+# CPU inference: about 2–4 minutes per turn for the official build, about 3–6 seconds for the non-thinking fallback; with a GPU, switch to a gateway or a larger model on the configuration page
+```
+
+### Local development
+
+```bash
+python -m venv venv
+venv\Scripts\activate          # Windows
+# source venv/bin/activate     # macOS / Linux
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py createcachetable   # cache table; a missing table makes login return 500 (login limiting / SSO replay protection use the shared cache)
+python manage.py createsuperuser
+python manage.py runserver
+```
+
+## 📁 Project layout
+
+```text
+Constellatio/
+├── docker-compose.yml   # one-command stack (MySQL 8 + Ollama + web)
+├── Dockerfile           # application image (gunicorn + whitenoise)
+├── entrypoint.sh        # container entrypoint (migrate / collectstatic / superuser / gunicorn)
+├── .env.example         # deployment environment template
+├── requirements.txt
+├── manage.py
+├── plugin_host/          # plugin container (the only fixed core)
+│   ├── registry.py       # plugin registry (PluginMeta / menu aggregation)
+│   ├── discover.py       # auto-discovery and registration checks
+│   ├── signals.py        # signal bus (cross-plugin communication)
+│   ├── context_processors.py  # aggregated menu injection for templates
+│   ├── views.py          # workspace home
+│   └── apps.py           # container AppConfig
+├── plugins/              # business plugins (all removable)
+│   ├── auth/             # authentication plugin
+│   ├── user/             # users / departments / roles / RBAC
+│   ├── approval/         # approval center
+│   ├── notice/           # notices
+│   ├── attendance/       # attendance
+│   ├── blockchain/       # activity hash chain
+│   ├── workspace/        # runtime plugin switches
+│   ├── structure/        # functional organization template
+│   └── language/         # language packs
+├── themes/               # theme layer (pluggable, discovered via theme.json)
+│   └── corporate-clean/  # built-in theme: light + dark
+├── locale/               # translation catalogs (.po and .mo committed; run tools/compile_mo.py after editing .po)
+├── tools/                # pure-Python .mo compiler
+└── docs/                 # project docs (core docs + frontend / AI plans + plugin development and release history)
+```
+
+## 📚 Documentation
+
+**Suggested reading order**: README → Tech stack and architecture → Constraints and acceptance → Database design → Development guide → AI-assisted development guide → Project overview → Frontend refactor record
+
+Most project documentation is written in Chinese.
+
+### Core documents
+
+| Document | Contents |
+| --- | --- |
+| [docs/release-notes.md](docs/release-notes.md) | **Release hub**: current v2.2.15 baseline, release history, tag checkout guide, and upgrade notes |
+| [docs/tech-stack-and-architecture.md](docs/tech-stack-and-architecture.md) | Technology choices, full-stack plugin architecture, plugin contracts, and competitor research |
+| [docs/constraints-and-acceptance.md](docs/constraints-and-acceptance.md) | Hard constraints, feature boundaries, acceptance criteria, development standards, and risks |
+| [docs/database-design.md](docs/database-design.md) | Database design (pluginized: independent tables and migrations per plugin) |
+| [docs/development-guide.md](docs/development-guide.md) | Development workflow, environment, container implementation, plugin development, and coding conventions |
+| [docs/ai-assisted-development-guide.md](docs/ai-assisted-development-guide.md) | AI-assisted development behavior and iteration standards |
+| [docs/project-overview.md](docs/project-overview.md) | Project overview, usage guide, and plugin development examples |
+| [docs/roadmap.md](docs/roadmap.md) | Gap matrix, v1.5–v2.2.15 roadmap, fixes, and documentation debt |
+
+### Frontend and AI plans
+
+| Document | Contents |
+| --- | --- |
+| [docs/frontend-refactor-plan.md](docs/frontend-refactor-plan.md) | v2.2.0–v2.2.13 DSH implementation record and acceptance data (§9.13.27–41) |
+| [docs/dsh-visual-spec.md](docs/dsh-visual-spec.md) | Measured DSH literals: color / spacing / components / shortcut visual baseline |
+| [docs/ai-assistant-plan.md](docs/ai-assistant-plan.md) | Conversational home A→B→C plan; A/B and C1 ordinary single-action cards are shipped, countersigned requests remain to be designed |
+| [docs/ai-assistant-eval.md](docs/ai-assistant-eval.md) | A-phase 20 fixed questions, scoring rules, run instructions, and 4B / 70% acceptance boundary |
+| [docs/ai-assistant-config.md](docs/ai-assistant-config.md) | Built-in Ollama default, configuration override, database / environment precedence, API key encryption, connection testing, and data flow |
+| [docs/ai-tool-calling.md](docs/ai-tool-calling.md) | Local-model tool calling conventions; A-phase read-only tools and validation layer are shipped |
+
+### Plugin development and release history
+
+- **Plugin development**: [workspace](docs/plugin-dev-workspace.md) / [user](docs/plugin-dev-user.md) / [structure](docs/plugin-dev-structure.md) / [language](docs/plugin-dev-language.md) / [theme](docs/plugin-dev-theme.md) / [RBAC](docs/plugin-dev-rbac.md) / [SSO](docs/plugin-dev-sso.md) / [notifications](docs/plugin-dev-notify.md)
+- **Release history**: 59 `docs/plugin-dev-*.md` documents (8 plugin topics + 51 version records), each recording the state at delivery time rather than being rewritten against the current baseline; see the `docs/` directory for the full list and [release-notes](docs/release-notes.md) for the entry point
+
+## 📌 Status
+
+**v2.2.15 AI Assistant C1 single-action approval card shipped** (2026-11-15): an ordinary approval request produces a read-only action card in the conversation, and the card POSTs directly to the existing `approval_detail`; nothing is written until the user confirms. No new write tools, endpoints, or migrations; countersigned requests do not produce cards. 650+ tests pass; tag `v2.2.15` and Release `v2.2.15 Beta` are published, with `Latest` pointing to the release. See [docs/release-notes.md](docs/release-notes.md) for the full version record and upgrade notes.
+
+---
+
+## 简体中文
+
+> **flexible plugin** —— 基于 Django 的全栈插件化 OA。插件容器是唯一固定层：数据库、外观、模板、图表、认证等基础设施，以及审批、公告、考勤等业务模块，全部可插拔、可替换。
+
+**当前基线**：`v2.2.15`（2026-11-15）· 650+ 项自动化测试全绿 · tag `v2.2.15` · Release `v2.2.15 Beta`（「AI 助手 C1 普通单动作卡」）
+**工作区**：首页 composer 的附件、只读模式、模型状态已补齐 · 650+ 项测试全绿
 
 ## ✨ 特性
 
 ### 架构与平台
 
 * 🧩 **万物皆可插件**：插件容器 + 全插件化业务（auth / user / approval / notice / attendance / blockchain / workspace / structure / language）
-* 🔌 **基础设施可插拔**：数据库（MySQL ↔ sqlite）、外观（内置浅色/深色 + `themes/` 外观包）、模板引擎、图表引擎、认证后端
+* 🔌 **基础设施可插拔**：数据库（MySQL ↔ SQLite）、外观（内置浅色 / 深色 + `themes/` 外观包）、模板引擎、图表引擎、认证后端
 * ⚙ **运行时插件开关**：工作台启用 / 禁用插件即时生效，停用即隐藏菜单 + 404；操作进入活动记录
 * 🏠 **工作台与图表**：指标卡、流程趋势、插件分布 / 组织人员图表，今日 / 本周 / 本月联动，管理员 / 员工视图分流；ECharts 本地资源，图表引擎可运行时停用并自动降级表格
 * ⛓ **活动记录**：关键操作 SHA-256 哈希链留痕，单条可查详情，篡改即断链报警；按日 × 来源插件统计
@@ -36,11 +185,11 @@
 ### 安全与工程
 
 * 🛡 **安全基线**：审批 / 留痕 / 打卡关键写入行锁 + 事务；审批详情与附件按申请人 / 审批人 / 会签人 / 抄送人对象级鉴权；统一 401 / 403 / 404 / 500 语义与 `X-Request-Id`；登录失败限流 + 密码校验器；CSP 10 条指令，`script-src` 只认 nonce，不放开 `unsafe-inline`
-* 🧪 **工程门禁**：依赖精确版本 + `ruff` + `manage.py check` + GitHub Actions 全量测试，当前 656 项全绿；共享缓存走 `DatabaseCache`，登录限流与 SSO 防重放跨 worker 成立
+* 🧪 **工程门禁**：依赖精确版本 + `ruff` + `manage.py check` + GitHub Actions 全量测试，当前 650+ 项全绿；共享缓存走 `DatabaseCache`，登录限流与 SSO 防重放跨 worker 成立
 
 ## 🛠 技术栈
 
-Python 3.13・Django 5.2 LTS・MySQL 8.0（可切 sqlite）・内置外观（浅色 / 深色，`themes/corporate-clean`）・ECharts 5・Gunicorn・WhiteNoise・Docker Compose
+Python 3.13 · Django 5.2 LTS · MySQL 8.0（可切 SQLite）· 内置外观（浅色 / 深色，`themes/corporate-clean`）· ECharts 5 · Gunicorn · WhiteNoise · Docker Compose
 
 ## 🚀 快速开始
 
@@ -74,9 +223,9 @@ python manage.py runserver
 
 ```text
 Constellatio/
-├── docker-compose.yml   # 一键部署（MySQL8 + Ollama + web）
+├── docker-compose.yml   # 一键部署（MySQL 8 + Ollama + web）
 ├── Dockerfile           # 应用镜像（gunicorn + whitenoise）
-├── entrypoint.sh        # 容器启动脚本（migrate/collectstatic/超管/gunicorn）
+├── entrypoint.sh        # 容器启动脚本（migrate / collectstatic / 超管 / gunicorn）
 ├── .env.example         # 部署环境变量示例
 ├── requirements.txt
 ├── manage.py
@@ -98,7 +247,7 @@ Constellatio/
 │   ├── structure/        # 职能制组织架构模板
 │   └── language/         # 语言包
 ├── themes/               # 外观层（可插拔，theme.json 发现）
-│   └── corporate-clean/  # 内置唯一外观：浅色 + 深色两态
+│   └── corporate-clean/  # 内置外观：浅色 + 深色两态
 ├── locale/               # 翻译目录（.po 与 .mo 都入库；改 .po 后跑 tools/compile_mo.py）
 ├── tools/                # 纯 Python .mo 编译器
 └── docs/                 # 项目文档（核心文档 + 前端 / AI 规划 + 插件开发与历史版本记录）
@@ -129,7 +278,7 @@ Constellatio/
 | [docs/dsh-visual-spec.md](docs/dsh-visual-spec.md) | DSH 实测字面量：颜色 / 间距 / 组件 / 快捷键视觉基线 |
 | [docs/ai-assistant-plan.md](docs/ai-assistant-plan.md) | 对话式首页 A→B→C 阶段方案；A/B 阶段已落地，C1 普通单动作卡已落地，会签单待设计 |
 | [docs/ai-assistant-eval.md](docs/ai-assistant-eval.md) | A 阶段 20 条固定问句、评分口径、运行方式与 4B/70% 验收边界 |
-| [docs/ai-assistant-config.md](docs/ai-assistant-config.md) | 内置 Ollama 默认、配置页覆盖、数据库/环境变量优先级、API Key 加密、测试连接与数据流向 |
+| [docs/ai-assistant-config.md](docs/ai-assistant-config.md) | 内置 Ollama 默认、配置页覆盖、数据库 / 环境变量优先级、API Key 加密、测试连接与数据流向 |
 | [docs/ai-tool-calling.md](docs/ai-tool-calling.md) | 本地模型 tool calling 接入规范；A 阶段只读工具与校验层已落地 |
 
 ### 插件开发与历史版本
@@ -139,4 +288,4 @@ Constellatio/
 
 ## 📌 状态
 
-**v2.2.15 AI 助手 C1 普通单动作卡已交付并发布**（2026-11-15）：普通审批单在对话内生成只读动作卡，卡片直接 POST 原 `approval_detail`，用户点击后才写库；无新写工具、无新端点、无迁移；会签单不出卡。全量 641 项测试全绿；tag `v2.2.15`，Release `v2.2.15 Beta` 已发布并接管 `Latest`。完整版本记录与升级须知见 [docs/release-notes.md](docs/release-notes.md)。
+**v2.2.15 AI 助手 C1 普通单动作卡已交付并发布**（2026-11-15）：普通审批单在对话内生成只读动作卡，卡片直接 POST 原 `approval_detail`，用户点击后才写库；无新写工具、无新端点、无迁移；会签单不出卡。650+ 项测试全绿；tag `v2.2.15`，Release `v2.2.15 Beta` 已发布并接管 `Latest`。完整版本记录与升级须知见 [docs/release-notes.md](docs/release-notes.md)。
