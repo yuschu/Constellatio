@@ -1,17 +1,20 @@
 {% load i18n %}
 {% comment %}
-快捷键参考弹层（v2.2.0，照 DSH `dsh-client-ui-shortcuts`）：
+快捷键参考弹层（v2.2.0，照 DSH `dsh-client-ui-shortcuts`；v2.2.16 补行内编辑）：
   - 480×600 卡片、`max-height:calc(100dvh - 108px)`，搜索行固定 60px、列表内部滚动、页脚 52px；
   - 行高 42、可执行行显示按键徽标（26 高、radius 10、平台灰底），只读固定行用 tertiary 文本；
   - 搜索按「标签 / 按键组合」的有序子序列匹配，命中即筛掉其余行；
   - `Mod+/`（Windows 即 Ctrl+/）打开与关闭；设置面板里的「快捷键」行也开这同一张卡。
+  - 每行可点「编辑」进入 DSH 同款内联编辑器：录制 / 移除 / 恢复默认；
+    页脚「恢复全部默认」带二次确认。覆盖写 localStorage `constellatio.keybindings.v1`，
+    只改当前 `web:windows` profile。输入框 Enter / Shift+Enter 是 fixed 动作，只读。
+  - 默认键位（DSH 0.2.2 Web Windows 字面量）：
+    session.new = Ctrl+Alt+N，sidebar.left.toggle = Ctrl+Alt+B（仅首页可折叠侧栏时列出），
+    settings.open = Ctrl+Alt+,，shortcuts.open = Ctrl+/；Esc 关闭固定不可改。
 
 快速操作行来自当前页面的入口清单：业务页用侧栏菜单（`menus`），对话式首页用
 自己的固定入口 + 「更多」白名单（`quick_actions`）——首页不渲染的入口不能只在这里
 冒出来。两组都已在后端按插件启停与权限过滤，Ctrl+Alt+1…9 直达。
-会话 / 侧栏与设置两组是 DSH 官方核心绑定（0.2.2 客户端包字面量）：
-`session.new` = Web Windows `Ctrl+Alt+N`，`sidebar.left.toggle` = Web Windows
-`Ctrl+Alt+B`，设置 = Web `Ctrl+Alt+,`，参考层 = `Ctrl+/`。
 DSH 的 `session.fork / session.search / workspace.add / session.rename /
 session.archive` 在本项目没有对应后端动作，reference 卡不列无效键位。
 {% endcomment %}
@@ -45,6 +48,7 @@ session.archive` 在本项目没有对应后端动作，reference 卡不列无�
       <ul class="ds-shortcuts__rows">
         {% for item in quick_actions|default:menus|slice:":9" %}
         <li class="ds-shortcuts__row" data-ds-shortcut-row
+            data-shortcut-id="quick.{{ item.shortcut_id }}"
             data-keys="Ctrl+Alt+{{ forloop.counter }}"
             data-shortcut-url="{{ item.url }}">
           <span class="ds-shortcuts__label">{{ item.label }}</span>
@@ -58,6 +62,7 @@ session.archive` 在本项目没有对应后端动作，reference 卡不列无�
       <p class="ds-shortcuts__group">{% trans "会话" %}</p>
       <ul class="ds-shortcuts__rows">
         <li class="ds-shortcuts__row" data-ds-shortcut-row
+            data-shortcut-id="session.new"
             data-keys="Ctrl+Alt+N"
             data-shortcut-url="{% url 'index' %}">
           <span class="ds-shortcuts__label">{% trans "新建会话" %}</span>
@@ -71,6 +76,7 @@ session.archive` 在本项目没有对应后端动作，reference 卡不列无�
       <ul class="ds-shortcuts__rows">
         {% if rail_toggle %}
         <li class="ds-shortcuts__row" data-ds-shortcut-row
+            data-shortcut-id="sidebar.left.toggle"
             data-keys="Ctrl+Alt+B"
             data-shortcut-action="sidebar">
           <span class="ds-shortcuts__label">{% trans "收起或展开侧栏" %}</span>
@@ -80,6 +86,7 @@ session.archive` 在本项目没有对应后端动作，reference 卡不列无�
         </li>
         {% endif %}
         <li class="ds-shortcuts__row" data-ds-shortcut-row
+            data-shortcut-id="settings.open"
             data-keys="Ctrl+Alt+,"
             data-shortcut-action="settings">
           <span class="ds-shortcuts__label">{% trans "打开设置" %}</span>
@@ -88,6 +95,7 @@ session.archive` 在本项目没有对应后端动作，reference 卡不列无�
           </span>
         </li>
         <li class="ds-shortcuts__row" data-ds-shortcut-row
+            data-shortcut-id="shortcuts.open"
             data-keys="Ctrl+/"
             data-shortcut-action="shortcuts">
           <span class="ds-shortcuts__label">{% trans "快捷键参考" %}</span>
@@ -95,7 +103,8 @@ session.archive` 在本项目没有对应后端动作，reference 卡不列无�
             <kbd class="ds-shortcuts__key">Ctrl</kbd><kbd class="ds-shortcuts__key">/</kbd>
           </span>
         </li>
-        <li class="ds-shortcuts__row" data-ds-shortcut-row
+        <li class="ds-shortcuts__row ds-shortcuts__row--fixed" data-ds-shortcut-row
+            data-shortcut-fixed="true"
             data-keys="Esc"
             data-shortcut-action="close">
           <span class="ds-shortcuts__label">{% trans "关闭当前弹层" %}</span>
@@ -125,8 +134,62 @@ session.archive` 在本项目没有对应后端动作，reference 卡不列无�
     </div>
 
     <div class="ds-shortcuts__footer">
-      <span class="ds-shortcuts__note">{% trans "快捷键为固定绑定，不可自定义" %}</span>
-      <button type="button" class="ds-shortcuts__done" data-ds-shortcuts-close>{% trans "关闭" %}</button>
+      <div class="ds-shortcuts__footer-main" data-ds-shortcuts-footer-main>
+        <span class="ds-shortcuts__note" data-ds-shortcuts-status
+              role="status" aria-live="polite">{% trans "点击「编辑」修改；Esc 关闭" %}</span>
+      </div>
+      <div class="ds-shortcuts__footer-confirm" data-ds-shortcuts-footer-confirm hidden>
+        <span class="ds-shortcuts__note">{% trans "恢复全部默认快捷键？" %}</span>
+        <div class="ds-shortcuts__footer-actions">
+          <button type="button" class="ds-shortcuts__inline-action"
+                  data-ds-shortcuts-cancel-reset>{% trans "取消" %}</button>
+          <button type="button" class="ds-shortcuts__done"
+                  data-ds-shortcuts-confirm-reset>{% trans "恢复" %}</button>
+        </div>
+      </div>
+      <div class="ds-shortcuts__footer-actions" data-ds-shortcuts-footer-actions>
+        <button type="button" class="ds-shortcuts__reset-all"
+                data-ds-shortcuts-reset disabled>{% trans "恢复全部默认" %}</button>
+        <button type="button" class="ds-shortcuts__done" data-ds-shortcuts-close>{% trans "关闭" %}</button>
+      </div>
     </div>
+
+    {% if not rail_toggle %}
+    <span hidden data-ds-shortcuts-global
+          data-shortcut-global-id="sidebar.left.toggle"
+          data-global-keys="Ctrl+Alt+B"
+          data-label="{% trans '收起或展开侧栏' %}"></span>
+    {% endif %}
+
+    <div hidden data-ds-shortcuts-i18n
+         data-msg-unbound="{% trans '暂无快捷键' %}"
+         data-msg-idle="{% trans '点击「编辑」修改；Esc 关闭' %}"
+         data-msg-modified="{% trans '{count} 项已自定义' %}"
+         data-msg-saved="{% trans '已修改' %}"
+         data-msg-reset="{% trans '已恢复默认' %}"
+         data-msg-cleared="{% trans '已移除快捷键' %}"
+         data-msg-conflict="{% trans '已被「{command}」占用' %}"
+         data-msg-reserved="{% trans '此组合由系统或文本编辑操作保留。' %}"
+         data-msg-modifier="{% trans '请同时按下 Ctrl 或 Alt 修饰键。' %}"
+         data-msg-unsupported-browser="{% trans '此浏览器暂不支持该组合。' %}"
+         data-msg-unsupported-key="{% trans '暂不支持这个按键。' %}"
+         data-msg-write-failed="{% trans '保存失败。原快捷键已保留，请重试。' %}"
+         data-msg-reset-failed="{% trans '恢复默认失败。原快捷键已保留，请重试。' %}"
+         data-msg-reset-all-saved="{% trans '已恢复默认快捷键' %}"
+         data-msg-edit-aria="{% trans '修改{command}快捷键' %}"></div>
+
+    <template data-ds-shortcuts-editor-template>
+      <span class="ds-shortcuts__editor" role="group">
+        <span class="ds-shortcuts__inline-controls">
+          <button type="button" class="ds-shortcuts__inline-action"
+                  data-editor-reset>{% trans "恢复默认" %}</button>
+          <button type="button" class="ds-shortcuts__inline-action"
+                  data-editor-clear>{% trans "移除" %}</button>
+          <button type="button" class="ds-shortcuts__recorder"
+                  data-editor-record>{% trans "按下快捷键" %}</button>
+        </span>
+        <span class="ds-shortcuts__editor-message" data-editor-message hidden></span>
+      </span>
+    </template>
   </div>
 </div>

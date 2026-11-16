@@ -21,6 +21,7 @@
         <span class="as-brand__name">Constellatio</span>
       </a>
       <button type="button" class="as-rail-toggle" data-ds-rail-toggle
+              data-ds-shortcut-aria="sidebar.left.toggle"
               aria-keyshortcuts="Control+Alt+B"
               data-label-collapse="{% trans '收起侧边栏' %}"
               data-label-open="{% trans '打开侧边栏' %}"
@@ -33,7 +34,8 @@
     </div>
 
     {% if assistant_enabled %}
-    <a href="/" class="as-new" aria-keyshortcuts="Control+Alt+N">
+    <a href="/" class="as-new" data-ds-shortcut-aria="session.new"
+       aria-keyshortcuts="Control+Alt+N">
       <span class="as-new__content">
         <svg class="as-new__ico" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
           <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" fill="none"/>
@@ -204,7 +206,8 @@
                 </svg>
               </span>
               <span>{% trans "设置" %}</span>
-              <span class="ds-menu__shortcut" aria-hidden="true">Ctrl+Alt+,</span>
+              <span class="ds-menu__shortcut" aria-hidden="true"
+                    data-ds-shortcut-text="settings.open">Ctrl+Alt+,</span>
             </button>
 
             {% if 'notify' in plugins_enabled %}
@@ -805,10 +808,16 @@
       <div class="ds-settings__row">
         <div>
           <div class="ds-settings__row-title">{% trans "快捷键" %}</div>
-          <div class="ds-settings__row-desc">{% trans "快速操作与输入框操作一览" %}</div>
+          <div class="ds-settings__row-desc">{% trans "查看和编辑当前可用的快捷键和输入操作" %}</div>
         </div>
-        <button type="button" class="ds-settings__keybtn" data-ds-shortcuts-open>
-          <kbd class="ds-kbd">Ctrl</kbd><kbd class="ds-kbd">/</kbd>
+        <button type="button" class="ds-settings__keybtn" data-ds-shortcuts-open
+                data-ds-shortcut-aria="shortcuts.open"
+                data-ds-shortcut-keys="shortcuts.open"
+                aria-keyshortcuts="Control+/">
+          <span class="ds-settings__keylabel">{% trans "编辑快捷键" %}</span>
+          <span class="ds-settings__keycaps" data-ds-shortcut-keycaps>
+            <kbd class="ds-kbd">Ctrl</kbd><kbd class="ds-kbd">/</kbd>
+          </span>
         </button>
       </div>
 

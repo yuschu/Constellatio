@@ -74,7 +74,8 @@
                   </svg>
                 </span>
                 <span>{% trans "设置" %}</span>
-                <span class="ds-menu__shortcut" aria-hidden="true">Ctrl+Alt+,</span>
+                <span class="ds-menu__shortcut" aria-hidden="true"
+                      data-ds-shortcut-text="settings.open">Ctrl+Alt+,</span>
               </button>
 
               {% if 'notify' in plugins_enabled %}
@@ -208,10 +209,16 @@
         <div class="ds-settings__row">
           <div>
             <div class="ds-settings__row-title">{% trans "快捷键" %}</div>
-            <div class="ds-settings__row-desc">{% trans "快速操作与输入框操作一览" %}</div>
+            <div class="ds-settings__row-desc">{% trans "查看和编辑当前可用的快捷键和输入操作" %}</div>
           </div>
-          <button type="button" class="ds-settings__keybtn" data-ds-shortcuts-open>
-            <kbd class="ds-kbd">Ctrl</kbd><kbd class="ds-kbd">/</kbd>
+          <button type="button" class="ds-settings__keybtn" data-ds-shortcuts-open
+                  data-ds-shortcut-aria="shortcuts.open"
+                  data-ds-shortcut-keys="shortcuts.open"
+                  aria-keyshortcuts="Control+/">
+            <span class="ds-settings__keylabel">{% trans "编辑快捷键" %}</span>
+            <span class="ds-settings__keycaps" data-ds-shortcut-keycaps>
+              <kbd class="ds-kbd">Ctrl</kbd><kbd class="ds-kbd">/</kbd>
+            </span>
           </button>
         </div>
 

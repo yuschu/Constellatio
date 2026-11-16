@@ -4919,9 +4919,10 @@ html[data-color-mode="dark"] select.r-select:not([multiple]) {
      1. DSH 每一行的「整组组合键」装在一个灰块里（.keyBadge 本身是整体），
         我们把组合键按 kbd 逐键拆开、外面套同一个灰块容器——结构不同、观感一致，
         因为我们的组合键里带数字（Ctrl+Alt+1），逐键拆开在中文语境下更易读。
-     2. 没有「编辑 / 录制 / 恢复默认 / 覆盖条数」那一整套（DSH 要写
-        localStorage `dsh.keybindings.v1`、桌面端写 userData/keybindings.json）。
-        我们的快捷键是固定绑定，页脚因此只放「固定绑定」说明 + 关闭。
+     2. 编辑能力按 DSH 0.2.2 的 Reference/Editor 移植：行内录制、移除、恢复默认、
+        冲突 / 保留键提示、修改条数、恢复全部默认。存储键改为
+        `constellatio.keybindings.v1`（只写当前 web:windows profile），
+        不做桌面端 userData/keybindings.json。
      3. 层级 1002：DSH 只有设置面板一层（1000），我们在设置面板之上再叠一层参考卡。
    ============================================================ */
 
@@ -5094,6 +5095,14 @@ html[data-color-mode="dark"] select.r-select:not([multiple]) {
   background: var(--ds-interactive-hover);
 }
 
+.ds-shortcuts__row--editable {
+  cursor: pointer;
+}
+
+.ds-shortcuts__row--editing {
+  background: var(--ds-interactive-hover);
+}
+
 .ds-shortcuts__label {
   min-width: 0;
   overflow: hidden;
@@ -5137,6 +5146,152 @@ html[data-color-mode="dark"] select.r-select:not([multiple]) {
   background: none;
 }
 
+/* ---------- 行内编辑（DSH 0.2.2 Reference/Editor + module.css 字面量） ---------- */
+.ds-shortcuts__value {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+}
+
+.ds-shortcuts__binding[hidden] {
+  display: none;
+}
+
+.ds-shortcuts__binding.is-unbound {
+  color: var(--ds-label-tertiary);
+}
+
+.ds-shortcuts__edit {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 26px;
+  padding: 0;
+  color: var(--ds-label-tertiary);
+  cursor: pointer;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  opacity: 0;
+}
+
+.ds-shortcuts__row--editable:hover .ds-shortcuts__edit,
+.ds-shortcuts__row--editing .ds-shortcuts__edit,
+.ds-shortcuts__edit:focus-visible {
+  opacity: 1;
+}
+
+.ds-shortcuts__edit:hover {
+  color: var(--ds-label-secondary);
+  background: var(--ds-interactive-hover);
+}
+
+.ds-shortcuts__edit:focus-visible {
+  outline: var(--ds-focus-width) solid var(--ds-focus-ring);
+  outline-offset: 2px;
+}
+
+.ds-shortcuts__editor {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 0;
+  max-width: 260px;
+}
+
+.ds-shortcuts__inline-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.ds-shortcuts__inline-action {
+  box-sizing: border-box;
+  min-height: 26px;
+  padding: 0;
+  color: var(--ds-label-tertiary);
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+  cursor: pointer;
+  appearance: none;
+  background: none;
+  border: 0;
+}
+
+.ds-shortcuts__inline-action:hover {
+  color: var(--ds-label-primary);
+}
+
+.ds-shortcuts__inline-action:focus-visible {
+  outline: var(--ds-focus-width) solid var(--ds-focus-ring);
+  outline-offset: 2px;
+}
+
+.ds-shortcuts__recorder {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 96px;
+  height: 26px;
+  padding: 0 12px;
+  color: var(--ds-label-secondary);
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+  cursor: pointer;
+  appearance: none;
+  background: var(--ds-bg-layer-3);
+  border: 0.5px solid var(--ds-border-l4);
+  border-radius: 10px;
+}
+
+.ds-shortcuts__recorder:hover {
+  color: var(--ds-label-primary);
+  background: var(--ds-interactive-hover);
+}
+
+.ds-shortcuts__recorder:focus-visible {
+  outline: var(--ds-focus-width) solid var(--ds-focus-ring);
+  outline-offset: 2px;
+}
+
+.ds-shortcuts__recorder.is-recording {
+  color: var(--ds-label-primary);
+  border-color: var(--ds-focus-ring);
+}
+
+.ds-shortcuts__recorder[aria-invalid="true"] {
+  border-color: var(--ds-state-warn);
+}
+
+.ds-shortcuts__editor-message {
+  max-width: 260px;
+  color: var(--ds-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+  text-align: right;
+}
+
+.ds-shortcuts__editor-message[hidden] {
+  display: none;
+}
+
+@media (hover: none) {
+  .ds-shortcuts__edit {
+    opacity: 1;
+  }
+}
+
 .ds-shortcuts__empty {
   margin: 18px 8px;
   color: var(--ds-label-tertiary);
@@ -5162,8 +5317,73 @@ html[data-color-mode="dark"] select.r-select:not([multiple]) {
   border-top: var(--ds-hairline) solid var(--ds-border-l2);
 }
 
+.ds-shortcuts__footer-main {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+}
+
+.ds-shortcuts__footer-confirm {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.ds-shortcuts__footer-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}
+
+.ds-shortcuts__footer-main[hidden],
+.ds-shortcuts__footer-confirm[hidden],
+.ds-shortcuts__footer-actions[hidden] {
+  display: none;
+}
+
 .ds-shortcuts__note {
+  min-width: 0;
+  overflow: hidden;
   color: var(--ds-label-tertiary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds-shortcuts__reset-all {
+  box-sizing: border-box;
+  height: 28px;
+  padding: 0 8px;
+  color: var(--ds-label-secondary);
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+  cursor: pointer;
+  appearance: none;
+  background: none;
+  border: 0;
+  border-radius: var(--ds-radius-sm);
+}
+
+.ds-shortcuts__reset-all:hover {
+  color: var(--ds-label-primary);
+  background: var(--ds-interactive-hover);
+}
+
+.ds-shortcuts__reset-all:focus-visible {
+  outline: var(--ds-focus-width) solid var(--ds-focus-ring);
+  outline-offset: 2px;
+}
+
+.ds-shortcuts__reset-all:disabled {
+  color: var(--ds-label-caption);
+  cursor: default;
+  background: none;
 }
 
 .ds-shortcuts__done {
@@ -5182,16 +5402,30 @@ html[data-color-mode="dark"] select.r-select:not([multiple]) {
   background: var(--ds-interactive-hover);
 }
 
-/* 设置面板里「快捷键」行右侧的入口：一组小键帽，点了开同一张卡 */
+/* 设置面板里「快捷键」行右侧的入口：文字 + 小键帽，点了开同一张卡 */
 .ds-settings__keybtn {
   display: inline-flex;
   flex: none;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   padding: 0;
+  color: var(--ds-label-secondary);
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
   cursor: pointer;
   background: none;
   border: 0;
+}
+
+.ds-settings__keylabel {
+  white-space: nowrap;
+}
+
+.ds-settings__keycaps {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
 }
 
 .ds-settings__keybtn:hover .ds-kbd {

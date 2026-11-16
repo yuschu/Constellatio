@@ -294,9 +294,17 @@ def home(request):
     # v2.2.0：快捷键「快速操作」与首页真正渲染出来的入口同源——固定入口指向面板
     # URL，「更多」白名单保持业务 URL；首页本来不显示的菜单不能只在快捷键卡里冒头。
     quick_actions = [
-        {'url': menu['panel_url'], 'label': menu['label']} for menu in primary_menus
+        {
+            'url': menu['panel_url'],
+            'label': menu['label'],
+            'shortcut_id': menu['shortcut_id'],
+        } for menu in primary_menus
     ] + [
-        {'url': menu['url'], 'label': menu['label']} for menu in common_menus
+        {
+            'url': menu['url'],
+            'label': menu['label'],
+            'shortcut_id': menu['shortcut_id'],
+        } for menu in common_menus
     ]
     context = {
         'color_mode': color_mode,

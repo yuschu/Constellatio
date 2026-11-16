@@ -333,12 +333,6 @@
       if (e.key === 'Escape' && isOpen()) {
         e.preventDefault();
         close();
-        return;
-      }
-      // Web 口径：Mod+Alt+, 切换设置
-      if ((e.metaKey || e.ctrlKey) && e.altKey && e.key === ',') {
-        e.preventDefault();
-        if (isOpen()) close(); else open(null);
       }
     });
 

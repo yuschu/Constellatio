@@ -60,7 +60,10 @@ class AssistantHomePageTests(TestCase):
         self.assertContains(response, '描述你要处理的事，/ 调用指令')
         self.assertFalse(response.context['model_configured'])
         # textarea、+ 附件、发送各一个 disabled（「只读」是状态标签，不是按钮）
-        self.assertContains(response, 'disabled', count=3)
+        html = response.content.decode()
+        self.assertRegex(html, r'<textarea[^>]*data-ds-input[^>]*disabled')
+        self.assertRegex(html, r'<button[^>]*data-ds-attach[^>]*disabled')
+        self.assertRegex(html, r'<button[^>]*data-ds-send[^>]*disabled')
 
     def test_rail_collapsed_state_booted_before_first_paint(self):
         """收起态要赶在首帧前落到 <html> 上。
@@ -92,7 +95,10 @@ class AssistantHomePageTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context['model_configured'])
         self.assertNotContains(response, '未配置模型服务')
-        self.assertNotContains(response, 'disabled')
+        html = response.content.decode()
+        self.assertNotRegex(html, r'<textarea[^>]*data-ds-input[^>]*disabled')
+        self.assertNotRegex(html, r'<button[^>]*data-ds-attach[^>]*disabled')
+        self.assertNotRegex(html, r'<button[^>]*data-ds-send[^>]*disabled')
 
     def test_composer_local_echo_before_post(self):
         """发送后立刻有反馈：两张 composer 都挂 pending 钩子，shell 提交即回显。

@@ -38,6 +38,26 @@ def color_mode(request):
     return {'color_mode': stored if stored in COLOR_MODES else DEFAULT_COLOR_MODE}
 
 
+def _shortcut_id(url):
+    """v2.2.16：快捷键覆盖用入口 URL 生成稳定 ID。
+
+    旧实现按 `quick.{序号}` 存储，但首页「快速操作」来自 primary + common，
+    业务页来自侧栏菜单，两边顺序不同：同一个 `quick.1` 在首页是「考勤」、
+    在业务页是「插件」。改一次键会串到别的入口，所以 ID 必须绑定入口本身。
+    """
+    path = (url or '/').strip()
+    if path.startswith('/?panel='):
+        return 'panel.' + path.split('=', 1)[1]
+    path = path.split('?', 1)[0].strip('/')
+    return (path or 'home').replace('/', '.')
+
+
+def _annotate_shortcut_ids(menus):
+    for menu in menus:
+        menu['shortcut_id'] = _shortcut_id(menu.get('url'))
+    return menus
+
+
 def _mark_active(menus, path):
     """v1.5.5：当前路径命中菜单则标记 active（详情页按前缀归属父菜单）。
 
@@ -75,11 +95,11 @@ def menus(request):
     if request.user.is_authenticated:
         # v2.2.1：容器自带的内置菜单（看板）与插件菜单合并后再排序——
         # 停用 AI 助手不该把看板入口一起摘掉，而看板的来源已从 assistant 挪到 core。
-        menu_items = _mark_active(
+        menu_items = _annotate_shortcut_ids(_mark_active(
             sorted(
                 get_menus(request.user, plugins) + get_container_menus(request.user),
                 key=lambda m: m.get('order', 100)),
-            request.path)
+            request.path))
     else:
         menu_items = []
     # v2.1.0：业务页侧栏不再展示首页已承载的面板入口（考勤 / 插件 / 看板），

@@ -359,7 +359,7 @@ class ThemeRuntimeSwitchTest(TestCase):
 
 
 class ShortcutLayerTest(TestCase):
-    """v2.2.0：快捷键层（Ctrl+/ 参考弹层 + Ctrl+Alt+数字 快速操作）。"""
+    """v2.2.0：快捷键层（Ctrl+/ 参考弹层 + Ctrl+Alt+数字 快速操作 + 行内编辑）。"""
 
     @classmethod
     def setUpTestData(cls):
@@ -388,6 +388,16 @@ class ShortcutLayerTest(TestCase):
         self.assertGreaterEqual(rows, 5)
         self.assertLessEqual(rows, 9 + 5)   # 菜单最多 9 行 + 会话/侧栏/设置/参考/关闭 5 行
 
+    def test_quick_action_ids_bind_to_entry_not_position(self):
+        """同一个入口在首页与业务页必须同 ID，不能按列表序号串到别的入口。"""
+        home_html = self.client.get('/').content.decode()
+        business_html = self.client.get('/dashboard/').content.decode()
+        for action_id in ('quick.plugins.attendance', 'quick.plugins.workspace'):
+            self.assertIn(f'data-shortcut-id="{action_id}"', home_html)
+            self.assertIn(f'data-shortcut-id="{action_id}"', business_html)
+        self.assertIsNone(re.search(r'data-shortcut-id="quick\.\d+', home_html))
+        self.assertIsNone(re.search(r'data-shortcut-id="quick\.\d+', business_html))
+
     def test_dsh_core_shortcuts_are_in_reference_dialog(self):
         """DSH 0.2.2 官方核心绑定：新建会话全站可分发，侧栏开合只在可折叠的首页出现。"""
         resp = self.client.get('/dashboard/')
@@ -399,6 +409,7 @@ class ShortcutLayerTest(TestCase):
         home_html = home.content.decode()
         self.assertIn('data-keys="Ctrl+Alt+B"', home_html)
         self.assertIn('data-shortcut-action="sidebar"', home_html)
+        self.assertIn('data-shortcut-id="sidebar.left.toggle"', home_html)
         self.assertContains(home, 'aria-keyshortcuts="Control+Alt+B"')
         self.assertContains(home, 'aria-keyshortcuts="Control+Alt+N"')
 
@@ -409,10 +420,26 @@ class ShortcutLayerTest(TestCase):
         self.assertNotContains(resp, 'data-shortcut-action="sidebar"')
 
     def test_settings_row_opens_the_same_dialog(self):
-        """设置面板里的「快捷键」行是一个按钮，和 Ctrl+/ 开的是同一张卡。"""
+        """设置面板里的「快捷键」行是入口，和 Ctrl+/ 开的是同一张可编辑卡。"""
         resp = self.client.get('/dashboard/')
         self.assertContains(resp, 'ds-settings__keybtn')
-        self.assertContains(resp, '快速操作与输入框操作一览')
+        self.assertContains(resp, '查看和编辑当前可用的快捷键和输入操作')
+        self.assertContains(resp, '编辑快捷键')
+
+    def test_shortcut_rows_expose_edit_contract(self):
+        """每行有稳定 command id；页脚有恢复全部默认；固定输入行不进入覆盖表。"""
+        resp = self.client.get('/dashboard/')
+        html = resp.content.decode()
+        for command_id in ('session.new', 'settings.open', 'shortcuts.open',
+                           'quick.plugins.workspace'):
+            self.assertIn('data-shortcut-id="%s"' % command_id, html)
+        self.assertIn('data-ds-shortcuts-editor-template', html)
+        self.assertIn('data-ds-shortcuts-reset', html)
+        self.assertIn('data-ds-shortcuts-confirm-reset', html)
+        self.assertNotIn('快捷键为固定绑定，不可自定义', html)
+        self.assertRegex(
+            html,
+            r'data-shortcut-id="settings.open"\s+data-keys="Ctrl\+Alt\+,"')
 
     def test_css_literals_match_dsh_shortcuts_module(self):
         """第 36 节的字面量逐项对得上 dsh-client-ui-shortcuts 的 CSS module。"""
@@ -445,6 +472,13 @@ class ShortcutLayerTest(TestCase):
         self.assertIn('height: 26px', badge)
         self.assertIn('border-radius: 10px', badge)
         self.assertIn('padding: 0 12px', badge)
+
+        editor = re.search(r'\.ds-shortcuts__editor\s*\{(.*?)\}', css, re.S).group(1)
+        self.assertIn('flex-direction: column', editor)
+        recorder = re.search(r'\.ds-shortcuts__recorder\s*\{(.*?)\}', css, re.S).group(1)
+        self.assertIn('min-width: 96px', recorder)
+        self.assertIn('height: 26px', recorder)
+        self.assertIn('border-radius: 10px', recorder)
 
     def test_key_chip_resets_bootstrap_kbd(self):
         """键帽不能继承 Bootstrap 的 kbd 底色（深底白字会把灰色药丸画成黑块）。
@@ -481,6 +515,13 @@ class ShortcutLayerTest(TestCase):
         self.assertIn('max-height: calc(100dvh - 108px)', body)
         self.assertIn('border-radius: 24px', body)
         self.assertIn('translateY(30px)', body)
+
+        editor = re.search(r'\.ds-shortcuts__editor\s*\{(.*?)\}', css, re.S).group(1)
+        self.assertIn('flex-direction: column', editor)
+        recorder = re.search(r'\.ds-shortcuts__recorder\s*\{(.*?)\}', css, re.S).group(1)
+        self.assertIn('min-width: 96px', recorder)
+        self.assertIn('height: 26px', recorder)
+        self.assertIn('border-radius: 10px', recorder)
 
 
 class AssetsVersionTest(SimpleTestCase):

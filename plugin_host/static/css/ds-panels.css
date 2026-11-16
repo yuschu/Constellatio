@@ -296,15 +296,29 @@ html[data-color-mode="dark"] .ds-settings .r-badge--orange {
   flex: 1;
 }
 
-/* 快捷键入口：两个键帽并排，不再用浏览器默认按钮 */
+/* 快捷键入口：文字 + 键帽并排，不再用浏览器默认按钮 */
 .ds-settings__keybtn {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 8px;
   padding: 0;
   border: 0;
   background: transparent;
+  color: var(--as-label-secondary, #5f6368);
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 18px;
   cursor: pointer;
+}
+
+.ds-settings__keylabel {
+  white-space: nowrap;
+}
+
+.ds-settings__keycaps {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
 }
 
 .ds-kbd {
@@ -490,6 +504,14 @@ html[data-color-mode="dark"] .ds-settings .r-badge--orange {
   background: var(--as-interactive-hover, #2631480f);
 }
 
+.ds-shortcuts__row--editable {
+  cursor: pointer;
+}
+
+.ds-shortcuts__row--editing {
+  background: var(--as-interactive-hover, #2631480f);
+}
+
 .ds-shortcuts__label {
   min-width: 0;
   overflow: hidden;
@@ -533,6 +555,152 @@ html[data-color-mode="dark"] .ds-settings .r-badge--orange {
   background: none;
 }
 
+/* ---------- 行内编辑：与主题表第 36 节同一份 DSH 字面量，变量落 --as-* ---------- */
+.ds-shortcuts__value {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+}
+
+.ds-shortcuts__binding[hidden] {
+  display: none;
+}
+
+.ds-shortcuts__binding.is-unbound {
+  color: var(--as-label-tertiary, #81858c);
+}
+
+.ds-shortcuts__edit {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 26px;
+  padding: 0;
+  color: var(--as-label-tertiary, #81858c);
+  cursor: pointer;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  opacity: 0;
+}
+
+.ds-shortcuts__row--editable:hover .ds-shortcuts__edit,
+.ds-shortcuts__row--editing .ds-shortcuts__edit,
+.ds-shortcuts__edit:focus-visible {
+  opacity: 1;
+}
+
+.ds-shortcuts__edit:hover {
+  color: var(--as-label-secondary, #61666b);
+  background: var(--as-interactive-hover, #2631480f);
+}
+
+.ds-shortcuts__edit:focus-visible {
+  outline: 1px solid var(--as-button-info-fill, #4176e6);
+  outline-offset: 2px;
+}
+
+.ds-shortcuts__editor {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 0;
+  max-width: 260px;
+}
+
+.ds-shortcuts__inline-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.ds-shortcuts__inline-action {
+  box-sizing: border-box;
+  min-height: 26px;
+  padding: 0;
+  color: var(--as-label-tertiary, #81858c);
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+  cursor: pointer;
+  appearance: none;
+  background: none;
+  border: 0;
+}
+
+.ds-shortcuts__inline-action:hover {
+  color: var(--as-label-primary, #0f1115);
+}
+
+.ds-shortcuts__inline-action:focus-visible {
+  outline: 1px solid var(--as-button-info-fill, #4176e6);
+  outline-offset: 2px;
+}
+
+.ds-shortcuts__recorder {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 96px;
+  height: 26px;
+  padding: 0 12px;
+  color: var(--as-label-secondary, #61666b);
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+  cursor: pointer;
+  appearance: none;
+  background: var(--as-selector, #f5f6f7);
+  border: 0.5px solid var(--as-border-l3, #0000001f);
+  border-radius: 10px;
+}
+
+.ds-shortcuts__recorder:hover {
+  color: var(--as-label-primary, #0f1115);
+  background: var(--as-interactive-hover, #2631480f);
+}
+
+.ds-shortcuts__recorder:focus-visible {
+  outline: 1px solid var(--as-button-info-fill, #4176e6);
+  outline-offset: 2px;
+}
+
+.ds-shortcuts__recorder.is-recording {
+  color: var(--as-label-primary, #0f1115);
+  border-color: var(--as-button-info-fill, #4176e6);
+}
+
+.ds-shortcuts__recorder[aria-invalid="true"] {
+  border-color: var(--as-error, #ec1313);
+}
+
+.ds-shortcuts__editor-message {
+  max-width: 260px;
+  color: var(--as-label-tertiary, #81858c);
+  font-size: 12px;
+  line-height: 18px;
+  text-align: right;
+}
+
+.ds-shortcuts__editor-message[hidden] {
+  display: none;
+}
+
+@media (hover: none) {
+  .ds-shortcuts__edit {
+    opacity: 1;
+  }
+}
+
 .ds-shortcuts__empty {
   margin: 18px 8px;
   color: var(--as-label-tertiary, #81858c);
@@ -554,8 +722,73 @@ html[data-color-mode="dark"] .ds-settings .r-badge--orange {
   border-top: 0.5px solid var(--as-border-l2, #0000001a);
 }
 
+.ds-shortcuts__footer-main {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+}
+
+.ds-shortcuts__footer-confirm {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.ds-shortcuts__footer-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}
+
+.ds-shortcuts__footer-main[hidden],
+.ds-shortcuts__footer-confirm[hidden],
+.ds-shortcuts__footer-actions[hidden] {
+  display: none;
+}
+
 .ds-shortcuts__note {
+  min-width: 0;
+  overflow: hidden;
   color: var(--as-label-tertiary, #81858c);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds-shortcuts__reset-all {
+  box-sizing: border-box;
+  height: 28px;
+  padding: 0 8px;
+  color: var(--as-label-secondary, #61666b);
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+  cursor: pointer;
+  appearance: none;
+  background: none;
+  border: 0;
+  border-radius: var(--as-radius-sm, 8px);
+}
+
+.ds-shortcuts__reset-all:hover {
+  color: var(--as-label-primary, #0f1115);
+  background: var(--as-interactive-hover, #2631480f);
+}
+
+.ds-shortcuts__reset-all:focus-visible {
+  outline: 1px solid var(--as-button-info-fill, #4176e6);
+  outline-offset: 2px;
+}
+
+.ds-shortcuts__reset-all:disabled {
+  color: var(--as-label-caption, #adb2b8);
+  cursor: default;
+  background: none;
 }
 
 .ds-shortcuts__done {

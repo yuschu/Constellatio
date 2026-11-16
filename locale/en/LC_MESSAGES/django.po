@@ -1691,8 +1691,8 @@ msgstr "Drop an appearance pack into themes/ to switch between them here"
 msgid "快捷键"
 msgstr "Keyboard shortcuts"
 
-msgid "快速操作与输入框操作一览"
-msgstr "Quick actions and input-field shortcuts at a glance"
+msgid "查看和编辑当前可用的快捷键和输入操作"
+msgstr "Review and edit the shortcuts and input actions available now"
 
 msgid "业务插件的运行时启停；外观、语言与系统底座随系统内置，不在本清单内"
 msgstr "Runtime toggles for business plugins; appearance, language and system foundations ship built in and are not listed here"
@@ -1745,8 +1745,71 @@ msgstr "Line break (the input grows with the content up to 336px)"
 msgid "没有匹配的快捷键"
 msgstr "No matching shortcuts"
 
-msgid "快捷键为固定绑定，不可自定义"
-msgstr "Shortcuts are fixed and cannot be customised"
+msgid "暂无快捷键"
+msgstr "No shortcut"
+
+msgid "{count} 项已自定义"
+msgstr "{count} shortcut(s) customised"
+
+msgid "已修改"
+msgstr "Saved"
+
+msgid "已恢复默认"
+msgstr "Default restored"
+
+msgid "已移除快捷键"
+msgstr "Shortcut removed"
+
+msgid "已被「{command}」占用"
+msgstr "Already used by “{command}”"
+
+msgid "此组合由系统或文本编辑操作保留。"
+msgstr "This combination is reserved by the system or text editing."
+
+msgid "请同时按下 Ctrl 或 Alt 修饰键。"
+msgstr "Press Ctrl or Alt together with the key."
+
+msgid "此浏览器暂不支持该组合。"
+msgstr "This browser does not support that combination."
+
+msgid "暂不支持这个按键。"
+msgstr "That key is not supported yet."
+
+msgid "保存失败。原快捷键已保留，请重试。"
+msgstr "Could not save. The previous shortcut is still in place; try again."
+
+msgid "恢复默认失败。原快捷键已保留，请重试。"
+msgstr "Could not reset to the default. The previous shortcut is still in place; try again."
+
+msgid "已恢复默认快捷键"
+msgstr "All shortcuts reset to defaults"
+
+msgid "修改{command}快捷键"
+msgstr "Edit shortcut for {command}"
+
+msgid "恢复默认"
+msgstr "Reset to default"
+
+msgid "移除"
+msgstr "Remove"
+
+msgid "按下快捷键"
+msgstr "Press a shortcut"
+
+msgid "编辑快捷键"
+msgstr "Edit shortcuts"
+
+msgid "恢复全部默认"
+msgstr "Reset all to defaults"
+
+msgid "恢复全部默认快捷键？"
+msgstr "Reset all shortcuts to defaults?"
+
+msgid "恢复"
+msgstr "Reset"
+
+msgid "点击「编辑」修改；Esc 关闭"
+msgstr "Choose Edit to change a shortcut; Esc closes this panel"
 
 msgid "AI 助手插件已停用"
 msgstr "AI assistant plugin is disabled"

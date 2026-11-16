@@ -1923,3 +1923,123 @@ after 的 `loaderHiddenAt` 54–97ms 与 `load` 同量级，`loaderSeen=false` �
 **真实栈验收**：强制重建后页面 `?v` 由 `1794758281` 变为 `6dfdc2659a93f0f7`，
 刷新后首页 12 条 `data-ds-shortcut-row`、分组仍为「快速操作 / 会话 / 侧栏与设置 / 输入框」，
 `Ctrl+/` 面板恢复 `480×600`。以后部署只需要正常重建容器，不再需要用户手动清浏览器缓存。
+
+### 9.13.44 快捷键参考弹层支持行内编辑（v2.2.16 / 2026-11-16）
+
+**DSH 0.2.2 真值**（`@deepseek-ai/dsh-client-ui-shortcuts@0.2.2-rc.3` 的
+`src/client/Reference.tsx`、`Editor.tsx`、`locales.ts`，以及 core `lib/client.js` 45–335 行）
+
+- DSH 设置里没有独立的快捷键编辑列表；General 只有一行 `ShortcutsRow`，点「查看」打开快捷键
+  参考弹层。真正修改发生在参考弹层内部：每行整行可点，右侧展开内联编辑器。
+- 固定动作没有 `modified` 字段，不可编辑；页脚 `reset-all` 只在 `modifiedCount > 0` 时可用，
+  点击先弹确认，确认后写 `{type:'reset-all'}`，显示 `reset-saved` / `reset-failed`。
+- 编辑器提供 `恢复默认` / `移除` / `按下快捷键`；录制态监听物理按键，Windows Web 在 `keyup`
+  提交；`Esc` 取消录制，`Tab` 在非三修饰键时允许切焦点。
+- 拒绝无修饰键、仅 Shift、保留键（`Escape` / `Tab` / `Space` / `Backspace` / `Delete` / 方向键、
+  无 `Alt` 的 `Enter`、`Ctrl+C/V/X/Z/Y/Q/H`、无 `Shift` 的 `Ctrl+A`、`Alt+F2/F4`、Windows `Meta` 等）；
+  冲突包含相同组合或单键落在双键 chord 内。Web Windows 允许三修饰键、单 primary + `,` / `\` / `` ` ``、
+  primary + alt/shift 双修饰键，以及 `Ctrl+/`、`Ctrl+Shift+,`、`Ctrl+Shift+.` 特例。
+- 持久化为 `runtime:platform` profile 的显式 override；只改当前 profile，`fixed` 不参与 override；
+  单写者队列 + revision stale 检查，先写存储再 publish。
+
+**本项目落点**
+
+- `plugin_host/static/js/shortcuts.js` v2.2.16：
+  - 存储键 `constellatio.keybindings.v1`，结构
+    `{"schemaVersion":1,"profiles":{"web:windows":{"<commandId>":"<Combo>"|null}}}`；
+    打开参考层与初始化时重新读取；保留其他 profile；空 profile 时删除键；
+    `storage` 事件同步其他标签页。当前为浏览器本地存储（DSH Web 口径），未做账号级服务端存储。
+  - 每行 `data-shortcut-id` 为稳定 ID，`data-keys` 作为默认值；`overrides` 生效时覆盖默认，
+    `null` 表示已移除。分发读 `keysOfRow(row)`，不再硬编码组合。
+  - `updateOutside` 同步 `[data-ds-shortcut-aria]` 的 `aria-keyshortcuts`、
+    `[data-ds-shortcut-text]` 的菜单键帽文案、`[data-ds-shortcut-keys]` 的设置键帽。
+  - 行内编辑器克隆 `<template data-ds-shortcuts-editor-template>`，按钮为
+    `恢复默认` / `移除` / `按下快捷键`；未绑定时隐藏「移除」；整行点击也可进入编辑。
+  - 录制：window capture `keydown/keyup`；`Esc` 取消；无 Ctrl/Alt/Meta 时提示
+    `请同时按下 Ctrl 或 Alt 修饰键。`；修饰键不提交；`keyup` 提交；`blur` 取消录制；
+    `aria-invalid` 标记错误，`:focus-visible` 与 `is-recording` 有可见态。
+  - `bindingIssue` 与 `webBindingAllowed` 按上表 DSH 口径拒绝保留键、非法修饰键与不允许的 Web 组合；
+    冲突校验按生效键位精确匹配，并同时覆盖隐藏的全局 `sidebar.left.toggle` 默认。本项目没有
+    DSH 那种 chord/序列键，因此未实现「单键落在双键 chord 内」的包含判定。
+  - `commitBinding` / `resetRow` / `clearRow` / `resetAll` 写 localStorage；写失败回滚原值并显示
+    `保存失败。原快捷键已保留，请重试。` / `恢复默认失败。原快捷键已保留，请重试。`；
+    状态文本 `已修改` / `已恢复默认` / `已移除快捷键` / `已恢复默认快捷键` / `{count} 项已自定义`，
+    3 秒后回 idle。
+  - 页脚二次确认条承载 `恢复全部默认快捷键？`；确认后清空当前 profile，`resetDisabled` 回到 true。
+  - `Esc` 优先关闭编辑器，再关闭参考层；`open` 重读存储并清旧状态计时器；
+    `close` 只在没有可见 `.ds-settings` 时移除 `body.ds-modal-open`。
+- `plugin_host/templates/includes/ds_shortcuts.html`：
+  - 可编辑行带 `data-shortcut-id`：`quick.<slug>`、`session.new`、`sidebar.left.toggle`、
+    `settings.open`、`shortcuts.open`；`Esc` 行固定只读。
+  - 页脚拆为 `footer-main`（状态）/ `footer-confirm`（确认）/ `footer-actions`（恢复全部默认 + 关闭）。
+  - 业务页（`not rail_toggle`）带隐藏 `[data-ds-shortcuts-global]`：
+    `data-shortcut-global-id="sidebar.left.toggle"`、`data-global-keys="Ctrl+Alt+B"`、
+    `data-label="收起或展开侧栏"`，用于跨页冲突校验。
+  - 隐藏 `[data-ds-shortcuts-i18n]` 带 20 个 `data-msg-*` 文案；
+    `<template data-ds-shortcuts-editor-template>` 内含编辑按钮与错误消息节点。
+  - 快速操作 ID 改 `quick.{{ item.shortcut_id }}`，由后端按入口 URL 生成，位置不再参与 ID。
+- `plugin_host/context_processors.py`：新增 `_shortcut_id(url)`——`/?panel=x` → `panel.x`，
+  其余去 query、去首尾斜杠、`/` 换 `.`，根路径 `home`；`_annotate_shortcut_ids(menus)` 给每条菜单
+  挂 `shortcut_id`。`plugins/assistant/views.py::home()` 的 `quick_actions` 同步带 `shortcut_id`。
+- 设置入口文案与可访问性：首页 `home_chat.html` 与业务页 `base.html` 的「快捷键」行描述改为
+  `查看和编辑当前可用的快捷键和输入操作`，按钮改为 `编辑快捷键` + 键帽，补
+  `data-ds-shortcut-aria` / `data-ds-shortcut-keys` / `aria-keyshortcuts="Control+/"`；
+  首页侧栏 toggle、新建会话、账号菜单同步 aria/data 属性。
+- `plugin_host/static/js/ds-shell.js`：删除 `initSettings` 内硬编码 `Ctrl+Alt+,` 切换分支，
+  只保留 Escape 关闭，避免改键后旧组合继续响应；设置/参考层的分发统一由 `shortcuts.js` 负责。
+- 样式：`corporate-clean.css` 第 36 节与 `ds-panels.css` 同步补
+  `.ds-shortcuts__value` / `.edit` / `.editor` / `.inline-controls` / `.inline-action` /
+  `.recorder`（min-width 96、height 26、0.5px 边框、radius 10）/ `.editor-message` /
+  `.footer-main` / `.footer-confirm` / `.footer-actions` / `.reset-all` / `.keylabel` / `.keycaps`；
+  `@media (hover:none)` 保留触控可达性。
+- 翻译：`locale/en/LC_MESSAGES/django.po` 新增 22 条编辑/录键/恢复/冲突文案，改 2 条旧文案；
+  `.mo` 已用 `tools/compile_mo.py` 重编译。
+
+**跨页串键修复**
+
+原快速操作行用 `data-shortcut-id="quick.{{ forloop.counter }}"`，但首页与业务页菜单顺序不同：
+首页 `quick.1` 是「考勤」，`/dashboard/` 的 `quick.1` 是「插件」。同一 ID 指向不同入口，改键会作用到
+错误入口。改为按入口 URL 生成稳定 ID 后，首页与 `/dashboard/` 的考勤都是
+`quick.plugins.attendance`、插件都是 `quick.plugins.workspace`；在首页把考勤改为 `Ctrl+Alt+0`，
+业务页同一 ID 行同步显示 `Ctrl+Alt+0`，按该组合键从 `/dashboard/` 成功跳到 `/plugins/attendance/`。
+旧 localStorage 里若存在 `quick.1..9` 覆盖，会因 ID 不再匹配而失效，不会串键；本轮未做迁移。
+
+**门禁与真实栈验收**
+
+- `ShortcutLayerTest` 10/10、`tests_assistant_home` 32/32；全量 `668 tests` OK。
+- `ruff check plugin_host/tests.py plugin_host/tests_assistant_home.py plugin_host/context_processors.py
+  plugins/assistant/views.py` 通过；`manage.py check` 通过；`node --check shortcuts.js` / `ds-shell.js`
+  通过；`compile_mo.py --check` 通过。
+- 容器重建后浏览器实测（`constellatio-web-1`，Chrome 已登录 admin）：
+  - 首页参考卡 panel `480×600`、24px 圆角、12 行、11 个编辑按钮；页脚
+    `点击「编辑」修改；Esc 关闭`；无覆盖时 `resetDisabled=true`。
+  - 设置「快捷键」行显示 `编辑快捷键 Ctrl /`，`aria-keyshortcuts="Control+/"`。
+  - 行内编辑器 `184×26`；按钮 `[恢复默认, 移除, 按下快捷键]`，aria 为
+    `修改新建会话快捷键`；录制 `Ctrl+Alt+M` 后写入
+    `{"schemaVersion":1,"profiles":{"web:windows":{"session.new":"Ctrl+Alt+M"}}}`，
+    行键变 `Ctrl Alt M`，页脚 `1 项已自定义`，`as-new` aria 同步 `Control+Alt+M`。
+  - 未点击录制直接按键只走普通分发，不保存。
+  - `settings.open` 改 `Ctrl+Alt+J` 后旧 `Ctrl+Alt+,` 不再打开设置，新组合可打开；
+    账号菜单键帽文案同步 `Ctrl+Alt+J`。
+  - 冲突：快速操作录 `Ctrl+Alt+J` 显示 `已被「打开设置」占用`，`aria-invalid=true`，store 未写入；
+    业务页给「插件」录 `Ctrl+Alt+B` 显示 `已被「收起或展开侧栏」占用`。
+  - 保留键：录 `Ctrl+C` 显示 `此组合由系统或文本编辑操作保留。`，store 未写入。
+  - 移除：行显示 `暂无快捷键`，store 写 `null`；单行恢复默认只删该条。
+  - 刷新后 store 保留，新组合仍生效。
+  - 恢复全部默认：页脚出现 `恢复全部默认快捷键？/取消/恢复`，确认后 store 变 `null`，
+    全部回默认、页脚回 idle、`resetDisabled=true`；设置面板仍在参考层之下，
+    `body.ds-modal-open` 保留；`Esc` 只关参考层，再 `Esc` 关设置并移除 body class。
+  - 深色：panel `rgb(35,35,36)`、录制按钮 `rgb(53,54,56)` 边框 `rgba(255,255,255,.2)`，
+    文字对比正常。
+  - 窄屏（Chrome 最小 504px viewport）：panel `472×600`、x=16，编辑器 `184×26` 不溢出，
+    `scrollWidth == innerWidth`，无横向滚动。
+
+**已知边界**
+
+- 持久化只在当前浏览器 localStorage，换浏览器/清缓存即回默认；未做账号级同步。
+- `Ctrl+Alt+1..9` 快速操作仍是本站扩展，不属于 DSH 核心；单独成组保留。
+- `sidebar.left.toggle` 仍只在首页渲染（业务页无折叠能力）；业务页通过隐藏全局条目参与冲突校验，
+  但不能在该页触发。
+- 浏览器级保留组合（如 `Ctrl+W` / `Ctrl+T` / `Ctrl+N` / `Ctrl+Shift+T`）尚未全部纳入
+  `bindingIssue`；录键阶段可能接受但浏览器优先拦截，后续按需补拒绝清单。
+- 录制按钮 CSS 声明 `0.5px` 边框，Chrome 计算值报 `1px`（子像素舍入），未强制改成 1px。
