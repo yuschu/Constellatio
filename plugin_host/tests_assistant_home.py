@@ -130,6 +130,15 @@ class AssistantHomePageTests(TestCase):
         self.assertIn("e.key === 'Escape'", shell)
         self.assertIn("modelTrigger.click()", shell)
         self.assertIn("fileInput.click()", shell)
+        # /model 的合成 click 会打开浮层；原始 row click 必须停止冒泡，
+        # 否则 document 上的菜单关闭器会立刻把浮层关掉。
+        self.assertRegex(
+            shell,
+            re.compile(
+                r"commandMenu\.addEventListener\('click'.*?event\.stopPropagation\(\)",
+                re.S,
+            ),
+        )
 
         css = (Path(settings.BASE_DIR) /
                'plugins/assistant/static/assistant/css/assistant.css'

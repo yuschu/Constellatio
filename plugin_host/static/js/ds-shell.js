@@ -663,6 +663,9 @@
             event.target.closest('[data-ds-command]');
           if (!row) return;
           event.preventDefault();
+          // /model 会合成 modelTrigger.click() 打开浮层；这次原始 row click
+          // 若继续冒泡到 document 的 click 关闭器，会把刚打开的浮层又关掉。
+          event.stopPropagation();
           executeCommand(row);
         });
         commandMenu.addEventListener('mouseover', function (event) {

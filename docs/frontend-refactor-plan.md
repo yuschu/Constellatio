@@ -2099,6 +2099,9 @@ after 的 `loaderHiddenAt` 54–97ms 与 `load` 同量级，`loaderSeen=false` �
   - 深色菜单 `rgb(67,69,74)`；500px viewport 下菜单随 composer 宽 181px、描述隐藏、
     `scrollWidth == clientWidth`，无横向滚动。
   - 控制台无 error。
+- 回归修复（2026-11-16）：鼠标点击 `/model` 时，`modelTrigger.click()` 的合成 click 先打开
+  浮层，原始 row click 继续冒泡到 document 的浮层关闭器又把浮层立刻关掉，表现为“点了没反应”；
+  命令行 click 现在停止冒泡，并加入对应的静态回归断言。
 
 **已知边界与未决**
 
