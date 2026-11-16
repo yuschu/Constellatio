@@ -10,11 +10,15 @@ v2.1.4：签到详情保持业务页宽度（明细表要横向可读），但�
 {% endcomment %}
 <div class="at-page">
   <header class="at-head">
-    <div class="at-head__lead">
+    <div class="at-head__lead at-head__lead--stack">
       <h2 class="at-head__title">{% trans "签到详情" %}</h2>
       <span class="at-note">{{ start|date:"Y-m-d H:i" }} ~ {{ end|date:"Y-m-d H:i" }}</span>
     </div>
     <div class="at-head__aside">
+      {% url 'attendance:attendance_export' 'csv' as export_csv %}
+      {% url 'attendance:attendance_export' 'xlsx' as export_xlsx %}
+      {% url 'attendance:attendance_export' 'pdf' as export_pdf %}
+      {% include "includes/ds_export_menu.html" with export_csv=export_csv export_xlsx=export_xlsx export_pdf=export_pdf export_query=export_query %}
       <span class="r-badge">{% trans "签到记录" %} {{ total }}</span>
     </div>
   </header>

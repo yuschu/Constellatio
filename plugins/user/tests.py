@@ -18,6 +18,11 @@ class DepartmentV12Tests(TestCase):
         cls.admin = User.objects.create_superuser('admin', '', 'adminpass')
         cls.dept = Department.objects.create(name='研发部')
 
+    def test_user_form_department_uses_ds_select_style(self):
+        """用户新建/编辑的「所属部门」跟直属上级一样走 .r-input，而不是原生下拉框。"""
+        widget = str(UserForm()['department'])
+        self.assertIn('class="r-input"', widget)
+
     def test_soft_delete_marks_inactive_and_signals(self):
         """软删：is_active=False + dept_disabled 信号。"""
         got = []

@@ -179,3 +179,91 @@ class NoticeTest(TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertContains(response, '403', status_code=403)
         self.assertFalse(Announcement.objects.filter(title='越权公告').exists())
+
+
+class NoticeAttachmentTests(TestCase):
+    """公告单附件：上传落盘、非法类型拒绝、登录下载、列表附件卡。"""
+
+    @classmethod
+    def setUpClass(cls):
+        import tempfile
+
+        from django.test import override_settings
+
+        cls._media_root = tempfile.mkdtemp(prefix='notice-media-')
+        cls._media_override = override_settings(MEDIA_ROOT=cls._media_root)
+        cls._media_override.enable()
+        super().setUpClass()
+
+    @classmethod
+    def tearDownClass(cls):
+        import shutil
+
+        super().tearDownClass()
+        cls._media_override.disable()
+        shutil.rmtree(cls._media_root, ignore_errors=True)
+
+    def setUp(self):
+        self.publisher = User.objects.create_user('attachment_publisher', password='pw')
+        self.reader = User.objects.create_user('attachment_reader', password='pw')
+        self.publisher.user_permissions.add(
+            Permission.objects.get(codename='notice_manage'))
+
+    def _upload(self, name='方案.pdf', body=b'%PDF-1.4\nnotice attachment'):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        content_type = 'application/pdf' if name.endswith('.pdf') else 'application/octet-stream'
+        return SimpleUploadedFile(name, body, content_type=content_type)
+
+    def test_create_with_attachment_saves_file(self):
+        import os
+
+        self.client.force_login(self.publisher)
+        response = self.client.post(reverse('notice:notice_create'), {
+            'title': '带附件公告', 'content': '附件正文',
+            'attachment': self._upload(),
+        })
+        self.assertRedirects(response, reverse('notice:notice_list'))
+        announcement = Announcement.objects.get(title='带附件公告')
+        self.assertTrue(announcement.attachment)
+        self.assertEqual(announcement.attachment_name, '方案.pdf')
+        self.assertTrue(os.path.exists(announcement.attachment.path))
+
+    def test_invalid_extension_is_rejected_without_writing(self):
+        self.client.force_login(self.publisher)
+        response = self.client.post(reverse('notice:notice_create'), {
+            'title': '非法附件', 'content': '正文',
+            'attachment': self._upload('payload.exe', b'MZ'),
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '不支持该文件类型')
+        self.assertFalse(Announcement.objects.filter(title='非法附件').exists())
+
+    def test_download_requires_login_and_streams_file(self):
+        self.client.force_login(self.publisher)
+        announcement = Announcement.objects.create(
+            title='可下载公告', content='正文', publisher=self.publisher,
+            attachment=self._upload())
+        url = reverse('notice:notice_attachment', args=[announcement.pk])
+
+        self.client.logout()
+        anonymous = self.client.get(url)
+        self.assertEqual(anonymous.status_code, 302)
+        self.assertIn('/login/', anonymous['Location'])
+
+        self.client.force_login(self.reader)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('attachment', response['Content-Disposition'])
+        self.assertEqual(b''.join(response.streaming_content), b'%PDF-1.4\nnotice attachment')
+
+    def test_list_renders_attachment_card_link(self):
+        self.client.force_login(self.publisher)
+        announcement = Announcement.objects.create(
+            title='附件公告', content='正文', publisher=self.publisher,
+            attachment=self._upload('说明.docx', b'PK\x03\x04'))
+        self.client.force_login(self.reader)
+        response = self.client.get(reverse('notice:notice_list'))
+        self.assertContains(response, reverse('notice:notice_attachment', args=[announcement.pk]))
+        self.assertContains(response, '说明.docx')
+        self.assertContains(response, 'ds-file-card')

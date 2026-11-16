@@ -25,6 +25,18 @@
      本站是 Django 多页，翻页即重新初始化，因此用 sessionStorage 复刻「同一会话内保持」。
      关闭标签页即清空，也不写 localStorage —— 不跨天、不跨设备。 */
   var RAIL_STORE_KEY = 'constellatio.rail-collapsed';
+  var i18nBox = document.querySelector('[data-ds-shell-i18n]');
+
+  function dsMsg(name) {
+    if (!i18nBox) return '';
+    return i18nBox.getAttribute('data-msg-' + name) || '';
+  }
+
+  function dsFmt(template, vars) {
+    return String(template || '').replace(/\{(\w+)\}/g, function (all, key) {
+      return vars && vars[key] != null ? vars[key] : all;
+    });
+  }
 
   function readStoredRail() {
     try { return window.sessionStorage.getItem(RAIL_STORE_KEY) === '1'; }
@@ -36,24 +48,81 @@
     catch (e) { /* 隐私模式 / 禁用存储：退化为「刷新即展开」 */ }
   }
 
-  // ---------- 侧栏收起（点击切换）----------
+  // ---------- 侧栏收起 / 窄屏抽屉（点击切换）----------
   function initRail() {
-    var toggle = document.querySelector('[data-ds-rail-toggle]');
-    if (!toggle) return;
     var root = document.documentElement;
-    var rail = toggle.closest('.ds-rail') || toggle.closest('.as-sidebar');
+    var toggles = document.querySelectorAll('[data-ds-rail-toggle]');
+    if (toggles.length === 0) return;
+    var rail = document.querySelector('.ds-rail, .as-sidebar');
+    var main = document.querySelector('.ds-main, .as-main');
+    var mask = document.querySelector('[data-ds-drawer-mask]');
+    var narrowMq = window.matchMedia ? window.matchMedia('(max-width: 1023.98px)') : null;
+    var drawerMq = window.matchMedia ? window.matchMedia('(max-width: 767.98px)') : null;
+    /* DSH layoutInfo.narrowExpanded：窄屏独立于桌面侧栏宽度偏好，跨 1024/768 阈值时重置。 */
+    var narrowExpanded = false;
+    var lastNarrow = !!(narrowMq && narrowMq.matches);
+    var lastDrawer = !!(drawerMq && drawerMq.matches);
     var animTimer = null;
     var settleTimer = null;
     var wideTimer = null;
+
+    function isNarrow() {
+      return !!(narrowMq && narrowMq.matches);
+    }
+
+    function isDrawer() {
+      return !!(drawerMq && drawerMq.matches);
+    }
+
+    function effectiveCollapsed() {
+      return isNarrow() ? !narrowExpanded : readStoredRail();
+    }
 
     function isCollapsed() {
       return root.getAttribute('data-rail-collapsed') === 'true';
     }
 
-    function sync(collapsed, animate) {
+    function setMode() {
+      if (isDrawer()) root.setAttribute('data-sidebar-drawer', 'true');
+      else root.removeAttribute('data-sidebar-drawer');
+    }
+
+    function syncDrawerState(collapsed) {
+      var drawer = isDrawer();
+      if (rail) rail.toggleAttribute('inert', drawer && collapsed);
+      if (main) main.toggleAttribute('inert', drawer && !collapsed);
+      if (mask) mask.setAttribute('aria-hidden', drawer && !collapsed ? 'false' : 'true');
+    }
+
+    function focusToggle(element) {
+      if (!element) return;
+      element.classList.add('is-focus-silent');
+      try { element.focus({ preventScroll: true }); } catch (e) { element.focus(); }
+      window.setTimeout(function () { element.classList.remove('is-focus-silent'); }, 250);
+    }
+
+    function toggleOutsideRail() {
+      if (!rail) return toggles[0] || null;
+      for (var i = 0; i < toggles.length; i += 1) {
+        if (!rail.contains(toggles[i])) return toggles[i];
+      }
+      return null;
+    }
+
+    function toggleInsideRail() {
+      if (!rail) return toggles[0] || null;
+      for (var i = 0; i < toggles.length; i += 1) {
+        if (rail.contains(toggles[i])) return toggles[i];
+      }
+      return null;
+    }
+
+    function sync(collapsed, animate, persist) {
       window.clearTimeout(animTimer);
       window.clearTimeout(settleTimer);
       window.clearTimeout(wideTimer);
+      var activeInsideRail = !!(rail && rail.contains(document.activeElement));
+      setMode();
 
       if (animate) {
         /* 源码口径：[data-animating] 期间才开宽度过渡 */
@@ -89,11 +158,14 @@
         }
       }
 
-      var label = collapsed ? toggle.dataset.labelOpen : toggle.dataset.labelCollapse;
-      if (label) toggle.setAttribute('aria-label', label);
+      Array.prototype.forEach.call(toggles, function (toggle) {
+        var label = collapsed ? toggle.dataset.labelOpen : toggle.dataset.labelCollapse;
+        if (label) toggle.setAttribute('aria-label', label);
+        toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      });
 
-      /* 落状态：翻页后新页面初始化时据此复原（否则每次导航都会「自己弹回」展开） */
-      writeStoredRail(collapsed);
+      /* DSH：narrowExpanded 是窄屏临时状态；只在 >=1024 时把 0/280 偏好写回存储。 */
+      if (persist && !isNarrow()) writeStoredRail(collapsed);
 
       if (collapsed) {
         var menu = document.querySelector('[data-ds-account-menu]');
@@ -102,21 +174,60 @@
           menu.setAttribute('hidden', '');
           if (trigger) trigger.setAttribute('aria-expanded', 'false');
         }
-        /* 焦点若在侧栏内部（如刚关掉的菜单项），回 toggle 且不画焦点环（源码 focusWithoutRing） */
-        if (rail && rail.contains(document.activeElement) && document.activeElement !== toggle) {
-          toggle.classList.add('is-focus-silent');
-          try { toggle.focus({ preventScroll: true }); } catch (e) { toggle.focus(); }
-          window.setTimeout(function () { toggle.classList.remove('is-focus-silent'); }, 250);
-        }
+      }
+
+      syncDrawerState(collapsed);
+
+      /* 抽屉收起后侧栏整体不可见，焦点必须落在主区外侧的打开器；轨道态仍回到侧栏开关。 */
+      if (collapsed && activeInsideRail) {
+        focusToggle(isDrawer() ? toggleOutsideRail() : toggleInsideRail());
       }
     }
 
-    /* DSH 的 layoutInfo.sidebar 默认 280，同一会话内由客户端内存保留；
-       本站多页，改由 sessionStorage 复原（见 RAIL_STORE_KEY） */
-    sync(readStoredRail(), false);
+    setMode();
+    /* 初次进入窄屏时 DSH 的 narrowExpanded 恒为 false：1024 以下自动收窄，
+       768 以下先收成抽屉，不继承桌面的展开偏好。 */
+    sync(effectiveCollapsed(), false, false);
 
-    toggle.addEventListener('click', function () {
-      sync(!isCollapsed(), true);
+    Array.prototype.forEach.call(toggles, function (toggle) {
+      toggle.addEventListener('click', function () {
+        if (isNarrow()) {
+          narrowExpanded = !narrowExpanded;
+          sync(!narrowExpanded, true, false);
+        } else {
+          sync(!isCollapsed(), true, true);
+        }
+      });
+    });
+
+    if (mask) {
+      mask.addEventListener('click', function () {
+        if (!isDrawer() || effectiveCollapsed()) return;
+        narrowExpanded = false;
+        sync(true, true, false);
+        focusToggle(toggleOutsideRail());
+      });
+    }
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key !== 'Escape' || !isDrawer() || effectiveCollapsed()) return;
+      if (document.body.classList.contains('ds-modal-open')) return;
+      event.preventDefault();
+      narrowExpanded = false;
+      sync(true, true, false);
+      focusToggle(toggleOutsideRail());
+    });
+
+    window.addEventListener('resize', function () {
+      var narrow = isNarrow();
+      var drawer = isDrawer();
+      if (narrow === lastNarrow && drawer === lastDrawer) return;
+      /* DSH setViewportWidth：跨越 1024 或 768 任一阈值即丢弃 narrowExpanded。 */
+      lastNarrow = narrow;
+      lastDrawer = drawer;
+      narrowExpanded = false;
+      setMode();
+      sync(effectiveCollapsed(), false, false);
     });
 
     /* 快捷键 Ctrl+Alt+B 统一由 shortcuts.js 的参考表分发（row[data-shortcut-action=sidebar]），
@@ -196,6 +307,96 @@
     // 点任一项都收起菜单；「设置」随后由 initSettings 打开面板
     Array.prototype.forEach.call(menu.querySelectorAll('[role=menuitem]'), function (item) {
       item.addEventListener('click', function () { close(false); });
+    });
+  }
+
+  // ---------- 通用动作菜单（下载三档） ----------
+  // 业务页的「下载」按钮复用 DSH 菜单材质；与账号菜单不同，这里向下弹，
+  // 并补 ArrowUp/ArrowDown 循环，键盘用户不必 Tab 穿过每个菜单项。
+  function initActionMenus() {
+    var roots = document.querySelectorAll('[data-ds-action-menu]');
+    Array.prototype.forEach.call(roots, function (root) {
+      var trigger = root.querySelector('[data-ds-menu-trigger]');
+      var menu = root.querySelector('.ds-menu');
+      if (!trigger || !menu) return;
+      var items = menu.querySelectorAll('[role=menuitem]');
+
+      function isOpen() { return !menu.hasAttribute('hidden'); }
+
+      function open(focusFirst) {
+        menu.removeAttribute('hidden');
+        trigger.setAttribute('aria-expanded', 'true');
+        if (focusFirst && items.length) items[0].focus({ preventScroll: true });
+      }
+
+      function close(refocus) {
+        if (!isOpen()) return;
+        menu.setAttribute('hidden', '');
+        trigger.setAttribute('aria-expanded', 'false');
+        if (refocus) trigger.focus({ preventScroll: true });
+      }
+
+      menu.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+
+      trigger.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (isOpen()) close(true); else open(false);
+      });
+
+      menu.addEventListener('keydown', function (e) {
+        if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+        e.preventDefault();
+        var at = Array.prototype.indexOf.call(items, document.activeElement);
+        var next = e.key === 'ArrowDown' ? at + 1 : at - 1;
+        if (next < 0) next = items.length - 1;
+        if (next >= items.length) next = 0;
+        items[next].focus({ preventScroll: true });
+      });
+
+      document.addEventListener('mousedown', function (e) {
+        if (isOpen() && !root.contains(e.target)) close(false);
+      });
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && isOpen()) {
+          e.preventDefault();
+          close(true);
+        }
+      });
+
+      Array.prototype.forEach.call(items, function (item) {
+        item.addEventListener('click', function () { close(false); });
+      });
+    });
+  }
+
+  // ---------- 文件选择字段（公告附件） ----------
+  // 只负责把文件名回显到 DSH FilePicker 行，并让「移除」清空 input；
+  // 类型 / 大小由服务端最终校验，前端不做同步准入门闩。
+  function initFileFields() {
+    var fields = document.querySelectorAll('[data-ds-file-field]');
+    Array.prototype.forEach.call(fields, function (field) {
+      var input = field.querySelector('[data-ds-file-input]');
+      var name = field.querySelector('[data-ds-file-name]');
+      var clear = field.querySelector('[data-ds-file-clear]');
+      if (!input || !name) return;
+      var placeholder = name.getAttribute('data-ds-file-placeholder') || name.textContent;
+
+      function render() {
+        var file = input.files && input.files[0];
+        name.textContent = file ? file.name : placeholder;
+        if (clear) clear.hidden = !file;
+      }
+
+      input.addEventListener('change', render);
+      if (clear) {
+        clear.addEventListener('click', function () {
+          input.value = '';
+          render();
+          input.focus({ preventScroll: true });
+        });
+      }
+      render();
     });
   }
 
@@ -466,7 +667,7 @@
           var remove = document.createElement('button');
           remove.type = 'button';
           remove.className = 'as-file-chip__remove';
-          remove.setAttribute('aria-label', '移除 ' + file.name);
+          remove.setAttribute('aria-label', dsFmt(dsMsg('remove-file'), { name: file.name }));
           remove.textContent = '×';
           remove.addEventListener('click', function () {
             setSelectedFiles(selectedFiles.filter(function (item) {
@@ -495,17 +696,19 @@
         var error = '';
         incoming.forEach(function (file) {
           if (next.length >= maxFiles) {
-            error = '一次最多附加 ' + maxFiles + ' 个文件';
+            error = dsFmt(dsMsg('max-files'), { max: maxFiles });
             return;
           }
           var dot = file.name.lastIndexOf('.');
           var ext = dot >= 0 ? file.name.slice(dot).toLowerCase() : '';
           if (allowedExtensions.length && allowedExtensions.indexOf(ext) === -1) {
-            error = '暂不支持 ' + file.name + '；首版只收文本类文件';
+            error = dsFmt(dsMsg('unsupported-file'), { name: file.name });
             return;
           }
           if (file.size > maxFileBytes) {
-            error = file.name + ' 超过 ' + Math.ceil(maxFileBytes / 1000000) + ' MB';
+            error = dsFmt(dsMsg('file-too-large'), {
+              name: file.name, size: Math.ceil(maxFileBytes / 1000000)
+            });
             return;
           }
           var duplicate = next.some(function (item) {
@@ -761,7 +964,7 @@
           chatForm.dataset.sending = '1';
           submitting = true;
           chatForm.setAttribute('aria-busy', 'true');
-          paintPending(value || '请阅读附件', selectedFiles.slice());
+          paintPending(value || dsMsg('read-attachment'), selectedFiles.slice());
 
           // DSH 口径：提交后不锁死输入。等待期间可以继续敲下一条；
           // 同步 PRG 返回会换页，所以输入内容进 sessionStorage，落地后恢复。
@@ -923,7 +1126,7 @@
       var option = document.querySelector(
         '[data-ds-mode-option="' + mode + '"] .as-popover__item-main');
       if (option && option.textContent.trim()) return option.textContent.trim();
-      return mode === 'readwrite' ? '可写' : '只读';
+      return mode === 'readwrite' ? dsMsg('mode-write') : dsMsg('mode-read');
     }
 
     function setMode(mode) {
@@ -1256,8 +1459,9 @@
       var settings = document.getElementById('ds-settings');
       var stacked = !!settings && !settings.hasAttribute('hidden');
       host.classList.toggle('ds-settings--subpage--stack', stacked);
-      /* 叠层时把底下那块设置面板先藏起来（遮罩留着当暗底）：二级页面板按内容收
-         高度，矮面板浮在一张 800 的面板里，四周全是空白。 */
+      /* 叠层时把底下那块设置面板先藏起来（遮罩留着当暗底）：有底部按钮的二级页
+         面板按内容收高度，矮面板浮在一张 800 的面板里，四周全是空白；没有按钮的
+         页面仍保持面板高度，内容短也只留白、不裁短。 */
       if (settings) settings.classList.toggle('ds-settings--stacked', stacked);
       /* 从另一个二级页弹层里再点开（组织架构「用户资料」→「用户管理」）：先把那层
          收掉，否则两个遮罩叠一起。落点沿用那层的 base —— 关掉新面板就回到它底下
@@ -1348,6 +1552,8 @@
     initSettings();
     initSubpages();
     initAccount();
+    initActionMenus();
+    initFileFields();
     initMore();
     initComposer();
     initComposerMenus();

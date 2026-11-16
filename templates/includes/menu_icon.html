@@ -1,0 +1,82 @@
+{% comment %}
+业务页「功能」侧栏图标：菜单 icon 字段存语义 key，这里统一渲染 16px SVG。
+- 插件：用户指定的四叶风车（与首页「浏览更多插件」同一枚 path）。
+- 其余：按 DSH 线性图标口径，取自 IconPark（48 viewBox 缩到 16，描边统一 1.2px 视觉）。
+新增菜单时在对应 apps.py 写 key，并在这里补一个分支；未知 key 回落到通用文档图标。
+{% endcomment %}
+{% if icon == 'plugin' %}
+<svg class="ds-rail__svg" viewBox="0 0 16 16" width="14" height="14"
+     fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true">
+  <path d="M7.84457 5.06199C11.6605 4.93876 14.7962 6.14848 14.8484 7.76397C14.8875 8.97461 13.1838 10.0696 10.7215 10.5942"></path>
+  <path d="M5.12742 8.07731C5.00419 4.26138 6.21391 1.12568 7.8294 1.07351C9.04004 1.03441 10.135 2.73808 10.6596 5.20037"></path>
+  <path d="M8.02457 10.6802C4.20865 10.8034 1.07294 9.5937 1.02077 7.97821C0.981678 6.76758 2.68535 5.67262 5.14763 5.14798"></path>
+  <path d="M10.7476 7.89535C10.8708 11.7113 9.66109 14.847 8.0456 14.8991C6.83496 14.9382 5.74 13.2346 5.21536 10.7723"></path>
+</svg>
+{% else %}
+<svg class="ds-rail__svg" viewBox="0 0 48 48" width="16" height="16"
+     fill="none" stroke="currentColor" stroke-width="3.6"
+     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  {% if icon == 'department' %}
+  {# IconPark: Build/building-two #}
+  <path d="M21 13L11 20L11 44"></path>
+  <path d="M21 4L31 11V24L38 29V44H21V4Z"></path>
+  <path d="M4 44H44"></path>
+  {% elif icon == 'user' %}
+  {# IconPark: Peoples/user #}
+  <circle cx="24" cy="12" r="8"></circle>
+  <path d="M42 44C42 34.0589 33.9411 26 24 26C14.0589 26 6 34.0589 6 44"></path>
+  {% elif icon == 'role' %}
+  {# IconPark: Peoples/peoples #}
+  <path d="M19 20C22.866 20 26 16.866 26 13C26 9.13401 22.866 6 19 6C15.134 6 12 9.13401 12 13C12 16.866 15.134 20 19 20Z"></path>
+  <path d="M32.6077 7C34.6405 8.2249 36.0001 10.4537 36.0001 13C36.0001 15.5463 34.6405 17.7751 32.6077 19"></path>
+  <path d="M4 40.8V42H34V40.8C34 36.3196 34 34.0794 33.1281 32.3681C32.3611 30.8628 31.1372 29.6389 29.6319 28.8719C27.9206 28 25.6804 28 21.2 28H16.8C12.3196 28 10.0794 28 8.36808 28.8719C6.86278 29.6389 5.63893 30.8628 4.87195 32.3681C4 34.0794 4 36.3196 4 40.8Z"></path>
+  <path d="M43.9999 42.0001V40.8001C43.9999 36.3197 43.9999 34.0795 43.128 32.3682C42.361 30.8629 41.1371 29.6391 39.6318 28.8721"></path>
+  {% elif icon == 'approval' %}
+  {# IconPark: Office/doc-success #}
+  <path d="M38 4H10C8.89543 4 8 4.89543 8 6V42C8 43.1046 8.89543 44 10 44H38C39.1046 44 40 43.1046 40 42V6C40 4.89543 39.1046 4 38 4Z"></path>
+  <path d="M17 30L31 30"></path>
+  <path d="M17 36H24"></path>
+  <path d="M30 13L22 21L18 17"></path>
+  {% elif icon == 'pending' %}
+  {# IconPark: Office/inbox #}
+  <path d="M4 30L9 6H39L44 30"></path>
+  <path d="M4 30H14.9091L16.7273 36H31.2727L33.0909 30H44V43H4V30Z"></path>
+  <path d="M19 14H29"></path>
+  <path d="M16 22H32"></path>
+  {% elif icon == 'cc' %}
+  {# IconPark: Office/mail #}
+  <path d="M4 39H44V24V9H24H4V24V39Z"></path>
+  <path d="M4 9L24 24L44 9"></path>
+  {% elif icon == 'records' %}
+  {# IconPark: Time/calendar-three（收成日期网格，避免 16px 下过密） #}
+  <rect x="4" y="8" width="40" height="36" rx="2"></rect>
+  <path d="M4 20H44M4 32H44M17 4V12M31 4V12"></path>
+  {% elif icon == 'history' %}
+  {# IconPark: Time/history #}
+  <path d="M5.81836 6.72729V14H13.0911"></path>
+  <path d="M4 24C4 35.0457 12.9543 44 24 44C35.0457 44 44 35.0457 44 24C44 12.9543 35.0457 4 24 4C16.598 4 10.1351 8.02111 6.67677 13.9981"></path>
+  <path d="M24.005 12L24.0038 24.0088L32.4832 32.4882"></path>
+  {% elif icon == 'structure' %}
+  {# IconPark: Connect/network-tree #}
+  <rect x="8" y="6" width="32" height="12"></rect>
+  <path d="M24 34V18"></path>
+  <path d="M8 34V26H40V34"></path>
+  <rect x="4" y="34" width="8" height="8"></rect>
+  <rect x="20" y="34" width="8" height="8"></rect>
+  <rect x="36" y="34" width="8" height="8"></rect>
+  {% elif icon == 'attendance' %}
+  <rect x="4" y="8" width="40" height="36" rx="2"></rect>
+  <path d="M4 20H44M17 4V12M31 4V12"></path>
+  <path d="M17 31L22 36L31 27"></path>
+  {% elif icon == 'notice' %}
+  {# IconPark: Office/announcement #}
+  <rect x="4" y="15" width="40" height="26" rx="2"></rect>
+  <path d="M24 7L16 15H32L24 7Z"></path>
+  <path d="M12 24H30"></path>
+  <path d="M12 32H20"></path>
+  {% else %}
+  <path d="M38 4H10C8.89543 4 8 4.89543 8 6V42C8 43.1046 8.89543 44 10 44H38C39.1046 44 40 43.1046 40 42V6C40 4.89543 39.1046 4 38 4Z"></path>
+  <path d="M16 18H32M16 26H32M16 34H26"></path>
+  {% endif %}
+</svg>
+{% endif %}

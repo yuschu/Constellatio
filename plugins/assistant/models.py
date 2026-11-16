@@ -18,13 +18,16 @@ class Conversation(AuditModel):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
         related_name='assistant_conversations', verbose_name='用户')
     title = models.CharField('标题', max_length=200, blank=True, default='')
+    pinned = models.BooleanField('置顶', default=False)
+    archived = models.BooleanField('归档', default=False)
 
     class Meta:
         verbose_name = '助手对话'
         verbose_name_plural = '助手对话'
-        ordering = ['-updated_at']
+        ordering = ['-pinned', '-updated_at']
         indexes = [
             models.Index(fields=['user', '-updated_at']),
+            models.Index(fields=['user', 'archived', '-pinned', '-updated_at']),
         ]
 
     def __str__(self):

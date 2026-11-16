@@ -526,7 +526,12 @@ a:hover {
   align-items: center;
   justify-content: center;
   width: 16px;
+  height: 16px;
   color: var(--ds-label-secondary);
+}
+
+.ds-rail__glyph svg {
+  display: block;
 }
 
 .ds-rail__label {
@@ -1268,27 +1273,10 @@ a:hover {
    22. 响应式
    ============================================================ */
 @media (max-width: 1023.98px) {
-  .ds-shell {
-    flex-direction: column;
-  }
-
-  .ds-rail {
-    width: 100%;
-    border-right: 0;
-    border-bottom: 0.5px solid var(--ds-border-l1);
-    max-height: none;
-  }
-
-  .ds-rail__nav {
-    flex-direction: column;
-    overflow: visible;
-    margin-right: 0;
-  }
-
-  .ds-rail__foot {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
+  /* DSH 在 1024 以下不是把侧栏横过来，而是收成 56px 图标轨；
+     轨道态需要一个展开入口，业务页只在窄屏显示这枚开关。 */
+  .ds-rail .ds-rail__narrow-toggle {
+    display: grid;
   }
 }
 
@@ -1396,6 +1384,16 @@ html[data-color-mode="dark"] .ds-rail__toggle:focus-visible {
 html[data-rail-collapsed="true"] .ds-rail__toggle > svg {
   width: 18px;
   height: 18px;
+}
+
+.ds-rail__narrow-toggle {
+  display: none;
+}
+
+/* 桌面端若因同一会话键/快捷键已收起，也留一个可恢复的轨道开关。
+   展开的桌面侧栏保持 v2.1.0 的「不折叠」口径。 */
+html[data-rail-collapsed="true"] .ds-rail__narrow-toggle {
+  display: grid;
 }
 
 /* 折叠态 iconButton 口径（dsh .collapsed .iconButton）：radius-md / 36×36 / label-primary */
@@ -1539,6 +1537,104 @@ html[data-rail-wide-in="true"] .ds-rail__foot {
   html[data-rail-wide-in="true"] .ds-rail__foot {
     transition: none;
     animation: none;
+  }
+}
+
+/* --- 窄屏抽屉（dsh-client-ui-layout/AppFrame [data-sidebar-drawer]） ---
+ *   viewport < 768：侧栏脱离栅格，绝对贴左、宽 min(280, viewport-48)，z 71；
+ *   收起时 translateX(-100%) + visibility hidden，遮罩 z 70 可点，主列 inert。
+ *   本项是浏览器，不带 DSH 的 !windowsTitlebar 条件，否则窄屏永远进不了抽屉。 */
+.ds-drawer-mask {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: var(--ds-bg-mask);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--ds-dur-slow) var(--ds-ease);
+}
+
+html[data-sidebar-drawer="true"] .ds-drawer-mask {
+  display: block;
+}
+
+html[data-sidebar-drawer="true"]:not([data-rail-collapsed="true"]) .ds-drawer-mask {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* 主区外侧的抽屉打开器：侧栏收起后唯一可见入口 */
+.ds-drawer-opener {
+  display: none;
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 72;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-bg-layer-2);
+  color: var(--ds-label-secondary);
+  box-shadow: 0 0 0 0.5px var(--ds-border-l1);
+  cursor: pointer;
+  corner-shape: var(--ds-corner);
+}
+
+html[data-sidebar-drawer="true"][data-rail-collapsed="true"] .ds-drawer-opener {
+  display: grid;
+}
+
+.ds-drawer-opener:hover {
+  background: var(--ds-interactive-hover);
+  color: var(--ds-label-primary);
+}
+
+.ds-drawer-opener:focus-visible {
+  outline: 2px solid #4176e6;
+  outline-offset: 2px;
+}
+
+html[data-sidebar-drawer="true"],
+html[data-sidebar-drawer="true"] body {
+  overflow-x: clip;
+}
+
+html[data-sidebar-drawer="true"] .ds-rail {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 71;
+  width: min(280px, max(0px, calc(100vw - 48px)));
+  height: 100vh;
+  height: 100dvh;
+  border-right: 0;
+  box-shadow: var(--ds-elevation-overlay);
+  transform: translateX(0);
+  visibility: visible;
+  transition: transform var(--ds-dur-slow) var(--ds-ease),
+    visibility 0s linear 0s;
+}
+
+html[data-sidebar-drawer="true"][data-rail-collapsed="true"] .ds-rail {
+  transform: translateX(-100%);
+  visibility: hidden;
+  transition: transform var(--ds-dur-slow) var(--ds-ease),
+    visibility 0s linear var(--ds-dur-slow);
+}
+
+/* 抽屉打开器占掉左上 48px，业务内容首屏让位（DSH mainPanel[data-global-panel]） */
+html[data-sidebar-drawer="true"] .ds-main__body {
+  padding-top: 48px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-sidebar-drawer="true"] .ds-rail,
+  html[data-sidebar-drawer="true"][data-rail-collapsed="true"] .ds-rail,
+  .ds-drawer-mask {
+    transition: none;
   }
 }
 
@@ -2106,25 +2202,37 @@ body.ds-modal-open {
   margin: 0;
 }
 
-/* 开关：轨道 36×20、圆点 16，勾选态用业务色；input 铺满轨道以保留原生点击区 */
+/* 开关：视觉轨道 36×20、圆点 16；外框 44×36 提供足够点击/触控判定，
+   负边距抵消外框增量，卡片排版仍按 36×20 占位 */
 .ds-plugin__switch {
   position: relative;
   display: inline-flex;
   flex: none;
-  width: 36px;
-  height: 20px;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 44px;
+  height: 36px;
+  margin: -8px -4px;
+  padding: 8px 4px;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
-.ds-plugin__switch input {
+/* 覆盖 `.ds-main__body form input[type="checkbox"]` 的 16×16 通用复选框尺寸：
+   开关的点击热区必须与 44×36 的 label 完全重合。 */
+.ds-plugin__switch input[type="checkbox"] {
   position: absolute;
   inset: 0;
-  margin: 0;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
   opacity: 0;
   cursor: pointer;
 }
 
 .ds-plugin__track {
+  position: relative;
   display: block;
   width: 36px;
   height: 20px;
@@ -2135,10 +2243,13 @@ body.ds-modal-open {
 }
 
 .ds-plugin__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
   display: block;
   width: 16px;
   height: 16px;
-  margin: 2px;
+  margin: 0;
   background: var(--ds-bg-base);
   border-radius: 50%;
   transition: transform var(--ds-dur-fast) var(--ds-ease);
@@ -3707,10 +3818,14 @@ html:not([data-color-mode="dark"]) .lc-ov-session {
   gap: var(--ds-space-2);
 }
 
-/* 签到详情：标题 + 时间范围两行起排，右侧只放计数徽标 */
-.at-head__lead {
+/* 签到详情：标题 + 时间范围两行起排，右侧只放计数徽标。
+   align-items 必须是 flex-start：column 方向下 center 会把短标题在 lead 内居中，
+   时间范围因为撑满整列才看着靠左，实测标题 x 比日期多缩进 24.5px。 */
+.at-head__lead.at-head__lead--stack {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
   gap: 2px;
 }
 
@@ -4143,6 +4258,27 @@ html:not([data-color-mode="dark"]) .lc-ov-session {
   box-shadow: none;
 }
 
+/* 可点击统计卡：保留 r-card 的描边与内边距，只补链接基线和可交互态。 */
+.r-card--link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color var(--ds-dur-fast) var(--ds-ease),
+              background-color var(--ds-dur-fast) var(--ds-ease);
+}
+
+.r-card--link:hover {
+  border-color: var(--ds-link);
+  background: var(--ds-interactive-hover);
+  text-decoration: none;
+}
+
+.r-card--link:focus-visible {
+  outline: var(--ds-focus-width) solid var(--ds-focus-ring);
+  outline-offset: 2px;
+}
+
 /* --- 考勤面板：卡片标题按 DSH cardTitle（14/20/600 + 浅色下 0.5px 下边） --- */
 .at-card {
   padding: 14px 16px;
@@ -4451,16 +4587,31 @@ html:not([data-color-mode="dark"]) .lc-ov-session {
   padding-bottom: 0;
 }
 
-/* ---- 二级页面板高度跟着内容走（v2.1.6）----
-   用户口径：二级页别留一大片空白，尽量一页放完、不滚动（「最下面是按钮的」那种）。
-   DSH 的 800 是**设置主面板**的字面量（那里有分区列、内容恒定长）；二级页只是单个
-   分区的一块表单/一段只读信息，按内容收高度更贴近使用。超出一屏才在 options 里滚。
-   叠在设置上的那层也一样收高度：底下的设置面板先藏起来（遮罩留作暗底），不然矮
-   面板浮在一张 800 的面板里，四周又是一片空白。 */
+/* ---- 二级页面板高度（v2.1.6 / v2.2.17 修订）----
+   有最下面一排按钮的二级页：面板跟内容走，别留一大片空白，尽量一页放完、不滚动
+   （用户口径：「最下面是按钮的」那种）。DSH 的 800 是**设置主面板**的字面量（那里
+   有分区列、内容恒定长）；这类表单/只读信息按内容收高度更贴近使用，超出一屏才在
+   options 里滚。叠在设置上的那层也一样收高度：底下的设置面板先藏起来（遮罩留作
+   暗底），不然矮面板浮在一张 800 的面板里，四周又是一片空白。
+   最后一排没有按钮的二级页（消息中心、查看权限、已读人员这类）：保持面板高度，
+   内容短就在底部留白，不再把面板裁到只剩内容高度——裁短了卡片像被截掉一样。 */
 .ds-settings--inline .ds-settings__panel,
 .ds-settings--subpage .ds-settings__panel {
   height: auto;
   max-height: calc(100vh - 48px);
+}
+
+.ds-settings--inline:not(:has(.ds-settings__actions)) .ds-settings__panel,
+.ds-settings--subpage:not(:has(.ds-settings__actions)) .ds-settings__panel {
+  height: min(800px, calc(100vh - 48px));
+}
+
+@media (max-width: 767.98px) {
+  .ds-settings--inline:not(:has(.ds-settings__actions)) .ds-settings__panel,
+  .ds-settings--subpage:not(:has(.ds-settings__actions)) .ds-settings__panel {
+    height: calc(100vh - 24px);
+    max-height: calc(100vh - 24px);
+  }
 }
 
 #ds-settings.ds-settings--stacked .ds-settings__panel {
@@ -4502,6 +4653,14 @@ html:not([data-color-mode="dark"]) .lc-ov-session {
    它们自己已经按 800×800 / 720 正文列居中，再套一层会被挤。
    ========================================================================== */
 .ds-main__body--column > :not(.ds-settings, .ds-modal) {
+  width: min(920px, 100%);
+  margin-inline: auto;
+}
+
+/* 组织架构页：Bootstrap 行放进一个 920 内容列的子容器，行自己保留负 gutter，
+   卡片外侧边才会和标题、「最近应用」通栏卡片对齐；直接让行当 920 列子元素时，
+   第 31 节的 width:920 + auto 会把负 gutter 吃掉，卡片左右各缩进半 gutter。 */
+.structure-grid {
   width: min(920px, 100%);
   margin-inline: auto;
 }
@@ -5402,34 +5561,75 @@ html[data-color-mode="dark"] select.r-select:not([multiple]) {
   background: var(--ds-interactive-hover);
 }
 
-/* 设置面板里「快捷键」行右侧的入口：文字 + 小键帽，点了开同一张卡 */
+/* 设置面板里「快捷键」行右侧的入口：文字 + 键帽 + 展开箭头，点了开同一张卡。
+   这是该行唯一的可点目标，所以给足 32px 命中高度、圆角 hover 与可见焦点；
+   键帽改用输入面底色 + 发丝描边，和面板底色分开，不再像两枚贴纸。 */
 .ds-settings__keybtn {
   display: inline-flex;
   flex: none;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
-  padding: 0;
+  box-sizing: border-box;
+  min-height: 32px;
+  margin-right: -6px;
+  padding: 3px 6px 3px 10px;
   color: var(--ds-label-secondary);
   font: inherit;
-  font-size: 12px;
-  line-height: 18px;
+  font-size: 13px;
+  line-height: 20px;
   cursor: pointer;
-  background: none;
+  background: var(--ds-bg-selector);
   border: 0;
+  border-radius: 10px;
+  corner-shape: var(--ds-corner);
+  transition: background-color var(--ds-dur-fast) linear,
+    color var(--ds-dur-fast) linear;
+}
+
+.ds-settings__keybtn:hover {
+  color: var(--ds-label-primary);
+  background: linear-gradient(
+      var(--ds-interactive-hover),
+      var(--ds-interactive-hover)
+    ),
+    var(--ds-bg-selector);
+}
+
+.ds-settings__keybtn:active {
+  background: linear-gradient(
+      var(--ds-interactive-active),
+      var(--ds-interactive-active)
+    ),
+    var(--ds-bg-selector);
+}
+
+.ds-settings__keybtn:focus-visible {
+  outline: var(--ds-focus-width) solid var(--ds-link);
+  outline-offset: 2px;
 }
 
 .ds-settings__keylabel {
+  font-weight: 500;
   white-space: nowrap;
 }
 
 .ds-settings__keycaps {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
 }
 
-.ds-settings__keybtn:hover .ds-kbd {
-  background: var(--ds-interactive-hover-solid);
+.ds-settings__keychevron {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--ds-label-caption);
+  transition: color var(--ds-dur-fast) linear;
+}
+
+.ds-settings__keybtn:hover .ds-settings__keychevron {
+  color: var(--ds-label-tertiary);
 }
 
 .ds-kbd {
@@ -5439,14 +5639,32 @@ html[data-color-mode="dark"] select.r-select:not([multiple]) {
   justify-content: center;
   min-width: 26px;
   height: 26px;
-  padding: 0 8px;
+  padding: 0 7px;
   color: var(--ds-label-secondary);
   font: inherit;
   font-size: 12px;
+  font-weight: 500;
   line-height: 18px;
-  background: var(--ds-bg-layer-3);
+  background: var(--ds-button-elevated-fill);
   border: 0;
   border-radius: 8px;
+  box-shadow: inset 0 0 0 0.5px var(--ds-border-l2);
+}
+
+.ds-settings__keybtn:hover .ds-kbd {
+  box-shadow: inset 0 0 0 0.5px var(--ds-border-l3);
+}
+
+@media (max-width: 559.98px) {
+  .ds-settings__keylabel {
+    display: none;
+  }
+
+  .ds-settings__keybtn {
+    gap: 6px;
+    margin-right: -4px;
+    padding: 3px 4px 3px 6px;
+  }
 }
 /* ============================================================
    37. 考勤仪表盘（Jibble 结构 + DSH 字面量，v2.2.2）
@@ -6064,5 +6282,608 @@ html[data-color-mode="dark"] select.r-select:not([multiple]) {
   .atj-feed__row {
     flex-wrap: wrap;
     gap: 8px;
+  }
+}
+
+/* ============================================================
+   §32 导出菜单 / 附件卡（DSH FileCard 口径）
+   ------------------------------------------------------------
+   - 下拉菜单复用 .ds-menu 的材质与行高；向下弹时贴触发按钮右缘。
+   - 文件卡来自 DSH FileCard：240×64、gap 10、padding 0 12、
+     0.5px border-l2、radius-lg、input-major 底面。
+   - 公告里的文件卡是链接，下载箭头 hover/focus 才加深；触控常显。
+   ============================================================ */
+
+.ds-actions-menu {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.ds-actions-menu__trigger {
+  white-space: nowrap;
+}
+
+.ds-menu--down {
+  top: calc(100% + 6px);
+  right: 0;
+  bottom: auto;
+  left: auto;
+  min-width: 220px;
+}
+
+.ds-actions-menu .ds-menu__icon {
+  width: 30px;
+  color: var(--ds-label-tertiary);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.ds-menu__meta {
+  flex: none;
+  color: var(--ds-label-tertiary);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+@media (max-width: 640px) {
+  .ds-menu--down {
+    right: 0;
+    left: auto;
+    min-width: min(220px, calc(100vw - 32px));
+  }
+}
+
+.ds-alert {
+  padding: 10px 12px;
+  border-radius: var(--ds-radius-md);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.ds-alert--error {
+  color: var(--ds-state-error);
+  background: color-mix(in srgb, var(--ds-state-error) 8%, transparent);
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--ds-state-error) 32%, transparent);
+}
+
+.ds-alert--success {
+  color: var(--ds-state-success);
+  background: color-mix(in srgb, var(--ds-state-success) 8%, transparent);
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--ds-state-success) 32%, transparent);
+}
+
+/* 模板架构：按 DSH Settings 行重排。
+   左侧是标题 + 说明，右侧是操作；行间用 0.5px 分隔，主按钮落在行尾，
+   不再把下载、选择、文件名、上传挤成一条工具栏。 */
+.ds-template-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.ds-template-rows .ds-settings__row-desc,
+.ds-template-builtin .ds-settings__row-desc {
+  color: var(--ds-label-tertiary);
+}
+
+.ds-settings__row-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding-right: 24px;
+}
+
+.ds-settings__row-control {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin-left: auto;
+}
+
+.ds-template-upload .ds-file-picker__btn {
+  height: var(--ds-control-h);
+  min-height: var(--ds-control-h);
+  font-size: var(--ds-text-control);
+  line-height: var(--ds-text-control-lh);
+}
+
+.ds-settings__row--stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.ds-settings__row--stack .ds-settings__row-text {
+  padding-right: 0;
+}
+
+.ds-template-upload {
+  flex-wrap: wrap;
+}
+
+.ds-template-upload .ds-settings__row-text {
+  flex: 1 1 240px;
+  padding-right: 0;
+}
+
+.ds-template-upload__control {
+  flex: 1 1 320px;
+  justify-content: flex-end;
+}
+
+.ds-template-upload .ds-file-picker {
+  flex: 1 1 auto;
+}
+
+.ds-template-upload .ds-file-picker__name {
+  flex: 1 1 80px;
+}
+
+.ds-template-builtin {
+  margin-top: 8px;
+}
+
+.ds-template-builtin__head {
+  padding: 16px 0 4px;
+}
+
+.ds-template-builtin__actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px 0 8px;
+}
+
+.ds-template-history__list {
+  margin-top: 8px;
+}
+
+.ds-template-history__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 0;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.ds-template-history__row + .ds-template-history__row {
+  border-top: 0.5px solid var(--ds-border-l2);
+}
+
+.ds-template-history__who {
+  min-width: 0;
+  color: var(--ds-label-primary);
+}
+
+.ds-template-history__meta {
+  flex: none;
+  color: var(--ds-label-tertiary);
+  text-align: right;
+}
+
+.ds-template-preview {
+  margin-top: var(--ds-space-5);
+}
+
+.ds-template-preview__head {
+  padding-bottom: var(--ds-space-2);
+  color: var(--ds-label-primary);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 22px;
+}
+
+.ds-template-preview__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  padding-top: 12px;
+  border-top: 0.5px solid var(--ds-border-l2);
+}
+
+.ds-template-preview__block {
+  min-width: 0;
+}
+
+.ds-template-preview__block--wide {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 0.5px solid var(--ds-border-l2);
+}
+
+.ds-template-block__title {
+  margin-bottom: 8px;
+  color: var(--ds-label-primary);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 22px;
+}
+
+.ds-template-block__note {
+  margin-top: 8px;
+  color: var(--ds-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.ds-template-tree,
+.ds-template-tree__children {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ds-template-tree__node + .ds-template-tree__node {
+  margin-top: 8px;
+}
+
+.ds-template-tree__dept {
+  color: var(--ds-label-primary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.ds-template-tree__children {
+  margin-top: 2px;
+  padding-left: 14px;
+  color: var(--ds-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.ds-template-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ds-template-users {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 28px;
+}
+
+.ds-template-users__group {
+  min-width: 0;
+}
+
+.ds-template-users__dept {
+  margin-bottom: 4px;
+  color: var(--ds-label-primary);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.ds-template-users__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 4px;
+  color: var(--ds-label-primary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.ds-template-users__row + .ds-template-users__row {
+  border-top: 0.5px solid var(--ds-border-l2);
+}
+
+.ds-template-users__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds-template-users__account {
+  color: var(--ds-label-tertiary);
+}
+
+.ds-template-users__role {
+  flex: none;
+  color: var(--ds-label-secondary);
+}
+
+@media (max-width: 767px) {
+  .ds-template-upload .ds-settings__row-text {
+    flex-basis: 100%;
+  }
+
+  .ds-template-upload__control {
+    flex-basis: 100%;
+    justify-content: flex-start;
+  }
+
+  .ds-template-preview__grid,
+  .ds-template-users {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ds-template-history__row {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .ds-template-history__meta {
+    text-align: left;
+  }
+}
+
+/* 发起审批：DSH Settings 行。
+   左侧标题/说明，右侧控件；类型 chips 也是同一行的一列，
+   不再用纵向 `.ds-field` 把标签、输入、说明叠成一块。 */
+.ds-approval-create__rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.ds-approval-create__rows > :where(.ds-settings__row) {
+  align-items: flex-start;
+}
+
+.ds-approval-create .ds-settings__row-desc {
+  color: var(--ds-label-tertiary);
+}
+
+.ds-approval-create__control {
+  flex: 0 0 320px;
+  width: 320px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.ds-approval-create__control > .r-input,
+.ds-approval-create__control > .r-select,
+.ds-approval-create__control > textarea,
+.ds-approval-create__control > select {
+  width: 100%;
+}
+
+.ds-approval-create__control textarea.r-input {
+  min-height: 88px;
+  height: 88px;
+  padding: 8px 10px;
+  line-height: 20px;
+  resize: vertical;
+}
+
+.ds-approval-create__control select.r-input {
+  height: var(--ds-control-h);
+}
+
+.ds-approval-create__required {
+  color: var(--ds-state-error);
+}
+
+.ds-approval-create__chips {
+  flex: 0 0 320px;
+  width: 320px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.ds-approval-create__chip {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 10px;
+}
+
+.ds-approval-create__error {
+  margin: 8px 0;
+}
+
+.ds-approval-create__form {
+  margin-top: 0;
+}
+
+.ds-approval-create__actions {
+  justify-content: flex-end;
+  padding-top: 16px;
+}
+
+.ds-approval-create__file {
+  width: 100%;
+}
+
+.ds-approval-create__file .ds-file-picker__btn {
+  position: relative;
+  height: var(--ds-control-h);
+  min-height: var(--ds-control-h);
+  padding: 0 12px;
+  font-size: var(--ds-text-control);
+  line-height: var(--ds-text-control-lh);
+  overflow: hidden;
+}
+
+.ds-approval-create__file .ds-file-picker__btn input[type="file"] {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+@media (max-width: 767px) {
+  .ds-approval-create__rows > :where(.ds-settings__row) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .ds-approval-create .ds-settings__row-text {
+    padding-right: 0;
+  }
+
+  .ds-approval-create__control,
+  .ds-approval-create__chips {
+    flex-basis: auto;
+    width: 100%;
+  }
+}
+
+
+
+.ds-file-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.ds-file-picker__btn {
+  flex: none;
+  height: 28px;
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+  line-height: 18px;
+  cursor: pointer;
+}
+
+.ds-file-picker__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ds-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds-file-picker__clear {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  color: var(--ds-label-tertiary);
+  font-size: 12px;
+  line-height: 1;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.ds-file-picker__clear:hover,
+.ds-file-picker__clear:focus-visible {
+  color: var(--ds-label-primary);
+  background: var(--ds-interactive-hover);
+}
+
+.ds-file-picker__clear[hidden] {
+  display: none;
+}
+
+.ds-file-card {
+  display: inline-flex;
+  box-sizing: border-box;
+  align-items: center;
+  gap: 10px;
+  width: 240px;
+  max-width: 100%;
+  height: 64px;
+  margin-top: 14px;
+  padding: 0 12px;
+  color: var(--ds-label-primary);
+  text-decoration: none;
+  background: var(--ds-bg-layer-2);
+  border-radius: var(--ds-radius-lg);
+  box-shadow: inset 0 0 0 0.5px var(--ds-border-l2);
+}
+
+.ds-file-card:hover,
+.ds-file-card:focus-visible {
+  background: var(--ds-interactive-hover);
+  box-shadow: inset 0 0 0 0.5px var(--ds-border-l3);
+}
+
+.ds-file-card:focus-visible {
+  outline: var(--ds-focus-width) solid var(--ds-focus-ring);
+  outline-offset: 2px;
+}
+
+.ds-file-card__icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  color: var(--ds-label-secondary);
+  background: var(--ds-bg-layer-3);
+  border-radius: var(--ds-radius-md);
+}
+
+.ds-file-card__body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ds-file-card__name {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 22px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds-file-card__meta {
+  overflow: hidden;
+  color: var(--ds-label-tertiary);
+  font-size: 12px;
+  line-height: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds-file-card__download {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: var(--ds-label-tertiary);
+  opacity: 0;
+}
+
+.ds-file-card:hover .ds-file-card__download,
+.ds-file-card:focus-visible .ds-file-card__download {
+  color: var(--ds-label-primary);
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .ds-file-card__download {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 520px) {
+  .ds-file-card {
+    width: 100%;
   }
 }

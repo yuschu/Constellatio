@@ -135,7 +135,7 @@ class BlockchainConfig(AppConfig):
             version='1.3.0',
             title=_('活动记录'),
             menus=[
-                {'label': _('活动记录'), 'icon': '▣', 'url': '/plugins/blockchain/', 'perm': 'blockchain_view'},
+                {'label': _('活动记录'), 'icon': 'history', 'url': '/plugins/blockchain/', 'perm': 'blockchain_view'},
             ],
             permissions=['blockchain_view', 'blockchain_verify'],
             urls='plugins.blockchain.urls',

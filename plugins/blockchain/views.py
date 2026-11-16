@@ -5,13 +5,14 @@ from datetime import timedelta
 from django.core.cache import cache
 from django.db.models import Count, Max
 from django.db.models.functions import TruncDate
-from django.http import JsonResponse
+from django.http import HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
 from plugin_host.charts import get_active_chart
+from plugin_host.exporting import export_response
 from plugin_host.pagination import paginate
 from plugin_host.permissions import require_perm
 from plugin_host.registry import PLUGIN_REGISTRY
@@ -158,6 +159,38 @@ def blockchain_list(request):
         'chart_records': table['records'],
         'chart_colspan': table['colspan'],
     })
+
+
+@require_perm('blockchain_view')
+def blockchain_export(request, fmt):
+    """活动记录全量导出（无筛选，列与列表一致）：CSV / XLSX / PDF。"""
+    records = BlockchainRecord.objects.order_by('-id')
+    columns = [
+        'ID', _('插件'), _('动作'), _('目标'), _('内容哈希'),
+        _('记录哈希'), _('时间'),
+    ]
+    rows = []
+    for record in records:
+        target = (
+            f'{record.target_type}#{record.target_id}' if record.target_type else '—')
+        rows.append([
+            record.id,
+            str(record.plugin_title),
+            str(record.action_label),
+            target,
+            record.payload_hash,
+            record.record_hash,
+            timezone.localtime(record.created_at).strftime('%Y-%m-%d %H:%M:%S'),
+        ])
+    filename = f'activity-records-{timezone.localdate():%Y%m%d}'
+    response = export_response(
+        fmt, filename=filename, title=_('活动记录'), columns=columns, rows=rows,
+        subtitle=f'{_("全量导出")} · {_("共")} {len(rows)} {_("条")}',
+        sheet_name=_('活动记录'),
+        widths=[40, 90, 120, 130, 260, 260, 110])
+    if response is None:
+        return HttpResponseBadRequest(_('不支持的导出格式'))
+    return response
 
 
 @require_perm('blockchain_view')

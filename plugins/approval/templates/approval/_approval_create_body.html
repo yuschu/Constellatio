@@ -1,70 +1,109 @@
 {% load i18n %}
 {% comment %}
 「发起审批」设置页正文（审批中心弹层 / 独立深链页 / 重新申请 共用）。
-类型 chips 的 href 由视图给出（弹层里是 `?view=new&type=…`，深链页是
-`?type=…`），所以切换类型不会把弹层丢掉。
+版式按 DSH Settings 行：左侧字段标题/说明，右侧控件；类型切换仍是普通链接，
+不改变现有 GET 参数与表单提交逻辑。
 {% endcomment %}
 {% if reapply_of %}
 <p class="ds-settings__desc">
   {% blocktranslate with id=reapply_of.id %}原申请 #{{ id }} 已驳回。修改内容后确认重新发起，确认后原记录将被新申请替换（留痕保留）。{% endblocktranslate %}
-  <span class="r-badge r-badge--blue">{{ reapply_of.get_approval_type_display }}</span>
+  <span class="r-badge r-badge--blue">{% trans reapply_of.get_approval_type_display %}</span>
 </p>
-{% else %}
-<p class="ds-settings__desc">{% trans "选择审批类型后填写对应字段；审批人与部门决定这张单据走哪条流程。" %}</p>
-<div class="ds-field">
-  <span class="ds-field__label">{% trans "选择审批类型" %}</span>
-  <div class="d-flex flex-wrap gap-2">
-    {% for t in type_chips %}
-    <a href="{{ t.href }}" class="r-badge {% if t.active %}r-badge--blue{% endif %}">{{ t.label }}</a>
-    {% endfor %}
-  </div>
-</div>
 {% endif %}
 
-<form method="post" enctype="multipart/form-data" novalidate class="ds-settings__form">
-  {% csrf_token %}
-  <input type="hidden" name="approval_type" value="{{ type_key }}">
-  {% if assistant_draft_token %}<input type="hidden" name="draft" value="{{ assistant_draft_token }}">{% endif %}
-  {% if reapply_of %}<input type="hidden" name="reapply_of" value="{{ reapply_of.id }}">{% endif %}
-
-  {% for error in form.non_field_errors %}
-  <div class="ds-field__error">{{ error }}</div>
-  {% endfor %}
-
-  <div class="ds-fields">
-    {% for field in form %}
-      {% if field.name != 'department' and field.name != 'approver' %}
-      <div class="ds-field">
-        <label class="ds-field__label" for="{{ field.id_for_label }}">
-          {{ field.label }}{% if field.field.required %} *{% endif %}
-        </label>
-        {{ field }}
-        {% if field.help_text %}<div class="ds-field__help">{{ field.help_text }}</div>{% endif %}
-        {% for e in field.errors %}<div class="ds-field__error">{{ e }}</div>{% endfor %}
+<div class="ds-approval-create">
+  {% if not reapply_of %}
+  <div class="ds-approval-create__rows">
+    <div class="ds-settings__row">
+      <div class="ds-settings__row-text">
+        <div class="ds-settings__row-title">{% trans "选择审批类型" %}</div>
+        <div class="ds-settings__row-desc">
+          {% trans "选择审批类型后填写对应字段；审批人与部门决定这张单据走哪条流程。" %}
+        </div>
       </div>
-      {% endif %}
+      <div class="ds-settings__row-control ds-approval-create__chips">
+        {% for t in type_chips %}
+        <a href="{{ t.href }}" class="r-badge ds-approval-create__chip {% if t.active %}r-badge--blue{% endif %}">{{ t.label }}</a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data" class="ds-settings__form ds-approval-create__form">
+    {% csrf_token %}
+    <input type="hidden" name="approval_type" value="{{ type_key }}">
+    {% if assistant_draft_token %}<input type="hidden" name="draft" value="{{ assistant_draft_token }}">{% endif %}
+    {% if reapply_of %}<input type="hidden" name="reapply_of" value="{{ reapply_of.id }}">{% endif %}
+
+    {% for error in form.non_field_errors %}
+    <div class="ds-field__error ds-approval-create__error">{{ error }}</div>
     {% endfor %}
 
-    <div class="ds-field">
-      <label class="ds-field__label" for="{{ form.department.id_for_label }}">{% trans "部门" %} *</label>
-      {{ form.department }}
-      {% for e in form.department.errors %}<div class="ds-field__error">{{ e }}</div>{% endfor %}
+    <div class="ds-approval-create__rows">
+      {% for field in form %}
+        {% if field.name != 'department' and field.name != 'approver' %}
+        <div class="ds-settings__row">
+          <div class="ds-settings__row-text">
+            <label class="ds-settings__row-title" for="{{ field.id_for_label }}">
+              {{ field.label }}{% if field.field.required %}<span class="ds-approval-create__required"> *</span>{% endif %}
+            </label>
+            {% if field.help_text %}<div class="ds-settings__row-desc">{{ field.help_text }}</div>{% endif %}
+          </div>
+          <div class="ds-settings__row-control ds-approval-create__control">
+            {% if field.name == 'seal_file' %}
+            <div class="ds-file-picker ds-approval-create__file" data-ds-file-field>
+              <label class="r-btn r-btn--plain ds-file-picker__btn ds-approval-create__file-btn">
+                <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                  <path d="M8.4 2.2v7.1a1.4 1.4 0 0 1-2.8 0V3.6a2.2 2.2 0 0 1 4.4 0v6.3a3.2 3.2 0 0 1-6.4 0V4.4"
+                        fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                </svg>
+                <span>{% trans "选择文件" %}</span>
+                {{ field }}
+              </label>
+              <span class="ds-file-picker__name" data-ds-file-name
+                    data-ds-file-placeholder="{% trans '未选择文件' %}">{% trans "未选择文件" %}</span>
+            </div>
+            {% else %}
+            {{ field }}
+            {% endif %}
+            {% for e in field.errors %}<div class="ds-field__error">{{ e }}</div>{% endfor %}
+          </div>
+        </div>
+        {% endif %}
+      {% endfor %}
+
+      <div class="ds-settings__row">
+        <div class="ds-settings__row-text">
+          <label class="ds-settings__row-title" for="{{ form.department.id_for_label }}">
+            {% trans "部门" %}<span class="ds-approval-create__required"> *</span>
+          </label>
+        </div>
+        <div class="ds-settings__row-control ds-approval-create__control">
+          {{ form.department }}
+          {% for e in form.department.errors %}<div class="ds-field__error">{{ e }}</div>{% endfor %}
+        </div>
+      </div>
+
+      <div class="ds-settings__row">
+        <div class="ds-settings__row-text">
+          <label class="ds-settings__row-title" for="{{ form.approver.id_for_label }}">
+            {% trans "审批人" %}<span class="ds-approval-create__required"> *</span>
+          </label>
+          <div class="ds-settings__row-desc">
+            {% trans "审批人限定为该审批类型的业务负责人（管辖部门经理）；提交后自动抄送申请人的直系领导。" %}
+          </div>
+        </div>
+        <div class="ds-settings__row-control ds-approval-create__control">
+          {{ form.approver }}
+          {% for e in form.approver.errors %}<div class="ds-field__error">{{ e }}</div>{% endfor %}
+        </div>
+      </div>
     </div>
 
-    <div class="ds-field">
-      <label class="ds-field__label" for="{{ form.approver.id_for_label }}">{% trans "审批人" %} *</label>
-      {{ form.approver }}
-      <div class="ds-field__help">{% trans "审批人限定为该审批类型的业务负责人（管辖部门经理）；提交后自动抄送申请人的直系领导。" %}</div>
-      {% for e in form.approver.errors %}<div class="ds-field__error">{{ e }}</div>{% endfor %}
+    <div class="ds-settings__actions ds-approval-create__actions">
+      <button class="r-btn" type="submit">{% if reapply_of %}{% trans "确认重新发起" %}{% else %}{% trans "提交审批" %}{% endif %}</button>
+      <a href="{% url 'approval:approval_list' %}" class="r-btn r-btn--ghost" data-ds-modal-close>{% trans "取消" %}</a>
     </div>
-  </div>
-
-  <div class="ds-settings__actions ds-settings__actions--center">
-    <button class="r-btn" type="submit">{% if reapply_of %}{% trans "确认重新发起" %}{% else %}{% trans "提交审批" %}{% endif %}</button>
-    {% if reapply_of %}
-    <a href="{% url 'approval:approval_list' %}" class="r-btn r-btn--ghost">{% trans "取消" %}</a>
-    {% else %}
-    <button class="r-btn r-btn--ghost" type="button" data-ds-modal-close>{% trans "取消" %}</button>
-    {% endif %}
-  </div>
-</form>
+  </form>
+</div>

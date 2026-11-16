@@ -132,16 +132,20 @@ class PluginSwitchTests(TestCase):
         self.assertIn('auth', listing.getvalue())
 
     def test_home_entries_follow_plugin_switches(self):
-        """v1.5.7：工作台入口随插件停用收敛（公告 / 审批 / 考勤卡与快捷发起）。"""
+        """v1.5.7：工作台入口随插件停用收敛（公告 / 审批 / 考勤卡与快捷发起）。
+
+        v2.4.1：公告入口改成首页 `?panel=notice` 面板，不再直链业务页。
+        """
         self._toggle(self.admin, 'notice', False)
         self._toggle(self.admin, 'approval', False)
         resp = self.client.get('/')
         self.assertEqual(resp.status_code, 200)
-        self.assertNotContains(resp, '/plugins/notice/')
+        self.assertNotContains(resp, 'data-home-panel="notice"')
         self.assertNotContains(resp, '/plugins/approval/')
         self._toggle(self.admin, 'notice', True)
         resp = self.client.get('/')
-        self.assertContains(resp, '/plugins/notice/')
+        self.assertContains(resp, 'data-home-panel="notice"')
+        self.assertContains(resp, 'href="/?panel=notice"')
 
     def test_perm_guard(self):
         """无 workspace_manage 权限的用户访问开关页被拒（重定向工作台）。"""

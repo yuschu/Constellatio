@@ -7,7 +7,7 @@ from datetime import time as dtime
 from django.apps import apps as dj_apps
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q
-from django.http import JsonResponse
+from django.http import HttpResponseBadRequest, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -18,6 +18,7 @@ from django.utils.translation import gettext as _
 
 from plugin_host.charts import get_active_chart
 from plugin_host.exceptions import ObjectPermissionDenied
+from plugin_host.exporting import export_response
 from plugin_host.pagination import paginate
 from plugin_host.permissions import require_perm
 from plugin_host.signals import attendance_checked
@@ -65,6 +66,7 @@ def _week_bars(user, today, now):
         hours = _worked_hours(record, now) if day <= today else 0.0
         bars.append({
             'day': day,
+            'day_text': date_format(day, 'MONTH_DAY_FORMAT'),
             'label': _(WEEK_LABELS[offset]),
             'hours': hours,
             'hours_text': _hours_text(hours),
@@ -217,7 +219,7 @@ def attendance_context(request):
         'team': team,
         'recent_rows': recent_rows,
         'can_view_report': request.user.has_perm('attendance.attendance_report_view'),
-        'sign_types': Attendance.SignType.choices,
+        'sign_types': [(key, _(label)) for key, label in Attendance.SignType.choices],
         'attendance_chart': attendance_chart,
         'status_totals': status_totals,
         # v1.7.2：今日状态卡展示当前考勤口径（迟到 / 早退判定阈值）
@@ -442,9 +444,8 @@ def _month_stats(first, department_id=None, user=None):
     return stats, table_rows
 
 
-@require_perm('attendance_report_view')
-def attendance_records(request):
-    """签到详情（管理岗）：时间范围 / 状态 / 类型 / 部门 / 姓名筛选 + 汇总 + 分页。"""
+def _attendance_record_scope(request):
+    """签到详情的唯一筛选入口：列表与导出共用，保证两边范围一致。"""
     now = timezone.localtime()
     default_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     start = _parse_aware(request.GET.get('start')) or default_start
@@ -472,6 +473,25 @@ def attendance_records(request):
     if sign_type in Attendance.SignType.values:
         records = records.filter(sign_type=sign_type)
     records = records.order_by('-date', 'user__last_name', 'user__username')
+    return records, {
+        'start': start,
+        'end': end,
+        'department_id': department_id,
+        'keyword': keyword,
+        'status': status,
+        'sign_type': sign_type,
+    }
+
+
+@require_perm('attendance_report_view')
+def attendance_records(request):
+    """签到详情（管理岗）：时间范围 / 状态 / 类型 / 部门 / 姓名筛选 + 汇总 + 分页。"""
+    records, scope = _attendance_record_scope(request)
+    start, end = scope['start'], scope['end']
+    department_id = scope['department_id']
+    keyword = scope['keyword']
+    status = scope['status']
+    sign_type = scope['sign_type']
 
     total = records.count()
     user_count = records.values('user_id').distinct().count()
@@ -490,6 +510,8 @@ def attendance_records(request):
     month_stats, chart_rows = _month_stats(month_first, stats_department_id)
 
     page_obj = paginate(request, records)
+    export_query = request.GET.copy()
+    export_query.pop('page', None)
 
     return render(request, 'attendance/attendance_records.html', {
         'start_value': start.strftime('%Y-%m-%dT%H:%M'),
@@ -508,14 +530,48 @@ def attendance_records(request):
         'keyword': keyword,
         'status': status,
         'sign_type': sign_type,
-        'status_choices': Attendance.Status.choices,
-        'sign_types': Attendance.SignType.choices,
+        'export_query': export_query.urlencode(),
+        'status_choices': [(key, _(label)) for key, label in Attendance.Status.choices],
+        'sign_types': [(key, _(label)) for key, label in Attendance.SignType.choices],
         # 月度看板（v1.6）：chart 为 None 时模板只渲染表格
         'chart': get_active_chart(),
         'month_value': month_first.strftime(MONTH_FORMAT),
         'chart_rows': chart_rows,
         'chart_totals': month_stats['totals'],
     })
+
+
+@require_perm('attendance_report_view')
+def attendance_export(request, fmt):
+    """按当前筛选范围导出全量签到记录（不受分页限制）：CSV / XLSX / PDF。"""
+    records, scope = _attendance_record_scope(request)
+    columns = [
+        _('日期'), _('姓名'), _('账号'), _('部门'), _('签到类型'),
+        _('签到'), _('签退'), _('状态'),
+    ]
+    rows = []
+    for record in records:
+        rows.append([
+            record.date.isoformat(),
+            record.user.last_name or record.user.username,
+            record.user.username,
+            record.user.department.name if record.user.department_id else '—',
+            _(record.get_sign_type_display()),
+            timezone.localtime(record.check_in).strftime('%H:%M') if record.check_in else '—',
+            timezone.localtime(record.check_out).strftime('%H:%M') if record.check_out else '—',
+            _(record.get_status_display()),
+        ])
+    start, end = scope['start'], scope['end']
+    subtitle = f'{start:%Y-%m-%d %H:%M} ~ {end:%Y-%m-%d %H:%M}'
+    filename = f'attendance-records-{start:%Y%m%d}-{end:%Y%m%d}'
+    response = export_response(
+        fmt, filename=filename, title=_('签到记录'), columns=columns, rows=rows,
+        subtitle=f'{subtitle} · {_("共")} {len(rows)} {_("条")}',
+        sheet_name=_('签到记录'),
+        widths=[58, 76, 70, 104, 82, 56, 56, 62])
+    if response is None:
+        return HttpResponseBadRequest(_('不支持的导出格式'))
+    return response
 
 
 

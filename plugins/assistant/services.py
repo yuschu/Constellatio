@@ -326,3 +326,17 @@ def get_conversation(user, pk):
         return Conversation.objects.get(pk=pk, user=user)
     except (Conversation.DoesNotExist, ValueError, TypeError):
         return None
+
+
+def update_conversation_meta(conversation, user, **fields):
+    """只改会话元数据，不把改名/置顶/归档算成一次对话活动。
+
+    `AuditModel.save()` 的 `auto_now` 会把 `updated_at` 顶到当前时间，进而让一条
+    旧会话因为「改名」跳到最近会话第一位。DSH 的侧栏顺序按会话活动时间，所以
+    这里用定向 UPDATE 只落 `updated_by` 与目标字段，保留 `updated_at` 原值。
+    """
+    fields['updated_by'] = user
+    Conversation.objects.filter(pk=conversation.pk, user=user).update(**fields)
+    for name, value in fields.items():
+        setattr(conversation, name, value)
+    return conversation

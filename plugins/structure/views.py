@@ -7,14 +7,16 @@
 """
 
 from django.apps import apps as dj_apps
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
 from plugin_host.permissions import require_perm
 
 from .hierarchy import build_department_tree, build_user_tree
-from .services import apply_structure
+from .services import apply_structure, apply_template
 from .template import DEPARTMENTS, ROLE_PERMISSIONS, ROLES, USERS, dept_tree
+from .template_io import TemplateError, build_template_workbook, parse_template
 
 
 @require_perm('structure_view')
@@ -72,6 +74,8 @@ def _overview_context(request):
             'tmpl_users_by_dept': template_ctx['users_by_dept'],
             'tmpl_can_apply': template_ctx['can_apply'],
             'tmpl_last_records': template_ctx['last_records'],
+            'tmpl_import_errors': template_ctx['import_errors'],
+            'tmpl_imported': template_ctx['imported'],
         })
         ctx.update({
             'template_open': request.method == 'GET' and request.GET.get('view') == 'template',
@@ -100,6 +104,11 @@ def _template_context(request):
         'users_by_dept': users_by_dept,
         'can_apply': request.user.has_perm('structure_manage'),
         'last_records': _last_records(),
+        'import_errors': [],
+        'imported': request.GET.get('imported') == '1',
+        'import_result': None,
+        'template_download_url': reverse('structure:template_file'),
+        'template_import_url': reverse('structure:template_import'),
     }
 
 
@@ -112,6 +121,7 @@ def structure_template(request):
     """
     ctx = _template_context(request)
     ctx['back_url'] = reverse('structure:overview')
+    ctx['import_result'] = request.session.pop('structure_import_result', None)
     return render(request, 'structure/template.html', ctx)
 
 
@@ -151,3 +161,39 @@ def structure_apply(request):
         grant = request.POST.get('grant_manager_perms') == '1'
         apply_structure(request.user, grant_manager_perms=grant)
     return redirect('structure:template')
+
+
+@require_perm('structure_view')
+def structure_template_file(request):
+    """下载当前内置架构的 XLSX 模板表（三工作表 + 说明）。"""
+    response = HttpResponse(
+        build_template_workbook(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="structure-template.xlsx"'
+    return response
+
+
+@require_perm('structure_manage')
+def structure_template_import(request):
+    """上传 XLSX 模板：先整表校验，再事务内幂等补齐；失败零写入并回显错误行。"""
+    if request.method != 'POST':
+        return redirect('structure:template')
+
+    ctx = _template_context(request)
+    ctx['back_url'] = reverse('structure:overview')
+    try:
+        payload = parse_template(request.FILES.get('template'))
+    except TemplateError as exc:
+        ctx['import_errors'] = exc.messages
+        return render(request, 'structure/template.html', ctx)
+
+    try:
+        dept, role, user = apply_template(request.user, payload)
+    except ValueError as exc:
+        ctx['import_errors'] = [str(exc)]
+        return render(request, 'structure/template.html', ctx)
+
+    request.session['structure_import_result'] = {
+        'dept': dept, 'role': role, 'user': user,
+    }
+    return redirect(f'{reverse("structure:template")}?imported=1')

@@ -142,7 +142,7 @@
       <div class="atj-bars">
         {% for bar in week.bars %}
         <div class="atj-bar{% if bar.is_today %} is-today{% endif %}{% if bar.future %} is-future{% endif %}"
-             title="{{ bar.day|date:'n月j日' }} · {{ bar.hours_text }}">
+             title="{{ bar.day_text }} · {{ bar.hours_text }}">
           <span class="atj-bar__value">{% if bar.hours %}{{ bar.hours_text }}{% endif %}</span>
           <div class="atj-bar__track">
             <span class="atj-bar__fill" style="height: {{ bar.percent }}%"></span>

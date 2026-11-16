@@ -1,47 +1,18 @@
 {% extends "base.html" %}
 {% load i18n %}
-{% block title %}{% if readers_view %}{% trans "已读人员" %}{% else %}{% trans "公告中心" %}{% endif %} · Constellatio{% endblock %}
+{% block title %}{% if readers_view %}{% trans "已读人员" %}{% else %}{% trans "公告" %}{% endif %} · Constellatio{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
-  <h2 class="mb-0">{% trans "公告中心" %}</h2>
-  {% if notice_create_url %}
-  <a href="{{ notice_create_url }}" class="r-btn" data-ds-modal-open="ds-notice-new">＋ {% trans "发布公告" %}</a>
-  {% endif %}
-</div>
-
-{% for a in announcements %}
-<article class="r-card mb-4" id="notice-{{ a.id }}">
-  <h2 class="mb-3">
-    {% if a.is_top %}<span class="r-badge r-badge--green">{% trans "置顶" %}</span> {% endif %}{{ a.title }}
-  </h2>
-  <div style="white-space:pre-wrap; line-height:1.9;">{{ a.content }}</div>
-  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-4">
-    <div class="text-muted" style="font-size:.8rem;">
-      {% blocktranslate with publisher=a.publisher.last_name|default:a.publisher.username %}发布人：{{ publisher }}{% endblocktranslate %}
-      · {{ a.created_at|date:"Y-m-d H:i" }}
-    </div>
-    {% if perms.notice.notice_manage %}
-    <a href="{% url 'notice:notice_readers' a.id %}" class="r-offset-hover text-muted" style="font-size:.8rem;" data-ds-panel>
-      {% blocktranslate with count=a.read_count %}已读 {{ count }} 人{% endblocktranslate %}
-    </a>
-    {% endif %}
+<header class="at-head mb-4">
+  <div class="at-head__lead">
+    <h2 class="at-head__title">{% trans "公告" %}</h2>
   </div>
-</article>
-{% empty %}
-<div class="r-card">
-  <p class="text-muted mb-0">{% trans "暂无公告" %}</p>
-</div>
-{% endfor %}
+  {% if notice_create_url %}
+  <div class="at-head__aside">
+    <a href="{{ notice_create_url }}" class="r-btn" data-ds-modal-open="ds-notice-new">＋ {% trans "发布公告" %}</a>
+  </div>
+  {% endif %}
+</header>
 
-{% include 'includes/pagination.html' %}
-
-{% if notice_create_url %}
-{% trans "发布公告" as sp_notice_create_title %}
-{% include "includes/ds_settings_modal.html" with sp_id="ds-notice-new" sp_title=sp_notice_create_title sp_body="notice/_notice_create_body.html" sp_query="view=new" sp_url=notice_create_url sp_base=notice_list_url sp_open=notice_form_open %}
-{% endif %}
-
-{% if readers_view %}
-{% trans "已读人员" as sp_readers_title %}
-{% include "includes/ds_settings_modal.html" with sp_id="ds-notice-readers" sp_title=sp_readers_title sp_body="notice/_notice_readers_body.html" sp_query="" sp_url="" sp_base="" sp_open=readers_open sp_static=True %}
-{% endif %}
+{% include "notice/_notice_items.html" %}
+{% include "notice/_notice_modals.html" %}
 {% endblock %}

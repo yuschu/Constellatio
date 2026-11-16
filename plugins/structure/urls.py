@@ -9,6 +9,8 @@ app_name = 'structure'
 urlpatterns = [
     path('', views.structure_overview, name='overview'),
     path('template/', views.structure_template, name='template'),   # v1.5.9 模板架构详情
+    path('template/download/', views.structure_template_file, name='template_file'),
+    path('template/import/', views.structure_template_import, name='template_import'),
     path('apply/', views.structure_apply, name='apply'),
     path('user/<int:user_id>/', views.structure_user_detail, name='user_detail'),  # v1.5.12 用户资料
 ]

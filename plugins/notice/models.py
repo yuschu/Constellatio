@@ -15,6 +15,9 @@ class Announcement(AuditModel):
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
         related_name='announcements', verbose_name='发布人')
     is_top = models.BooleanField('置顶', default=False)
+    attachment = models.FileField(
+        '附件', upload_to='notice_attachments/%Y/%m/', null=True, blank=True,
+        help_text='单附件，支持 PDF / Office / 图片 / TXT / CSV / ZIP，最大 10MB')
 
     class Meta:
         verbose_name = '公告'
@@ -27,6 +30,22 @@ class Announcement(AuditModel):
 
     def __str__(self):
         return self.title
+
+    @property
+    def attachment_name(self):
+        import os
+        return os.path.basename(self.attachment.name) if self.attachment else ''
+
+    @property
+    def attachment_size_label(self):
+        if not self.attachment:
+            return ''
+        size = getattr(self.attachment, 'size', 0) or 0
+        if size < 1024:
+            return f'{size} B'
+        if size < 1024 * 1024:
+            return f'{size / 1024:.0f} KB'
+        return f'{size / (1024 * 1024):.1f} MB'
 
 
 class AnnouncementRead(AuditModel):

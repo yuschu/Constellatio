@@ -92,6 +92,7 @@ class SealForm(BaseApprovalForm):
         label=_('用章文件'), required=True,
         widget=forms.ClearableFileInput(attrs={
             'class': 'r-input',
+            'data-ds-file-input': '',
             'accept': ','.join(f'.{ext}' for ext in ATTACHMENT_EXTENSIONS),
         }),
         validators=[FileExtensionValidator(ATTACHMENT_EXTENSIONS)])

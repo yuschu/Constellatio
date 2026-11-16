@@ -127,6 +127,48 @@ class ThemeDiscoveryTest(TestCase):
         self.assertIn('position: sticky', rail.group(1))
         self.assertIn('--ds-rail-w: 280px', css)
 
+    def test_narrow_shell_matches_dsh_drawer(self):
+        """v2.3.x：窄屏口径对齐 DSH AppFrame。
+
+        1024 以下自动收成 56px 轨道；768 以下侧栏脱离栅格做抽屉，
+        宽 min(280, viewport-48)，遮罩可点关闭，主列 inert。
+        """
+        base = (settings.BASE_DIR / 'themes/corporate-clean/templates/base.html').read_text(
+            encoding='utf-8')
+        home = (settings.BASE_DIR / 'plugins/assistant/templates/assistant/home_chat.html').read_text(
+            encoding='utf-8')
+        for name, markup in (('base', base), ('home', home)):
+            with self.subTest(template=name):
+                self.assertIn('data-ds-drawer-mask', markup)
+                self.assertIn('ds-drawer-opener', markup)
+                self.assertIn('data-ds-rail-toggle', markup)
+        self.assertIn('ds-rail__narrow-toggle', base)
+
+        theme_css = (settings.BASE_DIR / 'themes/corporate-clean/static/themes'
+                     '/corporate-clean/css/corporate-clean.css').read_text(encoding='utf-8')
+        self.assertIn('.ds-rail .ds-rail__narrow-toggle', theme_css)
+        home_css = (settings.BASE_DIR / 'plugins/assistant/static/assistant/css/assistant.css'
+                    ).read_text(encoding='utf-8')
+        for name, css, rail in (('business', theme_css, '.ds-rail'), ('home', home_css, '.as-sidebar')):
+            with self.subTest(css=name):
+                self.assertIn('html[data-sidebar-drawer="true"] ' + rail, css)
+                self.assertIn('min(280px, max(0px, calc(100vw - 48px)))', css)
+                self.assertIn('translateX(-100%)', css)
+                self.assertIn('visibility: hidden', css)
+                self.assertIn('.ds-drawer-mask', css)
+                self.assertIn('z-index: 71', css)
+                self.assertIn('z-index: 70', css)
+        self.assertNotIn('.ds-shell {\n    flex-direction: column;', theme_css)
+
+        shell_js = (settings.BASE_DIR / 'plugin_host/static/js/ds-shell.js').read_text(encoding='utf-8')
+        boot_js = (settings.BASE_DIR / 'plugin_host/static/js/rail-boot.js').read_text(encoding='utf-8')
+        self.assertIn("(max-width: 1023.98px)", shell_js)
+        self.assertIn("(max-width: 767.98px)", shell_js)
+        self.assertIn('narrowExpanded', shell_js)
+        self.assertIn("toggleAttribute('inert'", shell_js)
+        self.assertIn('width < 1024', boot_js)
+        self.assertIn('width < 768', boot_js)
+
     def test_rail_new_session_matches_panel_rows(self):
         """v2.2.7：收起态新会话按钮与面板行同档。
 
@@ -286,7 +328,7 @@ class SubpageInPlaceTest(TestCase):
         'plugins/user/templates/user/role_list.html',
         'plugins/blockchain/templates/blockchain/blockchain_list.html',
         'plugins/approval/templates/approval/approval_list.html',
-        'plugins/notice/templates/notice/notice_list.html',
+        'plugins/notice/templates/notice/_notice_items.html',
     )
 
     def test_row_links_are_flagged_for_in_place_open(self):
@@ -392,7 +434,7 @@ class ShortcutLayerTest(TestCase):
         """同一个入口在首页与业务页必须同 ID，不能按列表序号串到别的入口。"""
         home_html = self.client.get('/').content.decode()
         business_html = self.client.get('/dashboard/').content.decode()
-        for action_id in ('quick.plugins.attendance', 'quick.plugins.workspace'):
+        for action_id in ('quick.plugins.attendance', 'quick.plugins.approval'):
             self.assertIn(f'data-shortcut-id="{action_id}"', home_html)
             self.assertIn(f'data-shortcut-id="{action_id}"', business_html)
         self.assertIsNone(re.search(r'data-shortcut-id="quick\.\d+', home_html))
@@ -440,7 +482,7 @@ class ShortcutLayerTest(TestCase):
         resp = self.client.get('/dashboard/')
         html = resp.content.decode()
         for command_id in ('session.new', 'settings.open', 'shortcuts.open',
-                           'quick.plugins.workspace'):
+                           'quick.plugins.approval'):
             self.assertIn('data-shortcut-id="%s"' % command_id, html)
         self.assertIn('data-ds-shortcuts-editor-template', html)
         self.assertIn('data-ds-shortcuts-reset', html)

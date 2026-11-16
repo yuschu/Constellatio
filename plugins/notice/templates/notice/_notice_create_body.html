@@ -1,13 +1,17 @@
 {% load i18n %}
 {% comment %}
-「发布公告」设置页正文（公告中心弹层与独立深链页共用）。
+「发布公告」设置页正文（公告列表弹层与独立深链页共用）。
 公告是手写字段（不是 ModelForm），校验失败回到这里时由 form_data 回填，
 避免用户重打一遍正文。
 {% endcomment %}
-<p class="ds-settings__desc">{% trans "公告发布后进入公告中心，并按角色范围推送到消息中心；置顶公告固定在最前。" %}</p>
+<p class="ds-settings__desc">{% trans "公告发布后进入公告列表，并按角色范围推送到消息中心；置顶公告固定在最前。" %}</p>
 
-<form method="post" novalidate class="ds-settings__form">
+<form method="post" enctype="multipart/form-data" novalidate class="ds-settings__form">
   {% csrf_token %}
+
+  {% if form_error %}
+  <div class="ds-alert ds-alert--error" role="alert">{{ form_error }}</div>
+  {% endif %}
 
   <div class="ds-fields">
     <div class="ds-field">
@@ -29,7 +33,28 @@
                {% if form_data.is_top %}checked{% endif %}>
         <span>{% trans "置顶" %}</span>
       </label>
-      <div class="ds-field__help">{% trans "置顶公告在公告中心排序最前，适合制度变更、全员通知。" %}</div>
+      <div class="ds-field__help">{% trans "置顶公告在公告列表排序最前，适合制度变更、全员通知。" %}</div>
+    </div>
+
+    <div class="ds-field ds-file-field" data-ds-file-field>
+      <label class="ds-field__label" for="notice_attachment">{% trans "附件" %}</label>
+      <div class="ds-file-picker">
+        <label class="r-btn r-btn--plain ds-file-picker__btn">
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+            <path d="M8.4 2.2v7.1a1.4 1.4 0 0 1-2.8 0V3.6a2.2 2.2 0 0 1 4.4 0v6.3a3.2 3.2 0 0 1-6.4 0V4.4"
+                  fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+          <span>{% trans "选择文件" %}</span>
+          <input id="notice_attachment" type="file" name="attachment" hidden
+                 data-ds-file-input
+                 accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.png,.jpg,.jpeg">
+        </label>
+        <span class="ds-file-picker__name" data-ds-file-name
+              data-ds-file-placeholder="{% trans '未选择文件' %}">{% if form_data.attachment_name %}{{ form_data.attachment_name }}{% else %}{% trans "未选择文件" %}{% endif %}</span>
+        <button class="ds-file-picker__clear" type="button" data-ds-file-clear
+                aria-label="{% trans '移除附件' %}" {% if not form_data.attachment_name %}hidden{% endif %}>✕</button>
+      </div>
+      <div class="ds-field__help">{% trans "单附件，支持 PDF / Office / 图片 / TXT / CSV / ZIP，最大 10MB。" %}</div>
     </div>
   </div>
 

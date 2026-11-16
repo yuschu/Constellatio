@@ -1,0 +1,15 @@
+{% load i18n %}
+{% comment %}
+ds-shell.js 的界面文案（v2.4.0 i18n）：
+- 脚本本身不写死中文；附件移除、数量/类型/体积校验、只读模式都由模板注入。
+- 占位符使用 {name} / {max} / {size}，与 shortcuts.js 的 data-msg-* 同一种写法。
+- 仅界面提示；文件名等用户数据原样拼入。
+{% endcomment %}
+<div hidden data-ds-shell-i18n
+     data-msg-remove-file="{% trans '移除 {name}' %}"
+     data-msg-max-files="{% trans '一次最多附加 {max} 个文件' %}"
+     data-msg-unsupported-file="{% trans '暂不支持 {name}；首版只收文本类文件' %}"
+     data-msg-file-too-large="{% trans '{name} 超过 {size} MB' %}"
+     data-msg-read-attachment="{% trans '请阅读附件' %}"
+     data-msg-mode-write="{% trans '可写' %}"
+     data-msg-mode-read="{% trans '只读' %}"></div>

@@ -122,8 +122,8 @@ class MenuPermissionTests(TestCase):
         这里单独锚定三条 URL 的相对位置。
 
         v2.0.11：「助手」菜单（指向 /）下线——首页入口就是侧栏顶部的「+ 新会话」；
-        首页侧栏头部的固定三格顺序改由 `PRIMARY_MENU_URLS` 决定（考勤 / 插件 / 看板），
-        这里报的是业务侧栏 `get_menus` 的注册序。
+        首页侧栏头部的固定三格改由 `PRIMARY_MENU_ENTRIES` 决定（考勤 / 公告 / 看板），
+        这里报的是业务侧栏 `get_menus` 的注册序；插件页已回到业务侧栏第一格。
         v2.2.1：看板来自容器的 builtin core（`get_container_menus`），
         外壳把两份合起来排序，所以这里也按外壳口径量。
         """

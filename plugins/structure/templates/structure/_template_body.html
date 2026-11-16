@@ -2,85 +2,179 @@
 {% comment %}
 「模板架构」设置页正文（组织架构页弹层 / 独立深链页共用）。
 内容与权限口径不变：can_apply 才渲染「应用模板」表单（POST structure:apply）。
-本页只有一个分区，正文列 720（两列布局要宽度），按钮居中。
+版式按 DSH Settings 行：左侧标题/说明，右侧操作；主按钮落在行尾，不再居中。
 {% endcomment %}
 <p class="ds-settings__desc">
   {% blocktranslate with dept=dept_count user=user_count %}职能制模板：{{ dept }} 个部门、{{ user }} 个账号；应用时只创建缺失项，幂等补齐角色权限，不覆盖既有数据。{% endblocktranslate %}
 </p>
 
+{% if import_errors %}
+<div class="ds-alert ds-alert--error" role="alert">
+  <strong>{% trans "模板未导入，未写入任何数据：" %}</strong>
+  <ul class="mb-0">
+    {% for error in import_errors %}<li>{{ error }}</li>{% endfor %}
+  </ul>
+</div>
+{% endif %}
+{% if import_result %}
+<div class="ds-alert ds-alert--success" role="status">
+  {% blocktranslate with dept=import_result.dept role=import_result.role user=import_result.user %}导入完成：新增 {{ dept }} 个部门、{{ role }} 个角色、{{ user }} 个用户。{% endblocktranslate %}
+</div>
+{% endif %}
+
+<div class="ds-template-rows">
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-text">
+      <div class="ds-settings__row-title">{% trans "模板表文件" %}</div>
+      <div class="ds-settings__row-desc">
+        {% trans "下载后填写部门、角色与用户三张工作表，再从这里上传。" %}
+      </div>
+    </div>
+    <div class="ds-settings__row-control">
+      <a class="r-btn r-btn--plain" href="{% url 'structure:template_file' %}">
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+          <path d="M8 2.5v7.1M4.8 6.8 8 10l3.2-3.2M3 13.5h10"
+                fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+        {% trans "下载 XLSX 模板" %}
+      </a>
+    </div>
+  </div>
+
+  {% if can_apply %}
+  <form method="post" action="{% url 'structure:template_import' %}"
+        enctype="multipart/form-data" class="ds-settings__row ds-template-upload"
+        data-ds-file-field>
+    {% csrf_token %}
+    <div class="ds-settings__row-text">
+      <div class="ds-settings__row-title">{% trans "上传并应用" %}</div>
+      <div class="ds-settings__row-desc">
+        {% trans "选择填写好的 XLSX；逐行校验，只创建缺失项，失败整表不写入。" %}
+      </div>
+    </div>
+    <div class="ds-settings__row-control ds-template-upload__control">
+      <div class="ds-file-picker">
+        <label class="r-btn r-btn--plain ds-file-picker__btn">
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+            <path d="M8.4 2.2v7.1a1.4 1.4 0 0 1-2.8 0V3.6a2.2 2.2 0 0 1 4.4 0v6.3a3.2 3.2 0 0 1-6.4 0V4.4"
+                  fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+          <span>{% trans "选择 XLSX" %}</span>
+          <input type="file" name="template" accept=".xlsx" hidden data-ds-file-input>
+        </label>
+        <span class="ds-file-picker__name" data-ds-file-name
+              data-ds-file-placeholder="{% trans '未选择文件' %}">{% trans "未选择文件" %}</span>
+      </div>
+      <button class="r-btn" type="submit">{% trans "上传并应用" %}</button>
+    </div>
+  </form>
+  {% endif %}
+</div>
+
 {% if can_apply %}
-<form method="post" action="{% url 'structure:apply' %}" class="ds-settings__form">
+<form method="post" action="{% url 'structure:apply' %}" class="ds-template-builtin">
   {% csrf_token %}
-  <div class="ds-fields">
-    <div class="ds-field">
-      <label class="ds-field__checkbox" for="grant_manager_perms">
-        <input class="form-check-input" type="checkbox" name="grant_manager_perms"
-               id="grant_manager_perms" value="1">
-        <span>{% trans "经理角色同时授予用户管理权限（L1）" %}</span>
+  <div class="ds-template-builtin__head">
+    <div class="ds-settings__row-title">{% trans "直接应用内置模板" %}</div>
+    <div class="ds-settings__row-desc">
+      {% trans "无需上传文件；按内置职能制架构补齐组织与账号。" %}
+    </div>
+  </div>
+
+  <div class="ds-settings__row">
+    <div class="ds-settings__row-text">
+      <label class="ds-settings__row-title" for="grant_manager_perms">
+        {% trans "经理角色同时授予用户管理权限（L1）" %}
       </label>
-      <div class="ds-field__help">{% trans "仅当需要经理自行维护下属账号时勾选；不勾选则只补齐考勤与审批相关权限。" %}</div>
+      <div class="ds-settings__row-desc">
+        {% trans "仅当需要经理自行维护下属账号时勾选；不勾选则只补齐考勤与审批相关权限。" %}
+      </div>
+    </div>
+    <div class="ds-settings__row-control">
+      <input class="form-check-input" type="checkbox" name="grant_manager_perms"
+             id="grant_manager_perms" value="1">
     </div>
   </div>
 
   {% blocktranslate asvar confirm_apply %}应用职能制架构模板？仅创建缺失项、幂等补齐角色权限，不覆盖既有数据。{% endblocktranslate %}
-  <div class="ds-settings__actions ds-settings__actions--center">
-    <button class="r-btn" type="submit" data-confirm="{{ confirm_apply|escapejs }}">{% trans "⤓ 应用模板" %}</button>
+  <div class="ds-template-builtin__actions">
+    <button class="r-btn" type="submit" data-confirm="{{ confirm_apply|escapejs }}">{% trans "应用模板" %}</button>
   </div>
 </form>
 {% endif %}
 
 {% if last_records %}
-<div class="ds-field">
-  <span class="ds-field__label">{% trans "最近应用" %}</span>
-  <div class="ds-field__help">
-    {% for rec in last_records %}
-    <div>#{{ rec.pk }} {{ rec.applied_by.last_name|default:rec.applied_by.username }}
-      {% blocktranslate with dept=rec.dept_created role=rec.role_created user=rec.user_created %}+{{ dept }}部门/+{{ role }}角色/+{{ user }}用户{% endblocktranslate %}
-      · {{ rec.applied_at|date:"m-d H:i" }}</div>
-    {% endfor %}
+<div class="ds-settings__row ds-settings__row--stack ds-template-history">
+  <div class="ds-settings__row-text">
+    <div class="ds-settings__row-title">{% trans "最近应用" %}</div>
+    <div class="ds-template-history__list">
+      {% for rec in last_records %}
+      <div class="ds-template-history__row">
+        <span class="ds-template-history__who">#{{ rec.pk }} {{ rec.applied_by.last_name|default:rec.applied_by.username }}</span>
+        <span class="ds-template-history__meta">
+          {% blocktranslate with dept=rec.dept_created role=rec.role_created user=rec.user_created %}+{{ dept }}部门/+{{ role }}角色/+{{ user }}用户{% endblocktranslate %}
+          · {{ rec.applied_at|date:"m-d H:i" }}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
   </div>
 </div>
 {% endif %}
 
-<div class="ds-field">
-  <span class="ds-field__label">{% blocktranslate with count=dept_tree|length %}模板部门树（{{ count }} 个一级部门，共 {{ dept_count }} 个）{% endblocktranslate %}</span>
-  <ul class="list-unstyled mb-0" style="font-size:.88rem;">
-    {% for dept, children in dept_tree %}
-    <li class="mb-1">
-      <strong>{{ dept }}</strong>
-      {% if children %}
-      <ul class="list-unstyled ms-4 text-muted">
-        {% for c in children %}<li>└ {{ c }}</li>{% endfor %}
+<div class="ds-template-preview">
+  <div class="ds-template-preview__head">{% trans "模板内容" %}</div>
+
+  <div class="ds-template-preview__grid">
+    <section class="ds-template-preview__block">
+      <div class="ds-template-block__title">
+        {% blocktranslate with count=dept_tree|length %}模板部门树（{{ count }} 个一级部门，共 {{ dept_count }} 个）{% endblocktranslate %}
+      </div>
+      <ul class="ds-template-tree">
+        {% for dept, children in dept_tree %}
+        <li class="ds-template-tree__node">
+          <div class="ds-template-tree__dept">{{ dept }}</div>
+          {% if children %}
+          <ul class="ds-template-tree__children">
+            {% for c in children %}<li>└ {{ c }}</li>{% endfor %}
+          </ul>
+          {% endif %}
+        </li>
+        {% endfor %}
       </ul>
-      {% endif %}
-    </li>
-    {% endfor %}
-  </ul>
-</div>
+    </section>
 
-<div class="ds-field">
-  <span class="ds-field__label">{% blocktranslate with count=role_rows|length %}模板角色（{{ count }} 个，按模板授予权限）{% endblocktranslate %}</span>
-  <div>
-    {% for r in role_rows %}
-    <span class="r-badge me-2 mb-2" title="{{ r.codes|join:', ' }}">{{ r.name }}{% if r.perm_count %} · {{ r.perm_count }}{% endif %}</span>
-    {% endfor %}
+    <section class="ds-template-preview__block">
+      <div class="ds-template-block__title">
+        {% blocktranslate with count=role_rows|length %}模板角色（{{ count }} 个，按模板授予权限）{% endblocktranslate %}
+      </div>
+      <div class="ds-template-chips">
+        {% for r in role_rows %}
+        <span class="r-badge" title="{{ r.codes|join:', ' }}">{{ r.name }}{% if r.perm_count %} · {{ r.perm_count }}{% endif %}</span>
+        {% endfor %}
+      </div>
+      <div class="ds-template-block__note">
+        {% trans "全员基线：考勤打卡、公告浏览无需角色；管理岗模板含签到详情（attendance_report_view）。" %}
+      </div>
+    </section>
   </div>
-  <div class="ds-field__help">{% trans "全员基线：考勤打卡、公告浏览无需角色；管理岗模板含签到详情（attendance_report_view）。" %}</div>
-</div>
 
-<div class="ds-field">
-  <span class="ds-field__label">{% blocktranslate with count=user_count %}用户模板（{{ count }} 个，密码统一 constellatio123）{% endblocktranslate %}</span>
-  <div class="row g-3">
-    {% for dept, users in users_by_dept.items %}
-    <div class="col-md-6">
-      <div class="fw-bold mb-2" style="font-size:.85rem;">{{ dept }}</div>
-      {% for u in users %}
-      <div class="d-flex justify-content-between" style="font-size:.8rem;">
-        <span>{{ u.name }}（{{ u.account }}）</span>
-        <span class="text-muted">{{ u.role }}</span>
+  <section class="ds-template-preview__block ds-template-preview__block--wide">
+    <div class="ds-template-block__title">
+      {% blocktranslate with count=user_count %}用户模板（{{ count }} 个，密码统一 constellatio123）{% endblocktranslate %}
+    </div>
+    <div class="ds-template-users">
+      {% for dept, users in users_by_dept.items %}
+      <div class="ds-template-users__group">
+        <div class="ds-template-users__dept">{{ dept }}</div>
+        {% for u in users %}
+        <div class="ds-template-users__row">
+          <span class="ds-template-users__name">{{ u.name }}<span class="ds-template-users__account">（{{ u.account }}）</span></span>
+          <span class="ds-template-users__role">{{ u.role }}</span>
+        </div>
+        {% endfor %}
       </div>
       {% endfor %}
     </div>
-    {% endfor %}
-  </div>
+  </section>
 </div>

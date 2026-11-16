@@ -23,7 +23,7 @@
         <form method="post" action="{% url 'language:language_switch' %}" class="d-flex align-items-center gap-1 mb-0">
           {% csrf_token %}
           <input type="hidden" name="next" value="{{ request.get_full_path }}">
-          <button type="submit" name="lang" value="zh-hans" class="r-lang{% if LANGUAGE_CODE == 'zh-hans' %} is-active{% endif %}">中文</button>
+          <button type="submit" name="lang" value="zh-hans" class="r-lang{% if LANGUAGE_CODE == 'zh-hans' %} is-active{% endif %}">{% if LANGUAGE_CODE == 'en' %}Chinese{% else %}中文{% endif %}</button>
           <button type="submit" name="lang" value="en" class="r-lang{% if LANGUAGE_CODE == 'en' %} is-active{% endif %}">EN</button>
         </form>
         {% endif %}
@@ -64,7 +64,7 @@
         </div>
       </div>
 
-      <p class="text-center mt-3 r-small r-muted">Constellatio · {% trans "万物皆可插件" %}</p>
+      <p class="text-center mt-3 r-small r-muted">Constellatio · flexible plugin</p>
     </div>
   </div>
 

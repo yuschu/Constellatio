@@ -15,6 +15,20 @@
 <body class="as-body">
 <div class="as-shell">
 
+  {# 抽屉态：侧栏收起后主区左上角留一个打开器；遮罩 z70 盖住主区，侧栏 z71。 #}
+  <button type="button" class="ds-drawer-opener" data-ds-rail-toggle
+          data-ds-shortcut-aria="sidebar.left.toggle"
+          aria-keyshortcuts="Control+Alt+B"
+          data-label-collapse="{% trans '收起侧边栏' %}"
+          data-label-open="{% trans '打开侧边栏' %}"
+          aria-label="{% trans '打开侧边栏' %}">
+    <svg class="as-ico" viewBox="0 0 16 16" width="16" height="16" fill="none" aria-hidden="true">
+      <path d="M13.5 1.5H2.5C1.94772 1.5 1.5 1.94772 1.5 2.5V13.5C1.5 14.0523 1.94772 14.5 2.5 14.5H13.5C14.0523 14.5 14.5 14.0523 14.5 13.5V2.5C14.5 1.94772 14.0523 1.5 13.5 1.5Z" stroke="currentColor" stroke-width="1"/>
+      <path d="M5.5 1.5V14.5" stroke="currentColor" stroke-width="1"/>
+    </svg>
+  </button>
+  <div class="ds-drawer-mask" data-ds-drawer-mask aria-hidden="true"></div>
+
   <aside class="as-sidebar">
     <div class="as-logo-row">
       <a href="/" class="as-brand" title="Constellatio">
@@ -56,10 +70,13 @@
     </span>
     {% endif %}
 
-    {# 面板入口：primary_menus（考勤/插件/看板，来自 PRIMARY_MENU_URLS）+ 更多抽屉 #}
+    {% comment %}
+      面板入口：primary_menus（考勤 / 公告 / 看板）；三条都在首页内换面板，
+      公告页已从业务页「功能」侧栏移除。插件入口已移入业务页「功能」侧栏首位。
+    {% endcomment %}
     <nav class="as-panels" aria-label="{% trans '功能入口' %}">
       {% for menu in primary_menus %}
-      <a href="{{ menu.panel_url|default:menu.url }}" data-home-panel="{{ menu.panel_key }}" class="as-panel{% if menu.panel_active %} is-active{% endif %}"{% if menu.panel_active %} aria-current="page"{% endif %}>
+      <a href="{{ menu.panel_url|default:menu.url }}"{% if menu.panel_key %} data-home-panel="{{ menu.panel_key }}"{% endif %} class="as-panel{% if menu.panel_active %} is-active{% endif %}"{% if menu.panel_active %} aria-current="page"{% endif %}>
         <span class="as-panel__glyph" aria-hidden="true">
           {% if menu.url == '/plugins/attendance/' %}
           {# 考勤：日历 + 勾，与业务页「签到」语义一致 #}
@@ -68,6 +85,14 @@
             <rect x="2.25" y="3.25" width="11.5" height="10.5" rx="1.5"/>
             <path d="M2.25 6.5h11.5M5.25 1.6v2.6M10.75 1.6v2.6"/>
             <path d="M5.6 10.2l1.55 1.55 3.1-3.1"/>
+          </svg>
+          {% elif menu.url == '/plugins/notice/' %}
+          {# 公告：公告板 + 右下角通知点 #}
+          <svg class="as-ico" viewBox="0 0 16 16" width="16" height="16"
+               fill="none" stroke="currentColor" stroke-width="1">
+            <rect x="2.4" y="2.8" width="11.2" height="9.4" rx="1.5"/>
+            <path d="M4.8 5.6h6.4M4.8 8h4.4"/>
+            <circle cx="12.2" cy="12.2" r="1.6" fill="currentColor" stroke="none"/>
           </svg>
           {% elif menu.url == '/plugins/workspace/' %}
           {# 插件：DSH 用四格模块图标表达「可组合的插件单元」 #}
@@ -93,12 +118,12 @@
       </a>
       {% endfor %}
 
-      {% if common_menus %}
       {% comment %}
         更多：DSH 的 PanelMoreMenu 是一个与面板行同形的按钮（IconAppsAddOutlineRegular，
         展开 16 / 折叠 18），点开后弹出 .moreMenu（288px / max-width calc(100vw - 24px)）。
         菜单行按 dsh-client-ui-entry-customization 的 EntryMenuContent：常用入口 +
-        分隔线 + 「浏览更多插件」（pinwheel）+「创建你的插件」（plus）。
+        分隔线 + 「浏览更多插件」（pinwheel）+「创建你的插件」（plus）。即使常用入口
+        为空，「更多」也要保留，因为「浏览更多插件」是固定入口。
       {% endcomment %}
       <div class="as-more" data-as-more>
         <button type="button" class="as-panel as-more__anchor" data-as-more-trigger
@@ -158,26 +183,96 @@
           </div>
         </div>
       </div>
-      {% endif %}
     </nav>
 
     <section class="as-region" aria-labelledby="as-region-title">
       <div class="as-section-head">
         <h2 class="as-section-label" id="as-region-title">{% trans "会话" %}</h2>
+        <button type="button" class="as-archived-toggle" data-as-archived-toggle
+                aria-expanded="false" aria-controls="as-archived-list"
+                {% if not archived_conversations %}hidden{% endif %}>
+          <span>{% trans "已归档" %}</span>
+          <span class="as-archived-count" data-as-archived-count>{{ archived_conversations|length }}</span>
+        </button>
       </div>
 
       <div class="as-tree">
         {% if conversations %}
-        <ul class="as-session-list">
+        <ul class="as-session-list" data-as-session-list>
           {% for item in conversations %}
-          <li class="as-session-item{% if conversation and item.pk == conversation.pk %} is-active{% endif %}">
-            <a href="/?conversation={{ item.pk }}">{{ item.title|default:_('新会话')|truncatechars:24 }}</a>
+          <li class="as-session-item{% if conversation and item.pk == conversation.pk %} is-active{% endif %}"
+              data-session-row data-session-id="{{ item.pk }}"
+              data-session-title="{{ item.title }}"
+              data-session-pinned="{% if item.pinned %}1{% else %}0{% endif %}"
+              data-session-archived="0"
+              data-session-updated="{{ item.updated_at|date:'U'|default:'0' }}"
+              data-session-action-url="{% url 'assistant:conversation_action' item.pk %}">
+            <a class="as-session-link" href="/?conversation={{ item.pk }}">
+              {% if item.pinned %}
+              <span class="as-session-pin" role="img" aria-label="{% trans '已置顶' %}">
+                <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+                  <path d="M9.2 2.1l4.7 4.7-1.5 1.5-1.1-.3-2.2 2.2.4 1.8-1 1-2.4-2.4-2.6 2.6-.8-.8 2.6-2.6-2.4-2.4 1-1 1.8.4 2.2-2.2-.3-1.1 1.5-1.5z"
+                        fill="none" stroke="currentColor" stroke-width="1.2"/>
+                </svg>
+              </span>
+              {% endif %}
+              <span class="as-session-title">{{ item.title|default:_('新会话')|truncatechars:24 }}</span>
+            </a>
+            <button type="button" class="as-session-more" data-as-session-more
+                    aria-haspopup="menu" aria-expanded="false"
+                    aria-controls="as-session-menu"
+                    aria-label="{% trans '更多会话操作' %}">
+              <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                <circle cx="3" cy="8" r="1.2" fill="currentColor"/>
+                <circle cx="8" cy="8" r="1.2" fill="currentColor"/>
+                <circle cx="13" cy="8" r="1.2" fill="currentColor"/>
+              </svg>
+            </button>
           </li>
           {% endfor %}
         </ul>
         {% else %}
         <p class="as-tree__hint">{% trans "还没有会话" %}</p>
         {% endif %}
+
+        <div class="as-archived-block" data-as-archived-block
+             {% if not archived_conversations %}hidden{% endif %}>
+          <ul class="as-session-list as-session-list--archived"
+              id="as-archived-list" data-as-archived-list
+              {% if not archived_conversations %}hidden{% endif %}>
+            {% for item in archived_conversations %}
+            <li class="as-session-item is-archived" data-session-row
+                data-session-id="{{ item.pk }}"
+                data-session-title="{{ item.title }}"
+                data-session-pinned="{% if item.pinned %}1{% else %}0{% endif %}"
+                data-session-archived="1"
+                data-session-updated="{{ item.updated_at|date:'U'|default:'0' }}"
+                data-session-action-url="{% url 'assistant:conversation_action' item.pk %}">
+              <a class="as-session-link" aria-disabled="true" tabindex="-1">
+                {% if item.pinned %}
+                <span class="as-session-pin" role="img" aria-label="{% trans '已置顶' %}">
+                  <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+                    <path d="M9.2 2.1l4.7 4.7-1.5 1.5-1.1-.3-2.2 2.2.4 1.8-1 1-2.4-2.4-2.6 2.6-.8-.8 2.6-2.6-2.4-2.4 1-1 1.8.4 2.2-2.2-.3-1.1 1.5-1.5z"
+                          fill="none" stroke="currentColor" stroke-width="1.2"/>
+                  </svg>
+                </span>
+                {% endif %}
+                <span class="as-session-title">{{ item.title|default:_('新会话')|truncatechars:24 }}</span>
+              </a>
+              <button type="button" class="as-session-more" data-as-session-more
+                      aria-haspopup="menu" aria-expanded="false"
+                      aria-controls="as-session-menu"
+                      aria-label="{% trans '更多会话操作' %}">
+                <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                  <circle cx="3" cy="8" r="1.2" fill="currentColor"/>
+                  <circle cx="8" cy="8" r="1.2" fill="currentColor"/>
+                  <circle cx="13" cy="8" r="1.2" fill="currentColor"/>
+                </svg>
+              </button>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
       </div>
     </section>
 
@@ -266,6 +361,8 @@
       {% include "home_dashboard.html" %}
       {% elif panel_key == 'attendance' %}
       {% include "attendance/_panel.html" %}
+      {% elif panel_key == 'notice' %}
+      {% include "notice/_panel.html" %}
       {% elif panel_key == 'workspace' %}
       {% include "workspace/_panel.html" %}
       {% endif %}
@@ -312,57 +409,57 @@
             <div class="as-draft__fields">
               {% if message.draft.approval_type == 'leave' %}
               <label class="as-draft__field">
-                <span>请假时间</span>
+                <span>{% trans "请假时间" %}</span>
                 <input class="as-draft__input" type="datetime-local" name="leave_time"
                        value="{{ message.draft.initial.leave_time }}" required>
               </label>
               <label class="as-draft__field">
-                <span>事由</span>
+                <span>{% trans "事由" %}</span>
                 <textarea class="as-draft__input" name="reason" rows="2">{{ message.draft.initial.reason }}</textarea>
               </label>
               {% elif message.draft.approval_type == 'expense' %}
               <label class="as-draft__field">
-                <span>提交时间</span>
+                <span>{% trans "提交时间" %}</span>
                 <input class="as-draft__input" type="date" name="submit_time"
                        value="{{ message.draft.initial.submit_time }}" required>
               </label>
               <label class="as-draft__field">
-                <span>金额</span>
+                <span>{% trans "金额" %}</span>
                 <input class="as-draft__input" type="number" name="amount" step="0.01" min="0"
                        value="{{ message.draft.initial.amount }}" required>
               </label>
               <label class="as-draft__field">
-                <span>费用事由</span>
+                <span>{% trans "费用事由" %}</span>
                 <textarea class="as-draft__input" name="reason" rows="2">{{ message.draft.initial.reason }}</textarea>
               </label>
               {% elif message.draft.approval_type == 'seal' %}
               <label class="as-draft__field">
-                <span>用章时间</span>
+                <span>{% trans "用章时间" %}</span>
                 <input class="as-draft__input" type="datetime-local" name="seal_time"
                        value="{{ message.draft.initial.seal_time }}" required>
               </label>
               <label class="as-draft__field">
-                <span>用途</span>
+                <span>{% trans "用途" %}</span>
                 <textarea class="as-draft__input" name="purpose" rows="2">{{ message.draft.initial.purpose }}</textarea>
               </label>
               <label class="as-draft__field">
-                <span>用章文件</span>
+                <span>{% trans "用章文件" %}</span>
                 <input class="as-draft__input" type="file" name="seal_file" required>
               </label>
               {% elif message.draft.approval_type == 'comp' %}
               <label class="as-draft__field">
-                <span>调休开始时间</span>
+                <span>{% trans "调休开始时间" %}</span>
                 <input class="as-draft__input" type="datetime-local" name="start_time"
                        value="{{ message.draft.initial.start_time }}" required>
               </label>
               <label class="as-draft__field">
-                <span>调休结束时间</span>
+                <span>{% trans "调休结束时间" %}</span>
                 <input class="as-draft__input" type="datetime-local" name="end_time"
                        value="{{ message.draft.initial.end_time }}" required>
               </label>
               {% if message.draft_meta %}
               <label class="as-draft__field">
-                <span>调休依据</span>
+                <span>{% trans "调休依据" %}</span>
                 <select class="as-draft__input r-select" name="basis" required>
                   {% for option in message.draft_meta.basis_options %}
                   <option value="{{ option.id }}">{{ option.label }}</option>
@@ -372,39 +469,39 @@
               {% endif %}
               {% else %}
               <label class="as-draft__field">
-                <span>{{ message.draft.type_label }}开始时间</span>
+                <span>{% blocktranslate with type=message.draft.type_label %}{{ type }}开始时间{% endblocktranslate %}</span>
                 <input class="as-draft__input" type="datetime-local" name="start_time"
                        value="{{ message.draft.initial.start_time }}" required>
               </label>
               <label class="as-draft__field">
-                <span>{{ message.draft.type_label }}结束时间</span>
+                <span>{% blocktranslate with type=message.draft.type_label %}{{ type }}结束时间{% endblocktranslate %}</span>
                 <input class="as-draft__input" type="datetime-local" name="end_time"
                        value="{{ message.draft.initial.end_time }}" required>
               </label>
               <label class="as-draft__field">
-                <span>{{ message.draft.type_label }}事由</span>
+                <span>{% blocktranslate with type=message.draft.type_label %}{{ type }}事由{% endblocktranslate %}</span>
                 <textarea class="as-draft__input" name="reason" rows="2">{{ message.draft.initial.reason }}</textarea>
               </label>
               {% endif %}
             </div>
             {% if message.draft_meta %}
             <div class="as-draft__meta">
-              部门：{{ message.draft_meta.department_name }} · 审批人：{{ message.draft_meta.approver_name }}
+              {% blocktranslate with department=message.draft_meta.department_name approver=message.draft_meta.approver_name %}部门：{{ department }} · 审批人：{{ approver }}{% endblocktranslate %}
             </div>
             <div class="as-draft__actions">
-              <button class="as-draft__submit" type="submit">确认提交</button>
-              <a class="as-draft__link" href="{{ message.draft_url }}">去审批表单调整</a>
+              <button class="as-draft__submit" type="submit">{% trans "确认提交" %}</button>
+              <a class="as-draft__link" href="{{ message.draft_url }}">{% trans "去审批表单调整" %}</a>
             </div>
             {% else %}
             <div class="as-draft__meta">
               {% if message.draft.approval_type == 'comp' %}
-              没有可用的已通过加班记录，请先到审批表单补齐调休依据。
+              {% trans "没有可用的已通过加班记录，请先到审批表单补齐调休依据。" %}
               {% else %}
-              请先到审批表单补齐部门与审批人。
+              {% trans "请先到审批表单补齐部门与审批人。" %}
               {% endif %}
             </div>
             <div class="as-draft__actions">
-              <a class="as-draft__action" href="{{ message.draft_url }}">去审批</a>
+              <a class="as-draft__action" href="{{ message.draft_url }}">{% trans "去审批" %}</a>
             </div>
             {% endif %}
           </form>
@@ -418,17 +515,17 @@
               <span class="as-draft__type">{{ message.action_card.type_label }}</span>
             </div>
             <dl class="as-draft__row">
-              <dt>标题</dt><dd>{{ message.action_card.title }}</dd>
-              <dt>申请人</dt><dd>{{ message.action_card.applicant }}</dd>
+              <dt>{% trans "标题" %}</dt><dd>{{ message.action_card.title }}</dd>
+              <dt>{% trans "申请人" %}</dt><dd>{{ message.action_card.applicant }}</dd>
               {% if message.action_card.amount %}
-              <dt>金额</dt><dd>{{ message.action_card.amount }}</dd>
+              <dt>{% trans "金额" %}</dt><dd>{{ message.action_card.amount }}</dd>
               {% endif %}
-              <dt>提交时间</dt><dd>{{ message.action_card.created_at }}</dd>
+              <dt>{% trans "提交时间" %}</dt><dd>{{ message.action_card.created_at }}</dd>
             </dl>
             <label class="as-draft__field">
-              <span>审批意见</span>
+              <span>{% trans "审批意见" %}</span>
               <input class="as-draft__input" type="text" name="comment"
-                     placeholder="审批意见（可选）">
+                     placeholder="{% trans '审批意见（可选）' %}">
             </label>
             <div class="as-draft__actions">
               {% for action in message.action_card.actions %}
@@ -436,21 +533,21 @@
                       type="submit" name="action" value="{{ action.value }}"
                       data-confirm="{{ action.confirm }}">{{ action.label }}</button>
               {% endfor %}
-              <a class="as-draft__link" href="{{ message.action_card.detail_url }}">查看完整详情</a>
+              <a class="as-draft__link" href="{{ message.action_card.detail_url }}">{% trans "查看完整详情" %}</a>
             </div>
-            <p class="as-draft__meta" style="text-align:center;">审批操作需二次确认；确认后状态不可修改。</p>
+            <p class="as-draft__meta" style="text-align:center;">{% trans "审批操作需二次确认；确认后状态不可修改。" %}</p>
           </form>
           {% endif %}
           {% if message.page_link %}
           <div class="as-draft as-page-link">
             <div class="as-draft__head">
-              <span class="as-draft__tag">页面入口</span>
+              <span class="as-draft__tag">{% trans "页面入口" %}</span>
               <span class="as-draft__type">{{ message.page_link.title }}</span>
             </div>
             <p class="as-draft__meta">{{ message.page_link.description }}</p>
             <div class="as-draft__actions">
               <a class="as-draft__submit as-page-link__open"
-                 href="{{ message.page_link.url }}">打开{{ message.page_link.title }}</a>
+                 href="{{ message.page_link.url }}">{% blocktranslate with title=message.page_link.title %}打开{{ title }}{% endblocktranslate %}</a>
             </div>
           </div>
           {% endif %}
@@ -751,7 +848,7 @@
         <form method="post" action="{% url 'language:language_switch' %}" class="ds-settings__seg">
           {% csrf_token %}
           <input type="hidden" name="next" value="{{ request.get_full_path }}">
-          <button type="submit" name="lang" value="zh-hans" class="ds-settings__opt{% if LANGUAGE_CODE == 'zh-hans' %} is-active{% endif %}">中文</button>
+          <button type="submit" name="lang" value="zh-hans" class="ds-settings__opt{% if LANGUAGE_CODE == 'zh-hans' %} is-active{% endif %}">{% if LANGUAGE_CODE == 'en' %}Chinese{% else %}中文{% endif %}</button>
           <button type="submit" name="lang" value="en" class="ds-settings__opt{% if LANGUAGE_CODE == 'en' %} is-active{% endif %}">English</button>
         </form>
       </div>
@@ -817,15 +914,20 @@
         <button type="button" class="ds-settings__keybtn" data-ds-shortcuts-open
                 data-ds-shortcut-aria="shortcuts.open"
                 data-ds-shortcut-keys="shortcuts.open"
+                aria-label="{% trans '编辑快捷键' %} Ctrl /"
                 aria-keyshortcuts="Control+/">
           <span class="ds-settings__keylabel">{% trans "编辑快捷键" %}</span>
           <span class="ds-settings__keycaps" data-ds-shortcut-keycaps>
             <kbd class="ds-kbd">Ctrl</kbd><kbd class="ds-kbd">/</kbd>
           </span>
+          <svg class="ds-settings__keychevron" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path d="M6.25 3.75 10.5 8l-4.25 4.25" fill="none" stroke="currentColor"
+                  stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
         </button>
       </div>
 
-      <p class="ds-settings__version">Constellatio · {% trans "万物皆可插件" %}</p>
+      <p class="ds-settings__version">Constellatio · flexible plugin</p>
     </div>
 
     {% if can_manage_model %}
@@ -868,14 +970,110 @@
         <span class="ds-settings__state">{% if request.user.is_authenticated %}{% trans "已登录" %}{% else %}{% trans "未登录" %}{% endif %}</span>
       </div>
 
-      <p class="ds-settings__version">Constellatio · {% trans "万物皆可插件" %}</p>
+      <p class="ds-settings__version">Constellatio · flexible plugin</p>
     </div>
   </div>
 </div>
 
+</div>
+
+<div class="ds-menu as-session-menu" id="as-session-menu" role="menu" hidden
+     aria-label="{% trans '会话操作' %}">
+  <div class="ds-menu__material" aria-hidden="true"></div>
+  <div class="ds-menu__list">
+    <button type="button" role="menuitem" class="ds-menu__item"
+            data-session-menu-action="pin"
+            data-i18n-pin="{% trans '置顶会话' %}"
+            data-i18n-unpin="{% trans '取消置顶' %}">
+      <span class="ds-menu__icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16" width="14" height="14">
+          <path d="M9.2 2.1l4.7 4.7-1.5 1.5-1.1-.3-2.2 2.2.4 1.8-1 1-2.4-2.4-2.6 2.6-.8-.8 2.6-2.6-2.4-2.4 1-1 1.8.4 2.2-2.2-.3-1.1 1.5-1.5z"
+                fill="none" stroke="currentColor" stroke-width="1.2"/>
+        </svg>
+      </span>
+      <span class="ds-menu__label" data-session-menu-label>{% trans "置顶会话" %}</span>
+    </button>
+    <button type="button" role="menuitem" class="ds-menu__item"
+            data-session-menu-action="rename">
+      <span class="ds-menu__icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16" width="14" height="14">
+          <path d="M3 13l.7-3.7 7.2-7.2 2.8 2.8-7.2 7.2L3 13zM9.9 3.1l2.8 2.8"
+                fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <span class="ds-menu__label">{% trans "重命名" %}</span>
+    </button>
+    <div class="ds-menu__sep" role="separator"></div>
+    <button type="button" role="menuitem" class="ds-menu__item"
+            data-session-menu-action="copy">
+      <span class="ds-menu__icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16" width="14" height="14">
+          <rect x="5.2" y="5.2" width="7.3" height="7.3" rx="1.2"
+                fill="none" stroke="currentColor" stroke-width="1.2"/>
+          <path d="M10.8 5.2V4.3c0-.7-.5-1.2-1.2-1.2H4.3c-.7 0-1.2.5-1.2 1.2v5.3c0 .7.5 1.2 1.2 1.2h.9"
+                fill="none" stroke="currentColor" stroke-width="1.2"/>
+        </svg>
+      </span>
+      <span class="ds-menu__label">{% trans "复制 Session ID" %}</span>
+    </button>
+    <div class="ds-menu__sep" role="separator"></div>
+    <button type="button" role="menuitem" class="ds-menu__item"
+            data-session-menu-action="archive"
+            data-i18n-archive="{% trans '归档会话' %}"
+            data-i18n-unarchive="{% trans '取消归档' %}">
+      <span class="ds-menu__icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16" width="14" height="14">
+          <path d="M2.5 5.3h11v1.9h-11V5.3zM3.4 7.2h9.2v5.1H3.4V7.2zM5.8 9.2h4.4"
+                fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <span class="ds-menu__label" data-session-menu-label>{% trans "归档会话" %}</span>
+    </button>
+  </div>
+</div>
+
+<div class="as-toast" data-as-session-toast role="status" hidden></div>
+
+<div class="as-rename" data-as-rename hidden>
+  <div class="as-rename__overlay" data-as-rename-overlay></div>
+  <div class="as-rename__panel" role="dialog" aria-modal="true"
+       aria-labelledby="as-rename-title">
+    <button type="button" class="as-rename__close" data-as-rename-cancel
+            aria-label="{% trans '关闭' %}">
+      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+        <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5"
+              fill="none" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <h2 class="as-rename__title" id="as-rename-title">{% trans "重命名会话" %}</h2>
+    <label class="as-sr-only" for="as-rename-input">{% trans "会话名称" %}</label>
+    <input class="as-rename__input" id="as-rename-input" type="text"
+           data-as-rename-input maxlength="200" autocomplete="off">
+    <div class="as-rename__error" data-as-rename-error role="alert" hidden></div>
+    <div class="as-rename__actions">
+      <button type="button" class="as-rename__button" data-as-rename-cancel>{% trans "取消" %}</button>
+      <button type="button" class="as-rename__button as-rename__button--primary"
+              data-as-rename-confirm>{% trans "重命名" %}</button>
+    </div>
+  </div>
+</div>
+
+<div hidden data-as-session-i18n
+     data-label-pinned="{% trans '已置顶' %}"
+     data-msg-copied="{% trans 'Session ID 已复制' %}"
+     data-msg-copy-failed="{% trans '复制失败，请手动复制 Session ID' %}"
+     data-msg-action-failed="{% trans '操作失败，请重试' %}"
+     data-msg-archived="{% trans '会话已归档' %}"
+     data-msg-unarchived="{% trans '会话已取消归档' %}"
+     data-msg-pinned="{% trans '会话已置顶' %}"
+     data-msg-unpinned="{% trans '会话已取消置顶' %}"
+     data-msg-empty="{% trans '还没有会话' %}"></div>
+
 {% include "includes/ds_shortcuts.html" with rail_toggle=True %}
+{% include "includes/ds_shell_i18n.html" %}
 
 <script src="{% static 'js/ds-shell.js' %}?v={{ assets_version }}" defer></script>
 <script src="{% static 'js/shortcuts.js' %}?v={{ assets_version }}" defer></script>
+<script src="{% static 'assistant/js/session-menu.js' %}?v={{ assets_version }}" defer></script>
 </body>
 </html>

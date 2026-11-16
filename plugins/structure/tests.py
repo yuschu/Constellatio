@@ -185,6 +185,8 @@ class StructureApplyTests(TestCase):
         self.assertContains(resp, '当前角色')
         self.assertContains(resp, '当前工程师')
         self.assertContains(resp, '查看模板')
+        # 三张统计卡带 user_manage 时指到部门 / 用户 / 角色页，第四张保持静态。
+        self.assertEqual(resp.content.decode().count('r-card r-card--link'), 3)
 
     def test_role_cards_carry_members_and_modal(self):
         """v1.5.10：角色卡片可点击，携带成员明细供弹窗；容器带滚动。"""
@@ -236,11 +238,11 @@ class StructureApplyTests(TestCase):
         self.client.force_login(viewer)
         resp = self.client.get(reverse('structure:template'))
         self.assertEqual(resp.status_code, 200)
-        self.assertNotContains(resp, '⤓ 应用模板')
+        self.assertNotContains(resp, '应用模板')
 
         self.client.force_login(self.admin)
         resp = self.client.get(reverse('structure:template'))
-        self.assertContains(resp, '⤓ 应用模板')
+        self.assertContains(resp, '应用模板')
 
     def test_template_page_requires_structure_view(self):
         noperm = User.objects.create_user('tpl_noperm', password='pw')
@@ -431,3 +433,141 @@ class StructureUserDetailTests(TestCase):
         self.client.force_login(self.viewer)
         resp = self.client.get(reverse('structure:overview'))
         self.assertContains(resp, reverse('structure:user_detail', args=[self.target.pk]))
+
+
+class StructureTemplateFileTests(TestCase):
+    """组织架构 XLSX 模板：下载三工作表、解析、导入幂等与失败零写入。"""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin = User.objects.create_superuser('template_admin', '', 'adminpass')
+        cls.viewer = User.objects.create_user('template_viewer', password='pw')
+        role = cls.viewer.roles.create(name='模板查看')
+        role.permissions.add(Permission.objects.get(codename='structure_view'))
+
+    def setUp(self):
+        self.client.force_login(self.admin)
+
+    def _xlsx_upload(self, data, name='structure-template.xlsx'):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        return SimpleUploadedFile(
+            name, data, content_type=(
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'))
+
+    def test_download_has_three_business_sheets(self):
+        from io import BytesIO
+
+        from openpyxl import load_workbook
+
+        response = self.client.get(reverse('structure:template_file'))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('attachment', response['Content-Disposition'])
+        workbook = load_workbook(BytesIO(response.content))
+        self.assertEqual(
+            workbook.sheetnames, ['部门', '角色', '用户', '说明'])
+        self.assertEqual(workbook['部门'].max_row, 21)
+        self.assertEqual(workbook['角色'].max_row, 32)
+        self.assertEqual(workbook['用户'].max_row, 32)
+
+    def test_generated_template_parses(self):
+        from .template_io import build_template_workbook, parse_template
+
+        payload = parse_template(self._xlsx_upload(build_template_workbook()))
+        self.assertEqual(len(payload['departments']), 20)
+        self.assertEqual(len(payload['roles']), 31)
+        self.assertEqual(len(payload['users']), 31)
+
+    def test_import_generated_template_creates_structure(self):
+        from .template_io import build_template_workbook
+
+        response = self.client.post(
+            reverse('structure:template_import'),
+            {'template': self._xlsx_upload(build_template_workbook())})
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response['Location'].endswith('?imported=1'))
+        self.assertEqual(User.objects.filter(
+            username='gm_zhang', department__name='总裁办').count(), 1)
+        from .models import StructureRecord
+        record = StructureRecord.objects.latest('id')
+        self.assertEqual(
+            (record.dept_created, record.role_created, record.user_created),
+            (20, 31, 31))
+
+    def test_invalid_row_reports_error_and_writes_nothing(self):
+        from io import BytesIO
+
+        from openpyxl import load_workbook
+
+        from .template_io import build_template_workbook
+
+        data = build_template_workbook()
+        workbook = load_workbook(BytesIO(data))
+        workbook['用户'].append(['bad user!', '非法账号', '总裁办', '总经理', ''])
+        output = BytesIO()
+        workbook.save(output)
+
+        response = self.client.post(
+            reverse('structure:template_import'),
+            {'template': self._xlsx_upload(output.getvalue(), 'bad.xlsx')})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '账号只能包含')
+        from plugins.user.models import Department
+
+        self.assertEqual(Department.objects.count(), 0)
+        self.assertEqual(User.objects.filter(username='gm_zhang').count(), 0)
+
+    def test_import_requires_manage_and_download_requires_view(self):
+        self.client.force_login(self.viewer)
+        self.assertEqual(
+            self.client.get(reverse('structure:template_file')).status_code, 200)
+        response = self.client.post(
+            reverse('structure:template_import'), {'template': self._xlsx_upload(b'x')})
+        self.assertEqual(response.status_code, 403)
+
+        self.client.force_login(User.objects.create_user('template_none', password='pw'))
+        self.assertEqual(
+            self.client.get(reverse('structure:template_file')).status_code, 403)
+
+    def test_apply_template_rolls_back_on_missing_parent(self):
+        from plugins.user.models import Department
+
+        from .services import apply_template
+
+        with self.assertRaises(ValueError):
+            apply_template(self.admin, {
+                'departments': [{'name': '子部门', 'parent': '不存在的上级'}],
+                'roles': [], 'users': [],
+            })
+        self.assertEqual(Department.objects.filter(name='子部门').count(), 0)
+
+    def test_apply_template_only_creates_missing(self):
+        from plugins.user.models import Department, Role
+
+        from .services import apply_template
+
+        existing_dept = Department.objects.create(name='既有部门')
+        existing_role = Role.objects.create(name='既有角色')
+        existing_user = User.objects.create_user(
+            'existing_user', password='pw', last_name='原姓名', department=existing_dept)
+        existing_user.roles.add(existing_role)
+
+        dept, role, user = apply_template(self.admin, {
+            'departments': [
+                {'name': '既有部门', 'parent': ''},
+                {'name': '新增部门', 'parent': '既有部门'},
+            ],
+            'roles': [{'name': '既有角色', 'permissions': []}],
+            'users': [
+                {'account': 'existing_user', 'name': '新姓名',
+                 'department': '新增部门', 'role': '既有角色', 'leader': ''},
+                {'account': 'new_user', 'name': '新用户',
+                 'department': '新增部门', 'role': '既有角色', 'leader': 'existing_user'},
+            ],
+        })
+        self.assertEqual((dept, role, user), (1, 0, 1))
+        existing_user.refresh_from_db()
+        self.assertEqual(existing_user.last_name, '原姓名')
+        self.assertEqual(existing_user.department, existing_dept)
+        self.assertEqual(existing_user.leader_id, None)
+        self.assertFalse(existing_user.roles.exclude(pk=existing_role.pk).exists())
+        self.assertTrue(User.objects.get(username='new_user').check_password('constellatio123'))

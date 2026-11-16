@@ -12,6 +12,6 @@
 {% endcomment %}
 {% if reapply_of %}{% trans "重新申请" as sp_title_text %}{% else %}{% trans "发起审批" as sp_title_text %}{% endif %}
 <div class="ds-settings ds-settings--inline ds-settings--single">
-  {% include "includes/ds_settings_panel.html" with sp_title=sp_title_text sp_body="approval/_approval_create_body.html" sp_modal=False sp_back=back_url %}
+  {% include "includes/ds_settings_panel.html" with sp_title=sp_title_text sp_body="approval/_approval_create_body.html" sp_modal=False sp_back=back_url sp_stack="wide" %}
 </div>
 {% endblock %}

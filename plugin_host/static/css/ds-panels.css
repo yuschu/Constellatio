@@ -296,45 +296,108 @@ html[data-color-mode="dark"] .ds-settings .r-badge--orange {
   flex: 1;
 }
 
-/* 快捷键入口：文字 + 键帽并排，不再用浏览器默认按钮 */
+/* 快捷键入口：文字 + 键帽 + 展开箭头。首页面板行里这是唯一可点目标，
+   给足 32px 命中高度与整块 hover，键帽改用输入面底色 + 发丝描边。 */
 .ds-settings__keybtn {
   display: inline-flex;
+  flex: none;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
-  padding: 0;
+  box-sizing: border-box;
+  min-height: 32px;
+  margin-right: -6px;
+  padding: 3px 6px 3px 10px;
   border: 0;
-  background: transparent;
+  border-radius: 10px;
+  background: var(--as-selector, #f5f6f7);
   color: var(--as-label-secondary, #5f6368);
   font-family: inherit;
-  font-size: 12px;
-  line-height: 18px;
+  font-size: 13px;
+  line-height: 20px;
   cursor: pointer;
+  corner-shape: superellipse(1.5);
+  transition: background-color var(--as-dur-fast, 0.1s) linear,
+    color var(--as-dur-fast, 0.1s) linear;
+}
+
+.ds-settings__keybtn:hover {
+  background: linear-gradient(
+      var(--as-interactive-hover, #2631480f),
+      var(--as-interactive-hover, #2631480f)
+    ),
+    var(--as-selector, #f5f6f7);
+  color: var(--as-label-primary, #0f1115);
+}
+
+.ds-settings__keybtn:active {
+  background: linear-gradient(
+      var(--as-interactive-active, #2631481a),
+      var(--as-interactive-active, #2631481a)
+    ),
+    var(--as-selector, #f5f6f7);
+}
+
+.ds-settings__keybtn:focus-visible {
+  outline: 2px solid var(--as-link, #4176e6);
+  outline-offset: 2px;
 }
 
 .ds-settings__keylabel {
+  font-weight: 500;
   white-space: nowrap;
 }
 
 .ds-settings__keycaps {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
+}
+
+.ds-settings__keychevron {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--as-label-caption, #adb2b8);
+  transition: color var(--as-dur-fast, 0.1s) linear;
+}
+
+.ds-settings__keybtn:hover .ds-settings__keychevron {
+  color: var(--as-label-tertiary, #81858c);
 }
 
 .ds-kbd {
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 24px;
-  height: 24px;
-  padding: 0 6px;
-  border-radius: 5px;
-  background: var(--as-bg-layer-3, #f7f8fa);
+  min-width: 26px;
+  height: 26px;
+  padding: 0 7px;
+  border-radius: 8px;
+  background: var(--as-elevated-fill, #ffffff);
   color: var(--as-label-secondary, #5f6368);
   font-family: inherit;
   font-size: 12px;
-  line-height: 1;
+  font-weight: 500;
+  line-height: 18px;
   box-shadow: inset 0 0 0 0.5px var(--as-border-l2, #0000001a);
+}
+
+.ds-settings__keybtn:hover .ds-kbd {
+  box-shadow: inset 0 0 0 0.5px var(--as-border-l3, #0000001f);
+}
+
+@media (width <= 560px) {
+  .ds-settings__keylabel {
+    display: none;
+  }
+
+  .ds-settings__keybtn {
+    gap: 6px;
+    margin-right: -4px;
+    padding: 3px 4px 3px 6px;
+  }
 }
 
 /* ---------- 快捷键参考弹层：首页等价于主题表第 36 节 ---------- */

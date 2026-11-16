@@ -12,6 +12,8 @@ app_name = 'assistant'
 
 urlpatterns = [
     path('', views.home, name='home'),
+    path('conversations/<int:pk>/action/', views.conversation_action,
+         name='conversation_action'),
     path('draft/<int:message_id>/', views.approval_draft, name='approval_draft'),
     path('settings/', views.settings_page, name='settings'),
 ]

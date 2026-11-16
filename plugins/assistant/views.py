@@ -12,6 +12,9 @@ v2.1.0：顶部三格（考勤 / 插件 / 看板）改为**在主页面板内切
 不再跳业务页——DSH 的 panel 行只换主区内容，侧栏原地不动。业务页仍可直达，
 但侧栏不再重复展示这三条入口。
 
+v2.4.1：顶部第二格由「公告中心」收成「公告」，并改成首页内 `?panel=notice`
+面板；公告页从业务页「功能」侧栏移除，首页承接公告的阅读与发布入口。
+
 v2.3.0：接入只读工具调用与会话落库；`?conversation=<id>` 打开历史会话，
 侧栏列出最近 20 条。模型/工具失败只写一条助手消息，首页不降级。
 """
@@ -21,16 +24,21 @@ from urllib.parse import quote, urlencode
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseBadRequest, HttpResponseForbidden, HttpResponseNotFound
+from django.http import (
+    HttpResponseBadRequest,
+    HttpResponseForbidden,
+    HttpResponseNotFound,
+    JsonResponse,
+)
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext as _
+from django.views.decorators.http import require_POST
 
 from plugin_host.context_processors import (
     COLOR_MODE_COOKIE,
     COLOR_MODES,
     DEFAULT_COLOR_MODE,
-    HOME_PANEL_URLS,
 )
 from plugin_host.permissions import require_perm
 from plugin_host.registry import plugin_enabled
@@ -45,13 +53,20 @@ from .attachments import (
 from .forms import LLMSettingsForm
 from .models import Conversation, LLMSettings, Message
 
-# 顶部固定入口对应的菜单 URL，元组顺序即侧栏渲染顺序（v2.1.0 起与
-# 业务页侧栏的「已由主页承载」清单同源，避免两处各写一套）。
-PRIMARY_MENU_URLS = HOME_PANEL_URLS
+# 顶部固定入口（URL, 首页面板 key）。key 为空表示该入口只是业务页链接，
+# 不在首页内换面板。公告现在由首页面板承载，业务页「功能」侧栏不再重复。
+PRIMARY_MENU_ENTRIES = (
+    ('/plugins/attendance/', 'attendance'),
+    ('/plugins/notice/', 'notice'),
+    ('/dashboard/', 'dashboard'),
+)
+PRIMARY_MENU_URLS = tuple(url for url, _key in PRIMARY_MENU_ENTRIES)
 
-# 菜单 URL ←→ 首页面板 key（选择器 / 高亮 / 局部刷新都按这个 key 走）
+# 菜单 URL ←→ 首页面板 key（选择器 / 高亮 / 局部刷新都按这个 key 走）。
+# workspace 保留为深链面板（/?panel=workspace），但不再出现在首页固定入口。
 PANEL_BY_URL = {
     '/plugins/attendance/': 'attendance',
+    '/plugins/notice/': 'notice',
     '/plugins/workspace/': 'workspace',
     '/dashboard/': 'dashboard',
 }
@@ -59,6 +74,7 @@ PANEL_BY_URL = {
 # 面板标题（页面 title 与 a11y 用；侧栏文案仍取菜单 label）
 PANEL_TITLES = {
     'attendance': '考勤',
+    'notice': '公告',
     'workspace': '插件',
     'dashboard': '看板',
 }
@@ -76,6 +92,7 @@ PANEL_SUBS = {
 # 看板（/dashboard/）是容器自己的视图，没有插件开关，故不登记。
 PANEL_PLUGIN_KEYS = {
     'attendance': 'attendance',
+    'notice': 'notice',
     'workspace': 'workspace',
 }
 
@@ -84,13 +101,12 @@ SUB_TITLES = {
 }
 
 # 「更多」菜单里的常用入口，元组顺序即菜单行顺序（DSH 的更多菜单只放轻量导航，
-# 不把全部业务菜单铺进去；完整清单在业务页侧栏）。考勤已在顶部固定入口，这里不重复。
-# v2.1.6：消息中心下线这条——它由账号菜单的「消息」原地开二级页，不再占导航位置。
+# 不把全部业务菜单铺进去；完整清单在业务页侧栏）。考勤、公告已在顶部固定入口，
+# 这里不重复。v2.1.6：消息中心下线这条——它由账号菜单的「消息」原地开二级页。
 COMMON_MENU_URLS = (
     '/plugins/approval/pending/',  # 待我审批
     '/plugins/approval/cc/',       # 抄送我的
     '/plugins/approval/',          # 审批中心
-    '/plugins/notice/',            # 公告中心
 )
 
 # DSH 的「创建你的插件」不是打开某个管理页，而是起一个带预设 prompt 的新会话
@@ -175,6 +191,7 @@ def _attach_draft_cards(request, chat_messages):
         if not draft:
             continue
         message.draft = draft
+        draft['type_label'] = _(draft.get('type_label') or '')
         message.draft_url = reverse(
             'assistant:approval_draft', args=[message.pk])
         message.draft_meta = _draft_card_meta(request.user, draft)
@@ -188,6 +205,10 @@ def _attach_action_cards(chat_messages):
     for message in chat_messages:
         card = services.extract_action_card(message)
         if card:
+            card['type_label'] = _(card.get('type_label') or '')
+            for action in card.get('actions') or []:
+                action['label'] = _(action.get('label') or '')
+                action['confirm'] = _(action.get('confirm') or '')
             message.action_card = card
 
 
@@ -196,6 +217,8 @@ def _attach_page_links(chat_messages):
     for message in chat_messages:
         link = services.extract_page_link(message)
         if link:
+            link['title'] = _(link.get('title') or '')
+            link['description'] = _(link.get('description') or '')
             message.page_link = link
 
 
@@ -214,7 +237,7 @@ def _home_model_url(panel, sub, **extra):
 def home(request):
     """对话式首页：空态 + 输入区；有会话时渲染消息流（本版无数据，分支已就位）。
 
-    `?panel=attendance|workspace|dashboard` 时主区换成对应面板（同一份正文，
+    `?panel=attendance|notice|workspace|dashboard` 时主区换成对应面板（同一份正文，
     与业务页共用上下文），侧栏该行高亮；不传或无权限时回对话态。
     """
     color_mode = _resolve_color_mode(request)
@@ -264,6 +287,21 @@ def home(request):
                     attachments=attachments, read_only=read_only)
                 return redirect(f'/?conversation={conversation.pk}')
 
+    if request.method == 'POST' and panel == 'notice':
+        # 公告发布弹层在首页面板内，表单 action 为空 → POST 回 /?panel=notice。
+        # 校验失败把错误与已填内容挂在 request 上，由 _panel_context 交给
+        # notice/_panel.html 就地重画；成功则 PRG 回公告面板，不跳业务页。
+        if not request.user.has_perm('notice_manage'):
+            return HttpResponseForbidden('无权发布公告')
+        from plugins.notice.views import create_announcement_from_post
+        announcement, notice_error, notice_form_data = (
+            create_announcement_from_post(request))
+        if announcement is not None:
+            return redirect('/?panel=notice')
+        request.ds_notice_form_data = notice_form_data
+        request.ds_notice_form_error = notice_error
+        request.ds_notice_form_open = True
+
     if request.method == 'POST' and (panel, sub) == ('attendance', 'rules'):
         # 设置弹层里的规则表单 action 为空 → POST 回到面板 URL（/）：
         # 保存逻辑与业务页共用 save_rules()，成功 PRG 回面板并带 saved=1，
@@ -280,7 +318,11 @@ def home(request):
         return HttpResponseNotFound('会话不存在')
 
     conversations = list(Conversation.objects.filter(
-        user=request.user).order_by('-updated_at')[:20])
+        user=request.user, archived=False
+    ).order_by('-pinned', '-updated_at')[:20])
+    archived_conversations = list(Conversation.objects.filter(
+        user=request.user, archived=True
+    ).order_by('-updated_at')[:20])
     chat_messages = []
     if conversation is not None:
         chat_messages = list(conversation.messages.filter(
@@ -313,6 +355,7 @@ def home(request):
         'chat_enabled': chat_enabled,
         'chat_messages': chat_messages,
         'conversations': conversations,
+        'archived_conversations': archived_conversations,
         'conversation': conversation,
         'primary_menus': primary_menus,
         'common_menus': common_menus,
@@ -365,6 +408,56 @@ def home(request):
             COLOR_MODE_COOKIE, color_mode,
             max_age=settings.THEME_COOKIE_AGE, samesite='Lax')
     return response
+
+
+@login_required
+@require_POST
+def conversation_action(request, pk):
+    """会话右击菜单的落库动作：重命名 / 置顶 / 归档。
+
+    只接受当前用户的会话；不属于本人与不存在统一 404，不泄露会话是否存在。
+    返回 JSON 给 session-menu.js 就地更新行，不跳页。
+    """
+    conversation = services.get_conversation(request.user, pk)
+    if conversation is None:
+        return JsonResponse(
+            {'ok': False, 'error': _('会话不存在')}, status=404)
+
+    action = (request.POST.get('action') or '').strip()
+    if action == 'rename':
+        title = (request.POST.get('title') or '').strip()
+        if not title:
+            return JsonResponse(
+                {'ok': False, 'error': _('会话名称不能为空')}, status=400)
+        if len(title) > 200:
+            return JsonResponse(
+                {'ok': False, 'error': _('会话名称不能超过 200 个字符')}, status=400)
+        services.update_conversation_meta(conversation, request.user, title=title)
+        return JsonResponse({'ok': True, 'action': action, 'title': title})
+
+    if action in {'pin', 'unpin'}:
+        if conversation.archived:
+            return JsonResponse(
+                {'ok': False, 'error': _('已归档的会话不能置顶')}, status=400)
+        pinned = action == 'pin'
+        services.update_conversation_meta(
+            conversation, request.user, pinned=pinned)
+        return JsonResponse({'ok': True, 'action': action, 'pinned': pinned})
+
+    if action in {'archive', 'unarchive'}:
+        archived = action == 'archive'
+        fields = {'archived': archived}
+        if archived and conversation.pinned:
+            # 侧栏只给未归档会话提供置顶；归档时一并取消，恢复后不带回旧置顶。
+            fields['pinned'] = False
+        services.update_conversation_meta(conversation, request.user, **fields)
+        return JsonResponse({
+            'ok': True, 'action': action, 'archived': archived,
+            'pinned': fields.get('pinned', conversation.pinned),
+        })
+
+    return JsonResponse(
+        {'ok': False, 'error': _('不支持的操作')}, status=400)
 
 
 def _resolve_panel(request):
@@ -425,6 +518,17 @@ def _panel_context(request, panel, sub=''):
             context['rules_next'] = '/?panel=attendance&sub=rules'
             context['rules_open'] = sub == 'rules'
         return context
+    if panel == 'notice':
+        from plugins.notice.views import notice_list_context
+        return notice_list_context(
+            request,
+            form_data=getattr(request, 'ds_notice_form_data', None) or {},
+            form_open=(
+                request.GET.get('view') == 'new'
+                or bool(getattr(request, 'ds_notice_form_open', False))),
+            form_error=getattr(request, 'ds_notice_form_error', ''),
+            panel=True,
+        )
     if panel == 'workspace':
         from plugins.workspace.views import switch_list_context
         return switch_list_context()
@@ -448,19 +552,18 @@ def _split_menus(request, panel):
     by_url = {}
     for menu in all_menus:
         by_url.setdefault(menu.get('url') or '/', menu)
-    # 渲染顺序以 PRIMARY_MENU_URLS 为准，菜单 order 只决定业务页侧栏；
-    # 两处同源（都来自 get_menus），不另写一套顺序。
+    # 渲染顺序以 PRIMARY_MENU_ENTRIES 为准，菜单 order 只决定业务页侧栏；
+    # 两处同源（都来自 get_menus），不另写一套顺序。key 为空 = 业务页直链。
     primary = []
-    for url in PRIMARY_MENU_URLS:
+    for url, key in PRIMARY_MENU_ENTRIES:
         menu = by_url.get(url)
         if menu is None:
             continue
-        key = PANEL_BY_URL[url]
         primary.append({
             **menu,
             'panel_key': key,
-            'panel_url': f'/?panel={key}',
-            'panel_active': key == panel,
+            'panel_url': f'/?panel={key}' if key else menu['url'],
+            'panel_active': bool(key) and key == panel,
         })
     common = [by_url[url] for url in COMMON_MENU_URLS if url in by_url]
     return primary, common

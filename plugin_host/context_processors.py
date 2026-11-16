@@ -18,12 +18,12 @@ COLOR_MODE_COOKIE = 'oa_color_mode'
 COLOR_MODES = ('light', 'dark')
 DEFAULT_COLOR_MODE = 'light'
 
-# v2.1.0：主页自己承载的面板入口（顺序即首页侧栏顺序）。
-# 这三条在首页内切换（/?panel=…），业务页侧栏不再重复列一遍——
-# 同一入口出现在两套导航里，用户在业务页永远不知道该点哪一个。
+# 首页自己承载的面板入口：这三条在首页内切换（/?panel=…），业务页侧栏不再
+# 重复列一遍。插件页已移回业务页「功能」侧栏首位，不再由首页承接；公告也改由
+# 首页 `?panel=notice` 承载，所以公告不再出现在业务页「功能」侧栏。
 HOME_PANEL_URLS = (
     '/plugins/attendance/',   # 考勤
-    '/plugins/workspace/',    # 插件
+    '/plugins/notice/',       # 公告
     '/dashboard/',            # 看板
 )
 
@@ -102,8 +102,8 @@ def menus(request):
             request.path))
     else:
         menu_items = []
-    # v2.1.0：业务页侧栏不再展示首页已承载的面板入口（考勤 / 插件 / 看板），
-    # 首页侧栏仍用未过滤的 menus。
+    # v2.1.0：业务页侧栏不再展示首页已承载的面板入口（考勤 / 看板）。
+    # 插件入口已回到业务页「功能」侧栏首位，因此不再参与这里的过滤。
     sidebar_items = [
         menu for menu in menu_items
         if (menu.get('url') or '/') not in HOME_PANEL_URLS

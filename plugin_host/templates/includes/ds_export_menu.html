@@ -1,0 +1,36 @@
+{% load i18n %}
+{% comment %}
+DSH 风格的下拉动作菜单：一个触发按钮 + 三项下载。
+调用方用 {% url ... as export_csv %} 预先取好三个地址，再 include 本文件。
+{% endcomment %}
+<div class="ds-actions-menu" data-ds-action-menu>
+  <button class="r-btn r-btn--plain r-btn--sm ds-actions-menu__trigger" type="button"
+          data-ds-menu-trigger aria-haspopup="menu" aria-expanded="false"
+          aria-label="{% trans '下载当前范围' %}">
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+      <path d="M8 2.5v7.1M4.8 6.8 8 10l3.2-3.2M3 13.5h10"
+            fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+    </svg>
+    <span>{% trans "下载" %}</span>
+  </button>
+  <div class="ds-menu ds-menu--down" role="menu" hidden>
+    <div class="ds-menu__material"></div>
+    <div class="ds-menu__list">
+      <a class="ds-menu__item" role="menuitem" href="{{ export_csv }}{% if export_query %}?{{ export_query|safe }}{% endif %}">
+        <span class="ds-menu__icon" aria-hidden="true">CSV</span>
+        <span class="ds-menu__label">{% trans "CSV 表格" %}</span>
+        <span class="ds-menu__meta">.csv</span>
+      </a>
+      <a class="ds-menu__item" role="menuitem" href="{{ export_xlsx }}{% if export_query %}?{{ export_query|safe }}{% endif %}">
+        <span class="ds-menu__icon" aria-hidden="true">XLSX</span>
+        <span class="ds-menu__label">{% trans "Excel 工作簿" %}</span>
+        <span class="ds-menu__meta">.xlsx</span>
+      </a>
+      <a class="ds-menu__item" role="menuitem" href="{{ export_pdf }}{% if export_query %}?{{ export_query|safe }}{% endif %}">
+        <span class="ds-menu__icon" aria-hidden="true">PDF</span>
+        <span class="ds-menu__label">{% trans "PDF 文档" %}</span>
+        <span class="ds-menu__meta">.pdf</span>
+      </a>
+    </div>
+  </div>
+</div>

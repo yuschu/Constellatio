@@ -65,6 +65,9 @@ class BlockchainTest(TestCase):
             'approval', 'approval_finished', '1:approved', operator=self.user)
         response = self.client.get('/plugins/blockchain/')
         self.assertContains(response, f'/plugins/blockchain/{record.id}/')
+        self.assertContains(
+            response,
+            f'<a href="/plugins/blockchain/{record.id}/" class="r-btn r-btn--sm"')
 
     def test_record_detail(self):
         self.client.force_login(self.user)
@@ -212,3 +215,45 @@ class BlockchainStatsTests(TestCase):
         self.assertContains(response, 'blockchain-chart-fallback')
         self.assertNotContains(response, 'vendor/echarts.min.js')
 
+
+
+class BlockchainExportTests(TestCase):
+    """活动记录全量导出：CSV / XLSX / PDF，列与列表一致。"""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user('export_admin', password='pw')
+        role = cls.user.roles.create(name='导出留痕查看')
+        role.permissions.add(Permission.objects.get(codename='blockchain_view'))
+
+    def setUp(self):
+        self.client.force_login(self.user)
+        BlockchainRecord.append('approval', 'approval_finished', '1:approved')
+        BlockchainRecord.append('notice', 'notice_published', 'a:3')
+
+    def test_csv_contains_all_records_and_columns(self):
+        response = self.client.get('/plugins/blockchain/export/csv/')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('attachment', response['Content-Disposition'])
+        self.assertIn('activity-records-', response['Content-Disposition'])
+        text = response.content.decode('utf-8-sig')
+        self.assertIn('记录哈希', text)
+        self.assertIn('审批结束', text)
+        self.assertIn('公告发布', text)
+
+    def test_xlsx_and_pdf_are_real_files(self):
+        for fmt, magic in (('xlsx', b'PK'), ('pdf', b'%PDF')):
+            response = self.client.get(f'/plugins/blockchain/export/{fmt}/')
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(response.content.startswith(magic))
+
+    def test_list_renders_export_menu(self):
+        response = self.client.get('/plugins/blockchain/')
+        self.assertContains(response, '/plugins/blockchain/export/csv/')
+        self.assertContains(response, '/plugins/blockchain/export/xlsx/')
+        self.assertContains(response, '/plugins/blockchain/export/pdf/')
+
+    def test_export_requires_blockchain_view(self):
+        self.client.force_login(User.objects.create_user('export_staff2', password='pw'))
+        response = self.client.get('/plugins/blockchain/export/csv/')
+        self.assertEqual(response.status_code, 403)

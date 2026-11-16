@@ -1,0 +1,14 @@
+{% load i18n %}
+{% comment %}
+公告的两个 DSH 设置弹层：发布公告 / 已读人员。
+业务页与首页面板共用；已读人员弹层由 data-ds-panel 从列表链接原地取回。
+{% endcomment %}
+{% if notice_create_url %}
+{% trans "发布公告" as sp_notice_create_title %}
+{% include "includes/ds_settings_modal.html" with sp_id="ds-notice-new" sp_title=sp_notice_create_title sp_body="notice/_notice_create_body.html" sp_query="view=new" sp_url=notice_create_url sp_base=notice_list_url sp_open=notice_form_open %}
+{% endif %}
+
+{% if readers_view %}
+{% trans "已读人员" as sp_readers_title %}
+{% include "includes/ds_settings_modal.html" with sp_id="ds-notice-readers" sp_title=sp_readers_title sp_body="notice/_notice_readers_body.html" sp_query="" sp_url="" sp_base="" sp_open=readers_open sp_static=True %}
+{% endif %}

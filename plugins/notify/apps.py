@@ -4,7 +4,7 @@ import logging
 
 from django.apps import AppConfig
 from django.apps import apps as dj_apps
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext_lazy as _
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +116,7 @@ class NotifyConfig(AppConfig):
                     body=_('发布人：%(name)s') % {
                         'name': announcement.publisher.last_name
                         or announcement.publisher.username},
-                    link=f'/plugins/notice/?notice={announcement.pk}',
+                    link=f'/?panel=notice#notice-{announcement.pk}',
                 )
             except Exception:      # 订阅方失败不得影响业务主流程
                 logger.exception('站内信写入失败：公告发布')

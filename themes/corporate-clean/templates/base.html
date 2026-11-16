@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.min.css' %}">
   <link rel="stylesheet" href="{% static 'themes/corporate-clean/css/corporate-clean.css' %}?v={{ assets_version }}">
   {% block extra_css %}{% endblock %}
+  <script src="{% static 'js/rail-boot.js' %}?v={{ assets_version }}"></script>
 </head>
 <body class="r-body">
 
@@ -19,12 +20,38 @@
 
   <div class="ds-shell">
 
+    {# 抽屉态：侧栏收起后主区左上角留一个打开器；遮罩 z70 盖住主区，侧栏 z71。 #}
+    <button type="button" class="ds-drawer-opener" data-ds-rail-toggle
+            data-ds-shortcut-aria="sidebar.left.toggle"
+            aria-keyshortcuts="Control+Alt+B"
+            data-label-collapse="{% trans '收起侧边栏' %}"
+            data-label-open="{% trans '打开侧边栏' %}"
+            aria-label="{% trans '打开侧边栏' %}">
+      <svg viewBox="0 0 16 16" width="16" height="16" fill="none" aria-hidden="true">
+        <path d="M13.5 1.5H2.5C1.94772 1.5 1.5 1.94772 1.5 2.5V13.5C1.5 14.0523 1.94772 14.5 2.5 14.5H13.5C14.0523 14.5 14.5 14.0523 14.5 13.5V2.5C14.5 1.94772 14.0523 1.5 13.5 1.5Z" stroke="currentColor" stroke-width="1"/>
+        <path d="M5.5 1.5V14.5" stroke="currentColor" stroke-width="1"/>
+      </svg>
+    </button>
+    <div class="ds-drawer-mask" data-ds-drawer-mask aria-hidden="true"></div>
+
     <aside class="ds-rail">
       <div class="ds-rail__brand">
         <a href="/" title="Constellatio">
           <span class="ds-rail__brand-name">Constellatio</span>
         </a>
-        {% comment %}v2.1.0：业务页不再折叠侧栏，这一格换成「返回主页」——面板与对话都在首页。{% endcomment %}
+        {% comment %}v2.1.0：业务页桌面端不折叠侧栏；这一格只在 1024 以下出现，
+        与 DSH 窄屏的 56px 图标轨配套，用来展开/收起轨道。{% endcomment %}
+        <button type="button" class="ds-rail__toggle ds-rail__narrow-toggle" data-ds-rail-toggle
+                data-ds-shortcut-aria="sidebar.left.toggle"
+                aria-keyshortcuts="Control+Alt+B"
+                data-label-collapse="{% trans '收起侧边栏' %}"
+                data-label-open="{% trans '打开侧边栏' %}"
+                aria-label="{% trans '收起侧边栏' %}">
+          <svg viewBox="0 0 16 16" width="16" height="16" fill="none" aria-hidden="true">
+            <path d="M13.5 1.5H2.5C1.94772 1.5 1.5 1.94772 1.5 2.5V13.5C1.5 14.0523 1.94772 14.5 2.5 14.5H13.5C14.0523 14.5 14.5 14.0523 14.5 13.5V2.5C14.5 1.94772 14.0523 1.5 13.5 1.5Z" stroke="currentColor" stroke-width="1"/>
+            <path d="M5.5 1.5V14.5" stroke="currentColor" stroke-width="1"/>
+          </svg>
+        </button>
         <a href="/" class="ds-rail__toggle ds-rail__home" title="{% trans '返回主页' %}"
            aria-label="{% trans '返回主页' %}">
           <svg viewBox="0 0 16 16" width="16" height="16" fill="none" aria-hidden="true">
@@ -40,7 +67,7 @@
       <nav class="ds-rail__nav" aria-label="{% trans '功能' %}">
         {% for menu in sidebar_menus %}
         <a href="{{ menu.url }}" class="ds-rail__row{% if menu.active %} is-active{% endif %}"{% if menu.active %} aria-current="page"{% endif %}>
-          <span class="ds-rail__glyph" aria-hidden="true">{{ menu.icon }}</span>
+          <span class="ds-rail__glyph" aria-hidden="true">{% include "includes/menu_icon.html" with icon=menu.icon %}</span>
           <span class="ds-rail__label">{{ menu.label }}</span>
         </a>
         {% empty %}
@@ -171,7 +198,7 @@
           <form method="post" action="{% url 'language:language_switch' %}" class="ds-settings__seg">
             {% csrf_token %}
             <input type="hidden" name="next" value="{{ request.get_full_path }}">
-            <button type="submit" name="lang" value="zh-hans" class="ds-settings__opt{% if LANGUAGE_CODE == 'zh-hans' %} is-active{% endif %}">中文</button>
+            <button type="submit" name="lang" value="zh-hans" class="ds-settings__opt{% if LANGUAGE_CODE == 'zh-hans' %} is-active{% endif %}">{% if LANGUAGE_CODE == 'en' %}Chinese{% else %}中文{% endif %}</button>
             <button type="submit" name="lang" value="en" class="ds-settings__opt{% if LANGUAGE_CODE == 'en' %} is-active{% endif %}">English</button>
           </form>
         </div>
@@ -214,15 +241,20 @@
           <button type="button" class="ds-settings__keybtn" data-ds-shortcuts-open
                   data-ds-shortcut-aria="shortcuts.open"
                   data-ds-shortcut-keys="shortcuts.open"
+                  aria-label="{% trans '编辑快捷键' %} Ctrl /"
                   aria-keyshortcuts="Control+/">
             <span class="ds-settings__keylabel">{% trans "编辑快捷键" %}</span>
             <span class="ds-settings__keycaps" data-ds-shortcut-keycaps>
               <kbd class="ds-kbd">Ctrl</kbd><kbd class="ds-kbd">/</kbd>
             </span>
+            <svg class="ds-settings__keychevron" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+              <path d="M6.25 3.75 10.5 8l-4.25 4.25" fill="none" stroke="currentColor"
+                    stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
           </button>
         </div>
 
-        <p class="ds-settings__version">Constellatio · {% trans "万物皆可插件" %}</p>
+        <p class="ds-settings__version">Constellatio · flexible plugin</p>
       </div>
 
       {# 「我的」分区：原侧栏那个「我的」入口收进设置（dsh-client-ui-settings-account 的 AccountSection 形态） #}
@@ -257,7 +289,7 @@
           <span class="ds-settings__state">{% if request.user.is_authenticated %}{% trans "已登录" %}{% else %}{% trans "未登录" %}{% endif %}</span>
         </div>
 
-        <p class="ds-settings__version">Constellatio · {% trans "万物皆可插件" %}</p>
+        <p class="ds-settings__version">Constellatio · flexible plugin</p>
       </div>
     </div>
   </div>
@@ -271,6 +303,7 @@
 
   {# v2.2.0：快捷键参考弹层（Ctrl+/ 打开；设置面板「快捷键」行也开这同一张卡） #}
   {% include "includes/ds_shortcuts.html" %}
+  {% include "includes/ds_shell_i18n.html" %}
 
   <script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
   <script src="{% static 'js/ds-shell.js' %}?v={{ assets_version }}" defer></script>

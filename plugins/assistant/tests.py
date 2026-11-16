@@ -1,7 +1,7 @@
 """A 阶段门禁：只读工具、校验层、会话落库与首页对话链路。"""
 
 import json
-from datetime import date
+from datetime import date, timedelta
 from io import StringIO
 from unittest import mock
 from urllib.parse import parse_qs, urlparse
@@ -84,10 +84,10 @@ class AssistantChatTests(TestCase):
         expected = {
             'attendance': ('/plugins/attendance/', '考勤打卡'),
             'approval': ('/plugins/approval/', '审批中心'),
-            'notice': ('/plugins/notice/', '公告中心'),
+            'notice': ('/?panel=notice', '公告'),
             'approval_pending': ('/plugins/approval/pending/', '待我审批'),
             'approval_new': ('/plugins/approval/new/', '发起审批'),
-            'notice_new': ('/plugins/notice/new/', '发布公告'),
+            'notice_new': ('/?panel=notice&view=new', '发布公告'),
         }
         for page, (url, title) in expected.items():
             result = tools.open_page(self.user, page)
@@ -381,6 +381,113 @@ class AssistantChatTests(TestCase):
         response = self.client.get('/?conversation=%s' % conversation.pk)
         self.assertEqual(response.status_code, 404)
         self.assertNotIn('机密', response.content.decode())
+
+    def test_conversation_action_renames_without_bumping_activity(self):
+        conversation = Conversation.objects.create(user=self.user, title='旧标题')
+        Conversation.objects.filter(pk=conversation.pk).update(
+            updated_at=timezone.now() - timedelta(hours=2))
+        before = Conversation.objects.get(pk=conversation.pk).updated_at
+        response = self.client.post(
+            reverse('assistant:conversation_action', args=[conversation.pk]),
+            {'action': 'rename', 'title': '  新标题  '})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['title'], '新标题')
+        conversation.refresh_from_db()
+        self.assertEqual(conversation.title, '新标题')
+        self.assertEqual(conversation.updated_at, before)
+        self.assertEqual(conversation.updated_by, self.user)
+
+    def test_conversation_action_rejects_blank_or_overlong_title(self):
+        conversation = Conversation.objects.create(user=self.user, title='旧标题')
+        url = reverse('assistant:conversation_action', args=[conversation.pk])
+        for title in ('   ', '长' * 201):
+            response = self.client.post(url, {'action': 'rename', 'title': title})
+            self.assertEqual(response.status_code, 400)
+            self.assertFalse(response.json()['ok'])
+        conversation.refresh_from_db()
+        self.assertEqual(conversation.title, '旧标题')
+
+    def test_conversation_action_is_user_scoped_and_post_only(self):
+        conversation = Conversation.objects.create(user=self.user, title='私有')
+        url = reverse('assistant:conversation_action', args=[conversation.pk])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 405)
+        self.client.force_login(self.other)
+        response = self.client.post(url, {'action': 'archive'})
+        self.assertEqual(response.status_code, 404)
+        conversation.refresh_from_db()
+        self.assertFalse(conversation.archived)
+
+    def test_pin_archive_and_unarchive_change_sidebar_groups(self):
+        older = Conversation.objects.create(user=self.user, title='较早')
+        Conversation.objects.create(user=self.user, title='较新')
+        Conversation.objects.filter(pk=older.pk).update(
+            updated_at=timezone.now() - timedelta(hours=2))
+        page = self.client.get('/')
+        titles = [item.title for item in page.context['conversations']]
+        self.assertEqual(titles, ['较新', '较早'])
+
+        response = self.client.post(
+            reverse('assistant:conversation_action', args=[older.pk]),
+            {'action': 'pin'})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['pinned'])
+        page = self.client.get('/')
+        self.assertEqual(
+            [item.title for item in page.context['conversations']],
+            ['较早', '较新'])
+
+        response = self.client.post(
+            reverse('assistant:conversation_action', args=[older.pk]),
+            {'action': 'archive'})
+        self.assertTrue(response.json()['archived'])
+        page = self.client.get('/')
+        self.assertEqual(
+            [item.title for item in page.context['conversations']], ['较新'])
+        self.assertEqual(
+            [item.title for item in page.context['archived_conversations']],
+            ['较早'])
+        older.refresh_from_db()
+        self.assertTrue(older.archived)
+        self.assertFalse(older.pinned)
+        self.assertContains(page, 'data-session-archived="1"')
+
+        response = self.client.post(
+            reverse('assistant:conversation_action', args=[older.pk]),
+            {'action': 'unarchive'})
+        self.assertFalse(response.json()['archived'])
+        page = self.client.get('/')
+        self.assertEqual(
+            [item.title for item in page.context['conversations']],
+            ['较新', '较早'])
+        self.assertEqual(page.context['archived_conversations'], [])
+
+    def test_archived_conversation_cannot_be_pinned(self):
+        conversation = Conversation.objects.create(
+            user=self.user, title='归档项', archived=True)
+        response = self.client.post(
+            reverse('assistant:conversation_action', args=[conversation.pk]),
+            {'action': 'pin'})
+        self.assertEqual(response.status_code, 400)
+        conversation.refresh_from_db()
+        self.assertFalse(conversation.pinned)
+
+    def test_home_renders_session_context_menu_and_archived_controls(self):
+        conversation = Conversation.objects.create(user=self.user, title='可操作')
+        page = self.client.get('/')
+        html = page.content.decode('utf-8')
+        for marker in (
+                'id="as-session-menu"',
+                'data-session-menu-action="pin"',
+                'data-session-menu-action="rename"',
+                'data-session-menu-action="copy"',
+                'data-session-menu-action="archive"',
+                'data-as-session-more',
+                'data-as-archived-toggle',
+                'data-as-rename-input',
+                'data-msg-empty',
+                f'/plugins/assistant/conversations/{conversation.pk}/action/'):
+            self.assertIn(marker, html)
 
     def test_run_turn_executes_tool_and_returns_model_answer(self):
         Approval.objects.create(

@@ -7,24 +7,41 @@
   {% if template_url %}<a href="{{ template_url }}" class="r-btn r-btn--plain" data-ds-modal-open="ds-structure-template">{% trans "查看模板" %} →</a>{% endif %}
 </div>
 
+{% comment %}
+统计卡和双列卡放进 920 内容列的子容器：让 Bootstrap 行自己保留负 gutter，
+卡片外沿才能跟标题、「最近应用」通栏卡片对齐。
+{% endcomment %}
+<div class="structure-grid">
 <div class="row g-3 mb-4">
   <div class="col-md-3">
+    {% if perms.user.user_manage %}
+    <a class="r-card r-card--link" href="{% url 'user:department_list' %}">
+    {% else %}
     <div class="r-card">
+    {% endif %}
       <div class="text-muted" style="font-size:.75rem;">{% trans "部门（启用 / 总数）" %}</div>
       <div class="fs-3">{{ dept_stats.active }} / {{ dept_stats.total }}</div>
-    </div>
+    {% if perms.user.user_manage %}</a>{% else %}</div>{% endif %}
   </div>
   <div class="col-md-3">
+    {% if perms.user.user_manage %}
+    <a class="r-card r-card--link" href="{% url 'user:user_list' %}">
+    {% else %}
     <div class="r-card">
+    {% endif %}
       <div class="text-muted" style="font-size:.75rem;">{% trans "在岗账号" %}</div>
       <div class="fs-3">{{ org_stats.total }}</div>
-    </div>
+    {% if perms.user.user_manage %}</a>{% else %}</div>{% endif %}
   </div>
   <div class="col-md-3">
+    {% if perms.user.user_manage %}
+    <a class="r-card r-card--link" href="{% url 'user:role_list' %}">
+    {% else %}
     <div class="r-card">
+    {% endif %}
       <div class="text-muted" style="font-size:.75rem;">{% trans "角色总数" %}</div>
       <div class="fs-3">{{ role_rows|length }}</div>
-    </div>
+    {% if perms.user.user_manage %}</a>{% else %}</div>{% endif %}
   </div>
   <div class="col-md-3">
     <div class="r-card">
@@ -32,6 +49,7 @@
       <div class="fs-3">{{ org_stats.roots }}</div>
     </div>
   </div>
+</div>
 </div>
 
 {% if last_records %}
@@ -45,6 +63,7 @@
 </div>
 {% endif %}
 
+<div class="structure-grid">
 <div class="row g-4 mb-4 align-items-stretch">
   <div class="col-md-6 d-flex">
     <div class="r-card h-100 w-100 d-flex flex-column" style="max-height:min(62vh, 34rem); overflow:hidden;">
@@ -86,6 +105,7 @@
       {% endif %}
     </div>
   </div>
+</div>
 </div>
 
 {# v2.1.8：角色成员浮层改成 DSH Modal 原语（样式见 corporate-clean.css 第 32 节），默认隐藏，点角色行才浮出 #}
@@ -255,7 +275,7 @@
 </div>
 {% if template_url %}
 {% trans "模板架构" as sp_template_title %}
-{% include "includes/ds_settings_modal.html" with sp_id="ds-structure-template" sp_title=sp_template_title sp_body="structure/_template_body.html" sp_query="view=template" sp_url=template_url sp_base=overview_url sp_open=template_open sp_stack="wide" dept_tree=tmpl_dept_tree role_rows=tmpl_role_rows dept_count=tmpl_dept_count user_count=tmpl_user_count users_by_dept=tmpl_users_by_dept can_apply=tmpl_can_apply last_records=tmpl_last_records %}
+{% include "includes/ds_settings_modal.html" with sp_id="ds-structure-template" sp_title=sp_template_title sp_body="structure/_template_body.html" sp_query="view=template" sp_url=template_url sp_base=overview_url sp_open=template_open sp_stack="wide" dept_tree=tmpl_dept_tree role_rows=tmpl_role_rows dept_count=tmpl_dept_count user_count=tmpl_user_count users_by_dept=tmpl_users_by_dept can_apply=tmpl_can_apply last_records=tmpl_last_records import_errors=tmpl_import_errors imported=tmpl_imported %}
 {% endif %}
 {% if target %}
 {% include "includes/ds_settings_modal.html" with sp_id="ds-structure-user" sp_title=target.last_name|default:target.username sp_body="structure/_user_detail_body.html" sp_query="" sp_url="" sp_base=overview_url sp_open=user_detail_open sp_static=True %}

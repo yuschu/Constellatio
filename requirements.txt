@@ -3,3 +3,6 @@ django==5.2.18
 mysqlclient==2.3.0
 gunicorn==26.2.0
 whitenoise==6.12.0
+# v2.4.0 导出三档：CSV 用标准库，XLSX / PDF 分别用 openpyxl / reportlab
+openpyxl==3.1.5
+reportlab==5.1.0

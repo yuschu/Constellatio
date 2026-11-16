@@ -1,6 +1,6 @@
 # 前端重构方案（参考 DeepSeek Harness）
 
-> 状态：**已执行并收口（v2.2.13，2026-11-14）**。本文保留方案与判据，并在 §9.13 记录逐项实现与验收；当前基线 564 项测试，tag `v2.2.13`。
+> 状态：**已执行并收口（v2.2.13，2026-11-14；v2.4.1 交互细节续收口，2026-11-16）**。本文保留方案与判据，并在 §9.13 记录逐项实现与验收；当前发版候选 703 项测试，目标 tag `v2.4.1`。
 > 依据：`deepseek-ai/deepseek-harness` 的公开结构与文档 + 本项目实测盘点（数字均可复核）。
 > 决策记录：负责人已选定「引入组件框架」档位 + 「向 DSH 深色极简靠近」视觉基调；本文在该档位内给出三条可选实现与推荐。
 
@@ -1850,8 +1850,9 @@ after 的 `loaderHiddenAt` 54–97ms 与 `load` 同量级，`loaderSeen=false` �
 同一源码里另有 `session.search`（Web `Ctrl+Alt+K`）、`workspace.add`（`Ctrl+Alt+O`）、
 `session.rename`（`Ctrl+Alt+G`）、`session.fork`（Web `Ctrl+Shift+F`）、
 `session.archive`（Web `Ctrl+Alt+A`）、输入框 `/`（命令菜单）、`@`（引用菜单）、
-`Esc Esc`（停止生成）。这些动作在本项目没有对应后端（无工作区、无分叉、无归档、无会话搜索、
+`Esc Esc`（停止生成）。这些动作在本项目没有对应后端（无工作区、无分叉、无会话搜索、
 无命令/引用菜单、同步 POST 不可取消），**没有做成假快捷键**，参考卡不列。
+会话重命名/置顶/归档已由会话右击菜单承载（见 §9.13.50），仍不绑定快捷键。
 
 **交互收口**
 
@@ -2109,3 +2110,460 @@ after 的 `loaderHiddenAt` 54–97ms 与 `load` 同量级，`loaderSeen=false` �
 - `/model` 只是打开现有浮层，不是切换本会话模型；菜单文案已按真实能力降级，产品确认接受该范围，暂不做会话级模型切换。
 - `/settings`、`/shortcuts`、`/new` 等站内已有真实动作尚未纳入；本轮不擅自扩成 DSH 全量命令。
 - 首页与对话页共用同一模板，两处 composer 均已接入；空首页只渲染 hero，有消息时渲染 docked。
+
+### 9.13.46 设置页快捷键入口收成可点的键帽药丸（2026-11-16）
+
+**范围**
+
+- 只改设置「通用」分区里右侧的「编辑快捷键 Ctrl /」入口行；入口打开的快捷键参考卡
+  `ds_shortcuts.html` 及其 DSH 字面量样式不动，避免把「打开后的面板」与「打开入口」混成一次改版。
+- 首页 `home_chat.html` 与业务页 `base.html` 两套设置弹层同步改；样式分别落在
+  `ds-panels.css` 与 `corporate-clean.css`，值保持一致。
+
+**模板**
+
+- 入口仍在 `.ds-settings__row` 右侧，保留原 `data-ds-shortcuts-open`、`data-ds-shortcut-aria`、
+  `data-ds-shortcut-keys` 与 `aria-keyshortcuts="Control+/"`。
+- 新增 14px 展开箭头 `.ds-settings__keychevron`（纯装饰，`aria-hidden`）。
+- 补显式 `aria-label="编辑快捷键 Ctrl /"`：窄屏隐藏文字标签时，可访问名称不会退化成只有 `Ctrl /`。
+
+**样式口径**
+
+- 入口从「裸文字 + 小键帽」收成 32px 高的药丸容器：`min-height:32px`、`padding:3px 6px 3px 10px`、
+  `border-radius:10px`、`background:var(--ds-bg-selector)` / `var(--as-selector)`；文字 13/20、500，
+  箭头 14px caption 色。
+- 键帽由 24/26 两套统一成 26×26、圆角 8、左右 padding 7；底色改输入/抬升面
+  `--ds-button-elevated-fill` / `--as-elevated-fill`，加 0.5px 边框，字号 12/18、500。
+- hover / active 用 `--ds-interactive-hover` / `--ds-interactive-active` 叠在 selector 上，不换底色；
+  焦点环 2px 链接色、`outline-offset:2px`。
+- `max-width:559.98px` / `width <= 560px` 时隐藏 `.ds-settings__keylabel`，只留键帽与箭头，
+  避免挤压左侧标题和描述。
+
+**真实栈实测（容器 8000，静态版本 `?v=270dbf33e46bf4bf`）**
+
+- 1887×2044 viewport、首页设置「通用」：入口 `174.375×32`、x=1151.125；文字 `65×20`、
+  键帽组 `63.375×26`、单键帽 `33.375×26`、箭头 `14×14`，键帽右缘与箭头右缘分别落在
+  1297.5 / 1319.5，和原行末对齐。
+- 业务页 `/plugins/attendance/` 同一元素同为 `174.375×32`、x=1151.125，两套模板几何一致。
+- 浅色：药丸 `rgb(245,246,247)`、键帽 `rgb(255,255,255)`、内描边 `rgba(0,0,0,.1)`；
+  深色：药丸 `rgb(53,54,56)`、键帽 `rgb(67,69,74)`、内描边 `rgba(255,255,255,.12)`，
+  面板底 `rgb(35,35,36)`，两级层次清楚。
+- 焦点：键盘 Tab/Shift+Tab 回到入口后 `:focus-visible=true`，实测 `outline:rgb(65,118,230) 2px`、
+  offset 2px；点击入口打开参考卡 15 行、焦点落搜索框，`Esc` 关闭后焦点回到入口。
+- 504px viewport：入口 `93.375×32`、x=398.625、right=492；options `504` 宽且
+  `scrollWidth == clientWidth`，无横向滚动；文字标签 `display:none`，可访问名称仍为
+  `编辑快捷键 Ctrl /`。
+- 全量 `671 tests` OK。首页已恢复浅色并回到原页面；任务只改 4 个文件，未改快捷键参考卡。
+
+**已知边界**
+
+- 窄屏隐藏动作文字是响应式取舍，按钮名称靠 `aria-label` 保留；若后续要求任何宽度都显示文字，
+  需要把整行改为纵向堆叠而不是继续压宽。
+
+### 9.13.47 品牌尾注改为 flexible plugin（2026-11-16）
+
+**范围**
+
+- 用户要求把「万物皆可插件」改成 `flexible plugin`。按品牌尾注处理，统一改所有用户可见的
+  `Constellatio · 万物皆可插件`：
+  - 首页设置「通用」/「我的」两处 `home_chat.html`；
+  - 业务页设置「通用」/「我的」两处 `base.html`；
+  - 登录页 `login.html` 一处。
+- 模板直接写 `Constellatio · flexible plugin`，不再包 `{% trans %}`。这句是固定英文品牌语，
+  不走翻译回退，避免中文 locale 仍显示旧中文。
+
+**验证**
+
+- 容器重建后 8000 端口：首页设置「通用」可见尾注 `Constellatio · flexible plugin`，
+  业务页 `/plugins/attendance/` 同值；登录页匿名 `curl` 渲染同样为新串。
+- 全量 `671 tests` OK。
+- 英文 catalog 里旧 msgid `万物皆可插件` / `万物皆可插件：容器唯一固定，业务与基础设施全部可插拔。`
+  仍保留但已无模板引用；下次 `makemessages` 会按 obsolete 处理，不影响当前显示。
+
+### 9.13.48 英文界面全量 UI 英文（2026-11-16）
+
+**范围**
+
+- `LANGUAGES` 仍为 `zh-hans / en`，默认 `zh-hans`；只补 `locale/en`，不新建 `zh-hans`
+  目录，中文界面继续以模板中文 msgid 原样显示。
+- 只翻静态 UI：导航、按钮、表单标签与说明、空态、placeholder、aria-label、枚举标签、
+  分页、插件元数据、页面入口、草稿/动作卡标签。部门名、账号名、角色名、公告标题/正文、
+  通知标题/正文、审批单标题、聊天消息正文等数据库/会话内容不翻。
+- 语言选项在英文界面显示 `Chinese`，中文界面仍显示 `中文`；按 `LANGUAGE_CODE`
+  分支输出，不新增翻译条目，也不改中文界面。
+
+**改动**
+
+- `locale/en/LC_MESSAGES/django.po` 追加缺失 UI 条目，当前 849 条；`.mo` 由
+  `tools/compile_mo.py` 重编并通过 `--check`。审计为 `source_ids=618 missing=3`，
+  3 条均为已知非 UI/脚本误报（blocktrans 的 `%(var)s` 误报、`多行` / `忽略` 测试夹具）。
+- 用户表单的字段标签改为 `{% trans field.label %}` / `{% trans form.name.label %}`，
+  覆盖姓名、所属部门、部门名称、上级部门、角色名；此前这些 Django form label 绕过 gettext。
+- 组织模板说明补上带变量的 blocktranslate msgid：
+  `职能制模板：%(dept)s 个部门、%(user)s 个账号；…` 与
+  `+%(dept)s部门/+%(role)s角色/+%(user)s用户`。
+- 通知中心类别徽标不再用 `get_category_display` 的数据库中文值，改为按
+  `approval / notice / system` 走 `{% trans "审批" / "公告" / "系统" %}`；通知标题与正文
+  仍作为内容保留。
+- 其余运行时接入沿用本轮前段：模板/JS 硬编码文案、插件标题 `gettext_lazy`、
+  审批类型/考勤状态/签到类型/页面入口/草稿动作卡的运行时 `_()` 归一化。
+
+**真实栈实测**
+
+- 英文 `django_language=en`、容器 8000：
+  - 首页全文 + 属性扫描仅 `签到`、两条快捷问句；三条均为会话内容。
+  - 设置弹层整棵 `#ds-settings`（通用/模型/我的三分区）无中文；语言按钮为
+    `Chinese / English`。
+  - 快捷键参考卡全文无中文。
+- 30 条业务路由同一登录态批量抓取并扫描正文与 `placeholder/title/aria-label`：
+  静态 UI 中文为 0；剩余中文只在部门名、账号名、角色名、公告正文、通知标题/正文等数据。
+- 英文登录页、404 页无用户可见中文，仅 JS 注释仍为中文。
+- 临时构造草稿卡与动作卡验证：标签、按钮、确认文案为英文；用户填写的 `家里有事`、
+  审批单标题/申请人等值保持原样。临时会话已删除。
+- 中文回归：切回 `zh-hans` 后首页、设置、个人中心、部门、角色、审批、考勤、通知、
+  组织模板仍显示原中文，语言按钮仍为 `中文 / English`；`flexible plugin` 品牌尾注
+  保持固定英文。
+- 模板硬编码扫描剩余项均为预期：`default:_("保存")`、`default:_('新会话')`
+  与语言按钮 `Chinese / 中文` 的条件分支；JS 扫描仅命中模板 `{% trans %}` 误报。
+- 全量 `671 tests` OK，日志 `.tmp-test/test-i18n-final2.log`。
+
+**已知边界**
+
+- 已入库的历史会话、历史通知标题/正文不会因切换语言重译；新建内容按生成时的界面语言
+  写入。若要求历史数据也双语，需要单独的数据迁移，不属于本次静态 UI 范围。
+
+### 9.13.49 移植 DSH 窄屏口径：1024 收 56px 轨道、768 转抽屉（v2.3.x / 2026-11-16）
+
+**依据**
+
+- DSH 0.2.2 `AppFrame.tsx` / `AppFrame.module.css`：
+  `SIDEBAR_AUTO_COLLAPSE=1024`、`SIDEBAR_COLLAPSED=56`、`narrow = viewport < 1024`、
+  `drawer = viewport < 768 && !windowsTitlebar`。
+- `sidebarCollapsed = narrow ? !layoutInfo.narrowExpanded : layoutInfo.sidebar === 0`。
+- `sidebarWidth = drawer ? Math.min(layoutInfo.sidebar || 280, Math.max(0, viewport - 48)) : cols.sidebar`。
+- `toggleSidebar`：`<1024` 切 `narrowExpanded`，否则切桌面 `sidebar 0/280`；
+  `setViewportWidth` 跨越 1024 或 768 任一阈值时把 `narrowExpanded` 重置为 `false`。
+- 本项目是浏览器，没有 `data-windows-titlebar`，移植时去掉该条件，否则窄屏永远进不了抽屉。
+
+**实现**
+
+- `plugin_host/static/js/ds-shell.js` 的 `initRail()` 重写：`matchMedia` 用
+  `(max-width: 1023.98px)` 与 `(max-width: 767.98px)` 判定；新增窄屏临时状态
+  `narrowExpanded`，窄屏不读桌面 `sessionStorage['constellatio.rail-collapsed']`；
+  绑定全部 `[data-ds-rail-toggle]`；抽屉打开时给主列 `.as-main` / `.ds-main` 加
+  `inert`，收起时给侧栏加 `inert`；遮罩点击、Escape 关闭并回收焦点到主区外侧的打开器；
+  桌面端点按才写会话存储；resize 跨 1024/768 时先重置 `narrowExpanded=false` 再同步。
+- `plugin_host/static/js/rail-boot.js` 首帧同步：`clientWidth < 1024` 强制
+  `data-rail-collapsed="true"` / `data-rail-settled="true"`；`< 768` 额外落
+  `data-sidebar-drawer="true"`，避免抽屉首帧先画出 280px 展开态。业务页 `base.html`
+  因此也同步加载该脚本。
+- `corporate-clean.css`：删除 1024 以下「侧栏横过来铺满」的旧规则，改为 56px 图标轨；
+  `html[data-sidebar-drawer="true"]` 下 `.ds-rail` 改 `position: fixed; inset: 0 auto 0 0;
+  z-index: 71; width: min(280px, max(0px, calc(100vw - 48px)))`，收起时
+  `translateX(-100%)` + `visibility: hidden`；`.ds-drawer-mask` z70、`--ds-bg-mask`；
+  `.ds-drawer-opener` z72，仅抽屉且收起态显示；主区 `.ds-main__body` 顶部让位 48px；
+  业务页侧栏品牌行新增 `.ds-rail__narrow-toggle`，1024 以下及桌面已收起态显示。
+- `assistant.css`：同一套抽屉规则落到 `.as-sidebar`，使用 `--as-bg-mask` /
+  `--as-elevated-fill`；抽屉态 `.as-header` 高 48、左内边距 52，`.as-panelview`
+  顶部 48 给打开器让位；两套 CSS 均补 `prefers-reduced-motion`。
+- `home_chat.html` / `base.html` 的 `.as-shell` / `.ds-shell` 顶部新增
+  `.ds-drawer-opener`（`data-ds-rail-toggle`）与 `[data-ds-drawer-mask]`；业务页品牌行
+  补窄屏轨道开关。旧门禁中「业务页没有 `data-ds-rail-toggle`」的断言更新为
+  「打开器 + 窄屏轨道开关恰好两处，且不是看板入口」。
+
+**验证**
+
+- `node --check` 通过 `ds-shell.js`、`rail-boot.js`（Node v22.23.2）。
+- 新增 `ThemeDiscoveryTest.test_narrow_shell_matches_dsh_drawer`：两模板含遮罩/打开器、
+  两套 CSS 含 `html[data-sidebar-drawer="true"]` + 宽度公式 + `translateX(-100%)`
+  + z70/71、JS 含两个阈值与 `narrowExpanded`、`rail-boot.js` 含 `<1024` / `<768`。
+- 容器重建后 Chrome 实测（cookie `django_language=en`）：
+  - 1024 宽：首页侧栏 280、`position: static`，无抽屉。
+  - 1023 宽：侧栏收成 56，轨道开关可点；首页/业务页均无横向滚动。
+  - 767 宽：抽屉模式，收起时 `x=-280`、`visibility:hidden`，打开器 28×28；打开后
+    侧栏 280，主列 `inert=true`，遮罩 opacity 1；点遮罩与 Esc 均关闭并把焦点还回打开器。
+  - 520 宽：抽屉宽 280，`body.scrollWidth=520`；`.as-header` 48；中英文均无溢出。
+  - 320 宽（DevTools viewport）：抽屉宽 `272 = 320 - 48`，公式生效。
+  - 1023 展开 → 800 不重置（未跨阈值）；800 → 767 跨 768 阈值后自动收回 56/抽屉收起。
+- 全量 `672 tests` OK，日志 `.tmp-test/test-narrow.log`。
+
+**已知边界**
+
+- 沿用项目既有「遮罩纯底色、无 backdrop blur」约定，未引入 DSH 的
+  `backdrop-filter: var(--dsw-mask-blur)`；若要求逐像素一致需另加 token。
+- 业务页 320 宽内容区仍有 6px 横向溢出（`body.scrollWidth=326`），抽屉容器本身
+  `overflow-x: clip` 不产生横向滚动；dashboard 卡片栅格最小宽度不在本次侧栏范围。
+
+### 9.13.50 移植 DSH 会话列表右击菜单：置顶 / 重命名 / 复制 ID / 归档（v2.4.x / 2026-11-16）
+
+**源码真值**
+
+- DSH 0.2.2 注册会话菜单的是 `ui-workspace` 的
+  `session-actions/context-menus.tsx`，不是 `ui-layout`。菜单项顺序与分组为：
+  pin `100`、rename `200`、fork `300`、id `450`（`separatorBefore`）、
+  archive `600`（`separatorBefore`）。
+- 已归档会话隐藏 pin 项；archive 项在已归档行变为“取消归档”。行入口在
+  `rows/Rows.tsx::SessionNodeItem`：整行绑定 `contextmenu`，行内另有独立“更多”按钮；
+  空白会话不注册菜单。
+- `RenameSession.tsx`：当前标题为初值、`trim()` 为空禁用确认、未改名也允许提交、
+  提交中禁关闭、Enter 提交但 IME composition 的 Enter 不提交、错误在表单内
+  `role="alert"`、输入用 `aria-label` 而非可见 label。
+- `ArchiveSession.tsx`：只有存在进行中的 turn / 子 agent / 后台任务 / 定时提醒时，
+  才弹“停止并归档”。本项目对话是同步 POST，没有活动态，因此归档直接执行，
+  不做假确认弹窗。
+- **未逐行对照的边界**：DSH `ui-context-menu` 包不在 0.2.2 解包目录中。菜单浮层的
+  DOM、定位算法和键盘循环按已观察行为与项目现有 `.ds-menu` 补齐，不是逐像素复刻。
+
+**后端**
+
+- `plugins/assistant/models.py::Conversation` 新增 `pinned` / `archived` 两个
+  BooleanField；Meta ordering 改为 `['-pinned', '-updated_at']`；新增索引
+  `['user', 'archived', '-pinned', '-updated_at']`。
+- 迁移 `0005_alter_conversation_options_conversation_archived_and_more.py` 已生成，
+  容器启动日志显示应用成功。
+- `views.py::home()` 拆两段查询：active 为 `archived=False`、按 `-pinned,-updated_at`
+  取 20 条；已归档为 `archived=True`、按 `-updated_at` 取 20 条。上下文新增
+  `archived_conversations`。
+- 新接口 `views.py::conversation_action`，路由
+  `/plugins/assistant/conversations/<int:pk>/action/`（name
+  `assistant:conversation_action`），只接受 POST，只处理当前用户自己的会话；
+  不存在与非本人统一 404 JSON，不泄露会话是否存在。
+  - `rename`：`trim()`，空名 400，超过 200 字 400，成功返回新标题。
+  - `pin` / `unpin`：已归档会话拒绝置顶；成功返回 `pinned`。
+  - `archive` / `unarchive`：归档时若原为置顶，一并清掉 `pinned`；成功返回
+    `archived` / `pinned`。
+  - 未知动作 400。
+- `services.update_conversation_meta()` 用定向 QuerySet UPDATE 只写 `updated_by` 与
+  目标字段，保留 `updated_at`；改名/置顶/归档不会把旧会话顶到最近第一位。测试断言
+  rename 后 `updated_at` 不变、`updated_by` 写入成功。
+
+**模板与前端**
+
+- `home_chat.html`：会话行增加 `data-session-row` / `-id` / `-title` / `-pinned` /
+  `-archived` / `-updated` / `-action-url`，行内拆出 `a.as-session-link`、
+  `span.as-session-title`、`button.as-session-more`；置顶行显示 pin 图标。
+- 归档行进入独立 `ul#as-archived-list`，默认隐藏，链接去 `href`、`aria-disabled=true`、
+  `tabindex=-1`；`as-section-head` 增加“Archived + 计数”切换按钮。
+- 根级新增 `#as-session-menu`，复用 `.ds-menu` / `.ds-menu__material` /
+  `.ds-menu__list` / `.ds-menu__item` / `.ds-menu__sep`；项顺序为
+  pin、rename、分隔线、copy、分隔线、archive。新增 toast、重命名弹窗
+  （标题、sr-only 会话名称、取消/重命名、关闭 X、错误 `role=alert`）与
+  `[data-as-session-i18n]` 文案容器。
+- `session-menu.js`：整行右击与“更多”按钮都能打开；按指针/按钮定位并夹在视口内；
+  Up/Down 循环、Home/End、Tab/Esc 关闭并回焦、菜单外 mousedown 关闭、
+  resize/scroll/blur 关闭。pin/rename/copy/archive 走 fetch + CSRF 头；成功后就地
+  更新行、pin 图标、排序或移组；归档当前会话时跳回 `/`。重命名支持空名禁用、
+  Enter 提交、IME composition 防误提交、请求中禁用输入/确认/取消/X、失败内联展示、
+  成功更新标题并回焦行内“更多”。
+- 归档列表为空时动态创建 `p.as-tree__hint`（文案取 `data-msg-empty`）；从归档恢复
+  最后一条时会重建 `ul[data-as-session-list]`，隐藏空态提示。
+- `assistant.css`：新增 `.as-session-link`、`.as-session-title`、`.as-session-pin`、
+  `.as-session-more`（hover/focus-within/menu-open 才显示，`hover:none` 常显）、
+  归档组、toast、重命名弹窗样式；共享 `.ds-menu` 未改。
+- 真机抓到并修正两处：
+  - `placeMenu` 原先量 `.ds-menu` 外层高度（实际只有 8px），改为
+    `.ds-menu__list.offsetHeight + 8`；1280×800、指针 `(1270,790)` 时菜单
+    `left=1070, top=633`，list 底 786，未越出 800。
+  - `.as-session-menu` 与共享 `.ds-menu` 同 specificity，后置规则会把
+    `position:fixed` / `min-width:200` 覆盖掉；选择器改为 `.ds-menu.as-session-menu`。
+- 窄屏抽屉里按 Esc 的冲突：`ds-shell.js` 的抽屉 Esc 监听在冒泡阶段，原先会与菜单
+  同按一次关闭抽屉。`session-menu.js` 的 Escape 监听到捕获阶段，处理完菜单/重命名后
+  `stopPropagation()`；实测第一次 Esc 只关菜单并回焦“更多”，抽屉仍在；第二次 Esc
+  才关抽屉并把焦点还给打开器。
+
+**验证**
+
+- `plugins.assistant.tests.AssistantChatTests` 34 tests OK；新增并钉住：rename 不改
+  活动时间、空/超长标题拒绝、非本人与 GET 拒绝、pin 排序、archive 移组并清 pin、
+  unarchive 回组、归档不可置顶、首页菜单/归档控件/空态标记。
+- `manage.py check` 干净；`makemigrations --check --dry-run` 无变更；
+  `node --check session-menu.js` 通过；`ruff` 对相关 Python 文件全过。
+- 最终全量 **678 tests OK**（150.277s），日志 `.tmp-test/test-session-menu-final.log`。
+- 容器重建后 Chrome 实测（`django_language=en`）：
+  - 1280×800 英文：菜单 200px 固定浮层，四项顺序 Unpin session / Rename /
+    Copy Session ID / Archive session；贴底不越界，滚动页面不跟随。
+  - pin 后行置顶、图标生成、活动列表重排；菜单文案切 Unpin，取消置顶恢复正常。
+  - 归档：行移入归档组、链接去 href/`tabindex=-1`、Archived 计数增加；展开可见，
+    取消归档回活动组、计数/分组隐藏；归档当前会话后跳回 `/`。
+  - 键盘：End 到 archive、ArrowUp 跳过分隔线到 copy、Tab/Esc 关闭并回焦、
+    菜单外 mousedown 与 window scroll 关闭。
+  - 空活动列表：临时归档全部 16 条后出现 `No conversations yet` 与 Archived 16；
+    从归档恢复一条后动态建出活动列表、空态隐藏、计数变 15；随后恢复原数据。
+  - 窄屏 504×700：抽屉 280px，菜单 `x=96,y=328,w=192,h=149`，完整落在视口内；
+    抽屉内 Esc 只关菜单，第二次才关抽屉。
+  - 320×700 触控模拟：抽屉 272px，菜单 `x=16,y=328,w=192,h=149`，未越出 320；
+    `hover:none` 下行内“更多”按钮常显。
+  - 重命名：弹窗初值正确、空名禁用、Enter 提交、IME `isComposing` 的 Enter 不提交、
+    compositionend 后 Enter 正常提交；提交中 input/确认/取消/X 全部 disabled；
+    成功更新标题并回焦。
+  - 深色：菜单 material、分隔线、重命名弹窗与主按钮可读；浅色中文界面菜单文案为
+    “置顶会话 / 重命名 / 复制 Session ID / 归档会话”，归档/置顶态切换正常。
+- `locale/en/LC_MESSAGES/django.po` 追加 24 条本轮 msgid（总 873 条），
+  `tools/compile_mo.py` 重编译、`--check` 通过。
+
+**已知边界**
+
+- **未实现 fork**：本项目没有会话分支协议和后端，按用户口径不纳入。
+- **无“停止并归档”确认**：对话是同步 POST，没有进行中的 turn；DSH 的确认只在
+  有活动工作时出现。
+- **Session ID 是数据库主键**（如 `40`），不是 DSH 的 session UUID。复制的是
+  `data-session-id`，与当前详情链接 `?conversation=<pk>` 一致。
+- **归档视图是局部展开**：DSH 有“全部对话（显示已归档）”视图选项，本项目只做
+  section head 上的“Archived + 计数”展开/收起，未改首页整体视图模型。
+- **剪贴板内容未能独立读回**：页面内 `navigator.clipboard.writeText()` resolve、
+  toast 为“Session ID 已复制”，但从系统剪贴板读回仍是原内容；Chrome MCP 的剪贴板
+  与桌面系统剪贴板隔离，属于验收环境限制。已确认执行的是 `data-session-id`，
+  未把系统剪贴板内容写成已通过。
+- **浮层 DOM 未逐行对照**：`ui-context-menu` 包缺失，菜单浮层按现有 `.ds-menu`
+  与已观察行为实现；若要求逐像素一致，需要补齐该包源码再复核。
+- 工作区改动仍未提交；`CON`、`0` 不属于任务产物，未删除、未提交。
+
+### 9.13.51 公告收进首页面板：改名「公告」、业务侧栏移除、入口统一 `?panel=notice`（v2.4.1 / 2026-11-16）
+
+**用户口径**：公告中心改成公告；主页已有公告就移除功能页的公告；公告在主页打开。
+
+**入口与侧栏**
+
+- `plugins/assistant/views.py` 的 `PRIMARY_MENU_ENTRIES` 公告项改为 `/plugins/notice/ → notice`，
+  `PANEL_BY_URL` / `PANEL_TITLES` / `PANEL_PLUGIN_KEYS` 分别登记 `notice`；
+  首页固定入口仍是「考勤 / 公告 / 看板」，第二格落到 `/?panel=notice`。
+- `plugin_host/context_processors.py` 的 `HOME_PANEL_URLS` 加入 `/plugins/notice/`，
+  业务页「功能」分组不再出现公告行；`plugins/notice/apps.py` 菜单 label 改为「公告」。
+- 公告业务页 `/plugins/notice/` 保留为深链，标题/heading 为「公告」；侧栏没有 active 行。
+
+**面板与写入口**
+
+- 新增 `plugins/notice/templates/notice/_panel.html`（根标记 `data-notice-panel`，标题「公告」），
+  首页 `home_chat.html` 在 `panel_key == 'notice'` 时 include；正文与弹层抽成
+  `_notice_items.html` / `_notice_modals.html`，业务页与首页共用。
+- `plugins/notice/views.py` 新增 `notice_list_context()` 与 `create_announcement_from_post()`：
+  面板态列表地址 `/?panel=notice`、发布地址 `/?panel=notice&view=new`；业务态仍走
+  `notice:notice_list` 与 `?view=new`。首页 `home()` 的 notice POST 成功 PRG 回 `/?panel=notice`，
+  无 `notice_manage` 直接 403。
+- `notice_create_url` 现在只在 `notice_manage` 下渲染，普通员工的首页面板与业务页都看不到
+  「发布公告」按钮；管理者保留发布入口。
+- 公告面板分页由 `templates/includes/pagination.html` 在 `panel_links` 为真时加
+  `data-panel-link`，`home-panels.js` 原地换正文；业务页不受影响。
+
+**站内链接**
+
+- `plugins/assistant/tools.py` 的 `PAGES['notice']` 指向 `/?panel=notice`（标题「公告」），
+  `PAGES['notice_new']` 指向 `/?panel=notice&view=new`；`open_page` 支持 `path` 覆盖。
+- `plugin_host/templates/home_dashboard.html` 的「查看全部公告」与单条公告链接改为
+  `/?panel=notice`（单条带 `#notice-<id>`）；`plugins/notify/apps.py` 通知 link 同步。
+- `locale/en/LC_MESSAGES/django.po` 复用 `公告 → Notice`，补两条面板说明英文并重编译 `.mo`。
+
+**验证**
+
+- 专项 `plugin_host.tests_assistant_home plugins.notice.tests plugins.assistant.tests`
+  **143 OK**；`plugin_host.tests_pagination` **8 OK**（含首页公告面板分页 `data-panel-link`）。
+- 全量 `manage.py test` **702 OK / 176.371s**；全量基线包含新增的公告面板分页测试与
+  发布按钮权限门后的专项回归。
+- `docker compose up -d --build web` 重建，`constellatio-web-1` `Up`，`0.0.0.0:8000->8000`。
+- 真机 1280×800：首页三入口文案「考勤 / 公告 / 看板」；点公告后 URL `/?panel=notice`、
+  `data-active-panel=notice`、标题「公告」，`window.__panelMarker` 存活证明原地换正文；
+  业务页 `/dashboard/` 侧栏 notice 行 0，首行「插件」；`/plugins/notice/` 仍 200、标题「公告」、
+  7 张公告卡、发布按钮与 11 个已读人员链接，侧栏 notice 行 0；
+  `/?panel=notice&view=new` 弹层可见、标题/正文输入存在、form action 为空，关闭后回
+  `/?panel=notice` 且面板保持 active。
+
+
+### 9.13.52 五项 UI 修正：所属部门下拉、去 ⤓、统计卡跳转、菜单 SVG（2026-11-16）
+
+**用户口径**：编辑/新建用户弹层的「所属部门」样式不对；「⤓ 应用模板」去掉 `⤓`；
+组织架构三张统计卡分别进入部门页、用户页、角色页；插件菜单换成指定风车 SVG；
+其余功能菜单按 DSH 线性口径与功能语义换 SVG，缺图去 IconPark 取。
+
+**所属部门**
+
+- `plugins/user/forms.py` 的 `UserForm.Meta.widgets` 为 `department` 补
+  `forms.Select(attrs={'class': 'r-input'})`，与「直属上级」复用同一条 DSH 下拉样式；
+  字段循环模板未改。
+- `plugins/user/tests.py::DepartmentV12Tests.test_user_form_department_uses_ds_select_style`
+  断言渲染出的 `<select>` 带 `class="r-input"`。真机 1280×800 下「所属部门」宽度、圆角、
+  箭头位置与「直属上级」一致。
+
+**应用模板**
+
+- `plugins/structure/templates/structure/_template_body.html` 改为 `{% trans "应用模板" %}`；
+  模板页、测试、`.po` 与 `docs/plugin-dev-v159.md` 的 `⤓` 前缀全部移除。
+- `locale/en/LC_MESSAGES/django.po` 为 `应用模板 → Apply template`，`.mo` 已重编译并通过
+  `--check`；真机中文为「应用模板」、英文为「Apply template」，页面无 `⤓`。
+
+**统计卡跳转**
+
+- `plugins/structure/templates/structure/overview.html` 三张统计卡在 `perms.user.user_manage`
+  下渲染为 `<a class="r-card r-card--link">`，分别指向 `user:department_list`、
+  `user:user_list`、`user:role_list`；无 `user_manage` 回落普通 `div.r-card`，避免
+  只读 `structure_view` 用户点进 403。第四张「汇报链起点」保持静态。
+- `corporate-clean.css` 增加 `.r-card--link` 的链接基线、hover 描边/底色与
+  `focus-visible` 焦点环；真机 hover 时三张卡描边与底色变化，三卡保持 218×78 同基线。
+- 真机三个 href 为 `/plugins/user/departments/`、`/plugins/user/users/`、`/plugins/user/roles/`，
+  目标页均 200；点击第一张卡实际导航到部门管理。
+- 卡片文案仍为「在岗账号」，本轮只改可点击目标，未调整标签与统计口径。
+
+**菜单 SVG**
+
+- 菜单 `icon` 从文本字符改为语义 key：`plugin / department / user / role / approval /
+  pending / cc / records / history / structure / attendance / notice`。
+- 新增 `templates/includes/menu_icon.html`：`plugin` 逐字使用用户给的四段风车 path
+  （`viewBox 0 0 16 16`、`14×14`、`stroke-width 1`）；其余按 IconPark 的
+  `building-two / user / peoples / doc-success / inbox / mail / calendar-three /
+  history / network-tree / announcement` 统一改为 `fill:none`、`stroke:currentColor`、
+  48 viewBox 缩到 16、视觉描边约 1.2px；`attendance` 自绘日历勾，未知 key 回落文档图标。
+- `themes/corporate-clean/templates/base.html` 的侧栏 glyph 改为 include；
+  `.ds-rail__glyph` 固定 16×16 并让 SVG `display:block`，收起态 36×36 行内居中。
+- 真机侧栏 10 行均为 `<svg>`、glyph 内无字符残留；插件为风车，部门/用户/角色/审批/
+  待办/抄送/签到/活动记录/组织架构均显示对应线性图标。
+
+**验证**
+
+- `manage.py check`：0 issues。
+- 全量 `manage.py test`：**703 OK / 140.413s**（含新增所属部门回归与统计卡链接断言）。
+- `tools/compile_mo.py`：compiled 1 catalog；`--check`：与 `.po` 一致。
+- `docker compose up -d --build web` 重建，`constellatio-web-1` `Up`，gunicorn 26.2.0，
+  worker 12/13/14 正常监听。
+- 真机 1280×800：新建用户弹层「所属部门」为 `.r-input` 下拉；组织架构三卡为
+  `A / r-card r-card--link` 且四卡同高对齐；模板页中文/英文按钮均无 `⤓`；
+  侧栏 10 个 SVG 全部可见。
+
+### 9.13.53 分页与活动「查看」按钮化 + 插件开关热区修复（2026-11-16）
+
+**分页**
+
+- `templates/includes/pagination.html` 的「上一页 / 下一页」由 `a.r-offset-hover`
+  改为 `a.r-btn.r-btn--plain.r-btn--sm`；`href`、`querystring` 和首页面板的
+  `data-panel-link` 原样保留，翻页参数和原地换面板行为不变。
+- 真机 `/plugins/blockchain/?page=2`：上一页 `?`、下一页 `?page=3`，两枚按钮均
+  `69.7×28`，与页脚计数同一基线；分页共 15 页正常。
+
+**活动记录「查看」**
+
+- `plugins/blockchain/templates/blockchain/blockchain_list.html` 行内动作由
+  `a.r-offset-hover` 改为 `a.r-btn.r-btn--sm`；`.r-table .r-btn` 规则把它收成
+  28 高、12/18、0.5px 描边的 DSH outline 小按钮。
+- `data-ds-panel` 保留：真机点击「查看」仍在业务页原地打开详情面板（活动记录 #1434），
+  不跳整页；按钮实测 `44×28`。
+
+**插件胶囊开关**
+
+- 根因一：透明 checkbox 受 `.ds-main__body form input[type="checkbox"]` 的
+  `16×16 / margin-right:8` 规则压制，实际只有 16×16，停在 44×36 的 label 左上角，
+  胶囊可见区域不是有效热区。
+- 根因二：thumb 用 `margin:2px` 定位，父子块级外边距发生塌陷，thumb 贴到 track
+  顶端，开启态在右端呈月牙状。
+- `corporate-clean.css`：开关 input 选择器升为 `input[type="checkbox"]`，并以
+  `width/height:100% !important`、`margin:0 !important` 覆盖通用复选框尺寸；
+  `.ds-plugin__track` 改 `position:relative`；`.ds-plugin__thumb` 改
+  `position:absolute; top:2px; left:2px; margin:0`，开启态仍 `translateX(16px)`。
+- 真机：input 与 label 同为 `44×36`，track `36×20` 在 label 内居中，thumb
+  `16×16 @ (742,153)`、距轨道右端 2px，圆点完整；`elementFromPoint(742,161)`
+  命中 `input[type=checkbox]`，轨道中心可点击；开关启停链路复验正常。
+
+**验证**
+
+- `manage.py test plugin_host.tests_pagination plugins.blockchain.tests
+  plugins.workspace.tests`：**46 OK / 16.831s**。
+- `manage.py check`：0 issues。
+- `docker compose up -d --build web` 重建并启动 `constellatio-web-1`。
+- 本轮未重跑全量 703 项；分页按钮类、活动「查看」按钮类均已加回归断言。

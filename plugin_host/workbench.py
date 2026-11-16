@@ -12,6 +12,7 @@ from django.db.models import Count, Q
 from django.db.models.functions import TruncDate, TruncHour
 from django.db.utils import OperationalError, ProgrammingError
 from django.utils import timezone
+from django.utils.formats import date_format
 from django.utils.translation import gettext as _t
 
 from plugin_host.registry import PLUGIN_REGISTRY, plugin_counts
@@ -236,7 +237,7 @@ def _build_insight(*, user, is_admin, enabled_names, now):
         # 文案取「周六」那天的月份（column[6]），不是周日——取周日会让跨月那周和下一周重名
         saturday = sunday + timedelta(days=6)
         opens = (week == 0 or sunday.month != saturday.month or sunday.day == 1)
-        month_label = _t(f'{saturday.month} 月') if opens else ''
+        month_label = date_format(saturday, 'F') if opens else ''
         for offset in range(7):
             day = sunday + timedelta(days=offset)
             value = heat_counts.get(day, 0)
@@ -257,8 +258,8 @@ def _build_insight(*, user, is_admin, enabled_names, now):
                           'level': level, 'value': value})
         heat_cols.append({'cells': cells, 'month': month_label})
     # 星期行标签：DSH 只标一 / 三 / 五，其余留空保证七行对齐
-    weekday_names = {1: '一', 3: '三', 5: '五'}
-    heat_weeks = [{'label': _t(weekday_names[row]) if row in weekday_names else '',
+    weekday_names = {1: _t('周一'), 3: _t('周三'), 5: _t('周五')}
+    heat_weeks = [{'label': weekday_names.get(row, ''),
                    'index': row} for row in range(7)]
 
     return {

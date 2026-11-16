@@ -1,0 +1,20 @@
+{% load i18n %}
+{% comment %}
+v2.4.1：首页 `?panel=notice` 公告面板。正文复用公告流 partial 与两个设置弹层，
+与业务页 /plugins/notice/ 保持同一份内容；业务页「功能」侧栏不再出现公告入口。
+{% endcomment %}
+<div class="at-page" data-notice-panel>
+  <header class="at-head">
+    <div class="at-head__lead">
+      <h2 class="at-head__title">{% trans "公告" %}</h2>
+    </div>
+    {% if notice_create_url %}
+    <div class="at-head__aside">
+      <a href="{{ notice_create_url }}" class="r-btn" data-ds-modal-open="ds-notice-new">＋ {% trans "发布公告" %}</a>
+    </div>
+    {% endif %}
+  </header>
+
+  {% include "notice/_notice_items.html" %}
+  {% include "notice/_notice_modals.html" %}
+</div>

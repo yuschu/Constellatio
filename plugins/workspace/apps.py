@@ -13,9 +13,10 @@ class WorkspaceConfig(AppConfig):
             version='1.2.0',
             title=_('插件'),
             menus=[
-                # v2.0.6：侧栏钉在「助手」之后、「看板」之前（order=2），
-                # 名称从「插件开关」收敛为「插件」，页面本体按 DSH 插件清单重做。
-                {'label': _('插件'), 'icon': '⧉', 'url': '/plugins/workspace/',
+                # v2.3.0：回到业务页「功能」侧栏，排第一格（order=2；考勤与看板
+                # 由首页顶部入口承载，不再占业务侧栏）。名称仍是「插件」，
+                # 页面本体按 DSH 插件清单重做。
+                {'label': _('插件'), 'icon': 'plugin', 'url': '/plugins/workspace/',
                  'perm': 'workspace_manage', 'order': 2},
             ],
             permissions=['workspace_manage'],

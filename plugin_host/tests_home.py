@@ -302,8 +302,19 @@ class MenuActiveTests(TestCase):
 
     def test_current_tab_highlighted(self):
         self.client.force_login(self.staff)
+        response = self.client.get('/plugins/approval/')
+        self.assertContains(response, 'href="/plugins/approval/" class="ds-rail__row is-active"')
+
+    def test_notice_removed_from_business_sidebar(self):
+        """公告改由首页 `?panel=notice` 承载，业务页「功能」侧栏不再列公告。"""
+        self.client.force_login(self.staff)
         response = self.client.get('/plugins/notice/')
-        self.assertContains(response, 'href="/plugins/notice/" class="ds-rail__row is-active"')
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(
+            response, 'href="/plugins/notice/" class="ds-rail__row is-active"')
+        self.assertNotIn(
+            '/plugins/notice/',
+            [menu['url'] for menu in response.context['sidebar_menus']])
 
     def test_dashboard_page_has_no_duplicate_rail_entry(self):
         """v2.1.0：看板已搬进首页（`/?panel=dashboard`），业务页侧栏不再重复列一遍。
@@ -316,9 +327,11 @@ class MenuActiveTests(TestCase):
         self.assertNotContains(response, 'href="/dashboard/"')
         self.assertContains(response, 'class="ds-rail__toggle ds-rail__home"')
         self.assertContains(response, 'aria-label="返回主页"')
-        # 业务页不再有折叠开关
-        self.assertNotContains(response, 'data-ds-rail-toggle')
-        self.assertNotContains(response, 'js/rail-boot.js')
+        # 业务页桌面端不再折叠；v2.3.x 起只保留抽屉打开器 + 1024 以下的轨道开关，
+        # 两者都走 data-ds-rail-toggle，但都不是「看板」入口。
+        self.assertEqual(response.content.decode().count('data-ds-rail-toggle'), 2)
+        self.assertContains(response, 'ds-rail__narrow-toggle')
+        self.assertContains(response, 'js/rail-boot.js')
 
     def test_detail_page_highlights_parent_menu(self):
         approval = Approval.objects.create(

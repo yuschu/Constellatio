@@ -4,11 +4,47 @@
 > 单版实现细节仍以 `docs/plugin-dev-vXXXX.md` 为准，本文件只做汇总与指路。
 > **命名规范**：GitHub Release 标题统一写作 `vX.Y.Z Beta`（例：`v2.2.13 Beta`）；**tag 名保持 `vX.Y.Z`**（annotated，不带 `Beta`——tag 是不可变引用，`Beta` 只是 Release 层级的展示标记）。
 >
-> **已发布（2026-11-15）**：**v2.2.15 Beta**（AI 助手 C1 普通单动作卡）收口。C1 在对话内为普通审批单生成只读动作卡，卡片直接 POST 原 `approval_detail`，用户点击后才写库；无新写工具、无新 URL、无新模型字段、无迁移。会签单 `dept_delete` / `user_disable` 不出卡。全量 **641 项测试**；正式栈事务内卡片 200、POST 302、`approved`、`ApprovalRecord` 1 条、回滚后 `Approval` 48→48。A/B 阶段基线仍为 v2.2.14（632 项，A 最新一轮 20/20，六类草稿）。已发版，Release 线推进到 `v2.2.15`。
+> **上一版已发布（2026-11-15）**：**v2.2.15 Beta**（AI 助手 C1 普通单动作卡）收口。C1 在对话内为普通审批单生成只读动作卡，卡片直接 POST 原 `approval_detail`，用户点击后才写库；无新写工具、无新 URL、无新模型字段、无迁移。会签单 `dept_delete` / `user_disable` 不出卡。全量 **641 项测试**；正式栈事务内卡片 200、POST 302、`approved`、`ApprovalRecord` 1 条、回滚后 `Approval` 48→48。A/B 阶段基线仍为 v2.2.14（632 项，A 最新一轮 20/20，六类草稿）。已发版，Release 线推进到 `v2.2.15`。
 
 ---
 
-## 当前版本：v2.2.15（2026-11-15，AI 助手 C1 普通单动作卡）
+## 当前版本：v2.4.1 发版候选（2026-11-16，导出三档 + 公告面板 + 交互收口）
+
+| 项 | 值 |
+|---|---|
+| 发版基线 | 本次发版提交（`v2.4.1` tag 待打） |
+| Release | 待发布 `v2.4.1 Beta` |
+| 测试基线 | **703 项全绿**（`manage.py check` / 全量测试 / `compile_mo.py --check` / `pip check` / `docker compose config` / 容器 `check`） |
+| 变更范围 | `v2.2.15..本版` 当前工作区累计：**90 个文件，`+6154 / -471`**（含新增导出 / 附件 / 模板模块与文档）；新增 `assistant` 0005、`notice` 0003 迁移与 `openpyxl==3.1.5` / `reportlab==5.1.0` |
+
+### v2.4.0–v2.4.1 做了什么
+
+- **三档导出**：新增 `plugin_host/exporting.py`，CSV / XLSX / PDF 共用一套响应写出。CSV 带 UTF-8 BOM；XLSX 冻结表头、关闭网格线并按内容估列宽；PDF 横向 A4、中文 CID 字体、表头重复、长哈希折行。活动记录与签到详情接入三档下载。
+- **组织架构模板**：新增 `plugins/structure/template_io.py`，职能制模板可下载为文件并回传导入；导入仍按原幂等应用路径落库，不新增第二套写入口。
+- **公告附件**：`notice` 新增单附件上传 / 下载与 `0003_announcement_attachment` 迁移；附件类型、大小沿用审批附件口径，文件走 `media` 卷。
+- **首页公告面板**：公告入口统一为 `/?panel=notice`，业务页 `/plugins/notice/` 保留深链；列表正文与两个弹层抽成 `_notice_items.html` / `_notice_modals.html`，首页与业务页共用；面板分页走 `data-panel-link` 原地换正文。
+- **助手会话菜单**：`Conversation` 新增 `pinned` / `archived` 与索引，`0005` 迁移；新增 `conversation_action` POST 接口，只处理当前用户的会话，支持置顶 / 取消置顶 / 重命名 / 归档 / 取消归档；首页会话行整行右击与「更多」按钮共用菜单，已归档会话进入独立分组。
+- **DSH 交互收口**：分页「上一页 / 下一页」与活动行「查看」改为 `r-btn` 小按钮；插件胶囊开关修正透明 checkbox 热区与 thumb 外边距塌陷；新建 / 编辑用户「所属部门」统一为 `.r-input`；组织架构前三张统计卡链接到部门 / 用户 / 角色；侧栏菜单改用语义 SVG（插件风车 + IconPark 线性图标），去掉 `⤓`。
+- **i18n 与门禁**：英文目录补齐新增界面文案并重编译 `.mo`；全量测试 **703 项 OK**；容器重建后 PDF 真实下载 **200 / 214,935 字节 / `%PDF-`**，关键页面与导出入口冒烟通过。
+
+### 升级须知
+
+- 执行 `python manage.py migrate` 应用 `assistant` 0005 与 `notice` 0003；新库仍需 `python manage.py createcachetable`。
+- 重新构建镜像会安装 `openpyxl` / `reportlab`；已有容器必须 `docker compose up -d --build` 才能拿到导出与附件能力。
+- 公告发布入口仍在 `notice_manage` 权限下；普通员工的首页面板与业务页只读。公告业务页保留，但侧栏不再出现公告行。
+- 导出文件由服务端按当前筛选与权限生成，浏览器内 `fetch`/XHR 对附件响应可能显示 204 空体，属下载语义，不是接口失败。
+- 助手会话归档不会删除消息；归档当前会话后首页跳回 `/`，归档组可展开恢复。
+- 公网发布前请按 `docs/release-test-2026-11-16.md` §6.1 收紧 `ALLOWED_HOSTS`、HTTPS / SSL redirect 与 `SSO_SHARED_SECRET`；本机 / 可信内网可沿用当前直连 HTTP 配置。
+
+### 已知边界
+
+- 全量 703 项运行在宿主 SQLite 内存测试库；容器 MySQL 只做 `check`、迁移状态、真实 HTTP 与文件下载验证，未在 MySQL 内重跑全量。
+- `v2.4.1` tag 与 GitHub Release 尚未创建；发版提交后再打 annotated tag 并回填本文历史表。
+- 组织架构模板导入沿用原应用路径；模板格式变更仍需按 `docs/plugin-dev-structure.md` 的字段口径核对。
+
+---
+
+## 历史版本：v2.2.15（2026-11-15，AI 助手 C1 普通单动作卡）
 
 | 项 | 值 |
 |---|---|
@@ -146,7 +182,8 @@ tag `v1.7.15` → commit `39baf42`（annotated）。基线 467 → **472 项全�
 
 | tag | 指向 | 是否等同"该版最终状态" | 说明 |
 |---|---|---|---|
-| `v2.2.15` | `4516307` | ✅ | 当前基线；annotated tag `3db10e3`，Release `v2.2.15 Beta`（正文 `# AI 助手 C1 普通单动作卡`） |
+| `v2.4.1` | 待打 | ⏳ | 当前发版候选；tag / Release 在发版提交后创建并回填 |
+| `v2.2.15` | `4516307` | ✅ | 历史基线；annotated tag `3db10e3`，Release `v2.2.15 Beta`（正文 `# AI 助手 C1 普通单动作卡`） |
 | `v2.2.14` | `05ce668` | ✅ | 历史基线；annotated tag `becc22b`，Release `v2.2.14 Beta`（正文 `# AI 助手 A/B 阶段`） |
 | `v2.2.13` | `3fcf217` | ✅ | 历史基线；annotated tag `e4a73d6`，Release `v2.2.13 Beta`（正文 `# 视觉风格重构`） |
 | `v1.7.2` | `503e072` | ✅ | 文档提交即当版末提交 |

@@ -10,10 +10,10 @@
   <span class="d-flex gap-2">
     {% if page_obj.has_previous %}
     {# 上一页是第 1 页时删掉 page 参数，避免 URL 里留下无意义的 ?page=1 #}
-    <a class="r-offset-hover" href="{% if page_obj.previous_page_number == 1 %}{% querystring page=None %}{% else %}{% querystring page=page_obj.previous_page_number %}{% endif %}">← {% trans "上一页" %}</a>
+    <a class="r-btn r-btn--plain r-btn--sm" href="{% if page_obj.previous_page_number == 1 %}{% querystring page=None %}{% else %}{% querystring page=page_obj.previous_page_number %}{% endif %}"{% if panel_links %} data-panel-link{% endif %}>← {% trans "上一页" %}</a>
     {% endif %}
     {% if page_obj.has_next %}
-    <a class="r-offset-hover" href="{% querystring page=page_obj.next_page_number %}">{% trans "下一页" %} →</a>
+    <a class="r-btn r-btn--plain r-btn--sm" href="{% querystring page=page_obj.next_page_number %}"{% if panel_links %} data-panel-link{% endif %}>{% trans "下一页" %} →</a>
     {% endif %}
   </span>
 </div>

@@ -45,7 +45,7 @@ Bootstrap / 主题表；正文不再用 Bootstrap 工具类，改用 ds-panels.c
     {% for item in notifications %}
     <div class="notify-row">
       <div class="notify-row__main">
-        <span class="notify-badge {% if item.category == 'approval' %}notify-badge--blue{% elif item.category == 'notice' %}notify-badge--green{% endif %}">{{ item.get_category_display }}</span>
+        <span class="notify-badge {% if item.category == 'approval' %}notify-badge--blue{% elif item.category == 'notice' %}notify-badge--green{% endif %}">{% if item.category == 'approval' %}{% trans "审批" %}{% elif item.category == 'notice' %}{% trans "公告" %}{% else %}{% trans "系统" %}{% endif %}</span>
         <div class="notify-row__body">
           <a href="{% url 'notify:notify_read' item.pk %}" class="notify-title{% if not item.is_read %} is-unread{% endif %}">{{ item.title }}</a>
           {% if item.body %}<div class="notify-excerpt">{{ item.body }}</div>{% endif %}

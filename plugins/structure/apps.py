@@ -14,7 +14,7 @@ class StructureConfig(AppConfig):
             title=_('组织架构模板'),
             # v1.5.9：合并「组织架构」与「应用结构」——只保留一个入口，模板详情从页面进入
             menus=[
-                {'label': _('组织架构'), 'icon': '◫', 'url': '/plugins/structure/', 'perm': 'structure_view'},
+                {'label': _('组织架构'), 'icon': 'structure', 'url': '/plugins/structure/', 'perm': 'structure_view'},
             ],
             permissions=['structure_manage', 'structure_view'],
             urls='plugins.structure.urls',

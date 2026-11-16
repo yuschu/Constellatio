@@ -124,7 +124,7 @@ OpenAI 标准格式，字段固定不可改：
 
 **description 用中文写**，而且要写"什么时候用 / 什么时候不用"。小模型对 description 的依赖远高于大模型。
 
-**只读页面入口**：`open_page` 不返回任意 URL，只接受白名单枚举：`attendance`（考勤打卡）、`approval`（审批中心）、`notice`（公告中心）、`approval_pending`（待我审批）、`approval_new`（发起审批）、`notice_new`（发布公告），内部用 `reverse()` 生成 `/plugins/.../` 路径。工具本身 `write=False`，只给入口，不打开浏览器，不代替用户签到、填写或提交；页面权限在函数内部按目标页面单独判断（如待我审批要 `approval_approve`、发布公告要 `notice_manage`），工具元数据不再绑定某一个页面的权限码。助手消息渲染成链接卡，历史回放时从 `Message.tool_calls` 还原。
+**只读页面入口**：`open_page` 不返回任意 URL，只接受白名单枚举：`attendance`（考勤打卡）、`approval`（审批中心）、`notice`（公告）、`approval_pending`（待我审批）、`approval_new`（发起审批）、`notice_new`（发布公告）。默认用 `reverse()` 生成业务页路径；公告两条在 `PAGES` 里显式声明 `path`，分别落到首页面板 `/?panel=notice` 与 `/?panel=notice&view=new`，不再把用户带到业务页侧栏。工具本身 `write=False`，只给入口，不打开浏览器，不代替用户签到、填写或提交；页面权限在函数内部按目标页面单独判断（如待我审批要 `approval_approve`、发布公告要 `notice_manage`），工具元数据不再绑定某一个页面的权限码。助手消息渲染成链接卡，历史回放时从 `Message.tool_calls` 还原。
 
 **每个工具的元数据里带两样东西**（不放进 schema，放 Python 侧）：
 

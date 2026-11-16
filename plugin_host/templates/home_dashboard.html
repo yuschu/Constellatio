@@ -421,11 +421,11 @@
       <div class="lc-ov-list-head">
         <h2 class="lc-ov-list-title">{% trans "公告简报" %}</h2>
         <span class="lc-ov-list-count">{{ notices|length }}</span>
-        <a class="lc-ov-cover" href="/plugins/notice/">{% trans "查看全部公告" %}</a>
+        <a class="lc-ov-cover" href="/?panel=notice"{% if panel_key == 'dashboard' %} data-panel-link{% endif %}>{% trans "查看全部公告" %}</a>
       </div>
       <div class="lc-ov-grid">
         {% for notice in notices %}
-        <a class="lc-ov-session lc-ov-session--link" href="{% url 'notice:notice_list' %}?notice={{ notice.id }}">
+        <a class="lc-ov-session lc-ov-session--link" href="/?panel=notice#notice-{{ notice.id }}"{% if panel_key == 'dashboard' %} data-panel-link{% endif %}>
           <div class="lc-ov-session-head">
             <span class="lc-ov-session-title">{{ notice.title }}</span>
             {% if notice.is_top %}<span class="lc-ov-chip">{% trans "置顶" %}</span>{% endif %}

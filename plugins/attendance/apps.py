@@ -15,9 +15,9 @@ class AttendanceConfig(AppConfig):
             menus=[
                 # v2.0.10：考勤紧跟「看板」（order 4）——看板是业务大盘，考勤是最日常的
                 # 业务入口，两者相邻；其余菜单保持注册序（缺省 order 100）。
-                {'label': _('考勤'), 'icon': '▣', 'url': '/plugins/attendance/',
+                {'label': _('考勤'), 'icon': 'attendance', 'url': '/plugins/attendance/',
                  'perm': 'attendance_view', 'order': 4},
-                {'label': _('签到详情'), 'icon': '☷', 'url': '/plugins/attendance/records/', 'perm': 'attendance_report_view'},
+                {'label': _('签到详情'), 'icon': 'records', 'url': '/plugins/attendance/records/', 'perm': 'attendance_report_view'},
                 # v1.7.2：考勤规则设置（影响全员迟到 / 早退口径）。
                 # v2.1.6：**不再作为侧栏菜单**——它是「考勤」的二级页（点开设置那一页的形态），
                 # 从考勤看板右上角的 ⚙ 原地打开；侧栏里同一个插件列三条（考勤 / 签到详情 /

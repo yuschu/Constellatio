@@ -19,9 +19,9 @@ class UserConfig(AppConfig):
             version='1.2.0',
             title=_('用户与组织'),
             menus=[
-                {'label': _('部门'), 'icon': '▣', 'url': '/plugins/user/departments/', 'perm': 'user_manage'},
-                {'label': _('用户'), 'icon': '☰', 'url': '/plugins/user/users/', 'perm': 'user_manage'},
-                {'label': _('角色'), 'icon': '◆', 'url': '/plugins/user/roles/', 'perm': 'user_manage'},
+                {'label': _('部门'), 'icon': 'department', 'url': '/plugins/user/departments/', 'perm': 'user_manage'},
+                {'label': _('用户'), 'icon': 'user', 'url': '/plugins/user/users/', 'perm': 'user_manage'},
+                {'label': _('角色'), 'icon': 'role', 'url': '/plugins/user/roles/', 'perm': 'user_manage'},
             ],
             permissions=['user_manage', 'dept_delete_approve', 'user_disable_approve'],
             urls='plugins.user.urls',

@@ -2,10 +2,18 @@
 {% load i18n %}
 {% block title %}{% trans "活动记录" %} · Constellatio{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h2 class="mb-0">{% trans "活动记录" %}</h2>
-  <span class="r-badge">{% blocktranslate with count=total %}共 {{ count }} 条{% endblocktranslate %}</span>
-</div>
+<header class="at-head mb-4">
+  <div class="at-head__lead">
+    <h2 class="at-head__title">{% trans "活动记录" %}</h2>
+  </div>
+  <div class="at-head__aside">
+    {% url 'blockchain:blockchain_export' 'csv' as export_csv %}
+    {% url 'blockchain:blockchain_export' 'xlsx' as export_xlsx %}
+    {% url 'blockchain:blockchain_export' 'pdf' as export_pdf %}
+    {% include "includes/ds_export_menu.html" with export_csv=export_csv export_xlsx=export_xlsx export_pdf=export_pdf %}
+    <span class="r-badge">{% blocktranslate with count=total %}共 {{ count }} 条{% endblocktranslate %}</span>
+  </div>
+</header>
 <div class="r-card mb-4 position-relative">
   <span class="r-register-mark"></span>
   {% if verify_ok %}
@@ -86,7 +94,7 @@
         <td style="max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ r.payload_hash }}">{{ r.payload_hash|slice:":12" }}…</td>
         <td style="max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ r.record_hash }}">{{ r.record_hash|slice:":12" }}…</td>
         <td>{{ r.created_at|date:"m-d H:i:s" }}</td>
-        <td><a href="{% url 'blockchain:record_detail' r.id %}" class="r-offset-hover" data-ds-panel>{% trans "查看" %}</a></td>
+        <td><a href="{% url 'blockchain:record_detail' r.id %}" class="r-btn r-btn--sm" data-ds-panel>{% trans "查看" %}</a></td>
       </tr>
       {% empty %}
       <tr><td colspan="8" class="text-muted">{% trans "暂无活动记录（业务操作会自动上链）" %}</td></tr>

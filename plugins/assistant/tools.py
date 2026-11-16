@@ -13,6 +13,7 @@ from decimal import Decimal, InvalidOperation
 from django.db.models import Count
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.translation import gettext as _
 
 from .models import Message  # noqa: F401  （确保 app 已加载，不参与逻辑）
 
@@ -38,8 +39,9 @@ PAGES = {
         'plugin': 'notice',
         'permission': 'notice_view',
         'url_name': 'notice:notice_list',
-        'title': '公告中心',
-        'description': '打开公告列表，查看已读和未读通知。',
+        'path': '/?panel=notice',
+        'title': '公告',
+        'description': '在首页公告面板里查看已读和未读通知。',
     },
     'approval_pending': {
         'plugin': 'approval',
@@ -59,8 +61,9 @@ PAGES = {
         'plugin': 'notice',
         'permission': 'notice_manage',
         'url_name': 'notice:notice_create',
+        'path': '/?panel=notice&view=new',
         'title': '发布公告',
-        'description': '打开公告发布表单，由你本人填写并发布。',
+        'description': '在首页公告面板里打开发布表单，由你本人填写并发布。',
     },
 }
 
@@ -161,9 +164,9 @@ def open_page(user, page):
     return {
         'available': True,
         'page': page,
-        'title': meta['title'],
-        'description': meta['description'],
-        'url': reverse(meta['url_name']),
+        'title': _(meta['title']),
+        'description': _(meta['description']),
+        'url': meta.get('path') or reverse(meta['url_name']),
         'requires_user_action': True,
     }
 
@@ -213,10 +216,10 @@ def prepare_approval_action(user, approval_id):
             'created_at': _fmt_dt(approval.created_at),
             'detail_url': detail_url,
             'actions': [
-                {'value': 'approve', 'label': '通过',
-                 'confirm': '确认通过该申请？确认后不可修改。'},
-                {'value': 'reject', 'label': '驳回',
-                 'confirm': '确认驳回该申请？确认后不可修改。'},
+                {'value': 'approve', 'label': _('通过'),
+                 'confirm': _('确认通过该申请？确认后不可修改。')},
+                {'value': 'reject', 'label': _('驳回'),
+                 'confirm': _('确认驳回该申请？确认后不可修改。')},
             ],
         },
     }
@@ -289,7 +292,7 @@ def _draft_result(approval_type, initial, fields):
     return {
         'draft': {
             'approval_type': approval_type,
-            'type_label': DRAFT_TYPES[approval_type],
+            'type_label': _(DRAFT_TYPES[approval_type]),
             'initial': initial,
             'fields': fields,
         },
@@ -658,7 +661,7 @@ _register(
                 'page': {
                     'type': 'string',
                     'enum': list(PAGES),
-                    'description': 'attendance=考勤打卡，approval=审批中心，notice=公告中心，'
+                    'description': 'attendance=考勤打卡，approval=审批中心，notice=公告，'
                                    'approval_pending=待我审批，approval_new=发起审批，'
                                    'notice_new=发布公告',
                 },

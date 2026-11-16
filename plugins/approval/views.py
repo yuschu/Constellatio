@@ -7,6 +7,7 @@ from django.db import transaction
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
 from plugin_host.exceptions import ObjectPermissionDenied
@@ -125,7 +126,7 @@ def _create_context(request, form=None, type_key=None, source=None, chip_prefix=
         # 不是助手来源时为空，不影响原表单。
         'assistant_draft_token': request.GET.get('draft') or request.POST.get('draft'),
         'type_chips': [
-            {'key': key, 'label': Approval.Type(key).label,
+            {'key': key, 'label': _(Approval.Type(key).label),
              'href': f'{chip_prefix}{key}', 'active': key == type_key}
             for key in forms.FORM_TYPES
         ],
@@ -266,7 +267,7 @@ def approval_create(request):
                         return redirect('approval:approval_list')
                 approval = Approval.objects.create(
                     approval_type=type_key,
-                    title=f'{Approval.Type(type_key).label}｜{request.user.last_name or request.user.username}',
+                    title=f'{_(Approval.Type(type_key).label)}｜{request.user.last_name or request.user.username}',
                     content=_summary(type_key, form.cleaned_data, basis_label),
                     applicant=request.user,
                     approver=approver,

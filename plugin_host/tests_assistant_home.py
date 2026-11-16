@@ -12,11 +12,13 @@ from unittest import mock
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 from django.template.loader import render_to_string
 from django.test import RequestFactory, TestCase, override_settings
 
 from plugin_host.registry import PLUGIN_REGISTRY, get_home_provider
 from plugins.assistant import views as assistant_views
+from plugins.notice.models import Announcement, AnnouncementRead
 from plugins.workspace.models import PluginSwitch
 
 User = get_user_model()
@@ -70,7 +72,8 @@ class AssistantHomePageTests(TestCase):
 
         ds-shell.js 是 defer，最早也要等解析完才跑，冷导航时会先画 280 再跳 56；
         因此 head 里必须同步加载 rail-boot.js，且它读的是同一个会话键。
-        v2.1.0：功能页侧栏不再折叠（那一格换成「返回主页」），只有首页需要它。
+        v2.1.0：功能页侧栏在桌面端不折叠（那一格是「返回主页」）；v2.3.x 起
+        1024 以下两套壳都要先落收起态，因此业务页也同步加载 rail-boot。
         """
         self.client.force_login(self.user)
         home = self.client.get('/').content.decode()
@@ -78,9 +81,10 @@ class AssistantHomePageTests(TestCase):
         self.assertLess(home.index('js/rail-boot.js'), home.index('</head>'))
 
         dashboard = self.client.get('/dashboard/').content.decode()
-        self.assertNotIn('js/rail-boot.js', dashboard)
+        self.assertIn('js/rail-boot.js', dashboard)
+        self.assertLess(dashboard.index('js/rail-boot.js'), dashboard.index('</head>'))
         self.assertIn('class="ds-rail__toggle ds-rail__home"', dashboard)
-        self.assertNotIn('data-ds-rail-toggle', dashboard)
+        self.assertIn('ds-rail__narrow-toggle', dashboard)
 
         boot = Path(settings.BASE_DIR) / 'plugin_host/static/js/rail-boot.js'
         self.assertTrue(boot.exists())
@@ -230,7 +234,9 @@ class AssistantHomePageTests(TestCase):
             'HTMLFormElement.prototype.submit.call(chatForm)')
         clear_at = shell.index("input.value = ''", submit_at)
         self.assertGreater(clear_at, submit_at)
-        self.assertEqual(shell.count("input.value = ''"), 1)
+        # 附件选择字段也会清空自己的 file input；这里只约束 composer 提交之后
+        # 的清空次数，避免把无关字段的同类语句算进来。
+        self.assertEqual(shell.count("input.value = ''", submit_at), 1)
 
     def test_composer_input_stays_usable_while_waiting(self):
         """发送等待期间不能把输入框锁死。
@@ -281,10 +287,11 @@ class AssistantHomePageTests(TestCase):
         self.assertContains(response, '助手已停用')
         self.assertEqual(
             response.content.decode().count('data-locked="1"'), 1)
-        # 看板入口仍在（registered 在容器 core，不随助手插件停用消失）
+        # 看板入口仍在（registered 在容器 core，不随助手插件停用消失）；
+        # 插件已移入业务页侧栏，首页固定入口是考勤 / 公告 / 看板。
         self.assertEqual(
             [menu['url'] for menu in response.context['primary_menus']],
-            ['/plugins/attendance/', '/dashboard/'])
+            ['/plugins/attendance/', '/plugins/notice/', '/dashboard/'])
 
     def test_collapsed_rail_keeps_foot_pinned_to_bottom(self):
         """收起态账号按钮必须留在底部。
@@ -340,25 +347,27 @@ class AssistantHomePageTests(TestCase):
         self.assertContains(response, '>看板</span>')
 
     def test_primary_panel_starts_with_attendance(self):
-        """v2.0.7：助手入口就是侧栏顶部的「+ 新会话」，第一格改成考勤。
+        """v2.0.7：第一格是考勤；公告已收成首页第二格。
 
-        助手菜单（指向 /）已下线，所以首页不再有高亮项；考勤在顶部固定入口，
-        不应该在「更多」里再出现一条同名副本。
+        助手菜单（指向 /）已下线，所以首页不再有高亮项；考勤、公告已在
+        顶部固定入口，不应该在「更多」里再出现同名副本。
         """
         self.client.force_login(self.user)
         response = self.client.get('/')
-        # 网格首项必须是考勤；「插件」入口要 workspace_manage，普通账号看不到
+        # 首页固定入口：考勤 / 公告 / 看板；三条都在首页内换面板
         self.assertEqual(
             [menu['url'] for menu in response.context['primary_menus']],
-            ['/plugins/attendance/', '/dashboard/'])
-        # 每一格都带一个消息内切换的落点 URL
+            ['/plugins/attendance/', '/plugins/notice/', '/dashboard/'])
         self.assertEqual(
             [menu['panel_url'] for menu in response.context['primary_menus']],
-            ['/?panel=attendance', '/?panel=dashboard'])
+            ['/?panel=attendance', '/?panel=notice', '/?panel=dashboard'])
         # 首页没有指向 / 的菜单了，一个面板都不亮
         self.assertEqual(response.content.decode().count('as-panel is-active'), 0)
         self.assertNotIn(
             '/plugins/attendance/',
+            [menu['url'] for menu in response.context['common_menus']])
+        self.assertNotIn(
+            '/plugins/notice/',
             [menu['url'] for menu in response.context['common_menus']])
 
     def test_panel_query_switches_body_inside_home(self):
@@ -367,7 +376,8 @@ class AssistantHomePageTests(TestCase):
 
         for panel, marker in (
                 ('dashboard', 'lc-ov-page'),
-                ('attendance', 'at-page')):
+                ('attendance', 'at-page'),
+                ('notice', 'data-notice-panel')):
             response = self.client.get('/', {'panel': panel})
             html = response.content.decode()
             self.assertEqual(response.status_code, 200)
@@ -391,6 +401,52 @@ class AssistantHomePageTests(TestCase):
         chat = self.client.get('/').content.decode()
         self.assertIn('data-active-panel="chat"', chat)
         self.assertIn('as-hero__title', chat)
+
+    def test_notice_panel_lists_and_marks_read(self):
+        """公告面板复用列表正文：打开即展示公告，并把当页登记为已读。"""
+        self.client.force_login(self.user)
+        announcement = Announcement.objects.create(
+            title='制度更新', content='新的报销规则', publisher=self.user)
+        response = self.client.get('/', {'panel': 'notice'})
+        self.assertContains(response, 'data-notice-panel')
+        self.assertContains(response, '制度更新')
+        self.assertNotContains(response, '发布公告')
+        self.assertEqual(
+            AnnouncementRead.objects.filter(
+                user=self.user, announcement=announcement).count(), 1)
+
+    def test_notice_publish_from_home_panel(self):
+        """发布成功回首页公告面板；无 notice_manage 的 POST 被拒且不落库。"""
+        publisher = User.objects.create_user('home_notice_pub', '', 'pw')
+        publisher.user_permissions.add(
+            Permission.objects.get(codename='notice_manage'))
+        self.client.force_login(publisher)
+        response = self.client.post(
+            '/?panel=notice', {'title': '新公告', 'content': '正文'})
+        self.assertRedirects(response, '/?panel=notice')
+        self.assertTrue(
+            Announcement.objects.filter(title='新公告').exists())
+
+        self.client.force_login(self.user)
+        denied = self.client.post(
+            '/?panel=notice', {'title': '越权公告', 'content': '正文'})
+        self.assertEqual(denied.status_code, 403)
+        self.assertFalse(
+            Announcement.objects.filter(title='越权公告').exists())
+
+    def test_notice_plugin_disabled_hides_panel_and_sidebar_entry(self):
+        """公告插件停用后：深链 404、面板回落对话态、侧栏无公告行。"""
+        PluginSwitch.objects.create(app_key='notice', enabled=False)
+        admin = User.objects.create_superuser('home_notice_off', '', 'pw')
+        self.client.force_login(admin)
+        self.assertEqual(self.client.get('/plugins/notice/').status_code, 404)
+        response = self.client.get('/', {'panel': 'notice'})
+        self.assertContains(response, 'data-active-panel="chat"')
+        self.assertNotContains(response, 'data-notice-panel')
+        response = self.client.get('/dashboard/')
+        self.assertNotIn(
+            '/plugins/notice/',
+            [menu['url'] for menu in response.context['sidebar_menus']])
 
     def test_disabled_plugin_panel_falls_back_to_chat(self):
         """v2.1.7：插件停用后首页面板不能绕过守卫。
@@ -416,7 +472,7 @@ class AssistantHomePageTests(TestCase):
         response = self.client.get('/')
         self.assertEqual(
             [menu['url'] for menu in response.context['primary_menus']],
-            ['/plugins/workspace/', '/dashboard/'])
+            ['/plugins/notice/', '/dashboard/'])
 
     def test_unknown_or_forbidden_panel_falls_back_to_chat(self):
         """未知 key 与权限不足都回落对话，而不是渲染半个面板。"""
@@ -470,15 +526,31 @@ class AssistantHomePageTests(TestCase):
         self.client.force_login(self.user)
         response = self.client.get('/')
         html = response.content.decode()
-        # 「更多」抽屉存在（v2.0.10 起按 DSH PanelMoreMenu 做成按钮 + 浮层菜单），且确实承载了插件业务菜单
+        # 「更多」抽屉存在（v2.0.10 起按 DSH PanelMoreMenu 做成按钮 + 浮层菜单）；
+        # 即使常用入口为空也要保留，因为「浏览更多插件」是固定行。
         self.assertIn('data-as-more-trigger', html)
         self.assertIn('id="as-more-menu"', html)
-        self.assertTrue(response.context['common_menus'])
         # DSH EntryMenuContent 的两条固定行（zh 文案原文）
         self.assertIn('浏览更多插件', html)
         self.assertIn('创建你的插件', html)
-        # 顶部固定入口两条（普通账号）：考勤 / 看板；「插件」入口要 workspace_manage
-        self.assertEqual(len(response.context['primary_menus']), 2)
+        # 「浏览更多插件」直达业务页插件清单（插件入口已移入功能侧栏首格）
+        self.assertIn('href="/plugins/workspace/"', html)
+        # 多行模板注释不得原样泄漏到页面
+        self.assertNotIn('面板入口：primary_menus', html)
+        # 顶部固定入口三条（普通账号）：考勤 / 公告 / 看板
+        self.assertEqual(len(response.context['primary_menus']), 3)
+
+    def test_plugin_entry_moves_to_business_sidebar_first(self):
+        """插件从首页固定入口移到业务页「功能」侧栏，并排在第一格。
+
+        公告已由首页面板承接，业务页侧栏也不能再出现公告行。
+        """
+        admin = User.objects.create_superuser('home_admin_side', '', 'pw')
+        self.client.force_login(admin)
+        response = self.client.get('/dashboard/')
+        urls = [menu['url'] for menu in response.context['sidebar_menus']]
+        self.assertEqual(urls[0], '/plugins/workspace/')
+        self.assertNotIn('/plugins/notice/', urls)
 
     def test_old_workbench_menu_dropped_after_home_takeover(self):
         """「工作台」与「助手」都指向 /，去重后不应再出现第二个首页入口。"""

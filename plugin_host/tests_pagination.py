@@ -101,6 +101,7 @@ class QueryParamPreservationTests(_AdminMixin, TestCase):
         body1 = page1.content.decode()
         self.assertIn('status=late', body1)      # 下一页链接带筛选参数
         self.assertIn('page=2', body1)
+        self.assertIn('class="r-btn r-btn--plain r-btn--sm"', body1)  # DSH 小按钮，不是裸文本链
 
         page2 = self.client.get(
             '/plugins/attendance/records/', {'status': 'late', 'page': '2'})
@@ -139,6 +140,15 @@ class NoticeIncrementalReadTests(TestCase):
         self.client.get('/plugins/notice/', {'page': '2'})   # 第 2 页把剩下 5 条登记掉
         self.assertEqual(
             AnnouncementRead.objects.filter(user=self.reader).count(), len(self.announcements))
+
+    def test_home_panel_pagination_stays_in_panel(self):
+        """首页公告面板的翻页链接带 data-panel-link；业务页不带。"""
+        self.client.force_login(self.reader)
+        home = self.client.get('/', {'panel': 'notice'})
+        self.assertContains(home, 'data-panel-link')
+        self.assertContains(home, '?panel=notice&amp;page=2')
+        business = self.client.get('/plugins/notice/')
+        self.assertNotContains(business, 'data-panel-link')
 
     def test_second_visit_inserts_nothing(self):
         self.client.force_login(self.reader)

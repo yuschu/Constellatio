@@ -74,6 +74,9 @@ html[data-color-mode="light"] {
   --as-interactive-active: #2631481a;
   --as-button-info-fill: #4176e6;
   --as-button-info-hover: #3560cc;
+  --as-button-primary-fill: #111318;
+  --as-button-primary-hover: #2b2d33;
+  --as-button-primary-label: #ffffff;
   --border-elevation: var(--as-border-l2);
   --as-link: #4176e6;
   --as-error: #ec1313;
@@ -109,6 +112,9 @@ html[data-color-mode="dark"] {
   --as-interactive-active: #ffffff24;
   --as-button-info-fill: #7aaaff;
   --as-button-info-hover: #4176e6;
+  --as-button-primary-fill: #f9fafb;
+  --as-button-primary-hover: #dfe3e8;
+  --as-button-primary-label: #151517;
   --border-elevation: var(--as-border-l2);
   --as-link: #7aaaff;
   --as-scrollbar-thumb: #3c3c3d;
@@ -498,7 +504,8 @@ div.as-more__menu {
   cursor: pointer;
 }
 
-.as-session-item:hover {
+.as-session-item:hover,
+.as-session-item.is-menu-open {
   background-color: var(--as-interactive-hover);
   color: var(--as-label-primary);
 }
@@ -508,14 +515,298 @@ div.as-more__menu {
   color: var(--as-label-primary);
 }
 
-.as-session-item a {
-  display: block;
-  width: 100%;
+.as-session-item.is-archived {
+  color: var(--as-label-tertiary);
+}
+
+.as-session-item.is-archived:hover,
+.as-session-item.is-archived.is-menu-open {
+  color: var(--as-label-secondary);
+}
+
+.as-session-link {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
   overflow: hidden;
   color: inherit;
   text-decoration: none;
+}
+
+.as-session-title {
+  min-width: 0;
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.as-session-pin {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  color: var(--as-label-tertiary);
+}
+
+.as-session-more {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: -4px -5px -4px 2px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--as-radius-sm);
+  background: transparent;
+  color: var(--as-label-tertiary);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--as-dur-fast) linear,
+    background-color var(--as-dur-fast) linear;
+}
+
+.as-session-item:hover .as-session-more,
+.as-session-item:focus-within .as-session-more,
+.as-session-item.is-menu-open .as-session-more,
+.as-session-more:focus-visible {
+  opacity: 1;
+}
+
+.as-session-more:hover,
+.as-session-more:focus-visible {
+  background: var(--as-interactive-hover);
+  color: var(--as-label-primary);
+  outline: none;
+}
+
+@media (hover: none) {
+  .as-session-more {
+    opacity: 1;
+  }
+}
+
+.as-archived-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--as-radius-sm);
+  background: transparent;
+  color: var(--as-label-tertiary);
+  font: inherit;
+  font-size: 12px;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.as-archived-toggle[hidden] {
+  display: none;
+}
+
+.as-archived-toggle:hover,
+.as-archived-toggle:focus-visible {
+  background: var(--as-interactive-hover);
+  color: var(--as-label-primary);
+  outline: none;
+}
+
+.as-archived-count {
+  color: var(--as-label-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.as-archived-block {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 0.5px solid var(--as-border-l2);
+}
+
+.as-archived-block[hidden] {
+  display: none;
+}
+
+/* 右击菜单：portal 口径，位置由 session-menu.js 贴着指针/更多按钮算。
+   用双类选择器压过后面共享的 .ds-menu（absolute + bottom），否则浮层会跟着页面滚。 */
+.ds-menu.as-session-menu {
+  position: fixed;
+  z-index: 100;
+  bottom: auto;
+  min-width: 200px;
+  max-width: min(280px, calc(100vw - 16px));
+}
+
+.as-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 1200;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 8px 12px;
+  border-radius: var(--as-radius-md);
+  background: var(--as-bg-layer-1);
+  box-shadow: 0 0 0 0.5px var(--as-border-l3), 0 8px 24px #0000001a;
+  color: var(--as-label-primary);
+  font-size: 13px;
+  line-height: 20px;
+  transform: translateX(-50%);
+}
+
+.as-toast[hidden] {
+  display: none;
+}
+
+.as-rename {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.as-rename[hidden] {
+  display: none;
+}
+
+.as-rename__overlay {
+  position: absolute;
+  inset: 0;
+  background: #00000024;
+}
+
+html[data-color-mode="dark"] .as-rename__overlay {
+  background: #00000052;
+}
+
+.as-rename__panel {
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  width: min(360px, calc(100vw - 32px));
+  padding: 20px;
+  border-radius: var(--as-radius-lg);
+  background: var(--as-bg-layer-1);
+  box-shadow: 0 0 0 0.5px var(--border-elevation),
+    0 8px 32px #0000001a;
+  outline: none;
+  corner-shape: superellipse(1.5);
+}
+
+.as-rename__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--as-radius-sm);
+  background: transparent;
+  color: var(--as-label-primary);
+  cursor: pointer;
+}
+
+.as-rename__close:hover,
+.as-rename__close:focus-visible {
+  background: var(--as-interactive-hover);
+  outline: none;
+}
+
+.as-rename__close:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.as-rename__title {
+  margin: 0 32px 14px 0;
+  color: var(--as-label-primary);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+}
+
+.as-rename__input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 34px;
+  padding: 6px 10px;
+  border: 0.5px solid var(--as-border-l3);
+  border-radius: var(--as-radius-md);
+  background: var(--as-bg-layer-1);
+  color: var(--as-label-primary);
+  font: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  outline: none;
+}
+
+.as-rename__input:focus-visible {
+  border-color: var(--as-border-l1);
+  box-shadow: 0 0 0 1px var(--as-border-l1);
+}
+
+.as-rename__error {
+  margin-top: 8px;
+  color: var(--as-error, #c62828);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.as-rename__error[hidden] {
+  display: none;
+}
+
+.as-rename__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.as-rename__button {
+  height: 32px;
+  padding: 0 14px;
+  border: 0.5px solid var(--as-border-l3);
+  border-radius: var(--as-radius-md);
+  background: transparent;
+  color: var(--as-label-primary);
+  font: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.as-rename__button:hover,
+.as-rename__button:focus-visible {
+  background: var(--as-interactive-hover);
+  outline: none;
+}
+
+.as-rename__button--primary {
+  border-color: var(--as-button-primary-fill, #111318);
+  background: var(--as-button-primary-fill, #111318);
+  color: var(--as-button-primary-label, #ffffff);
+}
+
+.as-rename__button--primary:hover,
+.as-rename__button--primary:focus-visible {
+  background: var(--as-button-primary-hover, #2b2d33);
+}
+
+.as-rename__button:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 /* footArea */
@@ -1736,6 +2027,109 @@ html[data-rail-wide-in="true"] .as-foot {
   html[data-rail-wide-in="true"] .as-foot {
     transition: none;
     animation: none;
+  }
+}
+
+/* --- 窄屏抽屉（dsh-client-ui-layout/AppFrame [data-sidebar-drawer]） ---
+ *   viewport < 768：侧栏脱离 flex 行，fixed 贴左、宽 min(280, viewport-48)，z 71；
+ *   收起时 translateX(-100%) + visibility hidden；遮罩 z 70 可点；主区 inert 由 ds-shell.js 落。
+ *   DSH 桌面端的 !windowsTitlebar 条件不移植——浏览器没有原生标题栏，否则永远不会进抽屉。 */
+.ds-drawer-mask {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: var(--as-bg-mask, #0000004d);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--as-dur-slow) var(--as-ease);
+}
+
+html[data-sidebar-drawer="true"] .ds-drawer-mask {
+  display: block;
+}
+
+html[data-sidebar-drawer="true"]:not([data-rail-collapsed="true"]) .ds-drawer-mask {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* 侧栏收起后，主区左上角的抽屉打开器（DSH shell.leading 的浏览器等价入口） */
+.ds-drawer-opener {
+  display: none;
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 72;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--as-radius-sm);
+  background: var(--as-elevated-fill);
+  color: var(--as-label-secondary);
+  box-shadow: 0 0 0 0.5px var(--as-border-l2);
+  cursor: pointer;
+  corner-shape: superellipse(1.5);
+}
+
+html[data-sidebar-drawer="true"][data-rail-collapsed="true"] .ds-drawer-opener {
+  display: grid;
+}
+
+.ds-drawer-opener:hover {
+  background: var(--as-interactive-hover);
+  color: var(--as-label-primary);
+}
+
+.ds-drawer-opener:focus-visible {
+  outline: 2px solid #4176e6;
+  outline-offset: 2px;
+}
+
+html[data-sidebar-drawer="true"],
+html[data-sidebar-drawer="true"] body {
+  overflow-x: clip;
+}
+
+html[data-sidebar-drawer="true"] .as-sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 71;
+  flex: 0 0 auto;
+  width: min(280px, max(0px, calc(100vw - 48px)));
+  height: 100vh;
+  height: 100dvh;
+  box-shadow: 0 8px 24px #00000014, 0 2px 8px #0000000a;
+  transform: translateX(0);
+  visibility: visible;
+  transition: transform var(--as-dur-slow) var(--as-ease),
+    visibility 0s linear 0s;
+}
+
+html[data-sidebar-drawer="true"][data-rail-collapsed="true"] .as-sidebar {
+  transform: translateX(-100%);
+  visibility: hidden;
+  transition: transform var(--as-dur-slow) var(--as-ease),
+    visibility 0s linear var(--as-dur-slow);
+}
+
+/* 打开器占左上 48px：会话标题行与面板首屏都让位 */
+html[data-sidebar-drawer="true"] .as-header {
+  height: 48px;
+  padding-left: 52px;
+}
+
+html[data-sidebar-drawer="true"] .as-panelview {
+  padding-top: 48px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-sidebar-drawer="true"] .as-sidebar,
+  html[data-sidebar-drawer="true"][data-rail-collapsed="true"] .as-sidebar,
+  .ds-drawer-mask {
+    transition: none;
   }
 }
 

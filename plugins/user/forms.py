@@ -93,6 +93,7 @@ class UserForm(forms.ModelForm):
             'username': forms.TextInput(attrs={'class': 'r-input'}),
             'last_name': forms.TextInput(attrs={'class': 'r-input'}),
             'email': forms.EmailInput(attrs={'class': 'r-input'}),
+            'department': forms.Select(attrs={'class': 'r-input'}),
             'leader': forms.Select(attrs={'class': 'r-input'}),
             'roles': forms.SelectMultiple(attrs={'size': '12', 'class': 'r-input'}),
             'is_active': forms.CheckboxInput(),

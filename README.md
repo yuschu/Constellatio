@@ -4,8 +4,8 @@
 
 > **flexible plugin** — a full-stack, plugin-driven OA built on Django. The plugin container is the only fixed layer: infrastructure such as the database, themes, templates, charting, and authentication, together with business modules such as approvals, notices, and attendance, is fully pluggable and replaceable.
 
-**Current baseline**: `v2.2.15` (2026-11-15) · 650+ automated tests passing · tag `v2.2.15` · Release `v2.2.15 Beta` ("AI Assistant C1: single-action approval card")
-**Workspace**: assistant composer attachments, read-only mode, and model status are in place · 650+ automated tests passing
+**Current baseline**: `v2.4.1` release candidate (2026-11-16) · **703 automated tests passing** · target tag `v2.4.1` · Release pending
+**Workspace**: three-format exports, notice attachments, home notice panel, and conversation pin / rename / archive are in place · 703 automated tests passing
 
 ## ✨ Features
 
@@ -18,27 +18,28 @@
 * ⛓ **Activity log**: key operations are recorded in a SHA-256 hash chain, each entry has a detail view, and tampering breaks the chain and raises an alert; statistics are grouped by day × source plugin
 * 🔑 **Enterprise SSO**: HMAC-signed ticket gateway login with automatic account provisioning and replay protection, coexisting with password login
 * ✉ **Notifications**: an unread badge in the top bar plus a message center; pending approval tasks, approval results, and published notices generate in-app messages, and the feature can be disabled with graceful fallback
-* 🤖 **Built-in AI assistant (A/B/C1)**: Compose bundles Ollama and `qwen3:4b`, pulled and prewarmed on first start, with automatic fallback to the ModelScope non-thinking variant if the official source fails; read-only queries, six approval draft cards (inline editing, with submission still posting to the original approval endpoints), and ordinary single-action approval cards (card only; confirmation still POSTs to the existing approval detail endpoint); conversations are persisted; the configuration page can override the model with a gateway or a larger model
+* 🤖 **Built-in AI assistant (A/B/C1)**: Compose bundles Ollama and `qwen3:4b`, pulled and prewarmed on first start, with automatic fallback to the ModelScope non-thinking variant if the official source fails; read-only queries, six approval draft cards (inline editing, with submission still posting to the original approval endpoints), ordinary single-action approval cards (card only; confirmation still POSTs to the existing approval detail endpoint); conversations are persisted with pin / rename / copy ID / archive; the configuration page can override the model with a gateway or a larger model
 * 📦 **Self-hosted deployment**: `docker compose up -d` starts the full stack (MySQL 8 + Ollama + Gunicorn + WhiteNoise); Bootstrap is vendored for offline use, startup is refused without `SECRET_KEY` in production, and logout uses POST
 
 ### Business capabilities
 
 * 📋 **Approval center**: six dynamic forms for leave, reimbursement, seal use, field work, overtime, and compensatory time off, with required-field markers and automatic assignment / CC to the direct manager
+* 📤 **Exports and imports**: activity records and attendance details export to CSV / XLSX / PDF from one shared writer (UTF-8 BOM CSV, frozen XLSX header, landscape A4 PDF with Chinese CID font); organization templates download and import back; notices accept one attachment
 * 🕐 **Attendance**: office and field check-in, makeup check-in, detail filters, and a monthly dashboard; attendance rules are configurable (working hours, late/early grace periods, workdays, and makeup lookback). Since v2.2, the dashboard follows the Jibble layout, with four-column detail filters and a month selector that follows the selected range
-* 📢 **Notices**: a single-column notice feed with the title and body on the same screen; notices are marked read on entry, and read details are available to administrators
+* 📢 **Notices**: a home `?panel=notice` feed plus a deep-linkable business page; notices are marked read on entry, read details are available to administrators, and managers can publish with one attachment
 * 🏢 **Organization and permissions**: a functional organization template (one-click idempotent application of departments / roles / users), countersigned soft and hard department deletion, a user state machine, L0–L3 permission codes, and role-template grants; menus and URLs use the same policy
 * 👤 **Profile**: a top-bar username entry for editing the profile, viewing permissions, and changing the password; user editing only exposes permissions that the operator can grant
 * 🧾 **Baseline access**: attendance check-in and notice browsing are available to every signed-in user; administrative roles additionally get attendance report details (`attendance_report_view`)
 
 ### Frontend and experience
 
-* 🖥 **DSH-style frontend (v2.2.0–v2.2.13)**: the sidebar's wide and narrow states, settings sheet, composer, plugin page, dashboard, attendance, site-wide scrollbars, and page transitions are aligned item by item with the DSH source; dashboard spacing is tightened
+* 🖥 **DSH-style frontend (v2.2.0–v2.2.13, refined through v2.4.1)**: the sidebar's wide and narrow states, settings sheet, composer, plugin page, dashboard, attendance, site-wide scrollbars, page transitions, pagination buttons, activity-row actions, plugin switches, and menu SVGs are aligned item by item with the DSH source
 * 🎨 **Theme consolidation**: the built-in themes are light and dark, controlled by one site-wide switch; additional themes are installed under `themes/<key>/theme.json` and automatically appear in the "Theme packs" row
 
 ### Security and engineering
 
 * 🛡 **Security baseline**: row locks and transactions for approval, audit, and attendance writes; object-level authorization for approval details and attachments by applicant / approver / countersigner / CC; unified 401 / 403 / 404 / 500 semantics with `X-Request-Id`; login rate limiting and password validators; a CSP with 10 directives and a nonce-only `script-src`, without enabling `unsafe-inline`
-* 🧪 **Engineering gates**: pinned dependencies + `ruff` + `manage.py check` + full test suite in GitHub Actions, with 650+ tests passing; the shared cache uses `DatabaseCache`, so login rate limiting and SSO replay protection hold across workers
+* 🧪 **Engineering gates**: pinned dependencies + `ruff` + `manage.py check` + full test suite in GitHub Actions, with **703 tests passing**; the shared cache uses `DatabaseCache`, so login rate limiting and SSO replay protection hold across workers
 
 ## 🛠 Tech stack
 
@@ -116,20 +117,20 @@ Most project documentation is written in Chinese.
 
 | Document | Contents |
 | --- | --- |
-| [docs/release-notes.md](docs/release-notes.md) | **Release hub**: current v2.2.15 baseline, release history, tag checkout guide, and upgrade notes |
+| [docs/release-notes.md](docs/release-notes.md) | **Release hub**: current v2.4.1 release candidate, release history, tag checkout guide, and upgrade notes |
 | [docs/tech-stack-and-architecture.md](docs/tech-stack-and-architecture.md) | Technology choices, full-stack plugin architecture, plugin contracts, and competitor research |
 | [docs/constraints-and-acceptance.md](docs/constraints-and-acceptance.md) | Hard constraints, feature boundaries, acceptance criteria, development standards, and risks |
 | [docs/database-design.md](docs/database-design.md) | Database design (pluginized: independent tables and migrations per plugin) |
 | [docs/development-guide.md](docs/development-guide.md) | Development workflow, environment, container implementation, plugin development, and coding conventions |
 | [docs/ai-assisted-development-guide.md](docs/ai-assisted-development-guide.md) | AI-assisted development behavior and iteration standards |
 | [docs/project-overview.md](docs/project-overview.md) | Project overview, usage guide, and plugin development examples |
-| [docs/roadmap.md](docs/roadmap.md) | Gap matrix, v1.5–v2.2.15 roadmap, fixes, and documentation debt |
+| [docs/roadmap.md](docs/roadmap.md) | Gap matrix, v1.5–v2.4.1 roadmap, fixes, and documentation debt |
 
 ### Frontend and AI plans
 
 | Document | Contents |
 | --- | --- |
-| [docs/frontend-refactor-plan.md](docs/frontend-refactor-plan.md) | v2.2.0–v2.2.13 DSH implementation record and acceptance data (§9.13.27–41) |
+| [docs/frontend-refactor-plan.md](docs/frontend-refactor-plan.md) | DSH implementation record and acceptance data: v2.2.0–v2.2.13 baseline plus v2.4.x interaction refinements (§9.13.27–53) |
 | [docs/dsh-visual-spec.md](docs/dsh-visual-spec.md) | Measured DSH literals: color / spacing / components / shortcut visual baseline |
 | [docs/ai-assistant-plan.md](docs/ai-assistant-plan.md) | Conversational home A→B→C plan; A/B and C1 ordinary single-action cards are shipped, countersigned requests remain to be designed |
 | [docs/ai-assistant-eval.md](docs/ai-assistant-eval.md) | A-phase 20 fixed questions, scoring rules, run instructions, and 4B / 70% acceptance boundary |
@@ -143,7 +144,7 @@ Most project documentation is written in Chinese.
 
 ## 📌 Status
 
-**v2.2.15 AI Assistant C1 single-action approval card shipped** (2026-11-15): an ordinary approval request produces a read-only action card in the conversation, and the card POSTs directly to the existing `approval_detail`; nothing is written until the user confirms. No new write tools, endpoints, or migrations; countersigned requests do not produce cards. 650+ tests pass; tag `v2.2.15` and Release `v2.2.15 Beta` are published, with `Latest` pointing to the release. See [docs/release-notes.md](docs/release-notes.md) for the full version record and upgrade notes.
+**v2.4.1 release candidate ready for tag** (2026-11-16): CSV / XLSX / PDF exports for activity records and attendance details, organization template download / import, notice attachments, the home `?panel=notice` feed, conversation pin / rename / copy ID / archive, and a final DSH interaction pass. **703 tests pass**; `v2.4.1` tag and Release are pending. See [docs/release-notes.md](docs/release-notes.md) for the full version record and upgrade notes.
 
 ---
 
@@ -151,8 +152,8 @@ Most project documentation is written in Chinese.
 
 > **flexible plugin** —— 基于 Django 的全栈插件化 OA。插件容器是唯一固定层：数据库、外观、模板、图表、认证等基础设施，以及审批、公告、考勤等业务模块，全部可插拔、可替换。
 
-**当前基线**：`v2.2.15`（2026-11-15）· 650+ 项自动化测试全绿 · tag `v2.2.15` · Release `v2.2.15 Beta`（「AI 助手 C1 普通单动作卡」）
-**工作区**：首页 composer 的附件、只读模式、模型状态已补齐 · 650+ 项测试全绿
+**当前基线**：`v2.4.1` 发版候选（2026-11-16）· **703 项自动化测试全绿** · 目标 tag `v2.4.1` · Release 待发布
+**工作区**：导出三档、公告附件、首页公告面板、会话置顶 / 重命名 / 归档已收口 · 703 项测试全绿
 
 ## ✨ 特性
 
@@ -165,27 +166,28 @@ Most project documentation is written in Chinese.
 * ⛓ **活动记录**：关键操作 SHA-256 哈希链留痕，单条可查详情，篡改即断链报警；按日 × 来源插件统计
 * 🔑 **企业 SSO**：HMAC 签名 Ticket 网关登录，自动建号 / 防重放，与账号密码登录并存
 * ✉ **消息提醒**：顶栏未读数 + 消息中心；审批待办 / 结果、公告发布自动站内信，可停用降级
-* 🤖 **内置 AI 助手（A/B/C1 阶段）**：Compose 自带 Ollama 与 `qwen3:4b`，首次启动自动拉取并预热；官方源失败自动切 ModelScope 非思考版回退；只读查询 + 六类审批草稿卡片（卡片内联编辑，提交仍回原审批端点）+ 普通单待审批动作卡（只出卡，确认后仍 POST 原审批详情端点）；会话落库；配置页可覆盖为网关或更大模型
+* 🤖 **内置 AI 助手（A/B/C1 阶段）**：Compose 自带 Ollama 与 `qwen3:4b`，首次启动自动拉取并预热；官方源失败自动切 ModelScope 非思考版回退；只读查询 + 六类审批草稿卡片（卡片内联编辑，提交仍回原审批端点）+ 普通单待审批动作卡（只出卡，确认后仍 POST 原审批详情端点）；会话落库，支持置顶 / 重命名 / 复制 ID / 归档；配置页可覆盖为网关或更大模型
 * 📦 **私有化部署**：`docker compose up -d` 一键拉起（MySQL 8 + Ollama + Gunicorn + WhiteNoise）；Bootstrap 离线化、生产缺 `SECRET_KEY` 拒绝启动、登出改 POST
 
 ### 业务能力
 
 * 📋 **审批中心**：请假 / 报销 / 用章 / 外出 / 加班 / 调休六类动态表单，必填标注，直属上级自动指派与抄送
+* 📤 **导出与导入**：活动记录、签到详情共用 CSV / XLSX / PDF 三档导出（CSV 带 UTF-8 BOM，XLSX 冻结表头，PDF 横向 A4 + 中文 CID 字体）；组织架构模板可下载并回传导入；公告支持单附件上传与下载
 * 🕐 **考勤打卡**：内勤 / 外勤签到、补卡、签到详情筛选、月度看板；考勤规则可配（上下班时间 / 迟到早退宽限 / 工作日 / 补卡回溯）。v2.2 起采用 Jibble 形态仪表盘，签到详情四列筛选、月份跟随区间
-* 📢 **公告通知**：单列公告流，标题与正文同屏；进入即已读，已读明细下沉管理岗
+* 📢 **公告通知**：首页 `?panel=notice` 公告面板 + 可深链的业务页；进入即已读，已读明细下沉管理岗；管理者可发布单附件公告
 * 🏢 **组织与权限**：职能制组织架构模板（部门 / 角色 / 用户一键幂等应用）、部门软删 / 硬删会签、用户状态机、权限码 L0–L3 与角色模板授权，菜单与 URL 同一口径
 * 👤 **个人中心**：顶栏用户名入口；编辑资料 / 查看权限 / 修改密码；用户编辑只展示操作者可授予的权限范围
 * 🧾 **全员基线**：考勤打卡与公告浏览登录即用；管理岗额外拥有签到详情（`attendance_report_view`）
 
 ### 前端与体验
 
-* 🖥 **DSH 化前端（v2.2.0–v2.2.13）**：侧栏宽窄两态与设置弹层、输入框、插件页、看板、考勤、全站滚动条、页面切换按 DSH 源码逐项对齐；看板布局收紧
+* 🖥 **DSH 化前端（v2.2.0–v2.2.13，v2.4.1 细节收口）**：侧栏宽窄两态与设置弹层、输入框、插件页、看板、考勤、全站滚动条、页面切换、分页按钮、活动行操作、插件开关与菜单 SVG 按 DSH 源码逐项对齐
 * 🎨 **外观收口**：内置外观即浅色 / 深色，设置里一个开关全站生效；更多外观放 `themes/<key>/theme.json` 装包，自动出现在「外观包」行
 
 ### 安全与工程
 
 * 🛡 **安全基线**：审批 / 留痕 / 打卡关键写入行锁 + 事务；审批详情与附件按申请人 / 审批人 / 会签人 / 抄送人对象级鉴权；统一 401 / 403 / 404 / 500 语义与 `X-Request-Id`；登录失败限流 + 密码校验器；CSP 10 条指令，`script-src` 只认 nonce，不放开 `unsafe-inline`
-* 🧪 **工程门禁**：依赖精确版本 + `ruff` + `manage.py check` + GitHub Actions 全量测试，当前 650+ 项全绿；共享缓存走 `DatabaseCache`，登录限流与 SSO 防重放跨 worker 成立
+* 🧪 **工程门禁**：依赖精确版本 + `ruff` + `manage.py check` + GitHub Actions 全量测试，当前 **703 项全绿**；共享缓存走 `DatabaseCache`，登录限流与 SSO 防重放跨 worker 成立
 
 ## 🛠 技术栈
 
@@ -261,20 +263,20 @@ Constellatio/
 
 | 文档 | 内容 |
 | --- | --- |
-| [docs/release-notes.md](docs/release-notes.md) | **发版总入口**：v2.2.15 当前基线、历史收口、按 tag 检出指路、升级须知 |
+| [docs/release-notes.md](docs/release-notes.md) | **发版总入口**：v2.4.1 发版候选、历史收口、按 tag 检出指路、升级须知 |
 | [docs/tech-stack-and-architecture.md](docs/tech-stack-and-architecture.md) | 技术选型、全栈插件化架构、插件契约、竞品调研 |
 | [docs/constraints-and-acceptance.md](docs/constraints-and-acceptance.md) | 硬约束、功能边界、验收标准、开发规范、风险 |
 | [docs/database-design.md](docs/database-design.md) | 数据库设计（插件化：每插件独立表与迁移） |
 | [docs/development-guide.md](docs/development-guide.md) | 开发流程、环境、容器实现、插件开发、编程规约 |
 | [docs/ai-assisted-development-guide.md](docs/ai-assisted-development-guide.md) | AI 辅助开发行为规范、迭代规范 |
 | [docs/project-overview.md](docs/project-overview.md) | 项目说明、使用指南、插件开发示例 |
-| [docs/roadmap.md](docs/roadmap.md) | 差距矩阵、v1.5–v2.2.15 迭代路线、修复项与文档债务 |
+| [docs/roadmap.md](docs/roadmap.md) | 差距矩阵、v1.5–v2.4.1 迭代路线、修复项与文档债务 |
 
 ### 前端与 AI 规划
 
 | 文档 | 内容 |
 | --- | --- |
-| [docs/frontend-refactor-plan.md](docs/frontend-refactor-plan.md) | v2.2.0–v2.2.13 DSH 化实施记录与验收数据（§9.13.27–41） |
+| [docs/frontend-refactor-plan.md](docs/frontend-refactor-plan.md) | DSH 化实施记录与验收数据：v2.2.0–v2.2.13 基线 + v2.4.x 交互收口（§9.13.27–53） |
 | [docs/dsh-visual-spec.md](docs/dsh-visual-spec.md) | DSH 实测字面量：颜色 / 间距 / 组件 / 快捷键视觉基线 |
 | [docs/ai-assistant-plan.md](docs/ai-assistant-plan.md) | 对话式首页 A→B→C 阶段方案；A/B 阶段已落地，C1 普通单动作卡已落地，会签单待设计 |
 | [docs/ai-assistant-eval.md](docs/ai-assistant-eval.md) | A 阶段 20 条固定问句、评分口径、运行方式与 4B/70% 验收边界 |
@@ -288,4 +290,4 @@ Constellatio/
 
 ## 📌 状态
 
-**v2.2.15 AI 助手 C1 普通单动作卡已交付并发布**（2026-11-15）：普通审批单在对话内生成只读动作卡，卡片直接 POST 原 `approval_detail`，用户点击后才写库；无新写工具、无新端点、无迁移；会签单不出卡。650+ 项测试全绿；tag `v2.2.15`，Release `v2.2.15 Beta` 已发布并接管 `Latest`。完整版本记录与升级须知见 [docs/release-notes.md](docs/release-notes.md)。
+**v2.4.1 发版候选已收口，等待打 tag**（2026-11-16）：活动记录 / 签到详情 CSV / XLSX / PDF 三档导出、组织架构模板下载与导入、公告单附件、首页 `?panel=notice` 公告面板、会话置顶 / 重命名 / 复制 ID / 归档，以及最后一轮 DSH 交互细节收口。**703 项测试全绿**；`v2.4.1` tag 与 Release 待发布。完整版本记录与升级须知见 [docs/release-notes.md](docs/release-notes.md)。

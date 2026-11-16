@@ -169,8 +169,8 @@ msgstr "System required"
 msgid "组织架构（职能制模板）"
 msgstr "Organization (functional template)"
 
-msgid "⤓ 应用模板"
-msgstr "⤓ Apply template"
+msgid "应用模板"
+msgstr "Apply template"
 
 msgid "部门管理"
 msgstr "Departments"
@@ -1531,6 +1531,12 @@ msgstr "Approval"
 msgid "公告"
 msgstr "Notice"
 
+msgid "公告发布后进入公告列表，并按角色范围推送到消息中心；置顶公告固定在最前。"
+msgstr "Published notices appear in the notice list and are pushed to Messages by role scope; pinned notices stay at the top."
+
+msgid "置顶公告在公告列表排序最前，适合制度变更、全员通知。"
+msgstr "Pinned notices sort first in the notice list; use them for policy changes and company-wide announcements."
+
 msgid "系统"
 msgstr "System"
 
@@ -2294,3 +2300,525 @@ msgstr "View the current model, or open model settings"
 
 msgid "没有匹配的指令"
 msgstr "No matching commands"
+
+msgid "收起侧边栏"
+msgstr "Collapse sidebar"
+
+msgid "打开侧边栏"
+msgstr "Expand sidebar"
+
+msgid "新会话"
+msgstr "New conversation"
+
+msgid "功能入口"
+msgstr "Features"
+
+msgid "账号菜单"
+msgstr "Account menu"
+
+msgid "设置"
+msgstr "Settings"
+
+msgid "消息"
+msgstr "Messages"
+
+msgid "设置分区"
+msgstr "Settings section"
+
+msgid "通用"
+msgstr "General"
+
+msgid "我的"
+msgstr "Account"
+
+msgid "浅色"
+msgstr "Light"
+
+msgid "深色"
+msgstr "Dark"
+
+msgid "本地"
+msgstr "Local"
+
+msgid "登录状态"
+msgstr "Sign-in status"
+
+msgid "登出入口在侧栏账号菜单里"
+msgstr "Sign out from the account menu in the sidebar"
+
+msgid "已登录"
+msgstr "Signed in"
+
+msgid "未登录"
+msgstr "Signed out"
+
+msgid "确认"
+msgstr "Confirm"
+
+msgid "确认操作"
+msgstr "Confirm action"
+
+msgid "返回主页"
+msgstr "Back to home"
+
+msgid "返回上一页"
+msgstr "Go back"
+
+msgid "菜单"
+msgstr "Menu"
+
+msgid "容器"
+msgstr "Container"
+
+msgid "AI 助手"
+msgstr "AI assistant"
+
+msgid "会话记录"
+msgstr "Conversations"
+
+msgid "还没有会话"
+msgstr "No conversations yet"
+
+msgid "对话保存在本地数据库，重开会话可继续"
+msgstr "Conversations are stored in the local database; reopen one to continue"
+
+msgid "界面文案与菜单名称的显示语言"
+msgstr "Language for interface text and menu names"
+
+msgid "今天想处理什么？"
+msgstr "What would you like to handle today?"
+
+msgid "描述你要处理的事，/ 调用指令"
+msgstr "Describe what you need, or press / to run a command."
+
+msgid "输入消息"
+msgstr "Type a message"
+
+msgid "发送"
+msgstr "Send"
+
+msgid "助手"
+msgstr "Assistant"
+
+msgid "搜索插件"
+msgstr "Search plugins"
+
+msgid "搜索插件名称或标识"
+msgstr "Search by plugin name or key"
+
+msgid "没有匹配的插件"
+msgstr "No matching plugins"
+
+msgid "已注册的插件，可运行时启停"
+msgstr "Registered plugins can be enabled or disabled at runtime"
+
+msgid "链完整性"
+msgstr "Chain integrity"
+
+msgid "通过（未被篡改）"
+msgstr "Passed (not tampered)"
+
+msgid "签到明细"
+msgstr "Check-in details"
+
+msgid "尝试次数过多，请稍后再试"
+msgstr "Too many attempts. Try again later."
+
+msgid "启用 / 禁用请使用状态操作：普通管理员禁用需会签审批"
+msgstr "Use the status action to enable or disable. Regular administrators need countersign approval to disable."
+
+msgid "只修改自己的姓名与邮箱；角色、部门与权限由管理员在用户管理里调整。"
+msgstr "Update your own name and email only; roles, departments and permissions are managed by administrators."
+
+msgid "账号、部门与角色决定该用户可见的功能；创建后可在列表里继续编辑或冻结权限。"
+msgstr "Account, department and role determine what the user can see; after creation, continue editing or freeze permissions from the list."
+
+msgid "修改账号信息、部门与角色；启用 / 禁用请回列表用状态操作（普通管理员需会签）。"
+msgstr "Edit account details, department and role; use the status action in the list to enable or disable (regular administrators need countersign)."
+
+msgid "只改名称与上级部门；停用 / 物理删除回列表用行内操作（物理删除会发起会签审批单）。"
+msgstr "Change only the name and parent department; use row actions in the list to disable or delete (deletion starts a countersign approval)."
+
+msgid "部门名称与上级部门决定组织树的位置；保存后立即出现在部门列表里。"
+msgstr "The department name and parent determine its position in the organization tree; it appears in the list as soon as you save."
+
+msgid "留空表示顶层部门；下级部门会挂到所选部门之下。"
+msgstr "Leave blank for a top-level department; child departments are attached under the selected department."
+
+msgid "角色是权限的集合；新建后可在角色列表里继续调整权限，或分配给具体用户。"
+msgstr "A role is a set of permissions; after creation, adjust permissions in the role list or assign it to users."
+
+msgid "调整角色名与权限集合；改动即时作用于该角色下的所有成员。"
+msgstr "Edit the role name and permission set; changes apply immediately to all members."
+
+msgid "角色带来的权限；角色变动会即时生效。"
+msgstr "Permissions granted by roles; role changes take effect immediately."
+
+msgid "管理员直接分配给本账号的权限。"
+msgstr "Permissions assigned directly to this account by an administrator."
+
+msgid "基线 + 角色 + 直接权限的并集，扣掉冻结状态。"
+msgstr "The union of baseline, role and direct permissions, minus frozen state."
+
+msgid "等级取自身权限中的最高级。"
+msgstr "Level is the highest level among the account's own permissions."
+
+msgid "与组织关系树同权限口径：可看全员，只读。"
+msgstr "Same permission scope as the organization tree: all staff visible, read-only."
+
+msgid "需要当前密码；保存后本机会话保持登录，其它已登录设备需重新登录。"
+msgstr "Current password required; this session stays signed in, other signed-in devices must sign in again."
+
+msgid "选择审批类型后填写对应字段；审批人与部门决定这张单据走哪条流程。"
+msgstr "Choose an approval type and fill in its fields; the approver and department determine the workflow."
+
+msgid "公告发布后进入公告中心，并按角色范围推送到消息中心；置顶公告固定在最前。"
+msgstr "Published notices appear in Notices and are pushed to Messages by role scope; pinned notices stay at the top."
+
+msgid "置顶公告在公告中心排序最前，适合制度变更、全员通知。"
+msgstr "Pinned notices sort first in Notices; use them for policy changes and company-wide announcements."
+
+msgid "仅当需要经理自行维护下属账号时勾选；不勾选则只补齐考勤与审批相关权限。"
+msgstr "Check only when managers should maintain their subordinates' accounts; otherwise only attendance and approval permissions are added."
+
+msgid "职能制模板：20 个部门、31 个账号；应用时只创建缺失项，幂等补齐角色权限，不覆盖既有数据。"
+msgstr "Functional template: 20 departments and 31 accounts; applying it creates only missing items, idempotently fills role permissions, and never overwrites existing data."
+
+msgid "这里只显示当前生效的配置；切换模型请在「设置 › 模型」中调整。"
+msgstr "This shows the active configuration only; switch models under Settings › Model."
+
+msgid "用章时间"
+msgstr "Seal time"
+
+msgid "调休依据"
+msgstr "Comp time basis"
+
+msgid "%(type)s开始时间"
+msgstr "%(type)s start time"
+
+msgid "%(type)s结束时间"
+msgstr "%(type)s end time"
+
+msgid "%(type)s事由"
+msgstr "%(type)s reason"
+
+msgid "部门：%(department)s · 审批人：%(approver)s"
+msgstr "Department: %(department)s · Approver: %(approver)s"
+
+msgid "确认提交"
+msgstr "Submit"
+
+msgid "去审批表单调整"
+msgstr "Adjust in approval form"
+
+msgid "没有可用的已通过加班记录，请先到审批表单补齐调休依据。"
+msgstr "No approved overtime records are available; add comp-time basis in the approval form first."
+
+msgid "请先到审批表单补齐部门与审批人。"
+msgstr "Add the department and approver in the approval form first."
+
+msgid "审批意见"
+msgstr "Approval comment"
+
+msgid "查看完整详情"
+msgstr "View full details"
+
+msgid "页面入口"
+msgstr "Page shortcut"
+
+msgid "打开%(title)s"
+msgstr "Open %(title)s"
+
+msgid "移除 {name}"
+msgstr "Remove {name}"
+
+msgid "一次最多附加 {max} 个文件"
+msgstr "You can attach up to {max} files at once"
+
+msgid "暂不支持 {name}；首版只收文本类文件"
+msgstr "{name} is not supported; only text files are accepted for now"
+
+msgid "{name} 超过 {size} MB"
+msgstr "{name} is larger than {size} MB"
+
+msgid "打开考勤看板，在页面上完成签到或签退。"
+msgstr "Open the attendance dashboard to check in or out."
+
+msgid "打开发起、待办和已办审批的统一入口。"
+msgstr "Open the unified entry for new, pending and completed approvals."
+
+msgid "打开公告列表，查看已读和未读通知。"
+msgstr "Open the notice list to review read and unread notices."
+
+msgid "打开待我审批列表，查看并处理分配给你的审批单。"
+msgstr "Open pending approvals assigned to you."
+
+msgid "打开新建审批表单，由你本人填写并提交。"
+msgstr "Open the new approval form for you to complete and submit."
+
+msgid "打开公告发布表单，由你本人填写并发布。"
+msgstr "Open the notice form for you to complete and publish."
+
+msgid "第 %(page)s / %(total_pages)s 页 · 共 %(count)s 条"
+msgstr "Page %(page)s of %(total_pages)s · %(count)s total"
+
+msgid "职能制模板：%(dept)s 个部门、%(user)s 个账号；应用时只创建缺失项，幂等补齐角色权限，不覆盖既有数据。"
+msgstr "Functional template: %(dept)s departments and %(user)s accounts; applying it creates only missing items, idempotently fills role permissions, and never overwrites existing data."
+
+msgid "更多会话操作"
+msgstr "More session actions"
+
+msgid "已归档"
+msgstr "Archived"
+
+msgid "已置顶"
+msgstr "Pinned"
+
+msgid "会话操作"
+msgstr "Session actions"
+
+msgid "置顶会话"
+msgstr "Pin session"
+
+msgid "取消置顶"
+msgstr "Unpin session"
+
+msgid "重命名"
+msgstr "Rename"
+
+msgid "复制 Session ID"
+msgstr "Copy Session ID"
+
+msgid "归档会话"
+msgstr "Archive session"
+
+msgid "取消归档"
+msgstr "Unarchive"
+
+msgid "重命名会话"
+msgstr "Rename session"
+
+msgid "会话名称"
+msgstr "Session name"
+
+msgid "Session ID 已复制"
+msgstr "Session ID copied"
+
+msgid "复制失败，请手动复制 Session ID"
+msgstr "Could not copy. Copy the Session ID manually."
+
+msgid "操作失败，请重试"
+msgstr "Action failed. Try again."
+
+msgid "会话已归档"
+msgstr "Session archived"
+
+msgid "会话已取消归档"
+msgstr "Session unarchived"
+
+msgid "会话已置顶"
+msgstr "Session pinned"
+
+msgid "会话已取消置顶"
+msgstr "Session unpinned"
+
+msgid "会话不存在"
+msgstr "Session not found"
+
+msgid "会话名称不能为空"
+msgstr "Session name is required"
+
+msgid "会话名称不能超过 200 个字符"
+msgstr "Session name must be at most 200 characters"
+
+msgid "已归档的会话不能置顶"
+msgstr "Archived sessions cannot be pinned"
+
+msgid "不支持的操作"
+msgstr "Unsupported action"
+
+msgid "下载"
+msgstr "Download"
+
+msgid "下载当前范围"
+msgstr "Download current range"
+
+msgid "CSV 表格"
+msgstr "CSV table"
+
+msgid "Excel 工作簿"
+msgstr "Excel workbook"
+
+msgid "PDF 文档"
+msgstr "PDF document"
+
+msgid "全量导出"
+msgstr "Full export"
+
+msgid "共"
+msgstr "Total"
+
+msgid "条"
+msgstr "records"
+
+msgid "不支持的导出格式"
+msgstr "Unsupported export format"
+
+msgid "选择文件"
+msgstr "Choose file"
+
+msgid "未选择文件"
+msgstr "No file selected"
+
+msgid "移除附件"
+msgstr "Remove attachment"
+
+msgid "点击下载"
+msgstr "Click to download"
+
+msgid "单附件，支持 PDF / Office / 图片 / TXT / CSV / ZIP，最大 10MB。"
+msgstr "Single attachment. Supports PDF / Office / images / TXT / CSV / ZIP, up to 10 MB."
+
+msgid "下载附件 %(name)s"
+msgstr "Download attachment %(name)s"
+
+msgid "请选择要上传的文件"
+msgstr "Choose a file to upload"
+
+msgid "不支持该文件类型，仅支持 PDF / Office / 图片 / TXT / CSV / ZIP"
+msgstr "Unsupported file type. Only PDF / Office / images / TXT / CSV / ZIP are allowed."
+
+msgid "附件不能超过 %(mb)sMB"
+msgstr "Attachment must not exceed %(mb)s MB"
+
+msgid "附件为空，请重新选择"
+msgstr "The attachment is empty; choose another file"
+
+msgid "下载后填写部门、角色与用户三张工作表，再从这里上传。"
+msgstr "Download the workbook, fill in the Departments, Roles and Users sheets, then upload it here."
+
+msgid "选择填写好的 XLSX；逐行校验，只创建缺失项，失败整表不写入。"
+msgstr "Choose the completed XLSX. Rows are validated, only missing items are created, and nothing is written if validation fails."
+
+msgid "直接应用内置模板"
+msgstr "Apply the built-in template"
+
+msgid "无需上传文件；按内置职能制架构补齐组织与账号。"
+msgstr "No upload needed; fill in the organization and accounts from the built-in functional template."
+
+msgid "模板内容"
+msgstr "Template contents"
+
+msgid "模板表文件"
+msgstr "Template file"
+
+msgid "下载 XLSX 模板"
+msgstr "Download XLSX template"
+
+msgid "选择 XLSX"
+msgstr "Choose XLSX"
+
+msgid "上传并应用"
+msgstr "Upload and apply"
+
+msgid "或直接应用内置模板"
+msgstr "Or apply the built-in template"
+
+msgid "三工作表（部门 / 角色 / 用户）逐行校验；只创建缺失项，不覆盖既有数据；失败整表不写入。"
+msgstr "Rows are validated across the three sheets (Departments / Roles / Users); only missing items are created, existing data is never overwritten, and no data is written if validation fails."
+
+msgid "模板未导入，未写入任何数据："
+msgstr "Template not imported. No data was written:"
+
+msgid "导入完成：新增 %(dept)s 个部门、%(role)s 个角色、%(user)s 个用户。"
+msgstr "Import complete: %(dept)s departments, %(role)s roles and %(user)s users added."
+
+msgid "请选择要上传的模板文件"
+msgstr "Choose a template file to upload"
+
+msgid "只支持 .xlsx 模板文件"
+msgstr "Only .xlsx template files are supported"
+
+msgid "模板文件不能超过 %(mb)sMB"
+msgstr "Template file must not exceed %(mb)s MB"
+
+msgid "无法读取该文件，请确认是有效的 .xlsx 模板"
+msgstr "Cannot read this file. Make sure it is a valid .xlsx template"
+
+msgid "缺少工作表：%(names)s"
+msgstr "Missing worksheets: %(names)s"
+
+msgid "部门表为空"
+msgstr "The departments sheet is empty"
+
+msgid "部门表缺少「部门名称」列"
+msgstr "The departments sheet is missing the Department name column"
+
+msgid "部门表第 %(row)s 行：部门名称不能为空"
+msgstr "Departments row %(row)s: department name is required"
+
+msgid "部门表第 %(row)s 行：部门名称不能超过 100 个字符"
+msgstr "Departments row %(row)s: department name must be at most 100 characters"
+
+msgid "部门表第 %(row)s 行：部门「%(name)s」重复"
+msgstr "Departments row %(row)s: duplicate department \"%(name)s\""
+
+msgid "部门表第 %(row)s 行：上级部门不能是自己"
+msgstr "Departments row %(row)s: a department cannot be its own parent"
+
+msgid "角色表为空"
+msgstr "The roles sheet is empty"
+
+msgid "角色表缺少「角色名称」列"
+msgstr "The roles sheet is missing the Role name column"
+
+msgid "角色表第 %(row)s 行：角色名称不能为空"
+msgstr "Roles row %(row)s: role name is required"
+
+msgid "角色表第 %(row)s 行：角色名称不能超过 100 个字符"
+msgstr "Roles row %(row)s: role name must be at most 100 characters"
+
+msgid "角色表第 %(row)s 行：角色「%(name)s」重复"
+msgstr "Roles row %(row)s: duplicate role \"%(name)s\""
+
+msgid "角色表存在未知权限码：%(codes)s"
+msgstr "The roles sheet contains unknown permission codes: %(codes)s"
+
+msgid "用户表为空"
+msgstr "The users sheet is empty"
+
+msgid "用户表缺少「账号」列"
+msgstr "The users sheet is missing the Username column"
+
+msgid "用户表第 %(row)s 行：账号不能为空"
+msgstr "Users row %(row)s: username is required"
+
+msgid "用户表第 %(row)s 行：账号只能包含字母、数字、_ . @ + -，且不超过 150 个字符"
+msgstr "Users row %(row)s: username may only contain letters, digits, _ . @ + -, and at most 150 characters"
+
+msgid "用户表第 %(row)s 行：账号「%(account)s」重复"
+msgstr "Users row %(row)s: duplicate username \"%(account)s\""
+
+msgid "用户表第 %(row)s 行：姓名不能超过 150 个字符"
+msgstr "Users row %(row)s: name must be at most 150 characters"
+
+msgid "用户表第 %(row)s 行：直属上级不能是自己"
+msgstr "Users row %(row)s: a user cannot be their own leader"
+
+msgid "模板没有可导入的数据行"
+msgstr "The template has no data rows to import"
+
+msgid "部门表第 %(row)s 行：上级部门「%(parent)s」不存在"
+msgstr "Departments row %(row)s: parent department \"%(parent)s\" does not exist"
+
+msgid "用户表第 %(row)s 行：部门「%(dept)s」不存在"
+msgstr "Users row %(row)s: department \"%(dept)s\" does not exist"
+
+msgid "用户表第 %(row)s 行：角色「%(role)s」不存在"
+msgstr "Users row %(row)s: role \"%(role)s\" does not exist"
+
+msgid "用户表第 %(row)s 行：直属上级「%(leader)s」不存在"
+msgstr "Users row %(row)s: leader \"%(leader)s\" does not exist"
+
+msgid "部门层级成环：%(name)s"
+msgstr "Department hierarchy contains a cycle at %(name)s"

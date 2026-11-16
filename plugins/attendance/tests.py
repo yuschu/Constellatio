@@ -922,3 +922,64 @@ class AttendanceJibbleDashboardTests(TestCase):
         self.assertIn('name="action" value="out"', html)
         self.assertIn('name="sign_type"', html)
         self.assertIn('name="next"', html)
+
+
+class AttendanceExportTests(TestCase):
+    """签到详情导出：CSV / XLSX / PDF 三格式，按当前筛选范围取全量。"""
+
+    @classmethod
+    def setUpTestData(cls):
+        from django.contrib.auth.models import Permission
+
+        from plugins.user.models import Role
+
+        cls.day = timezone.localdate()
+        cls.manager = User.objects.create_user('export_mgr', password='pw')
+        role = Role.objects.create(name='签到导出')
+        role.permissions.add(Permission.objects.get(codename='attendance_report_view'))
+        cls.manager.roles.add(role)
+        cls.late_user = User.objects.create_user(
+            'export_late', password='pw', last_name='迟到者')
+        cls.early_user = User.objects.create_user(
+            'export_early', password='pw', last_name='早退者')
+        Attendance.objects.create(
+            user=cls.late_user, date=cls.day, sign_type=Attendance.SignType.INTERNAL,
+            check_in=timezone.make_aware(datetime.combine(cls.day, time(9, 30))),
+            check_out=timezone.make_aware(datetime.combine(cls.day, time(18, 10))))
+        Attendance.objects.create(
+            user=cls.early_user, date=cls.day, sign_type=Attendance.SignType.EXTERNAL,
+            check_in=timezone.make_aware(datetime.combine(cls.day, time(8, 50))),
+            check_out=timezone.make_aware(datetime.combine(cls.day, time(17, 0))))
+
+    def setUp(self):
+        self.client.force_login(self.manager)
+
+    def _range(self):
+        return {
+            'start': datetime.combine(self.day, time(0, 0)).strftime('%Y-%m-%dT%H:%M'),
+            'end': datetime.combine(self.day, time(23, 59)).strftime('%Y-%m-%dT%H:%M'),
+        }
+
+    def test_csv_respects_current_filter(self):
+        response = self.client.get(
+            '/plugins/attendance/records/export/csv/',
+            {**self._range(), 'status': 'late'})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('attachment', response['Content-Disposition'])
+        self.assertIn('attendance-records-', response['Content-Disposition'])
+        text = response.content.decode('utf-8-sig')
+        self.assertIn('迟到者', text)
+        self.assertNotIn('早退者', text)
+
+    def test_xlsx_and_pdf_are_real_files(self):
+        for fmt, magic in (('xlsx', b'PK'), ('pdf', b'%PDF')):
+            response = self.client.get(
+                f'/plugins/attendance/records/export/{fmt}/', self._range())
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(response.content.startswith(magic))
+            self.assertIn(f'attendance-records-', response['Content-Disposition'])
+
+    def test_export_requires_report_permission(self):
+        self.client.force_login(User.objects.create_user('export_staff', password='pw'))
+        response = self.client.get('/plugins/attendance/records/export/csv/')
+        self.assertEqual(response.status_code, 403)
