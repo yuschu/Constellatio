@@ -977,7 +977,7 @@ class AttendanceExportTests(TestCase):
                 f'/plugins/attendance/records/export/{fmt}/', self._range())
             self.assertEqual(response.status_code, 200)
             self.assertTrue(response.content.startswith(magic))
-            self.assertIn(f'attendance-records-', response['Content-Disposition'])
+            self.assertIn('attendance-records-', response['Content-Disposition'])
 
     def test_export_requires_report_permission(self):
         self.client.force_login(User.objects.create_user('export_staff', password='pw'))
