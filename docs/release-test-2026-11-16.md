@@ -2,7 +2,7 @@
 
 > 范围：`D:\InformationTechnologyStudy\Constellatio` 当前工作区（HEAD `a5af121` + 未提交改动）。
 > 结论：**代码、测试、容器、真实页面与导出链路均通过，可作为本机/内网发版基线。**
-> 公网发布前仍需处理本文「发布前待确认」中的部署配置与测试范围问题；版本记录已在提交前更新到 v2.4.1。
+> 公网发布前仍需处理本文「发布前待确认」中的部署配置与测试范围问题；版本记录已更新到 v2.4.1，并已完成 tag 与 Release 发布。
 
 ---
 
@@ -141,12 +141,12 @@ Content-Length: 214935
 ### 6.2 版本记录
 
 - 测试时发现：`README.md` 仍写当前基线 `v2.2.15`（2026-11-15，650+ tests）；`docs/release-notes.md` 仍停在 `v2.2.15`（641 项测试）。
-- 本次提交前已更新 `README.md`、`docs/release-notes.md`、`docs/roadmap.md` 与 `docs/frontend-refactor-plan.md`，对齐到 **v2.4.1 发版候选 / 703 项测试**；`v2.4.1` tag 与 Release 仍是待打、待发布状态。
+- 本次提交前已更新 `README.md`、`docs/release-notes.md`、`docs/roadmap.md` 与 `docs/frontend-refactor-plan.md`，对齐到 **v2.4.1 / 703 项测试**；`v2.4.1` tag 与 Release 已发布（tag `0121265` → `9679c88`，Release 447176845）。
 - `requirements.txt` 已加入 `openpyxl==3.1.5` / `reportlab==5.1.0`（v2.4.0 导出注释）。
 
 ### 6.3 工作区杂物
 
-未跟踪文件 `0`（134,359 字节，内容为一次 grep 输出）与 `CON`（35 字节，内容为 GitHub 用户名提示）疑似误生成，不应进入提交。建议发版提交前删除或确认来源。
+未跟踪文件 `0`（134,359 字节，内容为一次 grep 输出）与 `CON`（35 字节，内容为 GitHub 用户名提示）已确认是误生成，不纳入提交，仍原样保留在工作区，待确认来源后清理。
 
 ### 6.4 测试范围说明
 

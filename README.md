@@ -4,7 +4,7 @@
 
 > **flexible plugin** — a full-stack, plugin-driven OA built on Django. The plugin container is the only fixed layer: infrastructure such as the database, themes, templates, charting, and authentication, together with business modules such as approvals, notices, and attendance, is fully pluggable and replaceable.
 
-**Current baseline**: `v2.4.1` release candidate (2026-11-16) · **703 automated tests passing** · target tag `v2.4.1` · Release pending
+**Current baseline**: `v2.4.1` (2026-11-16) · **703 automated tests passing** · tag `v2.4.1` · Release `v2.4.1 Beta` published
 **Workspace**: three-format exports, notice attachments, home notice panel, and conversation pin / rename / archive are in place · 703 automated tests passing
 
 ## ✨ Features
@@ -144,7 +144,7 @@ Most project documentation is written in Chinese.
 
 ## 📌 Status
 
-**v2.4.1 release candidate ready for tag** (2026-11-16): CSV / XLSX / PDF exports for activity records and attendance details, organization template download / import, notice attachments, the home `?panel=notice` feed, conversation pin / rename / copy ID / archive, and a final DSH interaction pass. **703 tests pass**; `v2.4.1` tag and Release are pending. See [docs/release-notes.md](docs/release-notes.md) for the full version record and upgrade notes.
+**v2.4.1 released** (2026-11-16): CSV / XLSX / PDF exports for activity records and attendance details, organization template download / import, notice attachments, the home `?panel=notice` feed, conversation pin / rename / copy ID / archive, and a final DSH interaction pass. **703 tests pass**; tag `v2.4.1` and Release `v2.4.1 Beta` are published. See [docs/release-notes.md](docs/release-notes.md) for the full version record and upgrade notes.
 
 ---
 
@@ -152,7 +152,7 @@ Most project documentation is written in Chinese.
 
 > **flexible plugin** —— 基于 Django 的全栈插件化 OA。插件容器是唯一固定层：数据库、外观、模板、图表、认证等基础设施，以及审批、公告、考勤等业务模块，全部可插拔、可替换。
 
-**当前基线**：`v2.4.1` 发版候选（2026-11-16）· **703 项自动化测试全绿** · 目标 tag `v2.4.1` · Release 待发布
+**当前基线**：`v2.4.1`（2026-11-16）· **703 项自动化测试全绿** · tag `v2.4.1` · Release `v2.4.1 Beta` 已发布
 **工作区**：导出三档、公告附件、首页公告面板、会话置顶 / 重命名 / 归档已收口 · 703 项测试全绿
 
 ## ✨ 特性
@@ -290,4 +290,4 @@ Constellatio/
 
 ## 📌 状态
 
-**v2.4.1 发版候选已收口，等待打 tag**（2026-11-16）：活动记录 / 签到详情 CSV / XLSX / PDF 三档导出、组织架构模板下载与导入、公告单附件、首页 `?panel=notice` 公告面板、会话置顶 / 重命名 / 复制 ID / 归档，以及最后一轮 DSH 交互细节收口。**703 项测试全绿**；`v2.4.1` tag 与 Release 待发布。完整版本记录与升级须知见 [docs/release-notes.md](docs/release-notes.md)。
+**v2.4.1 已发布**（2026-11-16）：活动记录 / 签到详情 CSV / XLSX / PDF 三档导出、组织架构模板下载与导入、公告单附件、首页 `?panel=notice` 公告面板、会话置顶 / 重命名 / 复制 ID / 归档，以及最后一轮 DSH 交互细节收口。**703 项测试全绿**；tag `v2.4.1` 与 Release `v2.4.1 Beta` 已发布。完整版本记录与升级须知见 [docs/release-notes.md](docs/release-notes.md)。

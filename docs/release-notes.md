@@ -12,8 +12,8 @@
 
 | 项 | 值 |
 |---|---|
-| 发版基线 | 本次发版提交（`v2.4.1` tag 待打） |
-| Release | 待发布 `v2.4.1 Beta` |
+| 发版基线 | tag `v2.4.1`（annotated `0121265`）→ `9679c88` |
+| Release | `v2.4.1 Beta` 已发布（2026-11-16，Release 447176845），接管 `Latest` |
 | 测试基线 | **703 项全绿**（`manage.py check` / 全量测试 / `compile_mo.py --check` / `pip check` / `docker compose config` / 容器 `check`） |
 | 变更范围 | `v2.2.15..本版` 当前工作区累计：**90 个文件，`+6154 / -471`**（含新增导出 / 附件 / 模板模块与文档）；新增 `assistant` 0005、`notice` 0003 迁移与 `openpyxl==3.1.5` / `reportlab==5.1.0` |
 
@@ -39,7 +39,7 @@
 ### 已知边界
 
 - 全量 703 项运行在宿主 SQLite 内存测试库；容器 MySQL 只做 `check`、迁移状态、真实 HTTP 与文件下载验证，未在 MySQL 内重跑全量。
-- `v2.4.1` tag 与 GitHub Release 尚未创建；发版提交后再打 annotated tag 并回填本文历史表。
+- `v2.4.1` tag 与 GitHub Release 已创建；发版提交 `9679c88`，annotated tag 指向同一提交。
 - 组织架构模板导入沿用原应用路径；模板格式变更仍需按 `docs/plugin-dev-structure.md` 的字段口径核对。
 
 ---
@@ -182,7 +182,7 @@ tag `v1.7.15` → commit `39baf42`（annotated）。基线 467 → **472 项全�
 
 | tag | 指向 | 是否等同"该版最终状态" | 说明 |
 |---|---|---|---|
-| `v2.4.1` | 待打 | ⏳ | 当前发版候选；tag / Release 在发版提交后创建并回填 |
+| `v2.4.1` | `9679c88` | ✅ | annotated tag `0121265`；Release `v2.4.1 Beta`（正文「导出三档、公告面板与交互收口」） |
 | `v2.2.15` | `4516307` | ✅ | 历史基线；annotated tag `3db10e3`，Release `v2.2.15 Beta`（正文 `# AI 助手 C1 普通单动作卡`） |
 | `v2.2.14` | `05ce668` | ✅ | 历史基线；annotated tag `becc22b`，Release `v2.2.14 Beta`（正文 `# AI 助手 A/B 阶段`） |
 | `v2.2.13` | `3fcf217` | ✅ | 历史基线；annotated tag `e4a73d6`，Release `v2.2.13 Beta`（正文 `# 视觉风格重构`） |
