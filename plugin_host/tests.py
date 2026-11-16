@@ -426,6 +426,15 @@ class ShortcutLayerTest(TestCase):
         self.assertContains(resp, '查看和编辑当前可用的快捷键和输入操作')
         self.assertContains(resp, '编辑快捷键')
 
+    def test_slash_command_menu_is_a_fixed_input_action(self):
+        """`/` 现在有真实命令菜单，参考卡必须把它列为输入框固定动作。"""
+        resp = self.client.get('/dashboard/')
+        html = resp.content.decode()
+        self.assertIn('打开命令菜单', html)
+        self.assertRegex(
+            html,
+            r'<kbd class="ds-shortcuts__key ds-shortcuts__key--fixed">/</kbd>')
+
     def test_shortcut_rows_expose_edit_contract(self):
         """每行有稳定 command id；页脚有恢复全部默认；固定输入行不进入覆盖表。"""
         resp = self.client.get('/dashboard/')

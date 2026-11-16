@@ -473,6 +473,7 @@
               {% csrf_token %}
               {% if conversation %}<input type="hidden" name="conversation" value="{{ conversation.pk }}">{% endif %}
               <input type="hidden" name="mode" value="readonly" data-ds-mode-input>
+              {% include "includes/ds_command_menu.html" %}
               <input type="file" class="as-file-input" name="attachments" multiple
                      accept="{{ attachment_accept }}" data-ds-file-input tabindex="-1"
                      data-ds-file-max-count="{{ attachment_max_count }}"
@@ -487,7 +488,8 @@
                    {% if not attachment_error %}hidden{% endif %}>{{ attachment_error }}</div>
               <div class="as-bar">
                 <button type="button" class="as-add" data-ds-attach
-                        aria-label="{% trans '附加文件' %}"
+                        aria-label="{% trans '添加文件或调用指令' %}"
+                        aria-haspopup="listbox" aria-expanded="false"
                         {% if not chat_enabled %}disabled{% endif %}>
                   <svg class="as-ico" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
                     <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" fill="none"/>
@@ -587,6 +589,7 @@
         {% csrf_token %}
         {% if conversation %}<input type="hidden" name="conversation" value="{{ conversation.pk }}">{% endif %}
         <input type="hidden" name="mode" value="readonly" data-ds-mode-input>
+        {% include "includes/ds_command_menu.html" %}
         <input type="file" class="as-file-input" name="attachments" multiple
                accept="{{ attachment_accept }}" data-ds-file-input tabindex="-1"
                data-ds-file-max-count="{{ attachment_max_count }}"
@@ -601,7 +604,8 @@
              {% if not attachment_error %}hidden{% endif %}>{{ attachment_error }}</div>
         <div class="as-bar">
           <button type="button" class="as-add" data-ds-attach
-                  aria-label="{% trans '附加文件' %}"
+                  aria-label="{% trans '添加文件或调用指令' %}"
+                  aria-haspopup="listbox" aria-expanded="false"
                   {% if not chat_enabled %}disabled{% endif %}>
             <svg class="as-ico" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
               <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" fill="none"/>

@@ -2267,3 +2267,30 @@ msgstr "Environment variable"
 
 msgid "请阅读附件"
 msgstr "Please read the attachment"
+
+msgid "命令菜单"
+msgstr "Command menu"
+
+msgid "打开命令菜单"
+msgstr "Open command menu"
+
+msgid "添加文件或调用指令"
+msgstr "Add a file or run a command"
+
+msgid "添加"
+msgstr "Add"
+
+msgid "指令"
+msgstr "Commands"
+
+msgid "文件"
+msgstr "File"
+
+msgid "附加文件到本条消息"
+msgstr "Attach a file to this message"
+
+msgid "查看当前模型，或打开模型设置"
+msgstr "View the current model, or open model settings"
+
+msgid "没有匹配的指令"
+msgstr "No matching commands"

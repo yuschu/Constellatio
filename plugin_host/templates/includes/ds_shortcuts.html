@@ -7,7 +7,7 @@
   - `Mod+/`（Windows 即 Ctrl+/）打开与关闭；设置面板里的「快捷键」行也开这同一张卡。
   - 每行可点「编辑」进入 DSH 同款内联编辑器：录制 / 移除 / 恢复默认；
     页脚「恢复全部默认」带二次确认。覆盖写 localStorage `constellatio.keybindings.v1`，
-    只改当前 `web:windows` profile。输入框 Enter / Shift+Enter 是 fixed 动作，只读。
+    只改当前 `web:windows` profile。输入框 `/` 命令菜单、Enter / Shift+Enter 是 fixed 动作，只读。
   - 默认键位（DSH 0.2.2 Web Windows 字面量）：
     session.new = Ctrl+Alt+N，sidebar.left.toggle = Ctrl+Alt+B（仅首页可折叠侧栏时列出），
     settings.open = Ctrl+Alt+,，shortcuts.open = Ctrl+/；Esc 关闭固定不可改。
@@ -116,6 +116,12 @@ session.archive` 在本项目没有对应后端动作，reference 卡不列无�
 
       <p class="ds-shortcuts__group">{% trans "输入框" %}</p>
       <ul class="ds-shortcuts__rows">
+        <li class="ds-shortcuts__row ds-shortcuts__row--fixed">
+          <span class="ds-shortcuts__label">{% trans "打开命令菜单" %}</span>
+          <span class="ds-shortcuts__binding">
+            <kbd class="ds-shortcuts__key ds-shortcuts__key--fixed">/</kbd>
+          </span>
+        </li>
         <li class="ds-shortcuts__row ds-shortcuts__row--fixed">
           <span class="ds-shortcuts__label">{% trans "发送消息" %}</span>
           <span class="ds-shortcuts__binding">

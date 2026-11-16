@@ -1,0 +1,48 @@
+{% load i18n %}
+{% comment %}
+DSH composer 的 `/` 命令菜单（v2.2.17，先接真实动作）：
+  - 只列本项目确实能执行的两条：`/file` 复用附件 input，`/model` 复用现有模型浮层；
+  - DSH 的 goal / plan / feedback / compact / permission / export / btw / library
+    在本项目没有对应后端，不进入菜单，不做「能点但不起作用」的假交互；
+  - 菜单挂在 composer 卡片内部，宽度等于 composer，向上展开；分组与行序照
+    `ui-commands` 的「添加 / 指令」。
+{% endcomment %}
+<div class="as-command-menu" data-ds-command-menu hidden>
+  <div class="as-command-menu__list" role="listbox" aria-label="{% trans '命令菜单' %}">
+    <div class="as-command-menu__group" data-ds-command-group>
+      <div class="as-command-menu__group-label">{% trans "添加" %}</div>
+      <button type="button" class="as-command-menu__row" role="option" tabindex="-1"
+              aria-selected="false" data-ds-command="file" data-ds-command-token="file">
+        <span class="as-command-menu__icon" aria-hidden="true">
+          <svg viewBox="0 0 16 16" width="15" height="15">
+            <path d="M9.2 2.2H5.1A2.1 2.1 0 0 0 3 4.3v7.4a2.1 2.1 0 0 0 2.1 2.1h5.8a2.1 2.1 0 0 0 2.1-2.1V6.2L9.2 2.2Z"
+                  stroke="currentColor" stroke-width="1.25" fill="none" stroke-linejoin="round"/>
+            <path d="M9.2 2.2v3.1c0 .55.45 1 1 1H13" stroke="currentColor"
+                  stroke-width="1.25" fill="none" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span class="as-command-menu__label">{% trans "文件" %}<span class="as-command-menu__token">file</span></span>
+        <span class="as-command-menu__desc">{% trans "附加文件到本条消息" %}</span>
+      </button>
+    </div>
+
+    <div class="as-command-menu__group" data-ds-command-group>
+      <div class="as-command-menu__group-label">{% trans "指令" %}</div>
+      <button type="button" class="as-command-menu__row" role="option" tabindex="-1"
+              aria-selected="false" data-ds-command="model" data-ds-command-token="model">
+        <span class="as-command-menu__icon" aria-hidden="true">
+          <svg viewBox="0 0 16 16" width="15" height="15">
+            <path d="M8 2.1 13.5 5 8 7.9 2.5 5 8 2.1Zm5.5 5.9L8 10.9 2.5 8"
+                  stroke="currentColor" stroke-width="1.25" fill="none"
+                  stroke-linejoin="round" stroke-linecap="round"/>
+            <path d="M13.5 8.6 8 11.6 2.5 8.6" stroke="currentColor"
+                  stroke-width="1.25" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span class="as-command-menu__label">{% trans "模型" %}<span class="as-command-menu__token">model</span></span>
+        <span class="as-command-menu__desc">{% trans "查看当前模型，或打开模型设置" %}</span>
+      </button>
+    </div>
+  </div>
+  <p class="as-command-menu__empty" data-ds-command-empty role="status" hidden>{% trans "没有匹配的指令" %}</p>
+</div>

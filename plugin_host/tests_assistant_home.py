@@ -100,6 +100,45 @@ class AssistantHomePageTests(TestCase):
         self.assertNotRegex(html, r'<button[^>]*data-ds-attach[^>]*disabled')
         self.assertNotRegex(html, r'<button[^>]*data-ds-send[^>]*disabled')
 
+    def test_composer_has_real_slash_commands_only(self):
+        """`/` 菜单首版只列有真实动作的 file/model，不铺没有后端的 DSH 假命令。"""
+        self.client.force_login(self.user)
+        response = self.client.get('/')
+        html = response.content.decode()
+        self.assertGreaterEqual(html.count('data-ds-command-menu'), 1)
+        self.assertGreaterEqual(html.count('data-ds-command="file"'), 1)
+        self.assertGreaterEqual(html.count('data-ds-command="model"'), 1)
+        self.assertGreaterEqual(html.count('data-ds-command-empty'), 1)
+        self.assertIn('aria-haspopup="listbox"', html)
+        self.assertIn('添加文件或调用指令', html)
+        template = (
+            Path(settings.BASE_DIR) /
+            'plugins/assistant/templates/assistant/home_chat.html'
+        ).read_text(encoding='utf-8')
+        self.assertEqual(template.count('includes/ds_command_menu.html'), 2)
+        for token in ('goal', 'plan', 'feedback', 'compact', 'permission',
+                      'export', 'btw', 'library'):
+            self.assertNotIn('data-ds-command="%s"' % token, html)
+
+    def test_slash_menu_uses_existing_controls_and_keyboard_contract(self):
+        """命令菜单必须复用现有附件 input 与模型浮层，并保留 Enter 发送边界。"""
+        shell = (Path(settings.BASE_DIR) / 'plugin_host/static/js/ds-shell.js'
+                 ).read_text(encoding='utf-8')
+        self.assertIn('data-ds-command-menu', shell)
+        self.assertIn('commandContext', shell)
+        self.assertIn("e.key === 'ArrowDown'", shell)
+        self.assertIn("e.key === 'Escape'", shell)
+        self.assertIn("modelTrigger.click()", shell)
+        self.assertIn("fileInput.click()", shell)
+
+        css = (Path(settings.BASE_DIR) /
+               'plugins/assistant/static/assistant/css/assistant.css'
+               ).read_text(encoding='utf-8')
+        self.assertIn('.as-command-menu {', css)
+        self.assertIn('bottom: calc(100% + 10px)', css)
+        self.assertIn('max-height: min(320px, calc(100dvh - 140px))', css)
+        self.assertIn('@media (width <= 560px)', css)
+
     def test_composer_local_echo_before_post(self):
         """发送后立刻有反馈：两张 composer 都挂 pending 钩子，shell 提交即回显。
 

@@ -1,4 +1,4 @@
-/* DSH 外壳交互（v2.0.5，侧栏收起 v2.0.8）
+/* DSH 外壳交互（v2.0.5，侧栏收起 v2.0.8，命令菜单 v2.2.17）
  *
  * 行为与参数取自 dsh 客户端源码，不是像素采样：
  *   侧栏   dsh-client-ui-sidebar/SidebarRoot     —— 收起 = slide + crossfade、settled 150ms 后落 36×36 图标行、
@@ -8,7 +8,10 @@
  *   设置   dsh-client-ui-settings-general/Panel   —— 800×800 grid（nav 188px）、Esc/遮罩/关闭收起、
  *          关闭后焦点回到触发控件、Web 快捷键 Mod+Alt+,
  *   输入框 dsh-client-ui-conversation/Composer    —— min-height 36（hero 52）、max 336、
- *          Enter 发送 / Shift+Enter 换行 / 输入法组字期间不发送
+ *          Enter 发送 / Shift+Enter 换行 / 输入法组字期间不发送；
+ *          `/` 打开命令菜单，↑↓ 选择、Enter/Tab 执行、Esc 关闭。
+ *   命令   dsh-client-ui-commands                —— 首版只接有真实动作的 /file 与 /model，
+ *          其余 goal/plan/feedback/compact/permission/export/btw/library 无后端，不列假命令。
  */
 (function () {
   'use strict';
@@ -360,6 +363,16 @@
       var fileList = card.querySelector('[data-ds-file-list]');
       var fileError = card.querySelector('[data-ds-file-error]');
       var attach = card.querySelector('[data-ds-attach]');
+      var commandMenu = card.querySelector('[data-ds-command-menu]');
+      var commandEmpty = commandMenu && commandMenu.querySelector('[data-ds-command-empty]');
+      var commandRows = commandMenu
+        ? Array.prototype.slice.call(commandMenu.querySelectorAll('[data-ds-command]'))
+        : [];
+      var commandGroups = commandMenu
+        ? Array.prototype.slice.call(commandMenu.querySelectorAll('[data-ds-command-group]'))
+        : [];
+      var commandActive = null;
+      var commandSource = null;
       var selectedFiles = [];
       var maxFiles = parseInt(
         (fileInput && fileInput.dataset.dsFileMaxCount) || '3', 10) || 3;
@@ -504,12 +517,167 @@
         setSelectedFiles(next);
       }
 
+      function visibleCommandRows() {
+        return commandRows.filter(function (row) { return !row.hidden; });
+      }
+
+      function commandContext() {
+        if (!commandMenu) return null;
+        var caret = typeof input.selectionStart === 'number'
+          ? input.selectionStart : input.value.length;
+        // 与 DSH 的 slash 输入机一致：命令 token 必须位于行首或空白之后，
+        // 且光标在 token 末尾；光标落在 token 中间时不抢普通文本编辑。
+        if (caret !== input.value.length) return null;
+        var before = input.value.slice(0, caret);
+        var match = /(^|\s)\/([^\s/]*)$/.exec(before);
+        if (!match) return null;
+        return {
+          start: match.index + match[1].length,
+          end: caret,
+          query: match[2]
+        };
+      }
+
+      function setCommandActive(row) {
+        commandActive = row || null;
+        commandRows.forEach(function (item) {
+          var active = item === commandActive;
+          item.classList.toggle('is-active', active);
+          item.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+        if (commandActive && commandActive.scrollIntoView) {
+          try {
+            commandActive.scrollIntoView({ block: 'nearest' });
+          } catch (e) { commandActive.scrollIntoView(false); }
+        }
+      }
+
+      function refreshCommandMenu() {
+        if (!commandMenu || commandMenu.hidden) return;
+        var query = '';
+        if (commandSource === 'slash') {
+          var context = commandContext();
+          if (!context) {
+            closeCommandMenu(false);
+            return;
+          }
+          query = context.query.toLowerCase();
+        }
+        var visible = [];
+        commandRows.forEach(function (row) {
+          var text = (row.textContent + ' ' +
+            (row.getAttribute('data-ds-command-token') || '')).toLowerCase();
+          var match = !query || text.indexOf(query) !== -1;
+          row.hidden = !match;
+          if (match) visible.push(row);
+        });
+        commandGroups.forEach(function (group) {
+          group.hidden = !group.querySelector('[data-ds-command]:not([hidden])');
+        });
+        if (commandEmpty) commandEmpty.hidden = visible.length > 0;
+        if (!visible.length) {
+          setCommandActive(null);
+          return;
+        }
+        var index = visible.indexOf(commandActive);
+        setCommandActive(visible[index < 0 ? 0 : index]);
+      }
+
+      function openCommandMenu(source) {
+        if (!commandMenu || locked) return;
+        commandSource = source;
+        commandMenu.hidden = false;
+        if (attach) attach.setAttribute('aria-expanded', 'true');
+        if (source === 'button') setCommandActive(null);
+        refreshCommandMenu();
+      }
+
+      function closeCommandMenu(focusInput) {
+        if (!commandMenu) return;
+        commandMenu.hidden = true;
+        commandSource = null;
+        setCommandActive(null);
+        if (attach) attach.setAttribute('aria-expanded', 'false');
+        if (focusInput) input.focus();
+      }
+
+      function executeCommand(row) {
+        if (!row) return;
+        var context = commandContext();
+        if (context) {
+          var value = input.value;
+          input.value = value.slice(0, context.start) + value.slice(context.end);
+          try { input.setSelectionRange(context.start, context.start); }
+          catch (e) { /* 极旧浏览器不支持 setSelectionRange */ }
+        }
+        closeCommandMenu(false);
+        writeDraft();
+        autosize();
+        syncSend();
+
+        var command = row.getAttribute('data-ds-command');
+        if (command === 'file') {
+          if (fileInput) fileInput.click();
+        } else if (command === 'model') {
+          var modelTrigger = card.querySelector('[data-ds-model-trigger]');
+          if (modelTrigger) modelTrigger.click();
+        }
+        // 模型浮层会自己把焦点放到第一项；附件选择器关闭后焦点回输入框。
+        if (command !== 'model') input.focus();
+      }
+
+      function moveCommand(delta) {
+        var visible = visibleCommandRows();
+        if (!visible.length) return;
+        var index = visible.indexOf(commandActive);
+        if (index < 0) index = 0;
+        else index = (index + delta + visible.length) % visible.length;
+        setCommandActive(visible[index]);
+      }
+
       if (attach && fileInput) {
-        attach.addEventListener('click', function () {
+        attach.addEventListener('click', function (event) {
+          event.preventDefault();
           if (attach.disabled || locked) return;
-          fileInput.click();
+          if (!commandMenu) {
+            fileInput.click();
+            return;
+          }
+          if (!commandMenu.hidden) {
+            closeCommandMenu(true);
+            return;
+          }
+          openCommandMenu(commandContext() ? 'slash' : 'button');
+          input.focus();
         });
         fileInput.addEventListener('change', handleFileSelection);
+      }
+
+      if (commandMenu) {
+        // 点击行不抢走 textarea 焦点，保持 DSH combobox 的输入连贯性。
+        commandMenu.addEventListener('mousedown', function (event) {
+          event.preventDefault();
+        });
+        commandMenu.addEventListener('click', function (event) {
+          var row = event.target.closest &&
+            event.target.closest('[data-ds-command]');
+          if (!row) return;
+          event.preventDefault();
+          executeCommand(row);
+        });
+        commandMenu.addEventListener('mouseover', function (event) {
+          var row = event.target.closest &&
+            event.target.closest('[data-ds-command]');
+          if (row && !row.hidden) setCommandActive(row);
+        });
+        document.addEventListener('pointerdown', function (event) {
+          if (commandMenu.hidden) return;
+          if (commandMenu.contains(event.target)) return;
+          // 同一个 `+` 按钮要承担开/关两态；把关闭交给 click 处理器，
+          // 否则 pointerdown 先关、click 又开，按钮永远关不上。
+          if (attach && attach.contains(event.target)) return;
+          closeCommandMenu(false);
+        });
       }
 
       // DSH 发送态：提交那一刻先把本地回显和运行状态画进对话，
@@ -644,9 +812,25 @@
       }
 
       input.addEventListener('input', function () {
+        if (commandMenu) {
+          if (commandContext()) {
+            if (commandMenu.hidden || commandSource !== 'slash') {
+              openCommandMenu('slash');
+            } else {
+              refreshCommandMenu();
+            }
+          } else if (!commandMenu.hidden) {
+            closeCommandMenu(false);
+          }
+        }
         writeDraft();
         autosize();
         syncSend();
+      });
+      input.addEventListener('click', function () {
+        if (!commandMenu || commandMenu.hidden) return;
+        if (!commandContext()) closeCommandMenu(false);
+        else refreshCommandMenu();
       });
       input.addEventListener('compositionstart', function () { input.dataset.composing = '1'; });
       input.addEventListener('compositionend', function () {
@@ -656,9 +840,45 @@
       });
 
       input.addEventListener('keydown', function (e) {
-        if (e.key !== 'Enter' || e.shiftKey) return;
-        // 输入法组字中回车是「上屏」，不能当发送
+        // 输入法组字中回车是「上屏」，不能当发送或选命令
         if (e.isComposing || input.dataset.composing) return;
+
+        if (commandMenu && !commandMenu.hidden) {
+          if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            moveCommand(e.key === 'ArrowDown' ? 1 : -1);
+            return;
+          }
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            closeCommandMenu(true);
+            return;
+          }
+          if (e.key === 'Tab') {
+            if (e.shiftKey) {
+              e.preventDefault();
+              closeCommandMenu(true);
+              return;
+            }
+            if (commandActive && !commandActive.hidden) {
+              e.preventDefault();
+              executeCommand(commandActive);
+              return;
+            }
+          }
+          if (e.key === 'Enter' && !e.shiftKey) {
+            if (commandActive && !commandActive.hidden) {
+              e.preventDefault();
+              executeCommand(commandActive);
+              return;
+            }
+            // 没有可执行行时退回普通发送，不把 `/xyz` 卡在菜单里。
+            closeCommandMenu(false);
+          }
+        }
+
+        if (e.key !== 'Enter' || e.shiftKey) return;
         e.preventDefault();
         if (send && !send.disabled) send.click();
       });

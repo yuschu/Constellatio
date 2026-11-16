@@ -2043,3 +2043,67 @@ after 的 `loaderHiddenAt` 54–97ms 与 `load` 同量级，`loaderSeen=false` �
 - 浏览器级保留组合（如 `Ctrl+W` / `Ctrl+T` / `Ctrl+N` / `Ctrl+Shift+T`）尚未全部纳入
   `bindingIssue`；录键阶段可能接受但浏览器优先拦截，后续按需补拒绝清单。
 - 录制按钮 CSS 声明 `0.5px` 边框，Chrome 计算值报 `1px`（子像素舍入），未强制改成 1px。
+
+### 9.13.45 斜杠命令菜单先接真实动作（v2.2.17 / 2026-11-16）
+
+**范围**
+
+- 首版只接两条有真实交互的 DSH 命令：
+  - `/file`：复用 composer 的 `[data-ds-file-input]`，执行后打开现有附件选择器；选中后仍走
+    既有校验、chip、移除与提交路径。
+  - `/model`：复用现有模型浮层 `[data-ds-model-trigger]` / `[data-ds-model-menu]`；执行后打开
+    「当前模型 + 模型设置入口」。它不是 DSH 的「切换本会话模型」，菜单描述按本项目真实能力写成
+    `查看当前模型，或打开模型设置`。
+- DSH 的 `goal` / `plan` / `feedback` / `compact` / `permission` / `export` / `btw` / `library`
+  在本项目没有对应后端或真实交互，**不进入菜单**，避免「能点但不起作用」的假命令。截图中
+  `library` 以下被截断，完整 DSH 列表仍未从截图确认。
+
+**触发与键盘**
+
+- `/` token 规则照 DSH conversation `input/decorations.ts`：只在行首或空白之后，且光标在 token
+  末尾时打开；正则 `/(^|\s)\/([^\s/]*)$/`。光标落在 token 中间、`hello/x` 这种词内斜杠不打开。
+- 输入时实时过滤；匹配 `文件 / file / 描述` 与 `模型 / model / 描述` 文本；两组同时过滤，
+  空组隐藏；没有匹配时显示 `没有匹配的指令`，不伪造空命令。
+- `ArrowDown` / `ArrowUp` 在可见行内循环；`Enter` / `Tab` 执行当前行；`Shift+Tab`、`Esc`
+  关闭；`Esc` 关闭后焦点回输入框；`Shift+Enter` 仍换行；没有可执行行时 `Enter` 关闭菜单并
+  退回普通发送。输入法组字期间不处理。
+- `+` 照 DSH `InputBar` 的 `onToggleCommandMenu` 改为同一菜单的开/关两态，不再直接弹文件
+  选择器。pointerdown 先关、click 再开会导致按钮关不上，因此 `+` 的 pointerdown 不参与外部
+  关闭，由 click 统一 toggle。
+
+**模板与样式**
+
+- 新建 `plugin_host/templates/includes/ds_command_menu.html`：`[data-ds-command-menu]` +
+  `[role=listbox]`，`添加` 组放 `file`，`指令` 组放 `model`；空态 `[data-ds-command-empty]`。
+- `home_chat.html` 两处 composer（hero / docked）各 include 一次；`data-ds-attach` 的
+  `aria-label` 改为 `添加文件或调用指令`，补 `aria-haspopup="listbox"` / `aria-expanded`。
+- `assistant.css` 新增 `.as-command-menu`：绝对定位在 composer 上方 10px、左右贴齐、z-index 20、
+  `max-height: min(320px, calc(100dvh - 140px))`、16px 圆角、0.5px 发丝线、elevated 背景、
+  行高 34、图标 16、标签 13/20、token 12/18、描述右对齐；`@media (width <= 560px)` 隐藏描述。
+- `ds_shortcuts.html` 输入框组新增固定只读行 `打开命令菜单 /`；`/` 不参与自定义覆盖。
+
+**门禁与真实栈**
+
+- 新增 `tests_assistant_home` 两条：两处 include、只允许 `file/model`、无 DSH 假命令；命令菜单
+  复用 `fileInput` / `modelTrigger`，并含方向键/Esc/窄屏 CSS 契约。
+- `ShortcutLayerTest` 新增 `/` 固定行断言；全量 `671 tests` OK；`manage.py check`、
+  `ruff check plugin_host plugins`、`node --check ds-shell.js`、`compile_mo.py --check` 均通过。
+- 容器重建后静态版本 `?v=620fdcd5308d6edf`；真实浏览器（1440×900，admin）：
+  - `/` 打开菜单 `763×140`、x=475 与 composer 对齐、bottom 433 与 composer top 451 留 18；
+    首行 `file` active，`+` aria-expanded=true。
+  - `/mo` 过滤后只剩 `model`，`添加` 组隐藏；`ArrowDown` 选中 `model`；`Enter` 执行后
+    输入里的 token 被清空，模型浮层打开 `320×184`，焦点落到浮层内链接。
+  - `/fi` 经 click spy 验证只触发 1 次现有 `fileInput.click()`，菜单关闭、`aria-expanded=false`；
+    未新增独立附件路径。
+  - `Esc` 关闭菜单并回焦点输入框；`/zz` 显示空态；`hello/x` 不打开；`+` 连续点击可开/关。
+  - 深色菜单 `rgb(67,69,74)`；500px viewport 下菜单随 composer 宽 181px、描述隐藏、
+    `scrollWidth == clientWidth`，无横向滚动。
+  - 控制台无 error。
+
+**已知边界与未决**
+
+- `+` 从「直接选文件」改为「开/关菜单」是照 DSH 的行为，但改变原有单击预期；若更看重旧习惯，
+  可改成 `+` 直接选文件、`/` 才开菜单，需要产品决定。
+- `/model` 只是打开现有浮层，不是切换本会话模型；菜单文案已按真实能力降级。
+- `/settings`、`/shortcuts`、`/new` 等站内已有真实动作尚未纳入；本轮不擅自扩成 DSH 全量命令。
+- 当前只在首页两处 composer 接入；对话页复用同一 partial 时需要补挂载与回归。

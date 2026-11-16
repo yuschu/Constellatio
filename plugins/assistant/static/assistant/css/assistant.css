@@ -834,6 +834,126 @@ div.as-more__menu {
   outline-offset: 2px;
 }
 
+/* 命令菜单：DSH composer 的 `/` 菜单表面，宽度等于 composer 卡片，向上展开。
+   首版只放两条真实动作；分组标题与行距照 ui-commands 的“添加 / 指令”。 */
+.as-command-menu {
+  position: absolute;
+  z-index: 20;
+  right: 0;
+  bottom: calc(100% + 10px);
+  left: 0;
+  max-height: min(320px, calc(100dvh - 140px));
+  padding: 6px 8px 8px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 0.5px solid var(--as-border-l3);
+  border-radius: 16px;
+  background: var(--as-elevated-fill);
+  box-shadow: 0 16px 40px #00000014, 0 2px 8px #0000000a;
+  color: var(--as-label-primary);
+  corner-shape: superellipse(1.5);
+}
+
+.as-command-menu[hidden] {
+  display: none;
+}
+
+.as-command-menu__group[hidden],
+.as-command-menu__row[hidden] {
+  display: none;
+}
+
+.as-command-menu__group-label {
+  padding: 8px 8px 4px;
+  color: var(--as-label-caption);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.as-command-menu__row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.as-command-menu__row:hover,
+.as-command-menu__row.is-active,
+.as-command-menu__row[aria-selected="true"] {
+  background: var(--as-interactive-hover);
+}
+
+.as-command-menu__row:focus-visible {
+  outline: 2px solid var(--as-button-info-fill);
+  outline-offset: -2px;
+}
+
+.as-command-menu__icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  align-self: center;
+  width: 16px;
+  color: var(--as-label-tertiary);
+}
+
+.as-command-menu__label {
+  flex: none;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 13px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.as-command-menu__token {
+  color: var(--as-label-secondary);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+}
+
+.as-command-menu__desc {
+  min-width: 0;
+  margin-left: auto;
+  overflow: hidden;
+  color: var(--as-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.as-command-menu__empty {
+  margin: 0;
+  padding: 10px 8px 6px;
+  color: var(--as-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.as-command-menu__empty[hidden] {
+  display: none;
+}
+
+@media (width <= 560px) {
+  .as-command-menu__desc {
+    display: none;
+  }
+}
+
+
 /* modes / standardControls / trailing */
 .as-modes {
   display: flex;
