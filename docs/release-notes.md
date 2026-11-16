@@ -8,13 +8,13 @@
 
 ---
 
-## 当前版本：v2.4.1 发版候选（2026-11-16，导出三档 + 公告面板 + 交互收口）
+## 当前版本：v2.4.1（2026-11-16，导出三档 + 公告面板 + 交互收口）
 
 | 项 | 值 |
 |---|---|
 | 发版基线 | tag `v2.4.1`（annotated `0121265`）→ `9679c88` |
 | Release | `v2.4.1 Beta` 已发布（2026-11-16，Release 447176845），接管 `Latest` |
-| 测试基线 | **703 项全绿**（`manage.py check` / 全量测试 / `compile_mo.py --check` / `pip check` / `docker compose config` / 容器 `check`） |
+| 测试基线 | **703 项全绿**（`manage.py check` / 全量测试 / `compile_mo.py --check` / `pip check` / `docker compose config` / 容器 `check`）；`ruff check` 在发版提交漏跑，CI 首轮暴露 F541，已在 `e1bedfa` 修正并本地复跑通过 |
 | 变更范围 | `v2.2.15..本版` 当前工作区累计：**90 个文件，`+6154 / -471`**（含新增导出 / 附件 / 模板模块与文档）；新增 `assistant` 0005、`notice` 0003 迁移与 `openpyxl==3.1.5` / `reportlab==5.1.0` |
 
 ### v2.4.0–v2.4.1 做了什么
@@ -39,8 +39,21 @@
 ### 已知边界
 
 - 全量 703 项运行在宿主 SQLite 内存测试库；容器 MySQL 只做 `check`、迁移状态、真实 HTTP 与文件下载验证，未在 MySQL 内重跑全量。
-- `v2.4.1` tag 与 GitHub Release 已创建；发版提交 `9679c88`，annotated tag 指向同一提交。
+- `v2.4.1` tag 与 GitHub Release 已创建；发版提交 `9679c88`，annotated tag 指向同一提交。该提交的 CI 首轮失败，修复提交只在 `main`，tag 按“已发布不回改”保持不动（见下节）。
 - 组织架构模板导入沿用原应用路径；模板格式变更仍需按 `docs/plugin-dev-structure.md` 的字段口径核对。
+
+### 发布后 CI 修复（2026-11-16）
+
+发版提交 `9679c88` 与文档提交 `06682a3` 的 CI 均失败，根因不在运行时代码：
+
+| 项 | 值 |
+|---|---|
+| 失败 1：Ruff | `9679c88` run `43889268142` failure；`06682a3` run `43890272845` failure；`plugins/attendance/tests.py:980` `F541 f-string without any placeholders` |
+| 修复 1 | `e1bedfa` `test: remove stray f-string prefix in attendance export test`；Ruff 通过，Django checks 继续暴露缺依赖 |
+| 失败 2：Django checks | `e1bedfa` run `43891858966` failure；`plugin_host/exporting.py:14` 导入 `openpyxl` 报 `ModuleNotFoundError`，CI 只装 `requirements-dev.txt` |
+| 修复 2 | `9049334` `ci: install export dependencies in dev requirements`；`requirements-dev.txt` 加 `openpyxl==3.1.5` / `reportlab==5.1.0` |
+| CI 结果 | `9049334` run `43891996423` **success**（job `133385398917`）；Ruff / Django checks / deploy checks / coverage 全部通过 |
+| tag 处理 | `v2.4.1` 仍指向 `9679c88`，不移动；两笔修复只影响测试与 CI 依赖，运行时代码未变 |
 
 ---
 
@@ -182,7 +195,7 @@ tag `v1.7.15` → commit `39baf42`（annotated）。基线 467 → **472 项全�
 
 | tag | 指向 | 是否等同"该版最终状态" | 说明 |
 |---|---|---|---|
-| `v2.4.1` | `9679c88` | ✅ | annotated tag `0121265`；Release `v2.4.1 Beta`（正文「导出三档、公告面板与交互收口」） |
+| `v2.4.1` | `9679c88` | ✅ | annotated tag `0121265`；Release `v2.4.1 Beta`（正文「导出三档、公告面板与交互收口」）；CI 首轮失败，修复见上文「发布后 CI 修复」 |
 | `v2.2.15` | `4516307` | ✅ | 历史基线；annotated tag `3db10e3`，Release `v2.2.15 Beta`（正文 `# AI 助手 C1 普通单动作卡`） |
 | `v2.2.14` | `05ce668` | ✅ | 历史基线；annotated tag `becc22b`，Release `v2.2.14 Beta`（正文 `# AI 助手 A/B 阶段`） |
 | `v2.2.13` | `3fcf217` | ✅ | 历史基线；annotated tag `e4a73d6`，Release `v2.2.13 Beta`（正文 `# 视觉风格重构`） |

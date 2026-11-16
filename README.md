@@ -117,7 +117,7 @@ Most project documentation is written in Chinese.
 
 | Document | Contents |
 | --- | --- |
-| [docs/release-notes.md](docs/release-notes.md) | **Release hub**: current v2.4.1 release candidate, release history, tag checkout guide, and upgrade notes |
+| [docs/release-notes.md](docs/release-notes.md) | **Release hub**: current v2.4.1 release, release history, tag checkout guide, and upgrade notes |
 | [docs/tech-stack-and-architecture.md](docs/tech-stack-and-architecture.md) | Technology choices, full-stack plugin architecture, plugin contracts, and competitor research |
 | [docs/constraints-and-acceptance.md](docs/constraints-and-acceptance.md) | Hard constraints, feature boundaries, acceptance criteria, development standards, and risks |
 | [docs/database-design.md](docs/database-design.md) | Database design (pluginized: independent tables and migrations per plugin) |
@@ -263,7 +263,7 @@ Constellatio/
 
 | 文档 | 内容 |
 | --- | --- |
-| [docs/release-notes.md](docs/release-notes.md) | **发版总入口**：v2.4.1 发版候选、历史收口、按 tag 检出指路、升级须知 |
+| [docs/release-notes.md](docs/release-notes.md) | **发版总入口**：v2.4.1 已发布、历史收口、按 tag 检出指路、升级须知 |
 | [docs/tech-stack-and-architecture.md](docs/tech-stack-and-architecture.md) | 技术选型、全栈插件化架构、插件契约、竞品调研 |
 | [docs/constraints-and-acceptance.md](docs/constraints-and-acceptance.md) | 硬约束、功能边界、验收标准、开发规范、风险 |
 | [docs/database-design.md](docs/database-design.md) | 数据库设计（插件化：每插件独立表与迁移） |

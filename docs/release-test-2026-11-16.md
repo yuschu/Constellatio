@@ -154,6 +154,13 @@ Content-Length: 214935
 - 容器 MySQL 只做了 `check`、依赖、迁移状态、真实 HTTP、真实文件下载，**未在容器 MySQL 内重跑全量测试**，避免在生产库实例上创建/销毁 `test_constellatio`。
 - 因此 MySQL 专属行为（如特定排序、大小写、索引）不在本次 703 项的直接覆盖范围内；如需更强保证，应在独立测试库上补跑。
 
+### 6.5 发布后 CI 修复
+
+- 发版提交 `9679c88` 与文档提交 `06682a3` 的 CI 均失败：`plugins/attendance/tests.py:980` 的 `f'attendance-records-'` 触发 Ruff `F541`。
+- `e1bedfa` 去掉多余 `f` 前缀后 Ruff 通过，但 Django checks 因 CI 只装 `requirements-dev.txt`、缺 `openpyxl` 而失败。
+- `9049334` 在 `requirements-dev.txt` 增加 `openpyxl==3.1.5` / `reportlab==5.1.0`；该提交 CI run `43891996423` **success**，Ruff / Django checks / deploy checks / coverage 全部通过。
+- `v2.4.1` tag 仍指向 `9679c88`，按“已发布 tag 不回改”不移动；两笔修复只影响测试与 CI 依赖，运行时代码未变。
+
 ---
 
 ## 7. 发版建议
