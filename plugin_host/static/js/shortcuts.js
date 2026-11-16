@@ -186,7 +186,7 @@
     }).join('+');
   }
 
-  function renderKeys(box, keys) {
+  function renderKeys(box, keys, keyClass) {
     if (!box) { return; }
     box.textContent = '';
     if (!keys) {
@@ -197,7 +197,7 @@
     box.classList.remove('is-unbound');
     splitKeys(keys).forEach(function (part) {
       var key = document.createElement('kbd');
-      key.className = 'ds-shortcuts__key';
+      key.className = keyClass || 'ds-shortcuts__key';
       key.textContent = part;
       box.appendChild(key);
     });
@@ -223,7 +223,8 @@
       document.querySelectorAll('[data-ds-shortcut-keys]'), function (el) {
         var id = el.getAttribute('data-ds-shortcut-keys');
         var box = el.querySelector('[data-ds-shortcut-keycaps]') || el;
-        renderKeys(box, keysOfId(id));
+        renderKeys(box, keysOfId(id),
+          box.classList.contains('ds-settings__keycaps') ? 'ds-kbd' : null);
       });
   }
 
