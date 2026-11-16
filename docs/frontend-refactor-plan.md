@@ -2106,4 +2106,4 @@ after 的 `loaderHiddenAt` 54–97ms 与 `load` 同量级，`loaderSeen=false` �
   可改成 `+` 直接选文件、`/` 才开菜单，需要产品决定。
 - `/model` 只是打开现有浮层，不是切换本会话模型；菜单文案已按真实能力降级。
 - `/settings`、`/shortcuts`、`/new` 等站内已有真实动作尚未纳入；本轮不擅自扩成 DSH 全量命令。
-- 当前只在首页两处 composer 接入；对话页复用同一 partial 时需要补挂载与回归。
+- 首页与对话页共用同一模板，两处 composer 均已接入；空首页只渲染 hero，有消息时渲染 docked。
