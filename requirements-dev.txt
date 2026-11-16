@@ -3,3 +3,6 @@ django==5.2.18
 whitenoise==6.12.0
 ruff==0.6.9
 coverage==7.6.10
+# v2.4.0 导出三档：测试与 check 会导入 openpyxl / reportlab
+openpyxl==3.1.5
+reportlab==5.1.0
