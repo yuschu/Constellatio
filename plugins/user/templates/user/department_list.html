@@ -32,7 +32,7 @@
           <td>{{ d.name }}</td>
           <td>{{ d.parent.name|default:'—' }}</td>
           <td>{{ d.members.count }}</td>
-          <td class="text-nowrap">{% if d.is_active %}<span class="r-badge r-badge--green">{% trans "启用" %}</span>{% else %}<span class="r-badge r-badge--orange">{% trans "停用" %}</span>{% endif %}</td>
+          <td class="text-nowrap">{% if d.is_active %}{% trans "启用" %}{% else %}<span class="r-badge r-badge--orange">{% trans "停用" %}</span>{% endif %}</td>
           <td class="text-nowrap">
             <div class="d-flex align-items-center gap-2">
               {# v2.1.5：修改走 ?view=edit&id= 深链；不能带 data-ds-modal-open，就地打开的是列表页预渲染的「新建」弹层 #}

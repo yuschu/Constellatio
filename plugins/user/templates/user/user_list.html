@@ -34,7 +34,7 @@
           </td>
           <td>
             {% if u.is_active and u.permission_frozen %}<span class="r-badge r-badge--blue">{% trans "权限冻结" %}</span>
-            {% elif u.is_active %}<span class="r-badge">{% trans "启用" %}</span>
+            {% elif u.is_active %}{% trans "启用" %}
             {% else %}<span class="r-badge r-badge--orange">{% trans "禁用" %}</span>{% endif %}
           </td>
           <td class="text-nowrap">
