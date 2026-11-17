@@ -2878,14 +2878,18 @@ body.as-body .as-sidebar a:hover {
   text-decoration: none;
 }
 
-/* 面板内部仍要主题的链接口径（「查看全部公告」「审批中心 →」等）；
-   按钮是 a.r-btn，不是链接，别被这条染成链接蓝；
-   二级页（设置弹层）里的链接由 .ds-settings* 自己的口径负责，不受这条影响 */
-body.as-body .as-panelview a:not(.r-btn) {
-  color: var(--ds-link);
+/* 面板内的 a 不再统一染成链接蓝：主题的 a 规则已经给出普通链接口径，
+   组件类（.r-btn / .text-muted / .lc-* / .ds-file-card 等）保留自己的语义色。
+   在这里统一覆盖会压掉这些类的颜色，把按钮、分段控件和元信息一起变蓝。 */
+
+/* 首页面板不加载 bootstrap，.text-muted 这类工具类在这里没有定义；
+   公告「已读 N 人」等元信息链接按 DSH 三级文字着色，hover 回到一级。 */
+body.as-body .as-panelview a.text-muted {
+  color: var(--ds-label-tertiary);
 }
 
-body.as-body .as-panelview a:not(.r-btn):hover {
+body.as-body .as-panelview a.text-muted:hover {
+  color: var(--ds-label-primary);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
