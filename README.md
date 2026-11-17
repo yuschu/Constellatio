@@ -4,8 +4,8 @@
 
 > **flexible plugin** — a full-stack, plugin-driven OA built on Django. The plugin container is the only fixed layer: infrastructure such as the database, themes, templates, charting, and authentication, together with business modules such as approvals, notices, and attendance, is fully pluggable and replaceable.
 
-**Current baseline**: `v2.4.1` (2026-11-16) · **703 automated tests passing** · tag `v2.4.1` · Release `v2.4.1 Beta` published
-**Workspace**: three-format exports, notice attachments, home notice panel, and conversation pin / rename / archive are in place · 703 automated tests passing
+**Current baseline**: `v2.4.2` (2026-11-17) · **703 automated tests passing** · tag `v2.4.2` · Release `v2.4.2 Beta` published
+**Workspace**: DSH semantic colors for panel buttons and anchors, plus plain-text active status, are in place · 703 automated tests passing
 
 ## ✨ Features
 
@@ -33,7 +33,7 @@
 
 ### Frontend and experience
 
-* 🖥 **DSH-style frontend (v2.2.0–v2.2.13, refined through v2.4.1)**: the sidebar's wide and narrow states, settings sheet, composer, plugin page, dashboard, attendance, site-wide scrollbars, page transitions, pagination buttons, activity-row actions, plugin switches, and menu SVGs are aligned item by item with the DSH source
+* 🖥 **DSH-style frontend (v2.2.0–v2.2.13, refined through v2.4.2)**: the sidebar's wide and narrow states, settings sheet, composer, plugin page, dashboard, attendance, site-wide scrollbars, page transitions, pagination buttons, activity-row actions, plugin switches, and menu SVGs are aligned item by item with the DSH source
 * 🎨 **Theme consolidation**: the built-in themes are light and dark, controlled by one site-wide switch; additional themes are installed under `themes/<key>/theme.json` and automatically appear in the "Theme packs" row
 
 ### Security and engineering
@@ -117,14 +117,14 @@ Most project documentation is written in Chinese.
 
 | Document | Contents |
 | --- | --- |
-| [docs/release-notes.md](docs/release-notes.md) | **Release hub**: current v2.4.1 release, release history, tag checkout guide, and upgrade notes |
+| [docs/release-notes.md](docs/release-notes.md) | **Release hub**: current v2.4.2 release, release history, tag checkout guide, and upgrade notes |
 | [docs/tech-stack-and-architecture.md](docs/tech-stack-and-architecture.md) | Technology choices, full-stack plugin architecture, plugin contracts, and competitor research |
 | [docs/constraints-and-acceptance.md](docs/constraints-and-acceptance.md) | Hard constraints, feature boundaries, acceptance criteria, development standards, and risks |
 | [docs/database-design.md](docs/database-design.md) | Database design (pluginized: independent tables and migrations per plugin) |
 | [docs/development-guide.md](docs/development-guide.md) | Development workflow, environment, container implementation, plugin development, and coding conventions |
 | [docs/ai-assisted-development-guide.md](docs/ai-assisted-development-guide.md) | AI-assisted development behavior and iteration standards |
 | [docs/project-overview.md](docs/project-overview.md) | Project overview, usage guide, and plugin development examples |
-| [docs/roadmap.md](docs/roadmap.md) | Gap matrix, v1.5–v2.4.1 roadmap, fixes, and documentation debt |
+| [docs/roadmap.md](docs/roadmap.md) | Gap matrix, v1.5–v2.4.2 roadmap, fixes, and documentation debt |
 
 ### Frontend and AI plans
 
@@ -144,7 +144,7 @@ Most project documentation is written in Chinese.
 
 ## 📌 Status
 
-**v2.4.1 released** (2026-11-16): CSV / XLSX / PDF exports for activity records and attendance details, organization template download / import, notice attachments, the home `?panel=notice` feed, conversation pin / rename / copy ID / archive, and a final DSH interaction pass. **703 tests pass**; tag `v2.4.1` and Release `v2.4.1 Beta` are published. See [docs/release-notes.md](docs/release-notes.md) for the full version record and upgrade notes.
+**v2.4.2 released** (2026-11-17): a DSH visual-semantics patch on top of v2.4.1. Panel buttons return to the near-black primary / neutral ghost / outline / danger-outline set, panel anchors keep their own semantic colors instead of being uniformly painted link-blue, and the `启用` value in the user and department status columns renders as plain body text (abnormal states keep their colored badges). **703 tests pass**; tag `v2.4.2` and Release `v2.4.2 Beta` are published. See [docs/release-notes.md](docs/release-notes.md) for the full version record and upgrade notes.
 
 ---
 
@@ -152,8 +152,8 @@ Most project documentation is written in Chinese.
 
 > **flexible plugin** —— 基于 Django 的全栈插件化 OA。插件容器是唯一固定层：数据库、外观、模板、图表、认证等基础设施，以及审批、公告、考勤等业务模块，全部可插拔、可替换。
 
-**当前基线**：`v2.4.1`（2026-11-16）· **703 项自动化测试全绿** · tag `v2.4.1` · Release `v2.4.1 Beta` 已发布
-**工作区**：导出三档、公告附件、首页公告面板、会话置顶 / 重命名 / 归档已收口 · 703 项测试全绿
+**当前基线**：`v2.4.2`（2026-11-17）· **703 项自动化测试全绿** · tag `v2.4.2` · Release `v2.4.2 Beta` 已发布
+**工作区**：面板按钮与锚点的 DSH 语义色、状态列「启用」纯文本已收口 · 703 项测试全绿
 
 ## ✨ 特性
 
@@ -181,7 +181,7 @@ Most project documentation is written in Chinese.
 
 ### 前端与体验
 
-* 🖥 **DSH 化前端（v2.2.0–v2.2.13，v2.4.1 细节收口）**：侧栏宽窄两态与设置弹层、输入框、插件页、看板、考勤、全站滚动条、页面切换、分页按钮、活动行操作、插件开关与菜单 SVG 按 DSH 源码逐项对齐
+* 🖥 **DSH 化前端（v2.2.0–v2.2.13，v2.4.2 细节收口）**：侧栏宽窄两态与设置弹层、输入框、插件页、看板、考勤、全站滚动条、页面切换、分页按钮、活动行操作、插件开关与菜单 SVG 按 DSH 源码逐项对齐
 * 🎨 **外观收口**：内置外观即浅色 / 深色，设置里一个开关全站生效；更多外观放 `themes/<key>/theme.json` 装包，自动出现在「外观包」行
 
 ### 安全与工程
@@ -263,14 +263,14 @@ Constellatio/
 
 | 文档 | 内容 |
 | --- | --- |
-| [docs/release-notes.md](docs/release-notes.md) | **发版总入口**：v2.4.1 已发布、历史收口、按 tag 检出指路、升级须知 |
+| [docs/release-notes.md](docs/release-notes.md) | **发版总入口**：v2.4.2 已发布、历史收口、按 tag 检出指路、升级须知 |
 | [docs/tech-stack-and-architecture.md](docs/tech-stack-and-architecture.md) | 技术选型、全栈插件化架构、插件契约、竞品调研 |
 | [docs/constraints-and-acceptance.md](docs/constraints-and-acceptance.md) | 硬约束、功能边界、验收标准、开发规范、风险 |
 | [docs/database-design.md](docs/database-design.md) | 数据库设计（插件化：每插件独立表与迁移） |
 | [docs/development-guide.md](docs/development-guide.md) | 开发流程、环境、容器实现、插件开发、编程规约 |
 | [docs/ai-assisted-development-guide.md](docs/ai-assisted-development-guide.md) | AI 辅助开发行为规范、迭代规范 |
 | [docs/project-overview.md](docs/project-overview.md) | 项目说明、使用指南、插件开发示例 |
-| [docs/roadmap.md](docs/roadmap.md) | 差距矩阵、v1.5–v2.4.1 迭代路线、修复项与文档债务 |
+| [docs/roadmap.md](docs/roadmap.md) | 差距矩阵、v1.5–v2.4.2 迭代路线、修复项与文档债务 |
 
 ### 前端与 AI 规划
 
@@ -290,4 +290,4 @@ Constellatio/
 
 ## 📌 状态
 
-**v2.4.1 已发布**（2026-11-16）：活动记录 / 签到详情 CSV / XLSX / PDF 三档导出、组织架构模板下载与导入、公告单附件、首页 `?panel=notice` 公告面板、会话置顶 / 重命名 / 复制 ID / 归档，以及最后一轮 DSH 交互细节收口。**703 项测试全绿**；tag `v2.4.1` 与 Release `v2.4.1 Beta` 已发布。完整版本记录与升级须知见 [docs/release-notes.md](docs/release-notes.md)。
+**v2.4.2 已发布**（2026-11-17）：v2.4.1 之上的 DSH 视觉语义补丁 —— 面板按钮恢复近黑主按钮 / 中性 ghost / outline / 危险描边四档；面板锚点不再被统一染成链接蓝，组件类保留各自语义色；用户与部门状态列的「启用」改为与部门列一致的纯文本，异常态（禁用 / 权限冻结 / 停用）继续用状态色胶囊。**703 项测试全绿**；tag `v2.4.2` 与 Release `v2.4.2 Beta` 已发布。完整版本记录与升级须知见 [docs/release-notes.md](docs/release-notes.md)。

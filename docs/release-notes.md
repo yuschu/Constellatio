@@ -4,16 +4,47 @@
 > 单版实现细节仍以 `docs/plugin-dev-vXXXX.md` 为准，本文件只做汇总与指路。
 > **命名规范**：GitHub Release 标题统一写作 `vX.Y.Z Beta`（例：`v2.2.13 Beta`）；**tag 名保持 `vX.Y.Z`**（annotated，不带 `Beta`——tag 是不可变引用，`Beta` 只是 Release 层级的展示标记）。
 >
-> **上一版已发布（2026-11-15）**：**v2.2.15 Beta**（AI 助手 C1 普通单动作卡）收口。C1 在对话内为普通审批单生成只读动作卡，卡片直接 POST 原 `approval_detail`，用户点击后才写库；无新写工具、无新 URL、无新模型字段、无迁移。会签单 `dept_delete` / `user_disable` 不出卡。全量 **641 项测试**；正式栈事务内卡片 200、POST 302、`approved`、`ApprovalRecord` 1 条、回滚后 `Approval` 48→48。A/B 阶段基线仍为 v2.2.14（632 项，A 最新一轮 20/20，六类草稿）。已发版，Release 线推进到 `v2.2.15`。
+> **上一版已发布（2026-11-16）**：**v2.4.1 Beta**（导出三档、公告面板与交互收口）收口。CSV / XLSX / PDF 三档导出、公告附件与首页 `?panel=notice` 面板、组织架构模板、助手会话菜单与 DSH 交互细节落地；全量 **703 项测试**。发布后两轮 CI 失败（Ruff F541、缺 `openpyxl` / `reportlab`）已以 `e1bedfa` / `9049334` 修正，tag 保持不动。已发版，Release 线推进到 `v2.4.2`。
 
 ---
 
-## 当前版本：v2.4.1（2026-11-16，导出三档 + 公告面板 + 交互收口）
+## 当前版本：v2.4.2（2026-11-17，DSH 面板语义色与状态列收口）
+
+| 项 | 值 |
+|---|---|
+| 发版基线 | tag `v2.4.2`（annotated，指向本版提交） |
+| Release | `v2.4.2 Beta` 已发布（2026-11-17），接管 `Latest` |
+| 测试基线 | **703 项全绿**（`ruff check` / `manage.py check` / 全量测试 / `makemigrations --check` / `compile_mo.py --check` / `pip check` / `docker compose config` / 容器 `check`） |
+| 变更范围 | `v2.4.1..本版`：4 个运行时文件（`plugin_host/static/css/ds-panels.css`、`plugins/assistant/static/assistant/css/assistant.css`、`user_list.html`、`department_list.html`），2 个 CI / 测试文件（`requirements-dev.txt`、`plugins/attendance/tests.py`），其余为文档；无新增迁移、无新增依赖 |
+
+### v2.4.2 做了什么
+
+- **面板按钮恢复 DSH 语义**：`plugin_host/static/css/ds-panels.css` 里 `.ds-settings .r-btn` 从 info 蓝底改回近黑主按钮（深色近白），`--ghost` 改为透明底 + 二级文字、hover 只叠 `interactive-hover`；新增 `.r-btn--plain`（透明底 + 0.5px 描边，附件「选择文件」）与 `.r-btn--danger`（透明底 + 危险色文字 / 1px 描边）。蓝只留给链接与状态，不再做大面积按钮底色。
+- **面板锚点保留组件语义色**：删除 `plugins/assistant/static/assistant/css/assistant.css` 里 `body.as-body .as-panelview a:not(.r-btn)` 的统一链接色覆盖，普通 `a` 回到主题默认，`.r-btn` / `.lc-*` / 分段控件 / `.ds-file-card` 不再被一起染蓝；公告「已读 N 人」等 `.text-muted` 锚点单独按 DSH 三级文字着色，hover 回一级并加下划线。
+- **状态列「启用」去胶囊**：`plugins/user/templates/user/user_list.html` 与 `department_list.html` 的状态列把「启用」改为与部门 / 名称列一致的正文纯文本；`禁用`（橙）、`权限冻结`（蓝）、`停用`（橙）仍保留状态色胶囊。实测同一行 `部门` 与 `状态` 的 computed 样式一致：`13px / 400 / rgb(15,17,21)`，深色 `rgb(249,250,251)`。
+- **发布后 CI 修复纳入本版**：v2.4.1 之后的两笔 CI 修复（`e1bedfa` 去掉多余 f-string 前缀、`9049334` 在 `requirements-dev.txt` 补 `openpyxl==3.1.5` / `reportlab==5.1.0`）随本版一起发布，CI 不再因 Ruff F541 或缺导出依赖失败。
+- **真机与门禁**：容器重建后在 8000 实测公告面板（按钮近黑底白字、已读灰、普通无类锚点仍 `rgb(65,118,230)`）、看板（分段控件 `rgb(97,102,107)`、正文行 `rgb(15,17,21)`）、用户 / 部门列表（`启用` 裸文本、异常态胶囊保留）；全量 **703 项 OK**。
+
+### 升级须知
+
+- **无数据库迁移、无新增依赖**；`docker compose up -d --build` 重建镜像即可（模板与静态 CSS 都打进镜像，entrypoint 会 `collectstatic`）。
+- 若只替换静态文件而不重建镜像，8000 仍会看到旧模板和旧 CSS；本版以重建后的镜像为验收基线。
+- 回滚可直接切回 `v2.4.1` 镜像；本版没有数据或 schema 变化，不需要回滚数据。
+
+### 已知边界
+
+- 全量 703 项运行在宿主 SQLite 内存测试库；容器 MySQL 只做 `check`、迁移状态与真实 HTTP / 页面验证，未在 MySQL 内重跑全量。
+- 本版只按「启用」口径去胶囊；`组织架构` 与用户详情里的「在职」仍是绿色胶囊，若要与状态列统一需另开一项。
+- `v2.4.2` tag 按“已发布不回改”原则创建；后续文档修正只进 `main`，不移动 tag。
+
+---
+
+## 历史版本：v2.4.1（2026-11-16，导出三档 + 公告面板 + 交互收口）
 
 | 项 | 值 |
 |---|---|
 | 发版基线 | tag `v2.4.1`（annotated `0121265`）→ `9679c88` |
-| Release | `v2.4.1 Beta` 已发布（2026-11-16，Release 447176845），接管 `Latest` |
+| Release | `v2.4.1 Beta` 已发布（2026-11-16，Release 447176845），当时接管 `Latest`；现由 `v2.4.2 Beta` 接管 |
 | 测试基线 | **703 项全绿**（`manage.py check` / 全量测试 / `compile_mo.py --check` / `pip check` / `docker compose config` / 容器 `check`）；`ruff check` 在发版提交漏跑，CI 首轮暴露 F541，已在 `e1bedfa` 修正并本地复跑通过 |
 | 变更范围 | `v2.2.15..本版` 当前工作区累计：**90 个文件，`+6154 / -471`**（含新增导出 / 附件 / 模板模块与文档）；新增 `assistant` 0005、`notice` 0003 迁移与 `openpyxl==3.1.5` / `reportlab==5.1.0` |
 
@@ -195,6 +226,7 @@ tag `v1.7.15` → commit `39baf42`（annotated）。基线 467 → **472 项全�
 
 | tag | 指向 | 是否等同"该版最终状态" | 说明 |
 |---|---|---|---|
+| `v2.4.2` | 本版提交 | ✅ | annotated tag；Release `v2.4.2 Beta`（正文「DSH 面板语义色与状态列收口」）；无迁移、无新增依赖 |
 | `v2.4.1` | `9679c88` | ✅ | annotated tag `0121265`；Release `v2.4.1 Beta`（正文「导出三档、公告面板与交互收口」）；CI 首轮失败，修复见上文「发布后 CI 修复」 |
 | `v2.2.15` | `4516307` | ✅ | 历史基线；annotated tag `3db10e3`，Release `v2.2.15 Beta`（正文 `# AI 助手 C1 普通单动作卡`） |
 | `v2.2.14` | `05ce668` | ✅ | 历史基线；annotated tag `becc22b`，Release `v2.2.14 Beta`（正文 `# AI 助手 A/B 阶段`） |
@@ -253,9 +285,10 @@ tag `v1.7.15` → commit `39baf42`（annotated）。基线 467 → **472 项全�
 | v1.7.7 | 403 | v1.7.15 | 472 |
 | | | v1.7.16 | **483** |
 | v2.2.13 | **564** | v2.2.14 | **632** |
-| v2.2.15 | **641** | | |
+| v2.2.15 | **641** | v2.4.1 | **703** |
+| v2.4.2 | **703** | | |
 
-v1.7.8 交付时为 410，收尾补到 413；v1.7.14 交付时 466，收尾补到 467。数字增长来自新增用例，没有放宽任何既有断言。v2.2.14 为 632 项（v2.2.13 为 564 项）；v2.2.15 为 641 项（C1 新增 9 项）。
+v1.7.8 交付时为 410，收尾补到 413；v1.7.14 交付时 466，收尾补到 467。数字增长来自新增用例，没有放宽任何既有断言。v2.2.14 为 632 项（v2.2.13 为 564 项）；v2.2.15 为 641 项（C1 新增 9 项）；v2.4.1 与 v2.4.2 均为 703 项（v2.4.2 是纯展示修补，未增删用例）。
 
 ---
 

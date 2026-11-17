@@ -1,6 +1,6 @@
 # 前端重构方案（参考 DeepSeek Harness）
 
-> 状态：**已执行并收口（v2.2.13，2026-11-14；v2.4.1 交互细节续收口，2026-11-16）**。本文保留方案与判据，并在 §9.13 记录逐项实现与验收；当前 703 项测试，tag `v2.4.1` 与 Release `v2.4.1 Beta` 已发布。
+> 状态：**已执行并收口（v2.2.13，2026-11-14；v2.4.1 交互细节续收口，2026-11-16；v2.4.2 面板语义色与状态列收口，2026-11-17）**。本文保留方案与判据，并在 §9.13 记录逐项实现与验收；当前 703 项测试，tag `v2.4.2` 与 Release `v2.4.2 Beta` 已发布。
 > 依据：`deepseek-ai/deepseek-harness` 的公开结构与文档 + 本项目实测盘点（数字均可复核）。
 > 决策记录：负责人已选定「引入组件框架」档位 + 「向 DSH 深色极简靠近」视觉基调；本文在该档位内给出三条可选实现与推荐。
 
@@ -2567,3 +2567,27 @@ after 的 `loaderHiddenAt` 54–97ms 与 `load` 同量级，`loaderSeen=false` �
 - `manage.py check`：0 issues。
 - `docker compose up -d --build web` 重建并启动 `constellatio-web-1`。
 - 本轮未重跑全量 703 项；分页按钮类、活动「查看」按钮类均已加回归断言。
+
+### 9.13.54 面板语义色与状态列「启用」纯文本（v2.4.2 / 2026-11-17）
+
+**按钮与附件卡**
+
+- `plugin_host/static/css/ds-panels.css`：`.ds-settings .r-btn` 由 info 蓝底改回 DSH 主按钮近黑底（`--as-button-primary-fill`，深色走近白），文字为 `--as-button-primary-label`；`.r-btn--ghost` 去描边、透明底、`--as-label-secondary` 文字，hover 只叠 `--as-interactive-hover` 并回一级文字；新增 `.r-btn--plain`（透明底 + `.5px` 内描边）与 `.r-btn--danger`（透明底 + 危险色文字 / `1px` 描边）。
+- 实测浅色：发布按钮白字 `rgb(255,255,255)` / 底 `rgb(15,17,21)`；取消 ghost `rgb(97,102,107)`；附件卡白底、`.5px` 内描边、图标 `rgb(97,102,107)`。深色：发布按钮底 `rgb(249,250,251)`、字 `rgb(15,17,21)`。
+
+**面板锚点**
+
+- `plugins/assistant/static/assistant/css/assistant.css`：删除 `body.as-body .as-panelview a:not(.r-btn)` 与 `:hover` 的统一链接色规则；普通 `a` 回到主题默认，`.r-btn` / `.lc-*` / 分段控件 / `.ds-file-card` 保留自身语义色。
+- 新增 `body.as-body .as-panelview a.text-muted`：默认 `--ds-label-tertiary`，hover 回 `--ds-label-primary` 并加 `2px` 下划线。
+- 实测浅色：公告「已读 N 人」`rgb(129,133,140)`，hover `rgb(15,17,21)`；看板 `今日 / 本周`、`审批中心 →` `rgb(97,102,107)`；`查看全部公告 / 消息中心 →`、tally / session 行、附件卡标题 `rgb(15,17,21)`；普通无类锚点探针仍 `rgb(65,118,230)`。深色「已读」`rgb(173,178,184)`。
+
+**状态列**
+
+- `plugins/user/templates/user/user_list.html` 与 `department_list.html`：`启用` 去掉 `r-badge`，改为与 `部门 / 名称` 列一致的正文纯文本；`禁用` / `权限冻结` / `停用` 保留橙 / 蓝状态胶囊。
+- 实测同一行 `部门` 与 `状态` computed 完全一致：`13px / 400 / 20px`、浅色 `rgb(15,17,21)`、深色 `rgb(249,250,251)`；8000 真机用户列表与部门列表前 5 行均为裸文本。
+
+**验证**
+
+- 全量 **703 项 OK**（191.887s，exit 0）；`ruff`、`check`、`makemigrations --check`、`compile_mo.py --check`、`pip check`、`docker compose config`、容器 `check` 全绿；迁移 pending = 0。
+- 截图：`.tmp-test/notice-links-dsh.png`、`.tmp-test/dashboard-links-dsh.png`、`.tmp-test/user-list-status-plain.png`、`.tmp-test/dept-list-status-plain.png`。
+- 组织架构与用户详情的「在职」仍为绿色胶囊，本版未改，作为口径边界记录在 release notes。
