@@ -2879,12 +2879,13 @@ body.as-body .as-sidebar a:hover {
 }
 
 /* 面板内部仍要主题的链接口径（「查看全部公告」「审批中心 →」等）；
+   按钮是 a.r-btn，不是链接，别被这条染成链接蓝；
    二级页（设置弹层）里的链接由 .ds-settings* 自己的口径负责，不受这条影响 */
-body.as-body .as-panelview a {
+body.as-body .as-panelview a:not(.r-btn) {
   color: var(--ds-link);
 }
 
-body.as-body .as-panelview a:hover {
+body.as-body .as-panelview a:not(.r-btn):hover {
   text-decoration: underline;
   text-underline-offset: 2px;
 }

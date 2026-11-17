@@ -870,7 +870,9 @@ html[data-color-mode="dark"] .ds-settings .r-badge--orange {
   background: var(--as-interactive-hover, #2631480f);
 }
 
-/* 只在首页设置弹层里补按钮外观；业务页主题自己的 .r-btn 不受影响 */
+/* 只在首页设置弹层里补按钮外观；业务页主题自己的 .r-btn 不受影响。
+   DSH 主按钮近黑（深色近白），info 蓝只用于链接 / 状态，不做大面积底色；
+   否则公告独立页与公告弹层里的「发布 / 取消 / 选择文件」都会被染成蓝色。 */
 .ds-settings .r-btn,
 .ds-settings .r-btn--ghost {
   display: inline-flex;
@@ -881,8 +883,8 @@ html[data-color-mode="dark"] .ds-settings .r-badge--orange {
   padding: 0 12px;
   border: 0;
   border-radius: var(--as-radius-sm, 8px);
-  background: var(--as-button-info-fill, #4176e6);
-  color: var(--as-bg-base, #fff);
+  background: var(--as-button-primary-fill, #111318);
+  color: var(--as-button-primary-label, #fff);
   font: inherit;
   font-size: 13px;
   line-height: 1;
@@ -891,19 +893,47 @@ html[data-color-mode="dark"] .ds-settings .r-badge--orange {
 }
 
 .ds-settings .r-btn:hover {
-  background: var(--as-button-info-hover, #3560cc);
-  color: var(--as-bg-base, #fff);
+  background: var(--as-button-primary-hover, #2b2d33);
+  color: var(--as-button-primary-label, #fff);
 }
 
+/* ghost：透明底、无描边，hover 只叠一层 interactive-hover */
 .ds-settings .r-btn--ghost {
   background: transparent;
-  color: var(--as-link, #4176e6);
-  box-shadow: inset 0 0 0 0.5px var(--as-border-l2, #0000001a);
+  color: var(--as-label-secondary, #61666b);
+  box-shadow: none;
 }
 
 .ds-settings .r-btn--ghost:hover {
-  background: var(--as-interactive-hover, #f5f6f7);
-  color: var(--as-link, #4176e6);
+  background: var(--as-interactive-hover, #2631480f);
+  color: var(--as-label-primary, #0f1115);
+  box-shadow: none;
+}
+
+/* outline：透明底 + .5px 描边；附件「选择文件」走这一档 */
+.ds-settings .r-btn--plain {
+  background: transparent;
+  color: var(--as-label-primary, #0f1115);
+  box-shadow: inset 0 0 0 0.5px var(--as-border-l3, #0000001f);
+}
+
+.ds-settings .r-btn--plain:hover {
+  background: var(--as-interactive-hover, #2631480f);
+  color: var(--as-label-primary, #0f1115);
+  box-shadow: inset 0 0 0 0.5px var(--as-border-l3, #0000001f);
+}
+
+/* 危险语义只用于文字与描边，不做底色 */
+.ds-settings .r-btn--danger {
+  background: transparent;
+  color: var(--as-error, #ec1313);
+  box-shadow: inset 0 0 0 1px var(--as-error, #ec1313);
+}
+
+.ds-settings .r-btn--danger:hover {
+  background: var(--as-interactive-hover, #2631480f);
+  color: var(--as-error, #ec1313);
+  box-shadow: inset 0 0 0 1px var(--as-error, #ec1313);
 }
 
 /* ---------- 消息中心 ---------- */
