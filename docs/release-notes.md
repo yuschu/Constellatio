@@ -12,8 +12,8 @@
 
 | 项 | 值 |
 |---|---|
-| 发版基线 | tag `v2.4.2`（annotated，指向本版提交） |
-| Release | `v2.4.2 Beta` 已发布（2026-11-17），接管 `Latest` |
+| 发版基线 | tag `v2.4.2`（annotated `88bfa01`）→ `2638eff` |
+| Release | `v2.4.2 Beta` 已发布（2026-11-17 10:55，Release 448030068），接管 `Latest` |
 | 测试基线 | **703 项全绿**（`ruff check` / `manage.py check` / 全量测试 / `makemigrations --check` / `compile_mo.py --check` / `pip check` / `docker compose config` / 容器 `check`） |
 | 变更范围 | `v2.4.1..本版`：4 个运行时文件（`plugin_host/static/css/ds-panels.css`、`plugins/assistant/static/assistant/css/assistant.css`、`user_list.html`、`department_list.html`），2 个 CI / 测试文件（`requirements-dev.txt`、`plugins/attendance/tests.py`），其余为文档；无新增迁移、无新增依赖 |
 
@@ -226,7 +226,7 @@ tag `v1.7.15` → commit `39baf42`（annotated）。基线 467 → **472 项全�
 
 | tag | 指向 | 是否等同"该版最终状态" | 说明 |
 |---|---|---|---|
-| `v2.4.2` | 本版提交 | ✅ | annotated tag；Release `v2.4.2 Beta`（正文「DSH 面板语义色与状态列收口」）；无迁移、无新增依赖 |
+| `v2.4.2` | `2638eff` | ✅ | annotated tag `88bfa01`；Release `v2.4.2 Beta`（正文「DSH 面板语义色与状态列收口」，id `448030068`）；无迁移、无新增依赖 |
 | `v2.4.1` | `9679c88` | ✅ | annotated tag `0121265`；Release `v2.4.1 Beta`（正文「导出三档、公告面板与交互收口」）；CI 首轮失败，修复见上文「发布后 CI 修复」 |
 | `v2.2.15` | `4516307` | ✅ | 历史基线；annotated tag `3db10e3`，Release `v2.2.15 Beta`（正文 `# AI 助手 C1 普通单动作卡`） |
 | `v2.2.14` | `05ce668` | ✅ | 历史基线；annotated tag `becc22b`，Release `v2.2.14 Beta`（正文 `# AI 助手 A/B 阶段`） |
