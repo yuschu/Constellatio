@@ -1,6 +1,6 @@
 # 前端重构方案（参考 DeepSeek Harness）
 
-> 状态：**已执行并收口（v2.2.13，2026-11-14；v2.4.1 交互细节续收口，2026-11-16；v2.4.2 面板语义色与状态列收口，2026-11-17）**。本文保留方案与判据，并在 §9.13 记录逐项实现与验收；当前 703 项测试，tag `v2.4.2` 与 Release `v2.4.2 Beta` 已发布。
+> 状态：**已执行并收口（v2.2.13，2026-11-14；v2.4.1 交互细节续收口，2026-11-16；v2.4.2 面板语义色与状态列收口，2026-11-17；v2.4.3 滚动条闲置隐藏，2026-11-20）**。本文保留方案与判据，并在 §9.13 记录逐项实现与验收；当前 703 项测试，tag `v2.4.3` 与 Release `v2.4.3 Beta` 已发布。
 > 依据：`deepseek-ai/deepseek-harness` 的公开结构与文档 + 本项目实测盘点（数字均可复核）。
 > 决策记录：负责人已选定「引入组件框架」档位 + 「向 DSH 深色极简靠近」视觉基调；本文在该档位内给出三条可选实现与推荐。
 
@@ -2591,3 +2591,24 @@ after 的 `loaderHiddenAt` 54–97ms 与 `load` 同量级，`loaderSeen=false` �
 - 全量 **703 项 OK**（191.887s，exit 0）；`ruff`、`check`、`makemigrations --check`、`compile_mo.py --check`、`pip check`、`docker compose config`、容器 `check` 全绿；迁移 pending = 0。
 - 截图：`.tmp-test/notice-links-dsh.png`、`.tmp-test/dashboard-links-dsh.png`、`.tmp-test/user-list-status-plain.png`、`.tmp-test/dept-list-status-plain.png`。
 - 组织架构与用户详情的「在职」仍为绿色胶囊，本版未改，作为口径边界记录在 release notes。
+
+### 9.13.55 滚动条闲置隐藏（v2.4.3 / 2026-11-20）
+
+**问题**
+
+- 全站滚动条由主题 CSS 定义、助手会话页由 `assistant.css` 单独定义，thumb 都是常显 5px；DSH 的滚动条在无滚动动作时不应一直占视觉注意力。
+
+**实现**
+
+- 主题与助手 CSS 的 `::-webkit-scrollbar-thumb` 默认改 `background: transparent`；新增 `html.ds-scroll-active::-webkit-scrollbar-thumb` / `html.ds-scroll-active ::-webkit-scrollbar-thumb` / `::-webkit-scrollbar-thumb:hover` 才使用 `background-color: var(--ds-scrollbar)` / `var(--as-scrollbar-thumb)`。
+- Firefox 分支在 `@supports not selector(::-webkit-scrollbar)` 内默认 `scrollbar-color: transparent transparent`，`html.ds-scroll-active` 时恢复 `var(--as-scrollbar-thumb) transparent` / `var(--ds-scrollbar) transparent`。
+- `plugin_host/static/js/ds-shell.js` 新增 `SCROLLBAR_IDLE_MS = 700` 与 `initScrollbars()`：在 `document` 上以 capture 监听 `scroll`，滚动时给 `html` 挂 `ds-scroll-active`，每次滚动重置 700ms 定时器，超时摘掉 class；`boot()` 首项调用。`scroll` 不冒泡，capture 才能同时接住 document 与 `.as-tree` 等嵌套容器。
+- 滚动条宽度、槽位与 hover 色不变；指针停在 thumb 上由 CSS `:hover` 兜住，不额外监听。侧栏 `.ds-rail__nav` 原本只在 hover 显形，active 规则使用容器自己的 `--ds-scrollbar`，未 hover 时仍 transparent。
+
+**验证**
+
+- 全量 **703 项 OK**（134.141s，exit 0）；`ruff`（应用源码）、`check`、`makemigrations --check`、`compile_mo.py --check`、`pip check`、`docker compose config`、容器 `check` / `showmigrations --plan` 全绿。
+- Chrome 1280×800：用户页静止 `active=false`、thumb `rgba(0,0,0,0)`，`scrollHeight / clientHeight = 1423 / 800`；instant 滚到 600 后 80ms 内 `active=true`、thumb `rgb(229,229,229)`，800ms 后恢复透明。
+- 助手首页 `.as-tree`（`508 / 436`）嵌套滚动与深色模式同样通过（深色 active `rgb(84,85,87)`）；真实键盘 PageDown 由 MutationObserver 记录 `active` 从 top 1 到 623 全程 true，最后一次滚动后约 715ms 变 false。
+- 截图仅作页面状态记录：`%TEMP%\scrollbar-idle.png`、`scrollbar-active.png`、`scrollbar-active2.png`；Chrome overlay scrollbar 不把 5px thumb 绘进 viewport 截图，行为证据以 computed style 与 MutationObserver 为准。
+- 容器镜像 `sha256:4f41e40bfb29...`，8000 返回 200；无迁移、无新增依赖。

@@ -4,11 +4,43 @@
 > 单版实现细节仍以 `docs/plugin-dev-vXXXX.md` 为准，本文件只做汇总与指路。
 > **命名规范**：GitHub Release 标题统一写作 `vX.Y.Z Beta`（例：`v2.2.13 Beta`）；**tag 名保持 `vX.Y.Z`**（annotated，不带 `Beta`——tag 是不可变引用，`Beta` 只是 Release 层级的展示标记）。
 >
-> **上一版已发布（2026-11-16）**：**v2.4.1 Beta**（导出三档、公告面板与交互收口）收口。CSV / XLSX / PDF 三档导出、公告附件与首页 `?panel=notice` 面板、组织架构模板、助手会话菜单与 DSH 交互细节落地；全量 **703 项测试**。发布后两轮 CI 失败（Ruff F541、缺 `openpyxl` / `reportlab`）已以 `e1bedfa` / `9049334` 修正，tag 保持不动。已发版，Release 线推进到 `v2.4.2`。
+> **上一版已发布（2026-11-17）**：**v2.4.2 Beta**（DSH 面板语义色与状态列收口）收口。面板按钮恢复近黑主按钮 / 中性 ghost / outline / 危险描边，面板锚点保留组件语义色，用户与部门状态列「启用」改纯文本；全量 **703 项测试**。已发版，Release 线推进到 `v2.4.3`。
 
 ---
 
-## 当前版本：v2.4.2（2026-11-17，DSH 面板语义色与状态列收口）
+## 当前版本：v2.4.3（2026-11-20，滚动条闲置隐藏）
+
+| 项 | 值 |
+|---|---|
+| 发版基线 | tag `v2.4.3`（annotated，指向本版发版提交） |
+| Release | `v2.4.3 Beta` 已发布（2026-11-20），接管 `Latest` |
+| 测试基线 | **703 项全绿**（`ruff check`（应用源码）/ `manage.py check` / 全量测试 / `makemigrations --check` / `compile_mo.py --check` / `pip check` / `docker compose config` / 容器 `check`） |
+| 变更范围 | `v2.4.2..本版`：3 个运行时文件（`themes/corporate-clean/.../corporate-clean.css`、`plugins/assistant/.../assistant.css`、`plugin_host/static/js/ds-shell.js`），2 个测试文件（`plugin_host/tests.py`、`plugin_host/tests_assistant_home.py`），其余为文档；无新增迁移、无新增依赖 |
+
+### v2.4.3 做了什么
+
+- **默认透明，滚动才显形**：主题 CSS 与助手会话页 CSS 的滚动条拇指默认 `background: transparent`；`ds-shell.js` 在 `document` 上以 capture 监听 `scroll`，滚动时给 `html` 挂 `ds-scroll-active`，每次滚动重置 700ms 定时器，超时摘掉 class。`scroll` 不冒泡，capture 才能同时接住页面与 `.as-tree` 这类嵌套滚动容器。
+- **槽位保留，不跳布局**：只改拇指可见性，5px 滚动条宽度与槽位不变；指针移到拇指本身时由 CSS `:hover` 临时显形，不额外加监听。
+- **WebKit 与 Firefox 同口径**：WebKit 走 `::-webkit-scrollbar-thumb` 的 active / hover 选择器；Firefox 在 `@supports not selector(::-webkit-scrollbar)` 分支默认 `scrollbar-color: transparent transparent`，active 时恢复 `var(--ds-scrollbar) transparent`。浅色 `#e5e5e5` / hover `#d4d4d4`，深色 `#3c3c3d` / hover `#545557`。
+- **侧栏原有 hover 口径不变**：`.ds-rail__nav` 仍只在 hover 时显形；active 规则使用容器自己的 `--ds-scrollbar`，侧栏未 hover 时保持 transparent。
+- **真机与门禁**：Chrome 1280×800 实测用户页静止 `active=false`、thumb `rgba(0,0,0,0)`；滚到 600 后 80ms 内 `active=true`、thumb `rgb(229,229,229)`，800ms 后恢复透明。助手首页 `.as-tree` 嵌套滚动与深色模式同样通过（深色 active `rgb(84,85,87)`）；真实键盘 PageDown 由 MutationObserver 记录 `active` 全程为 true，最后一次滚动后约 715ms 变 false。容器重建后 8000 返回 200，容器 `check` 与迁移状态正常；全量 **703 项 OK**。
+
+### 升级须知
+
+- **无数据库迁移、无新增依赖**；`docker compose up -d --build` 重建镜像即可（CSS / JS 打进镜像，entrypoint 会 `collectstatic`）。
+- 静态资源带内容哈希 `?v=`，CSS / JS 内容变则 URL 变，浏览器不会继续用旧滚动条样式。
+- 回滚可直接切回 `v2.4.2` 镜像；本版没有数据或 schema 变化。
+
+### 已知边界
+
+- 滚动条显隐由 `scroll` 事件驱动；浏览器自身的 overlay scrollbar 模式下，thumb 的绘制仍由浏览器控制，本版只保证槽位与 DSH 5px 口径不被改坏。
+- Chrome 的 overlay scrollbar 在 viewport 截图中不会绘出 5px thumb 像素，本版行为证据以 computed style 与 MutationObserver 为准，截图仅作页面状态记录。
+- 本地工作区存在未跟踪的 `tools/tests_dist.py`，裸 `manage.py test` 会多收集 1 项并因其二次 `setup_test_environment()` 报错；发版基线用 `manage.py test plugin_host plugins` 复现仓库内容，结果 703 项 OK。CI 在干净检出中不含该文件。
+- `v2.4.3` tag 按“已发布不回改”原则创建；后续文档修正只进 `main`，不移动 tag。
+
+---
+
+## 历史版本：v2.4.2（2026-11-17，DSH 面板语义色与状态列收口）
 
 | 项 | 值 |
 |---|---|
@@ -44,7 +76,7 @@
 | 项 | 值 |
 |---|---|
 | 发版基线 | tag `v2.4.1`（annotated `0121265`）→ `9679c88` |
-| Release | `v2.4.1 Beta` 已发布（2026-11-16，Release 447176845），当时接管 `Latest`；现由 `v2.4.2 Beta` 接管 |
+| Release | `v2.4.1 Beta` 已发布（2026-11-16，Release 447176845），当时接管 `Latest`；先后由 `v2.4.2 Beta` / `v2.4.3 Beta` 接管 |
 | 测试基线 | **703 项全绿**（`manage.py check` / 全量测试 / `compile_mo.py --check` / `pip check` / `docker compose config` / 容器 `check`）；`ruff check` 在发版提交漏跑，CI 首轮暴露 F541，已在 `e1bedfa` 修正并本地复跑通过 |
 | 变更范围 | `v2.2.15..本版` 当前工作区累计：**90 个文件，`+6154 / -471`**（含新增导出 / 附件 / 模板模块与文档）；新增 `assistant` 0005、`notice` 0003 迁移与 `openpyxl==3.1.5` / `reportlab==5.1.0` |
 
