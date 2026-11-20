@@ -65,24 +65,34 @@ class ThemeDiscoveryTest(TestCase):
             self.assertIn(token, css)
 
     def test_scrollbar_ported_from_dsh(self):
-        """v2.2.4：滚动条照 DSH 的 scrollbar.css 移植（宽度/描边/圆角/hover/分支）。"""
+        """v2.2.4 移植 DSH 口径；v2.4.3 追加闲置自动隐藏。"""
         theme = get_theme(settings.BASE_DIR, 'corporate-clean')
         css = (theme.static / 'themes/corporate-clean/css/corporate-clean.css').read_text(
             encoding='utf-8')
         self.assertIn('--ds-scrollbar-width: 5px', css)
         self.assertIn('@supports not selector(::-webkit-scrollbar)', css)
-        self.assertIn('scrollbar-color: var(--ds-scrollbar) transparent', css)
+        self.assertIn('scrollbar-color: transparent transparent', css)
+        self.assertIn('html.ds-scroll-active body', css)
         thumb = re.search(r'::-webkit-scrollbar-thumb\s*\{(.*?)\}', css, re.S)
         self.assertIsNotNone(thumb, '缺少 ::-webkit-scrollbar-thumb 规则')
         body = thumb.group(1)
-        self.assertIn('background: var(--ds-scrollbar)', body)
+        self.assertIn('background: transparent', body)
         self.assertIn('background-clip: content-box', body)
         self.assertIn('border-radius: 999px', body)
+        self.assertIn('html.ds-scroll-active ::-webkit-scrollbar-thumb', css)
+        self.assertIn('background-color: var(--ds-scrollbar)', css)
         self.assertIn('::-webkit-scrollbar-thumb:hover', css)
         self.assertIn('--ds-scrollbar-l2: #545557', css)
         self.assertIn('--ds-scrollbar-hover-l2: #65676b', css)
         self.assertRegex(
             css, r'\.ds-rail__nav\s*\{[^}]*--ds-scrollbar:\s*transparent')
+
+        shell_js = (settings.BASE_DIR / 'plugin_host/static/js/ds-shell.js').read_text(
+            encoding='utf-8')
+        self.assertIn('SCROLLBAR_IDLE_MS = 700', shell_js)
+        self.assertIn("classList.add('ds-scroll-active')", shell_js)
+        self.assertIn("classList.remove('ds-scroll-active')", shell_js)
+        self.assertIn("addEventListener('scroll', arm, true)", shell_js)
 
     def test_loader_in_base(self):
         source = get_template('base.html').template.source

@@ -342,7 +342,9 @@ a:hover {
    `dsh-web-frontend` 的 inline `scrollbar.css` 取字面量，不是估的）。
    默认 5px 宽、0 描边、0 track margin、999 圆角、content-box 裁边，hover 换
    scrollbar-hover；Firefox 走 @supports 里的 thin + scrollbar-color 那条路，
-   WebKit 走 ::-webkit-scrollbar 伪元素，两条互斥。 */
+   WebKit 走 ::-webkit-scrollbar 伪元素，两条互斥。
+   v2.4.3：thumb 默认透明，滚动时由 ds-shell.js 给 html 挂 `ds-scroll-active`，
+   700ms 无滚动后摘掉；指针移到 thumb 本身也临时显形。槽位始终保留，不跳动。 */
 :root {
   --ds-scrollbar-width: 5px;
   --ds-scrollbar-thumb-border: 0px;
@@ -353,6 +355,11 @@ a:hover {
   body,
   body * {
     scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+
+  html.ds-scroll-active body,
+  html.ds-scroll-active body * {
     scrollbar-color: var(--ds-scrollbar) transparent;
   }
 }
@@ -370,9 +377,16 @@ a:hover {
 ::-webkit-scrollbar-thumb {
   border: var(--ds-scrollbar-thumb-border) solid transparent;
   corner-shape: round;
-  background: var(--ds-scrollbar);
+  background: transparent;
   background-clip: content-box;
   border-radius: 999px;
+  transition: background-color var(--ds-dur-fast) var(--ds-ease);
+}
+
+html.ds-scroll-active::-webkit-scrollbar-thumb,
+html.ds-scroll-active ::-webkit-scrollbar-thumb,
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--ds-scrollbar);
 }
 
 @media (hover: hover) {

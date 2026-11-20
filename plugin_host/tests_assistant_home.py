@@ -322,6 +322,11 @@ class AssistantHomePageTests(TestCase):
         self.assertIn('--as-scrollbar-width: 5px;', css)
         self.assertIn('::-webkit-scrollbar {', css)
         self.assertIn('--as-scrollbar-thumb: #e5e5e5;', css)
+        self.assertIn('scrollbar-color: transparent transparent', css)
+        self.assertIn('html.ds-scroll-active ::-webkit-scrollbar-thumb', css)
+        thumb = re.search(r'::-webkit-scrollbar-thumb \{(.*?)\}', css, re.S)
+        self.assertIsNotNone(thumb)
+        self.assertIn('background: transparent', thumb.group(1))
 
         scroll = re.search(r'\.as-scroll \{(.*?)\}', css, re.S)
         self.assertIsNotNone(scroll)

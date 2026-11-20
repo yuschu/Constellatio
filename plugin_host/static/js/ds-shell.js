@@ -21,6 +21,9 @@
   var RAIL_ANIM_MS = 300;
   var RAIL_SETTLE_MS = 150;
   var RAIL_WIDE_IN_MS = 200;
+  /* 滚动条闲置隐藏：滚动事件是「有动作」的唯一信号，停止 700ms 后隐去；
+     指针停在 thumb 上由 CSS :hover 兜住，不需要额外监听。 */
+  var SCROLLBAR_IDLE_MS = 700;
   /* 收起状态的作用域：DSH 把 layoutInfo.sidebar 存在 SPA 内存里，同一会话内翻页不丢；
      本站是 Django 多页，翻页即重新初始化，因此用 sessionStorage 复刻「同一会话内保持」。
      关闭标签页即清空，也不写 localStorage —— 不跨天、不跨设备。 */
@@ -1547,7 +1550,26 @@
     sync();
   }
 
+  // ---------- 滚动条：滚动时显形，闲置 700ms 隐去 ----------
+  function initScrollbars() {
+    var root = document.documentElement;
+    var idleTimer = 0;
+
+    function arm() {
+      root.classList.add('ds-scroll-active');
+      if (idleTimer) window.clearTimeout(idleTimer);
+      idleTimer = window.setTimeout(function () {
+        root.classList.remove('ds-scroll-active');
+        idleTimer = 0;
+      }, SCROLLBAR_IDLE_MS);
+    }
+
+    /* scroll 不冒泡，capture 才能同时收到 document 与各滚动容器的滚动 */
+    document.addEventListener('scroll', arm, true);
+  }
+
   function boot() {
+    initScrollbars();
     initRail();
     initSettings();
     initSubpages();
