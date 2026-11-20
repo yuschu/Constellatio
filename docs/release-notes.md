@@ -12,8 +12,8 @@
 
 | 项 | 值 |
 |---|---|
-| 发版基线 | tag `v2.4.3`（annotated，指向本版发版提交） |
-| Release | `v2.4.3 Beta` 已发布（2026-11-20），接管 `Latest` |
+| 发版基线 | tag `v2.4.3`（annotated `a9125d0`）→ `7cee748` |
+| Release | `v2.4.3 Beta` 已发布（2026-11-20 14:08，Release 452331023），接管 `Latest` |
 | 测试基线 | **703 项全绿**（`ruff check`（应用源码）/ `manage.py check` / 全量测试 / `makemigrations --check` / `compile_mo.py --check` / `pip check` / `docker compose config` / 容器 `check`） |
 | 变更范围 | `v2.4.2..本版`：3 个运行时文件（`themes/corporate-clean/.../corporate-clean.css`、`plugins/assistant/.../assistant.css`、`plugin_host/static/js/ds-shell.js`），2 个测试文件（`plugin_host/tests.py`、`plugin_host/tests_assistant_home.py`），其余为文档；无新增迁移、无新增依赖 |
 
