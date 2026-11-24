@@ -2,7 +2,7 @@
 
 > 项目：《基于 Django 的企业办公自动化系统的设计与实现》
 > 设计思想：**万物皆可插件**——容器内核唯一固定，从基础设施到业务模块全部可插拔、可替换
-> 文档版本：v2.2.13 · 2026-11-14（外观口径按 v2.2.13：内置浅色/深色 + 外观包接口；前端 DSH 化已收口）
+> 文档版本：v2.4.3 · 2026-11-20（基线 703 项测试；外观口径：内置浅色/深色 + 外观包接口）
 
 ---
 
@@ -58,7 +58,8 @@
    - 图表引擎：统一 `ChartRenderer` 接口，ECharts 为默认实现
    - 认证后端：`AUTHENTICATION_BACKENDS` 列表加一行 = 新增一种登录方式
 3. **业务插件层**（全部可插拔）
-   - auth（登录/认证）、user（用户/部门/角色/RBAC）、approval（审批中心）、notice（公告通知）、attendance（考勤打卡）、blockchain（操作留痕上链）、workspace（插件开关）、structure（组织架构模板）、language（中英切换）、sso（企业 SSO）、notify（消息提醒）
+   - auth（登录/认证）、user（用户/部门/角色/RBAC）、approval（审批中心）、notice（公告通知）、attendance（考勤打卡）、blockchain（操作留痕上链）、workspace（插件开关）、structure（组织架构模板）、language（中英切换）、sso（企业 SSO）、notify（消息提醒）、assistant（内置智能助手）；图表引擎以 Provider 形式注册（charts，内置）
+   - 合计 13 个插件：7 个业务插件可运行时启停（approval / notice / attendance / blockchain / notify / assistant / sso），6 个内置底座（auth / user / workspace / structure / language / charts）
    - 删一个插件 = 从 `OA_PLUGINS` 删一行，导航/权限/路由自动消失，系统照常运行
 
 ## 三、插件契约（每个插件必须声明）

@@ -44,18 +44,22 @@
 | approval | `approval_approval` | 业务 | 审批单 |
 | approval | `approval_approvalrecord` | 业务 | 审批留痕 |
 | approval | `approval_approvalsigner` | 业务 | 会签人（v1.2 落地，全部通过才生效） |
+| approval | `approval_approval_cc_users` | 中间表 | 审批抄送人 M2M（提交与结束时抄送申请人直系领导，v1.5.5 落地） |
 | notice | `notice_announcement` | 业务 | 公告 |
 | notice | `notice_announcementread` | 业务 | 公告已读 |
 | attendance | `attendance_attendance` | 业务 | 考勤记录 |
+| attendance | `attendance_attendancerule` | 业务 | 考勤规则单例（上下班 / 宽限 / 工作日 / 补卡回溯，v1.7.2 落地，无外键） |
 | blockchain | `blockchain_record` | 业务 | 操作留痕链（哈希链，防篡改） |
 | workspace | `workspace_pluginswitch` | 业务 | 插件运行时开关（v1.1 落地，DB 覆盖静态配置） |
 | structure | `structure_structurerecord` | 业务 | 结构模板应用记录（v1.3 落地，幂等应用留痕） |
 | notify | `notify_notification` | 业务 | 站内消息（审批待办/结果、公告，v1.7.0 落地） |
 | assistant | `assistant_conversation` | 业务 | AI 助手会话（A 阶段，按用户隔离） |
 | assistant | `assistant_message` | 业务 | 助手消息（user / assistant / tool） |
+| assistant | `assistant_llmsettings` | 业务 | 模型配置单例（地址 / 模型名 / 密钥密文 / 超时，无外键） |
+| auth | `auth_login_failure_counter` | 业务 | 登录失败计数（按用户名+来源为键、行锁自增，v1.7.7 落地，无外键） |
 | — | `auth_permission` 等 | 框架内置 | Django 自带（auth_group / django_session / django_migrations 等） |
 
-业务插件共 **16 张表**；框架内置表不属于任何插件，由 Django 自动管理。
+业务插件共 **20 张表**（18 个实体模型 + 2 张 M2M 中间表：`user_user_roles`、`approval_approval_cc_users`）；框架内置表不属于任何插件，由 Django 自动管理。
 
 > v1.7.0 的 `sso` 插件**无业务表**：登录态复用 Django session；Ticket 防重放走缓存不落库。
 
@@ -94,6 +98,8 @@
 - 用户 1—N 考勤记录
 
 ## 四、逐表设计
+
+> 下列后加表本节未逐字段展开：`approval_approval_cc_users`、`attendance_attendancerule`、`assistant_conversation` / `assistant_message` / `assistant_llmsettings`、`auth_login_failure_counter`；字段与约束以各插件 `migrations/` 为准，口径见对应 `plugin-dev-*.md`。
 
 ### 4.1 user 插件（plugins/user）
 

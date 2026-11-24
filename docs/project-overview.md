@@ -3,7 +3,7 @@
 > 项目代号：**Constellatio**
 > 系统名称：基于 Django 的企业办公自动化系统（OA）
 > 设计思想：**万物皆可插件**（全栈插件化）
-> 文档版本：v2.2.13 · 2026-11-14（v2.2 前端 DSH 化收口）
+> 文档版本：v2.4.3 · 2026-11-20（滚动条闲置隐藏收口；703 项测试）
 
 ---
 
@@ -17,8 +17,8 @@
 
 ```
 万物皆可插件：
-┌─ 业务插件层 ─ auth / user / approval / notice / attendance / blockchain / workspace / structure / language / sso / notify ─┐
-│ 基础设施插件层 ─ DB后端 / 模板引擎 / 主题UI / 图表引擎 / 认证（SSO） │
+┌─ 业务插件层 ─ auth / user / approval / notice / attendance / blockchain / workspace / structure / language / sso / notify / assistant ─┐
+│ 基础设施插件层 ─ DB后端 / 主题UI / 图表引擎（charts） / 认证后端 / 模板引擎（尚未插件化，v1.8 单独起线） │
 │ 插件容器 plugin_host（唯一固定：注册表/外壳/信号/配置）        │
 └─ 部署：WhiteNoise + Gunicorn + Django + MySQL（Docker Compose）  ─┘
 ```
@@ -34,7 +34,7 @@
 |---|---|---|
 | auth | 登录/登出/会话 | 认证后端可插拔（默认 session） |
 | user | 部门/用户/角色/RBAC | 权限体系地基，被所有插件引用 |
-| approval | 审批中心 | 请假/报销/用章，状态机 + 审批留痕 |
+| approval | 审批中心 | 六类表单（请假/报销/用章/外出/加班/调休），状态机 + 会签 + 抄送 + 审批留痕 |
 | notice | 公告通知 | 发布/置顶/已读统计 |
 | attendance | 考勤打卡 | 上下班打卡 + 月度统计看板（ECharts） |
 | blockchain | 操作留痕上链 | 订阅全局信号写入哈希链，列表可点击查看记录详情，篡改即断链报警 |
@@ -44,6 +44,8 @@
 | theme | 外观插件 | 内置外观 = 浅色 / 深色（全站一个开关）；更多外观放 `themes/<key>/theme.json` 即成为「外观包」（v2.2.0 收口） |
 | sso | 企业单点登录 | HMAC 签名 Ticket 网关登录、自动建号、防重放、登录页入口（v1.7.0） |
 | notify | 消息提醒 | 站内信：审批待办 / 结果、公告发布、顶栏未读、消息中心、工作台卡片（v1.7.0） |
+| assistant | 内置智能助手 | Ollama + qwen3:4b 本地推理；九个只读工具、七道校验、三轮循环；六类草稿卡 + 单动作卡，写操作仍回原审批端点；会话支持置顶/重命名/复制编号/归档（v2.2.14–v2.2.15、v2.4.1） |
+| charts | 图表引擎（Provider） | ECharts 本地资源；统一载荷接口，可运行时停用并自动降级表格（v1.6） |
 
 ## 四、技术栈
 
@@ -112,7 +114,8 @@ Constellatio/
 │   ├── structure/              # 组织架构模板（v1.3）
 │   ├── language/               # 中英切换（v1.4）
 │   ├── sso/                    # 企业 SSO 签名 Ticket 登录（v1.7.0）
-│   └── notify/                 # 站内消息提醒（v1.7.0）
+│   ├── notify/                 # 站内消息提醒（v1.7.0）
+│   └── assistant/              # 内置智能助手（会话/消息/模型配置，v2.2.14 起）
 ├── themes/                     # 外观层（可插拔，theme.json 发现）
 │   └── corporate-clean/        # 内置唯一外观：浅色 + 深色两态（Risograph 已于 v2.2.0 移除）
 └── docs/                       # 文档
@@ -193,4 +196,5 @@ OA_PLUGINS = [
 - [x] v1.5.5 审批六类动态表单 + 直属上级抄送、签到状态/类型/时间筛选与补卡、工作台双视图、侧栏高亮、密码权限（138 项测试全绿）—— 2026-10-22
 - [x] v2.2.0 前端全面移植 DSH 收尾：内置插件不外显（auth/user/structure/workspace/language/charts）、外观收口成浅色/深色（Risograph 移除、外观包接口保留）、快捷键层（Ctrl+/ 参考卡 + Ctrl+Alt+数字 快速操作）—— 2026-11-13：`docs/frontend-refactor-plan.md` §9.13.27
 - [x] v2.2.1–v2.2.13 前端 DSH 化收口：考勤 Jibble 仪表盘、组织架构原地浮层、全站滚动条、签到详情重排、页面切换去遮罩、看板布局收紧与英文界面补齐（564 项测试，tag `v2.2.13`）—— 2026-11-14：`docs/frontend-refactor-plan.md` §9.13.29–41
+- [x] v2.2.14–v2.4.3 智能助手与交付收口：A/B 助手会话与只读工具、C1 普通单动作卡（632 / 641 项）、三档导出 + 公告首页面板 + 会话菜单（703 项，tag `v2.4.1`）、DSH 面板语义色与状态列（tag `v2.4.2`）、滚动条闲置隐藏（tag `v2.4.3`，Release `v2.4.3 Beta`）—— 2026-11-20：`docs/release-notes.md`
 - [ ] 测试报告

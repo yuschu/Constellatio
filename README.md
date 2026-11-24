@@ -159,7 +159,7 @@ Most project documentation is written in Chinese.
 
 ### 架构与平台
 
-* 🧩 **万物皆可插件**：插件容器 + 全插件化业务（auth / user / approval / notice / attendance / blockchain / workspace / structure / language）
+* 🧩 **万物皆可插件**：插件容器 + 全插件化业务（auth / user / approval / notice / attendance / blockchain / workspace / structure / language / sso / notify / assistant），另以 Provider 形式内置图表引擎（charts）
 * 🔌 **基础设施可插拔**：数据库（MySQL ↔ SQLite）、外观（内置浅色 / 深色 + `themes/` 外观包）、模板引擎、图表引擎、认证后端
 * ⚙ **运行时插件开关**：工作台启用 / 禁用插件即时生效，停用即隐藏菜单 + 404；操作进入活动记录
 * 🏠 **工作台与图表**：指标卡、流程趋势、插件分布 / 组织人员图表，今日 / 本周 / 本月联动，管理员 / 员工视图分流；ECharts 本地资源，图表引擎可运行时停用并自动降级表格

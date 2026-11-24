@@ -813,9 +813,11 @@ volumes:
 ```bash
 #!/bin/sh
 set -e
+python tools/compile_mo.py          # 翻译编译（幂等，.mo 已入库时也重编一遍）
 python manage.py migrate --noinput
+python manage.py createcachetable   # DatabaseCache 表：缺表则登录限流 / SSO 防重放首个请求 500
 python manage.py collectstatic --noinput
-# 存在 DJANGO_SUPERUSER_* 时幂等创建超管
+# 存在 DJANGO_SUPERUSER_* 时幂等创建超管（exists 判断后 create，不重置已改密码）
 python manage.py shell -c "..."
 exec gunicorn plugin_host.wsgi:application --bind 0.0.0.0:8000 --workers "${GUNICORN_WORKERS:-3}" --timeout "${GUNICORN_TIMEOUT:-900}"
 ```
